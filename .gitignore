@@ -15,3 +15,6 @@ node_modules/
 # large media stays on CDN, not git
 *.mp4
 *.mov
+
+# site hero video (small, intentional)
+!assets/img/hero.mp4

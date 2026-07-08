@@ -84,7 +84,7 @@
       html += `
         <a class="nft-card" href="assets/nft/stagwifhood/img/${n}.png" target="_blank" rel="noopener" data-i="${i}" aria-label="Hooded Stag #${n}">
           <span class="nft-rar rar-${r}">${label[r]}</span>
-          <img src="assets/nft/stagwifhood/thumb/${n}.webp" alt="Hooded Stag #${n}"
+          <img src="assets/nft/stagwifhood/medallion/${n}.webp" alt="Hooded Stag #${n}"
                onerror="this.replaceWith(ph(${i}))" loading="lazy" />
         </a>`;
     }

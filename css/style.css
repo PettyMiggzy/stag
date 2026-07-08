@@ -59,7 +59,7 @@ em{color:var(--gold-lite);font-style:italic}
   animation:fogdrift 22s ease-in-out infinite alternate;
   z-index:-1;
 }
-@keyframes fogdrift{from{transform:transl3d(-2%,0,0)}to{transform:translate3d(3%,-1%,0)}}
+@keyframes fogdrift{from{transform:translate3d(-2%,0,0)}to{transform:translate3d(3%,-1%,0)}}
 .bg-rays{
   background:conic-gradient(from 200deg at 78% -10%,
      transparent 0deg, rgba(248,230,160,.07) 12deg, transparent 24deg,
@@ -71,25 +71,25 @@ em{color:var(--gold-lite);font-style:italic}
 
 /* ---------- ambient walking stags ---------- */
 .woodland{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-.walk-stag{position:absolute;bottom:1vh;height:min(38vh,340px);width:auto;
-  opacity:.14;filter:saturate(.85) drop-shadow(0 18px 24px rgba(0,0,0,.4));will-change:transform}
-.walk-near{opacity:.17;height:min(42vh,380px);animation:walkR 46s linear infinite}
-.walk-far{opacity:.09;height:min(26vh,240px);bottom:9vh;transform:scaleX(-1);animation:walkL 68s linear infinite;animation-delay:-14s}
+.walk-stag{position:absolute;bottom:1vh;height:min(34vh,300px);width:auto;
+  opacity:.16;filter:saturate(.9) drop-shadow(0 18px 24px rgba(0,0,0,.45));will-change:transform}
+.walk-near{opacity:.2;height:min(38vh,340px);animation:walkR 22s linear infinite}
+.walk-far{opacity:.1;height:min(24vh,220px);bottom:8vh;transform:scaleX(-1);animation:walkL 32s linear infinite;animation-delay:-9s}
 @keyframes walkR{
   0%{transform:translateX(-28vw) translateY(0)}
-  12%{transform:translateX(2vw) translateY(-9px)}
+  12%{transform:translateX(2vw) translateY(-5px)}
   25%{transform:translateX(28vw) translateY(0)}
-  37%{transform:translateX(52vw) translateY(-9px)}
+  37%{transform:translateX(52vw) translateY(-5px)}
   50%{transform:translateX(76vw) translateY(0)}
-  62%{transform:translateX(100vw) translateY(-9px)}
+  62%{transform:translateX(100vw) translateY(-5px)}
   75%{transform:translateX(120vw) translateY(0)}
   100%{transform:translateX(140vw) translateY(-4px)}
 }
 @keyframes walkL{
   0%{transform:scaleX(-1) translateX(-28vw) translateY(0)}
-  25%{transform:scaleX(-1) translateX(28vw) translateY(-7px)}
+  25%{transform:scaleX(-1) translateX(28vw) translateY(-4px)}
   50%{transform:scaleX(-1) translateX(76vw) translateY(0)}
-  75%{transform:scaleX(-1) translateX(120vw) translateY(-7px)}
+  75%{transform:scaleX(-1) translateX(120vw) translateY(-4px)}
   100%{transform:scaleX(-1) translateX(140vw) translateY(-3px)}
 }
 
@@ -178,7 +178,7 @@ em{color:var(--gold-lite);font-style:italic}
   background:radial-gradient(circle,rgba(230,184,63,.28),transparent 62%);
   filter:blur(10px);animation:breathe 5s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.6;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
-.stag-img{width:100%;border-radius:50%;box-shadow:0 0 0 3px var(--gold),0 30px 70px -20px rgba(0,0,0,.8),0 0 80px -20px var(--gold);position:relative;z-index:2}
+.stag-img{width:100%;aspect-ratio:1;object-fit:cover;display:block;border-radius:50%;box-shadow:0 0 0 3px var(--gold),0 30px 70px -20px rgba(0,0,0,.8),0 0 80px -20px var(--gold);position:relative;z-index:2}
 .emblem-wrap{width:100%;display:none;position:relative;z-index:2}
 .emblem-wrap.show{display:block}
 .emblem-svg{width:100%;filter:drop-shadow(0 24px 50px rgba(0,0,0,.7))}
@@ -246,6 +246,9 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
 .prize:hover{transform:translateY(-8px);border-color:var(--gold);box-shadow:0 24px 46px -22px rgba(230,184,63,.4)}
 .prize-mc{font-family:'Space Grotesk',monospace;font-weight:700;font-size:1.05rem;color:var(--gold);margin-bottom:.6rem}
 .prize-ico{font-size:2.4rem;margin-bottom:.5rem;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+.prize-photo{width:100%;height:118px;object-fit:cover;border-radius:12px;margin-bottom:.9rem;
+  border:1px solid var(--line);box-shadow:0 10px 22px -12px rgba(0,0,0,.7);transition:transform .3s var(--ease)}
+.prize:hover .prize-photo{transform:scale(1.03)}
 .prize h3{font-family:'Cinzel',serif;font-size:1.15rem;margin-bottom:.5rem}
 .prize p{color:var(--muted);font-size:.86rem;margin-bottom:.9rem;min-height:2.4em}
 .prize-brand{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--green-lite);font-weight:700}
@@ -253,15 +256,17 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
 .prize.grand::before{content:"GRAND HEIST";position:absolute;top:10px;left:50%;transform:translateX(-50%);
   font-size:.6rem;letter-spacing:.15em;color:#241708;background:var(--grad-gold);padding:.25em .7em;border-radius:100px;font-weight:800}
 .prize.grand .prize-ico{margin-top:.8rem}
+.prize.grand .prize-photo{margin-top:1.4rem;border-color:var(--gold)}
 .ladder-note{text-align:center;color:var(--muted);margin-top:2.2rem;font-style:italic}
 
 /* ---------- nfts ---------- */
 .nft-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.9rem}
-.nft-card{aspect-ratio:1;border-radius:14px;overflow:hidden;position:relative;
-  background:linear-gradient(150deg,var(--panel),var(--panel-2));border:1px solid var(--line);
+.nft-card{aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
+  background:radial-gradient(circle at 50% 42%, #14321f, #0b1d12 72%);border:1px solid var(--line);
   display:grid;place-items:center;transition:transform .3s var(--ease),box-shadow .3s,border-color .3s}
-.nft-card:hover{transform:translateY(-6px) scale(1.02);border-color:var(--gold);box-shadow:0 20px 40px -20px rgba(230,184,63,.5);z-index:2}
-.nft-card img{width:100%;height:100%;object-fit:cover}
+.nft-card:hover{transform:translateY(-6px) scale(1.03);border-color:var(--gold);box-shadow:0 20px 40px -20px rgba(230,184,63,.5);z-index:2}
+.nft-card img{width:100%;height:100%;object-fit:contain;padding:5%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45));transition:transform .3s var(--ease)}
+.nft-card:hover img{transform:scale(1.05) rotate(-1deg)}
 .nft-ph{display:grid;place-items:center;gap:.4rem;color:var(--muted)}
 .nft-ph .num{font-family:'Cinzel',serif;font-size:1.6rem;font-weight:900;color:var(--gold);opacity:.75}
 .nft-ph .shimmer{width:46px;height:46px;border-radius:50%;background:conic-gradient(from 0deg,var(--gold-deep),var(--gold-lite),var(--gold-deep));
