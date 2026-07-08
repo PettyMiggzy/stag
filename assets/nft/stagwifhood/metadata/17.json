@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #17 — Meadowlight",
+  "symbol": "STAG",
+  "description": "Meadowlight, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "17.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Wildflower Meadow"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Golden Apple"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Meadow Green"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Bloom"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "17.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

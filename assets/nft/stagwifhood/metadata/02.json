@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #02 — Nightstalker",
+  "symbol": "STAG",
+  "description": "Nightstalker, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "02.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Moonlit Glade"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Silver-Tipped Arrows"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Deep Teal"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Moonsilver"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "02.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

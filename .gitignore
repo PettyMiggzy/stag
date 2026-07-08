@@ -1,0 +1,17 @@
+# scratch / temp
+scratch/
+*.log
+
+# internal ops doc — not for the public repo
+CREATIVE_HANDOFF.md
+docs/CREATIVE-HANDOFF.md
+
+# deps / env
+node_modules/
+.env
+.env.*
+.DS_Store
+
+# large media stays on CDN, not git
+*.mp4
+*.mov

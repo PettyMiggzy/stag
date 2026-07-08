@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #11 — Dawnwarden",
+  "symbol": "STAG",
+  "description": "Dawnwarden, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "11.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Dawn Pines"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Green-Fletched Quiver"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Fresh Green"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Sunrise"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "11.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

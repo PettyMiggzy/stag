@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAGWIFHOOD ($STAG) — The Stag Who Stole Robin Hood's Hood</title>
+  <meta name="description" content="Robin Hood left the forest for Wall Street — but he forgot his hood. A rogue stag put it on and never gave it back. $STAG, the face of Robinhood Chain. Hold to win real prizes at every market-cap milestone." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="STAGWIFHOOD ($STAG)" />
+  <meta property="og:description" content="The stag who stole Robin Hood's hood. Face of Robinhood Chain. Hold to win real prizes — iPad, iPhone, laptops, up to a car — at every milestone." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stagwifhood.fun" />
+  <meta property="og:image" content="assets/img/logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ambient background layers -->
+  <div class="bg-layer bg-forest" aria-hidden="true"></div>
+  <div class="bg-layer bg-glow" aria-hidden="true"></div>
+  <div class="bg-layer bg-fog" aria-hidden="true"></div>
+  <div class="bg-rays" aria-hidden="true"></div>
+
+  <!-- ambient walking stags in the forest -->
+  <div class="woodland" aria-hidden="true">
+    <img src="assets/img/stag-walk.png" alt="" class="walk-stag walk-far" onerror="this.remove()" />
+    <img src="assets/img/stag-walk.png" alt="" class="walk-stag walk-near" onerror="this.remove()" />
+  </div>
+
+  <!-- ===================== NAV ===================== -->
+  <header class="nav" id="nav">
+    <a class="nav-brand" href="#top" aria-label="STAGWIFHOOD home">
+      <img src="assets/img/logo.png" alt="" class="nav-mark" onerror="this.replaceWith(document.getElementById('emblem-fallback').cloneNode(true))" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#legend">The Legend</a>
+      <a href="#lottery">Prize Heist</a>
+      <a href="#nfts">The Hooded 20</a>
+      <a href="#buy">How to Buy</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+    <div class="nav-social">
+      <a class="ic" href="#" aria-label="X / Twitter" data-social="x">𝕏</a>
+      <a class="ic" href="#" aria-label="Telegram" data-social="tg">✈</a>
+      <a class="btn btn-gold btn-sm" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <main id="top">
+  <section class="hero" id="hero">
+    <div class="hero-inner">
+      <div class="hero-copy reveal">
+        <span class="chain-badge"><span class="pulse-dot"></span> Launching on Noxa · Robinhood Chain</span>
+        <h1 class="hero-title">
+          <span class="line">THE STAG WHO STOLE</span>
+          <span class="line gold-grad">ROBIN HOOD'S HOOD</span>
+        </h1>
+        <p class="hero-sub">
+          Robin Hood left the forest for Wall Street — but he forgot his hood.
+          A rogue stag put it on and <em>never gave it back.</em>
+          Fast. Fearless. Built for memes.
+        </p>
+
+        <div class="hero-cta">
+          <a class="btn btn-gold" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Buy $STAG on Noxa</a>
+          <a class="btn btn-ghost" href="#lottery">See the Prize Heist</a>
+        </div>
+
+        <div class="ca-bar" id="ca-bar" title="Contract address — copy">
+          <span class="ca-label">CA</span>
+          <code id="ca-text">TBA — launching on Robinhood Chain</code>
+          <button class="ca-copy" id="ca-copy" aria-label="Copy contract address">Copy</button>
+        </div>
+
+        <ul class="hero-tags">
+          <li>🦌 $STAG</li>
+          <li>🏹 Milestone Lottery</li>
+          <li>🎁 Real Prizes, Real Delivery</li>
+        </ul>
+      </div>
+
+      <div class="hero-art reveal">
+        <div class="stag-stage">
+          <div class="ring-glow"></div>
+          <img src="assets/img/logo.png" alt="STAGWIFHOOD — a hooded stag archer" class="stag-img"
+               onerror="this.style.display='none';document.getElementById('emblem-fallback').classList.add('show')" />
+          <!-- SVG fallback emblem (also reused in nav) -->
+          <div class="emblem-wrap" id="emblem-fallback"><svg class="emblem-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hooded stag emblem">
+            <defs>
+              <linearGradient id="goldA" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#f8e6a0"/><stop offset=".5" stop-color="#e6b83f"/><stop offset="1" stop-color="#a9791f"/>
+              </linearGradient>
+              <radialGradient id="hoodG" cx=".5" cy=".35" r=".8">
+                <stop offset="0" stop-color="#3c7f47"/><stop offset="1" stop-color="#1c4425"/>
+              </radialGradient>
+              <radialGradient id="faceG" cx=".5" cy=".4" r=".8">
+                <stop offset="0" stop-color="#d9a866"/><stop offset="1" stop-color="#96633a"/>
+              </radialGradient>
+              <filter id="soft"><feGaussianBlur stdDeviation="2"/></filter>
+            </defs>
+            <circle cx="200" cy="200" r="190" fill="#0a1a0f" stroke="url(#goldA)" stroke-width="7"/>
+            <circle cx="200" cy="200" r="176" fill="none" stroke="url(#goldA)" stroke-width="1.5" opacity=".5"/>
+            <!-- gold arrow mark (top) -->
+            <g transform="translate(200 78)">
+              <path d="M-16 -20 L14 -20 L14 22 L4 22 L4 -8 L-16 8 Z" fill="url(#goldA)"/>
+            </g>
+            <!-- antlers -->
+            <g fill="none" stroke="url(#goldA)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" class="antlers">
+              <path d="M150 150 C138 96 108 84 92 52 M150 132 C120 128 104 108 76 100 M150 118 C128 96 120 72 132 50"/>
+              <path d="M250 150 C262 96 292 84 308 52 M250 132 C280 128 296 108 324 100 M250 118 C272 96 280 72 268 50"/>
+            </g>
+            <!-- hood -->
+            <path d="M132 168 C132 120 162 104 200 104 C238 104 268 120 268 168 C268 250 236 316 200 336 C164 316 132 250 132 168 Z" fill="url(#hoodG)" stroke="url(#goldA)" stroke-width="3"/>
+            <!-- ears -->
+            <path d="M150 150 C132 150 120 168 126 190 C144 182 152 168 156 156 Z" fill="#c69355"/>
+            <path d="M250 150 C268 150 280 168 274 190 C256 182 248 168 244 156 Z" fill="#c69355"/>
+            <!-- face -->
+            <path d="M156 178 C156 150 176 138 200 138 C224 138 244 150 244 178 C244 236 224 296 200 320 C176 296 156 236 156 178 Z" fill="url(#faceG)"/>
+            <!-- muzzle highlight -->
+            <path d="M180 250 C180 234 189 226 200 226 C211 226 220 234 220 250 C220 280 211 302 200 312 C189 302 180 280 180 250 Z" fill="#e7c896" opacity=".55"/>
+            <!-- eyes -->
+            <g class="eyes">
+              <circle cx="178" cy="196" r="10" fill="#fff4bf"/>
+              <circle cx="222" cy="196" r="10" fill="#fff4bf"/>
+              <circle cx="178" cy="196" r="20" fill="#fff4bf" opacity=".28" filter="url(#soft)"/>
+              <circle cx="222" cy="196" r="20" fill="#fff4bf" opacity=".28" filter="url(#soft)"/>
+            </g>
+            <!-- nose -->
+            <ellipse cx="200" cy="286" rx="15" ry="11" fill="#22160b"/>
+          </svg></div>
+          <div class="orbit orbit-1"><span>🏹</span></div>
+          <div class="orbit orbit-2"><span>🍃</span></div>
+          <div class="orbit orbit-3"><span>✦</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- scrolling hype marquee -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>THE HOOD HAS A NEW OWNER</span><span class="dot">•</span>
+        <span>READY FOR THE NEXT BILLION DOLLAR RUN</span><span class="dot">•</span>
+        <span>HOLD → WIN → REPEAT</span><span class="dot">•</span>
+        <span>THE LEGEND BELONGS TO THE FOREST</span><span class="dot">•</span>
+        <span>THE HOOD HAS A NEW OWNER</span><span class="dot">•</span>
+        <span>READY FOR THE NEXT BILLION DOLLAR RUN</span><span class="dot">•</span>
+        <span>HOLD → WIN → REPEAT</span><span class="dot">•</span>
+        <span>THE LEGEND BELONGS TO THE FOREST</span><span class="dot">•</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LEGEND ===================== -->
+  <section class="legend" id="legend">
+    <div class="section-head reveal">
+      <span class="eyebrow">The Legend</span>
+      <h2>An old hood. A new owner.</h2>
+    </div>
+    <div class="scroll-parchment reveal">
+      <div class="parchment-inner">
+        <p class="drop">Robin Hood left the forest for Wall Street...</p>
+        <p>But he forgot one thing. <strong>His hood.</strong></p>
+        <p>A rogue stag found it, put it on, and never gave it back. Now the legend belongs to the forest.</p>
+        <p>No one knows where the stag came from. They only know one thing: once the hood went on, it became the face of <strong>Robinhood Chain.</strong></p>
+        <p class="legend-beats"><span>Fast.</span> <span>Fearless.</span> <span>Built for memes.</span> <span>Ready for the next billion dollar run.</span></p>
+        <p class="legend-final">The hood has a new owner.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LOTTERY / PRIZE HEIST ===================== -->
+  <section class="lottery" id="lottery">
+    <div class="section-head reveal">
+      <span class="eyebrow">The Prize Heist</span>
+      <h2>Every milestone, a holder gets robbed rich.</h2>
+      <p class="section-lead">
+        The stag steals from the chart and gives to the holders. Each time $STAG hits a
+        new market-cap milestone, a wallet is drawn <strong>live</strong> from the holders list —
+        and a real prize ships to their door. Apple, Samsung, Alienware, Tesla. No points. No "raffle credits." Real hardware.
+      </p>
+    </div>
+
+    <div class="how-steps reveal">
+      <div class="step"><span class="step-n">01</span><h3>Hold $STAG</h3><p>Every wallet holding at the snapshot block is automatically entered. No forms, no sign-up.</p></div>
+      <div class="step"><span class="step-n">02</span><h3>Milestone hits</h3><p>The market cap crosses a milestone. A snapshot of the holders list is taken on-chain.</p></div>
+      <div class="step"><span class="step-n">03</span><h3>Drawn live</h3><p>A holder is picked at random on stream — provably fair, verifiable on-chain.</p></div>
+      <div class="step"><span class="step-n">04</span><h3>Prize delivered</h3><p>Winner ships their prize direct from the brand. Worldwide online delivery.</p></div>
+    </div>
+
+    <div class="ladder reveal" id="ladder">
+      <div class="ladder-rail"><div class="ladder-fill" id="ladder-fill"></div></div>
+      <div class="prize-grid">
+        <article class="prize" data-tier="1">
+          <div class="prize-mc">$100K</div>
+          <div class="prize-ico">📱</div>
+          <h3>iPad</h3>
+          <p>The warm-up. A fresh iPad, boxed and shipped.</p>
+          <span class="prize-brand">Apple</span>
+        </article>
+        <article class="prize" data-tier="2">
+          <div class="prize-mc">$500K</div>
+          <div class="prize-ico">📲</div>
+          <h3>Flagship Phone</h3>
+          <p>Latest iPhone Pro or Galaxy Ultra — winner's pick.</p>
+          <span class="prize-brand">Apple · Samsung</span>
+        </article>
+        <article class="prize" data-tier="3">
+          <div class="prize-mc">$1M</div>
+          <div class="prize-ico">💻</div>
+          <h3>Gaming Laptop</h3>
+          <p>Alienware, HP Omen or Lenovo Legion — fully specced.</p>
+          <span class="prize-brand">Alienware · HP · Lenovo</span>
+        </article>
+        <article class="prize" data-tier="4">
+          <div class="prize-mc">$5M</div>
+          <div class="prize-ico">🖥️</div>
+          <h3>Pro Battlestation</h3>
+          <p>MacBook Pro + monitor + a full creator setup.</p>
+          <span class="prize-brand">Apple · Samsung</span>
+        </article>
+        <article class="prize grand" data-tier="5">
+          <div class="prize-mc">$10M</div>
+          <div class="prize-ico">🚗</div>
+          <h3>A Car</h3>
+          <p>The grand heist. A brand-new EV, delivered.</p>
+          <span class="prize-brand">Tesla · Lucid</span>
+        </article>
+      </div>
+    </div>
+    <p class="ladder-note reveal">Milestones and prizes scale with the run. The bigger the chart, the bigger the heist.</p>
+  </section>
+
+  <!-- ===================== NFTS ===================== -->
+  <section class="nfts" id="nfts">
+    <div class="section-head reveal">
+      <span class="eyebrow">The Collection</span>
+      <h2>The Hooded 20</h2>
+      <p class="section-lead">
+        Twenty legendary stags, each wearing the stolen hood a different way — rangers, rogues,
+        and outlaws of the forest. Minted on Robinhood Chain. Holders get whitelist priority in
+        every future Prize Heist.
+      </p>
+    </div>
+    <div class="nft-grid reveal" id="nft-grid"><!-- populated by main.js --></div>
+    <div class="nft-cta reveal">
+      <span class="soon-pill">Art dropping soon</span>
+      <a class="btn btn-ghost" href="#buy">Get $STAG to qualify</a>
+    </div>
+  </section>
+
+  <!-- ===================== BUY ===================== -->
+  <section class="buy" id="buy">
+    <div class="section-head reveal">
+      <span class="eyebrow">How to Buy</span>
+      <h2>Grab the hood in four steps.</h2>
+    </div>
+    <div class="buy-grid reveal">
+      <div class="buy-card"><span class="buy-n">1</span><h3>Get a wallet</h3><p>Set up a Robinhood Chain-compatible wallet and back up your seed phrase.</p></div>
+      <div class="buy-card"><span class="buy-n">2</span><h3>Fund it</h3><p>Load the network's gas token so you can swap and cover fees.</p></div>
+      <div class="buy-card"><span class="buy-n">3</span><h3>Grab it on Noxa</h3><p>Head to the official Noxa launchpad, confirm the token matches this site, and buy $STAG.</p></div>
+      <div class="buy-card"><span class="buy-n">4</span><h3>Hold & win</h3><p>Just hold. Every milestone auto-enters you into the Prize Heist.</p></div>
+    </div>
+    <div class="buy-launch reveal">
+      <a class="btn btn-gold" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Launch on Noxa →</a>
+      <span class="buy-launch-note">fun.noxa.fi/robinhood</span>
+    </div>
+  </section>
+
+  <!-- ===================== TOKENOMICS ===================== -->
+  <section class="tokenomics" id="tokenomics">
+    <div class="section-head reveal">
+      <span class="eyebrow">Tokenomics</span>
+      <h2>Lean. Fair. Built to run.</h2>
+    </div>
+    <div class="stat-grid reveal">
+      <div class="stat"><div class="stat-num" data-count="1000000000" data-suffix="">0</div><div class="stat-label">Total Supply</div></div>
+      <div class="stat"><div class="stat-num" data-count="100" data-suffix="%">0</div><div class="stat-label">LP Locked</div></div>
+      <div class="stat"><div class="stat-num" data-count="0" data-suffix="%">0</div><div class="stat-label">Team Tax</div></div>
+      <div class="stat"><div class="stat-num" data-count="20" data-suffix="">0</div><div class="stat-label">Hooded NFTs</div></div>
+    </div>
+    <p class="section-lead center reveal">A share of every heist is funded by the treasury — the chart pays the prizes, holders keep the bags.</p>
+  </section>
+
+  <!-- ===================== ROADMAP ===================== -->
+  <section class="roadmap" id="roadmap">
+    <div class="section-head reveal">
+      <span class="eyebrow">The Hunt</span>
+      <h2>Roadmap</h2>
+    </div>
+    <div class="timeline reveal">
+      <div class="phase"><span class="phase-tag">Phase I — The Theft</span><h3>Launch the legend</h3><ul><li>Deploy $STAG on Robinhood Chain</li><li>Website, lore & socials live</li><li>First community heist teased</li></ul></div>
+      <div class="phase"><span class="phase-tag">Phase II — The Forest Grows</span><h3>Milestone heists begin</h3><ul><li>First live prize draw at $100K</li><li>The Hooded 20 NFT drop</li><li>Meme engine + $STAG AI content</li></ul></div>
+      <div class="phase"><span class="phase-tag">Phase III — The Run</span><h3>Scale the heist</h3><ul><li>Laptop & flagship-phone milestones</li><li>CEX conversations</li><li>Partnership hunts across the chain</li></ul></div>
+      <div class="phase"><span class="phase-tag">Phase IV — The Grand Heist</span><h3>Give away a car</h3><ul><li>$10M milestone: EV giveaway</li><li>Global holder tour</li><li>The next billion dollar run</li></ul></div>
+    </div>
+  </section>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer">
+    <div class="footer-brand">
+      <img src="assets/img/logo.png" alt="" class="footer-mark" onerror="this.style.display='none'" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </div>
+    <p class="footer-tag">The stag who stole Robin Hood's hood. $STAG.</p>
+    <div class="footer-social">
+      <a href="#" data-social="x">X / Twitter</a>
+      <a href="#" data-social="tg">Telegram</a>
+    </div>
+    <p class="footer-fine">
+      $STAG is a community meme token with no intrinsic value or expectation of financial return.
+      Prizes are community-funded rewards, not securities. Nothing here is financial advice. DYOR.
+    </p>
+    <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

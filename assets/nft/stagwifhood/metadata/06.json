@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #06 — The Watcher",
+  "symbol": "STAG",
+  "description": "The Watcher, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "06.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Cliffside Overlook"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Spyglass"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Moss Green"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Wind"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "06.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

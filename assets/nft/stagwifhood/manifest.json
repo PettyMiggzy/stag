@@ -1,0 +1,127 @@
+{
+  "collection": "The Hooded 20",
+  "symbol": "STAG",
+  "total": 20,
+  "items": [
+    {
+      "id": 1,
+      "file": "01.png",
+      "name": "Hooded Stag #01 — The Hood Bearer",
+      "rarity": "Legendary"
+    },
+    {
+      "id": 2,
+      "file": "02.png",
+      "name": "Hooded Stag #02 — Nightstalker",
+      "rarity": "Epic"
+    },
+    {
+      "id": 3,
+      "file": "03.png",
+      "name": "Hooded Stag #03 — The Sharpshooter",
+      "rarity": "Epic"
+    },
+    {
+      "id": 4,
+      "file": "04.png",
+      "name": "Hooded Stag #04 — Gold Vein",
+      "rarity": "Epic"
+    },
+    {
+      "id": 5,
+      "file": "05.png",
+      "name": "Hooded Stag #05 — River Ranger",
+      "rarity": "Rare"
+    },
+    {
+      "id": 6,
+      "file": "06.png",
+      "name": "Hooded Stag #06 — The Watcher",
+      "rarity": "Rare"
+    },
+    {
+      "id": 7,
+      "file": "07.png",
+      "name": "Hooded Stag #07 — Embercamp",
+      "rarity": "Rare"
+    },
+    {
+      "id": 8,
+      "file": "08.png",
+      "name": "Hooded Stag #08 — Frosthorn",
+      "rarity": "Rare"
+    },
+    {
+      "id": 9,
+      "file": "09.png",
+      "name": "Hooded Stag #09 — Thornwood",
+      "rarity": "Rare"
+    },
+    {
+      "id": 10,
+      "file": "10.png",
+      "name": "Hooded Stag #10 — Sunspear",
+      "rarity": "Rare"
+    },
+    {
+      "id": 11,
+      "file": "11.png",
+      "name": "Hooded Stag #11 — Dawnwarden",
+      "rarity": "Rare"
+    },
+    {
+      "id": 12,
+      "file": "12.png",
+      "name": "Hooded Stag #12 — Fogwalker",
+      "rarity": "Common"
+    },
+    {
+      "id": 13,
+      "file": "13.png",
+      "name": "Hooded Stag #13 — Oakheart",
+      "rarity": "Common"
+    },
+    {
+      "id": 14,
+      "file": "14.png",
+      "name": "Hooded Stag #14 — Birchveil",
+      "rarity": "Common"
+    },
+    {
+      "id": 15,
+      "file": "15.png",
+      "name": "Hooded Stag #15 — Ridgeline",
+      "rarity": "Common"
+    },
+    {
+      "id": 16,
+      "file": "16.png",
+      "name": "Hooded Stag #16 — Cascade",
+      "rarity": "Common"
+    },
+    {
+      "id": 17,
+      "file": "17.png",
+      "name": "Hooded Stag #17 — Meadowlight",
+      "rarity": "Common"
+    },
+    {
+      "id": 18,
+      "file": "18.png",
+      "name": "Hooded Stag #18 — Duskrunner",
+      "rarity": "Common"
+    },
+    {
+      "id": 19,
+      "file": "19.png",
+      "name": "Hooded Stag #19 — Rainveil",
+      "rarity": "Common"
+    },
+    {
+      "id": 20,
+      "file": "20.png",
+      "name": "Hooded Stag #20 — Starfern",
+      "rarity": "Common"
+    }
+  ]
+}

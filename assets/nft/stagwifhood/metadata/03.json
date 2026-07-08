@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #03 — The Sharpshooter",
+  "symbol": "STAG",
+  "description": "The Sharpshooter, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "03.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Autumn Woods"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Drawn Longbow"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Hunter Green"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Amber"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "03.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #16 — Cascade",
+  "symbol": "STAG",
+  "description": "Cascade, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "16.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Waterfall Grotto"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Woven Net"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Teal Green"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Spray"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "16.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}

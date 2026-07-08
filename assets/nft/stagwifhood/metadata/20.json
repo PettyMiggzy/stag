@@ -1,0 +1,38 @@
+{
+  "name": "Hooded Stag #20 — Starfern",
+  "symbol": "STAG",
+  "description": "Starfern, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
+  "image": "20.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Starlit Night"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Map Scroll"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Midnight Green"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Starlight"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "20.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  }
+}
