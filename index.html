@@ -32,12 +32,6 @@
   <div class="bg-layer bg-fog" aria-hidden="true"></div>
   <div class="bg-rays" aria-hidden="true"></div>
 
-  <!-- ambient walking stags in the forest -->
-  <div class="woodland" aria-hidden="true">
-    <img src="assets/img/stag-run.webp" alt="" class="walk-stag walk-far" onerror="this.remove()" />
-    <img src="assets/img/stag-run.webp" alt="" class="walk-stag walk-near" onerror="this.remove()" />
-  </div>
-
   <!-- ===================== NAV ===================== -->
   <header class="nav" id="nav">
     <a class="nav-brand" href="#top" aria-label="STAGWIFHOOD home">
@@ -272,13 +266,16 @@
     </div>
     <div class="buy-grid reveal">
       <div class="buy-card"><span class="buy-n">1</span><h3>Get a wallet</h3><p>Set up a Robinhood Chain-compatible wallet and back up your seed phrase.</p></div>
-      <div class="buy-card"><span class="buy-n">2</span><h3>Fund it</h3><p>Load the network's gas token so you can swap and cover fees.</p></div>
+      <div class="buy-card"><span class="buy-n">2</span><h3>Bridge funds</h3><p>Bridge from Arbitrum One to Robinhood Chain, then keep a little for gas.</p></div>
       <div class="buy-card"><span class="buy-n">3</span><h3>Grab it on Noxa</h3><p>Head to the official Noxa launchpad, confirm the token matches this site, and buy $STAG.</p></div>
       <div class="buy-card"><span class="buy-n">4</span><h3>Hold & win</h3><p>Just hold. Every milestone auto-enters you into the Prize Heist.</p></div>
     </div>
     <div class="buy-launch reveal">
-      <a class="btn btn-gold" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Launch on Noxa →</a>
-      <span class="buy-launch-note">fun.noxa.fi/robinhood</span>
+      <div class="buy-btns">
+        <a class="btn btn-ghost" href="https://portal.arbitrum.io/bridge?amount=1&destinationChain=robinhood-chain&sanitized=true&sourceChain=arbitrum-one" target="_blank" rel="noopener">🌉 Bridge to Robinhood Chain</a>
+        <a class="btn btn-gold" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Launch on Noxa →</a>
+      </div>
+      <span class="buy-launch-note">Bridge from Arbitrum · then buy $STAG on fun.noxa.fi/robinhood</span>
     </div>
   </section>
 

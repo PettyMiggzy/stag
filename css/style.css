@@ -69,30 +69,6 @@ em{color:var(--gold-lite);font-style:italic}
 }
 @keyframes rays{to{transform:rotate(360deg)}}
 
-/* ---------- ambient walking stags ---------- */
-.woodland{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-.walk-stag{position:absolute;bottom:1vh;height:min(34vh,300px);width:auto;
-  opacity:.16;filter:saturate(.9) drop-shadow(0 18px 24px rgba(0,0,0,.45));will-change:transform}
-.walk-near{opacity:.2;height:min(38vh,340px);animation:walkR 22s linear infinite}
-.walk-far{opacity:.1;height:min(24vh,220px);bottom:8vh;transform:scaleX(-1);animation:walkL 32s linear infinite;animation-delay:-9s}
-@keyframes walkR{
-  0%{transform:translateX(-28vw) translateY(0)}
-  12%{transform:translateX(2vw) translateY(-5px)}
-  25%{transform:translateX(28vw) translateY(0)}
-  37%{transform:translateX(52vw) translateY(-5px)}
-  50%{transform:translateX(76vw) translateY(0)}
-  62%{transform:translateX(100vw) translateY(-5px)}
-  75%{transform:translateX(120vw) translateY(0)}
-  100%{transform:translateX(140vw) translateY(-4px)}
-}
-@keyframes walkL{
-  0%{transform:scaleX(-1) translateX(-28vw) translateY(0)}
-  25%{transform:scaleX(-1) translateX(28vw) translateY(-4px)}
-  50%{transform:scaleX(-1) translateX(76vw) translateY(0)}
-  75%{transform:scaleX(-1) translateX(120vw) translateY(-4px)}
-  100%{transform:scaleX(-1) translateX(140vw) translateY(-3px)}
-}
-
 /* ---------- buttons ---------- */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:.5em;
@@ -288,7 +264,8 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
 .buy-n{position:absolute;top:1.1rem;right:1.3rem;font-family:'Cinzel',serif;font-size:2.4rem;font-weight:900;color:rgba(230,184,63,.22)}
 .buy-card h3{font-family:'Cinzel',serif;font-size:1.15rem;margin-bottom:.5rem}
 .buy-card p{color:var(--muted);font-size:.92rem}
-.buy-launch{display:flex;flex-direction:column;align-items:center;gap:.7rem;margin-top:2.5rem}
+.buy-launch{display:flex;flex-direction:column;align-items:center;gap:.9rem;margin-top:2.5rem}
+.buy-btns{display:flex;gap:.9rem;flex-wrap:wrap;justify-content:center}
 .buy-launch-note{font-family:'Space Grotesk',monospace;font-size:.85rem;letter-spacing:.06em;color:var(--muted)}
 
 /* ---------- tokenomics ---------- */
