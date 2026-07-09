@@ -1,38 +1,24 @@
 {
-  "name": "Hooded Stag #15 — Ridgeline",
-  "symbol": "STAG",
-  "description": "Ridgeline, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
-  "image": "15.png",
-  "external_url": "https://stagwifhood.fun",
+  "name": "The Hooded 20 #15 \u2014 Camo Scout",
+  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "15.jpg",
+  "animation_url": "15.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",
       "value": "Common"
     },
     {
-      "trait_type": "Background",
-      "value": "Mountain Ridge"
+      "trait_type": "Character",
+      "value": "Camo Scout"
     },
     {
-      "trait_type": "Gear",
-      "value": "Traveler Pack"
+      "trait_type": "Collection",
+      "value": "The Hooded 20"
     },
     {
-      "trait_type": "Cloak",
-      "value": "Slate Green"
-    },
-    {
-      "trait_type": "Aura",
-      "value": "Alpine"
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
     }
-  ],
-  "properties": {
-    "files": [
-      {
-        "uri": "15.png",
-        "type": "image/png"
-      }
-    ],
-    "category": "image"
-  }
+  ]
 }

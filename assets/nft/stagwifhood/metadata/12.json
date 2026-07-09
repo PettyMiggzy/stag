@@ -1,38 +1,24 @@
 {
-  "name": "Hooded Stag #12 — Fogwalker",
-  "symbol": "STAG",
-  "description": "Fogwalker, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
-  "image": "12.png",
-  "external_url": "https://stagwifhood.fun",
+  "name": "The Hooded 20 #12 \u2014 Forest Druid",
+  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "12.jpg",
+  "animation_url": "12.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",
       "value": "Common"
     },
     {
-      "trait_type": "Background",
-      "value": "Foggy Morning"
+      "trait_type": "Character",
+      "value": "Forest Druid"
     },
     {
-      "trait_type": "Gear",
-      "value": "Coin Pouch"
+      "trait_type": "Collection",
+      "value": "The Hooded 20"
     },
     {
-      "trait_type": "Cloak",
-      "value": "Sage Green"
-    },
-    {
-      "trait_type": "Aura",
-      "value": "Soft Mist"
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
     }
-  ],
-  "properties": {
-    "files": [
-      {
-        "uri": "12.png",
-        "type": "image/png"
-      }
-    ],
-    "category": "image"
-  }
+  ]
 }

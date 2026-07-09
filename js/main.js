@@ -70,36 +70,41 @@
     lIO.observe(ladder);
   }
 
-  /* ---- build The Hooded 20 gallery ----
-     Renders real art from assets/nft/stagwifhood/img/NN.png when present,
-     falling back to an elegant placeholder tile. ---- */
+  /* ---- build The Hooded 20 gallery (animated) ----
+     Manifest-driven: shows the art, plays the animation on hover/focus. ---- */
   const grid = document.getElementById('nft-grid');
   if (grid) {
-    const rarity = (i) => (i === 1 ? 'legendary' : i <= 4 ? 'epic' : i <= 10 ? 'rare' : 'common');
-    const label = { legendary: 'Legendary', epic: 'Epic', rare: 'Rare', common: 'Common' };
-    let html = '';
-    for (let i = 1; i <= 20; i++) {
-      const n = String(i).padStart(2, '0');
-      const r = rarity(i);
-      html += `
-        <a class="nft-card" href="assets/nft/stagwifhood/img/${n}.png" target="_blank" rel="noopener" data-i="${i}" aria-label="Hooded Stag #${n}">
-          <span class="nft-rar rar-${r}">${label[r]}</span>
-          <img src="assets/nft/stagwifhood/medallion/${n}.webp" alt="Hooded Stag #${n}"
-               onerror="this.replaceWith(ph(${i}))" loading="lazy" />
-        </a>`;
-    }
-    grid.innerHTML = html;
+    const BASE = 'assets/nft/stagwifhood';
+    const rarClass = { Mythic: 'rar-mythic', Legendary: 'rar-legendary', Epic: 'rar-epic', Rare: 'rar-rare', Common: 'rar-common' };
+    fetch(`${BASE}/manifest.json`).then((r) => r.json()).then((m) => {
+      grid.innerHTML = m.items.map((it) => `
+        <a class="nft-card" href="${BASE}/anim/${it.animation}" target="_blank" rel="noopener"
+           data-anim="${BASE}/anim/${it.animation}" aria-label="${it.name}">
+          <span class="nft-rar ${rarClass[it.rarity] || 'rar-common'}">${it.rarity}</span>
+          <img src="${BASE}/img/${it.image}" alt="${it.name}" loading="lazy" />
+          <span class="nft-name">${it.character || it.name}</span>
+        </a>`).join('');
+      grid.querySelectorAll('.nft-card').forEach((card) => {
+        let vid = null;
+        const play = () => {
+          if (vid) return;
+          vid = document.createElement('video');
+          vid.src = card.dataset.anim; vid.muted = true; vid.loop = true;
+          vid.autoplay = true; vid.playsInline = true; vid.className = 'nft-vid';
+          card.appendChild(vid); vid.play().catch(() => {});
+        };
+        const stop = () => { if (vid) { vid.remove(); vid = null; } };
+        card.addEventListener('mouseenter', play);
+        card.addEventListener('mouseleave', stop);
+        card.addEventListener('focus', play);
+        card.addEventListener('blur', stop);
+        card.addEventListener('click', (e) => { if (vid) e.preventDefault(); }); // let hover-preview click not navigate on touch
+      });
+    }).catch(() => {});
   }
-  // placeholder factory (referenced by inline onerror)
-  window.ph = function (i) {
-    const d = document.createElement('div');
-    d.className = 'nft-ph';
-    d.innerHTML = `<div class="shimmer"></div><div class="num">#${String(i).padStart(2, '0')}</div>`;
-    return d;
-  };
 
   /* ---- social links (fill these in when live) ---- */
-  const SOCIALS = { x: '#', tg: '#' };
+  const SOCIALS = { x: 'https://x.com/StagWifHood', tg: 'https://t.me/StagWifHood' };
   document.querySelectorAll('[data-social]').forEach((a) => {
     const url = SOCIALS[a.dataset.social];
     if (url && url !== '#') { a.href = url; a.target = '_blank'; a.rel = 'noopener'; }

@@ -2,126 +2,167 @@
   "collection": "The Hooded 20",
   "symbol": "STAG",
   "total": 20,
+  "animated": true,
   "items": [
     {
       "id": 1,
-      "file": "01.png",
-      "name": "Hooded Stag #01 — The Hood Bearer",
-      "rarity": "Legendary"
+      "name": "The Hooded 20 #1 \u2014 Golden Sovereign",
+      "rarity": "Mythic",
+      "character": "Golden Sovereign",
+      "image": "1.jpg",
+      "animation": "1.mp4"
     },
     {
       "id": 2,
-      "file": "02.png",
-      "name": "Hooded Stag #02 — Nightstalker",
-      "rarity": "Epic"
+      "name": "The Hooded 20 #2 \u2014 Shadow Rogue",
+      "rarity": "Legendary",
+      "character": "Shadow Rogue",
+      "image": "2.jpg",
+      "animation": "2.mp4"
     },
     {
       "id": 3,
-      "file": "03.png",
-      "name": "Hooded Stag #03 — The Sharpshooter",
-      "rarity": "Epic"
+      "name": "The Hooded 20 #3 \u2014 Forest Ranger",
+      "rarity": "Common",
+      "character": "Forest Ranger",
+      "image": "3.jpg",
+      "animation": "3.mp4"
     },
     {
       "id": 4,
-      "file": "04.png",
-      "name": "Hooded Stag #04 — Gold Vein",
-      "rarity": "Epic"
+      "name": "The Hooded 20 #4 \u2014 Scarred Outlaw",
+      "rarity": "Rare",
+      "character": "Scarred Outlaw",
+      "image": "4.jpg",
+      "animation": "4.mp4"
     },
     {
       "id": 5,
-      "file": "05.png",
-      "name": "Hooded Stag #05 — River Ranger",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #5 \u2014 Crimson Assassin",
+      "rarity": "Rare",
+      "character": "Crimson Assassin",
+      "image": "5.jpg",
+      "animation": "5.mp4"
     },
     {
       "id": 6,
-      "file": "06.png",
-      "name": "Hooded Stag #06 — The Watcher",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #6 \u2014 Emerald King",
+      "rarity": "Legendary",
+      "character": "Emerald King",
+      "image": "6.jpg",
+      "animation": "6.mp4"
     },
     {
       "id": 7,
-      "file": "07.png",
-      "name": "Hooded Stag #07 — Embercamp",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #7 \u2014 Cyber Ranger",
+      "rarity": "Epic",
+      "character": "Cyber Ranger",
+      "image": "7.jpg",
+      "animation": "7.mp4"
     },
     {
       "id": 8,
-      "file": "08.png",
-      "name": "Hooded Stag #08 — Frosthorn",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #8 \u2014 Frost Hunter",
+      "rarity": "Rare",
+      "character": "Frost Hunter",
+      "image": "8.jpg",
+      "animation": "8.mp4"
     },
     {
       "id": 9,
-      "file": "09.png",
-      "name": "Hooded Stag #09 — Thornwood",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #9 \u2014 Ember Berserker",
+      "rarity": "Epic",
+      "character": "Ember Berserker",
+      "image": "9.jpg",
+      "animation": "9.mp4"
     },
     {
       "id": 10,
-      "file": "10.png",
-      "name": "Hooded Stag #10 — Sunspear",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #10 \u2014 Bone Reaper",
+      "rarity": "Epic",
+      "character": "Bone Reaper",
+      "image": "10.jpg",
+      "animation": "10.mp4"
     },
     {
       "id": 11,
-      "file": "11.png",
-      "name": "Hooded Stag #11 — Dawnwarden",
-      "rarity": "Rare"
+      "name": "The Hooded 20 #11 \u2014 Golden Archer",
+      "rarity": "Rare",
+      "character": "Golden Archer",
+      "image": "11.jpg",
+      "animation": "11.mp4"
     },
     {
       "id": 12,
-      "file": "12.png",
-      "name": "Hooded Stag #12 — Fogwalker",
-      "rarity": "Common"
+      "name": "The Hooded 20 #12 \u2014 Forest Druid",
+      "rarity": "Common",
+      "character": "Forest Druid",
+      "image": "12.jpg",
+      "animation": "12.mp4"
     },
     {
       "id": 13,
-      "file": "13.png",
-      "name": "Hooded Stag #13 — Oakheart",
-      "rarity": "Common"
+      "name": "The Hooded 20 #13 \u2014 Matrix Hacker",
+      "rarity": "Epic",
+      "character": "Matrix Hacker",
+      "image": "13.jpg",
+      "animation": "13.mp4"
     },
     {
       "id": 14,
-      "file": "14.png",
-      "name": "Hooded Stag #14 — Birchveil",
-      "rarity": "Common"
+      "name": "The Hooded 20 #14 \u2014 Royal Hood",
+      "rarity": "Legendary",
+      "character": "Royal Hood",
+      "image": "14.jpg",
+      "animation": "14.mp4"
     },
     {
       "id": 15,
-      "file": "15.png",
-      "name": "Hooded Stag #15 — Ridgeline",
-      "rarity": "Common"
+      "name": "The Hooded 20 #15 \u2014 Camo Scout",
+      "rarity": "Common",
+      "character": "Camo Scout",
+      "image": "15.jpg",
+      "animation": "15.mp4"
     },
     {
       "id": 16,
-      "file": "16.png",
-      "name": "Hooded Stag #16 — Cascade",
-      "rarity": "Common"
+      "name": "The Hooded 20 #16 \u2014 Street Outlaw",
+      "rarity": "Common",
+      "character": "Street Outlaw",
+      "image": "16.jpg",
+      "animation": "16.mp4"
     },
     {
       "id": 17,
-      "file": "17.png",
-      "name": "Hooded Stag #17 — Meadowlight",
-      "rarity": "Common"
+      "name": "The Hooded 20 #17 \u2014 Sunrise Ranger",
+      "rarity": "Rare",
+      "character": "Sunrise Ranger",
+      "image": "17.jpg",
+      "animation": "17.mp4"
     },
     {
       "id": 18,
-      "file": "18.png",
-      "name": "Hooded Stag #18 — Duskrunner",
-      "rarity": "Common"
+      "name": "The Hooded 20 #18 \u2014 Shadow Lord",
+      "rarity": "Legendary",
+      "character": "Shadow Lord",
+      "image": "18.jpg",
+      "animation": "18.mp4"
     },
     {
       "id": 19,
-      "file": "19.png",
-      "name": "Hooded Stag #19 — Rainveil",
-      "rarity": "Common"
+      "name": "The Hooded 20 #19 \u2014 Gilded Duelist",
+      "rarity": "Epic",
+      "character": "Gilded Duelist",
+      "image": "19.jpg",
+      "animation": "19.mp4"
     },
     {
       "id": 20,
-      "file": "20.png",
-      "name": "Hooded Stag #20 — Starfern",
-      "rarity": "Common"
+      "name": "The Hooded 20 #20 \u2014 Arena Champion",
+      "rarity": "Mythic",
+      "character": "Arena Champion",
+      "image": "20.jpg",
+      "animation": "20.mp4"
     }
   ]
 }

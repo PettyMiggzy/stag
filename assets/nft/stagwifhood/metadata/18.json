@@ -1,38 +1,24 @@
 {
-  "name": "Hooded Stag #18 — Duskrunner",
-  "symbol": "STAG",
-  "description": "Duskrunner, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
-  "image": "18.png",
-  "external_url": "https://stagwifhood.fun",
+  "name": "The Hooded 20 #18 \u2014 Shadow Lord",
+  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "18.jpg",
+  "animation_url": "18.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Common"
+      "value": "Legendary"
     },
     {
-      "trait_type": "Background",
-      "value": "Twilight Forest"
+      "trait_type": "Character",
+      "value": "Shadow Lord"
     },
     {
-      "trait_type": "Gear",
-      "value": "Lantern"
+      "trait_type": "Collection",
+      "value": "The Hooded 20"
     },
     {
-      "trait_type": "Cloak",
-      "value": "Twilight Green"
-    },
-    {
-      "trait_type": "Aura",
-      "value": "Dusk"
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
     }
-  ],
-  "properties": {
-    "files": [
-      {
-        "uri": "18.png",
-        "type": "image/png"
-      }
-    ],
-    "category": "image"
-  }
+  ]
 }

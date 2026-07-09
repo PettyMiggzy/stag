@@ -18,3 +18,6 @@ node_modules/
 
 # site hero video (small, intentional)
 !assets/img/hero.mp4
+
+# animated NFT collection (intentional)
+!assets/nft/stagwifhood/anim/*.mp4

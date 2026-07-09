@@ -1,38 +1,24 @@
 {
-  "name": "Hooded Stag #10 — Sunspear",
-  "symbol": "STAG",
-  "description": "Sunspear, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
-  "image": "10.png",
-  "external_url": "https://stagwifhood.fun",
+  "name": "The Hooded 20 #10 \u2014 Bone Reaper",
+  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "10.jpg",
+  "animation_url": "10.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Rare"
+      "value": "Epic"
     },
     {
-      "trait_type": "Background",
-      "value": "Golden Clearing"
+      "trait_type": "Character",
+      "value": "Bone Reaper"
     },
     {
-      "trait_type": "Gear",
-      "value": "Raised Bow"
+      "trait_type": "Collection",
+      "value": "The Hooded 20"
     },
     {
-      "trait_type": "Cloak",
-      "value": "Sunlit Green"
-    },
-    {
-      "trait_type": "Aura",
-      "value": "Sunset"
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
     }
-  ],
-  "properties": {
-    "files": [
-      {
-        "uri": "10.png",
-        "type": "image/png"
-      }
-    ],
-    "category": "image"
-  }
+  ]
 }

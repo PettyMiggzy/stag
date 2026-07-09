@@ -1,38 +1,24 @@
 {
-  "name": "Hooded Stag #19 — Rainveil",
-  "symbol": "STAG",
-  "description": "Rainveil, one of The Hooded 20 — the legendary stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. Holders get whitelist priority in every $STAG Prize Heist.",
-  "image": "19.png",
-  "external_url": "https://stagwifhood.fun",
+  "name": "The Hooded 20 #19 \u2014 Gilded Duelist",
+  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "19.jpg",
+  "animation_url": "19.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Common"
+      "value": "Epic"
     },
     {
-      "trait_type": "Background",
-      "value": "Rainy Forest"
+      "trait_type": "Character",
+      "value": "Gilded Duelist"
     },
     {
-      "trait_type": "Gear",
-      "value": "Oilcloak"
+      "trait_type": "Collection",
+      "value": "The Hooded 20"
     },
     {
-      "trait_type": "Cloak",
-      "value": "Wet Green"
-    },
-    {
-      "trait_type": "Aura",
-      "value": "Rain"
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
     }
-  ],
-  "properties": {
-    "files": [
-      {
-        "uri": "19.png",
-        "type": "image/png"
-      }
-    ],
-    "category": "image"
-  }
+  ]
 }
