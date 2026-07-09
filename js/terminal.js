@@ -116,22 +116,14 @@
       const supply = supplyRaw || 1;
       const supplyHuman = supplyRaw / Math.pow(10, dec);
 
-      // parallel: counters, holders, recent transfers (for the live feed),
-      // address meta, and the FULL transfer history via RPC (for clusters/bundles).
-      const fullP = (window.STAG && window.STAG.fetchAllTransfers)
-        ? window.STAG.fetchAllTransfers(ca).catch(() => null) : Promise.resolve(null);
-      const [counters, holdersRaw, xfers, addr, full] = await Promise.all([
+      // parallel: counters, holders, recent transfers (live feed), address meta
+      const [counters, holdersRaw, xfers, addr] = await Promise.all([
         jSafe(`${BASE}/api/v2/tokens/${ca}/counters`),
         pages(`/api/v2/tokens/${ca}/holders`, MAX_HOLDER_PAGES),
         pages(`/api/v2/tokens/${ca}/transfers`, 3),
         jSafe(`${BASE}/api/v2/addresses/${ca}`),
-        fullP,
       ]);
       if (myScan !== termSeq) return;
-      // window we actually analyzed for bundles: full history if RPC succeeded
-      const xferWindow = full
-        ? { count: full.transfers, complete: true }
-        : { count: xfers.length, complete: false };
 
       const holders = (holdersRaw || []).filter((h) => h.address && h.value)
         .sort((a, b) => Number(b.value) - Number(a.value)).slice(0, MAX_NODES);
@@ -147,10 +139,18 @@
       const ids = nodes.map((n) => n.addr);
       const byLc = {}; nodes.forEach((n) => (byLc[n.addr.toLowerCase()] = n));
 
-      // linked-wallet edges among top holders, from FULL history when available.
-      // Wallet↔wallet only (skip contracts/LP) so pool trades don't merge everyone.
-      const rawEdges = full ? full.edges
-        : (xfers || []).map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]);
+      // Targeted cluster query: direct transfers between the top holders only
+      // (from∈holders AND to∈holders). Fast + complete, unlike pulling a busy
+      // token's whole history. Wallet↔wallet only (contracts/LP excluded).
+      const eoaAddrs = nodes.filter((n) => !n.contract).map((n) => n.addr);
+      let rawEdges = [];
+      if (window.STAG && window.STAG.fetchHolderEdges) {
+        try { rawEdges = (await window.STAG.fetchHolderEdges(ca, eoaAddrs)).edges; } catch (_) { rawEdges = []; }
+      } else {
+        rawEdges = (xfers || []).map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]);
+      }
+      if (myScan !== termSeq) return;
+      const xferWindow = { count: rawEdges.length, complete: true };
       const edgeMap = {};
       rawEdges.forEach(([f, to]) => {
         const nf = byLc[f], nt = byLc[to];
@@ -293,9 +293,7 @@
     const sub = $('t-bundle-sub'), box = $('t-bundles');
     // transparency line: which transfer window did we actually analyze?
     const scope = win
-      ? `<p class="term-scope">${win.complete
-          ? `✓ Full transfer history analyzed (${fmtNum(win.count)} transfers, creation → now).`
-          : `Analyzed the ${fmtNum(win.count)} most recent transfers (token too active to reach creation client-side).`}</p>`
+      ? `<p class="term-scope">Analyzed every direct transfer between the top holders (${fmtNum(win.count)} wallet-to-wallet transfers, full history).</p>`
       : '';
     if (!groups.length) {
       sub.textContent = 'Clean';

@@ -137,18 +137,20 @@
       render(nodes, []);
       overlay.hidden = true; legend.hidden = false;
 
-      // ---- PHASE 2: load FULL transfer history (RPC getLogs) → paint clusters + links ----
-      // Wallet↔wallet direct transfers over the token's whole life are the real
-      // "connected wallet" signal. We skip contracts (LP/router) so trades through
-      // the pool don't falsely merge everyone into one cluster.
+      // ---- PHASE 2: targeted cluster detection ----
+      // We only need transfers BETWEEN top holders. eth_getLogs filtered by
+      // from∈holders AND to∈holders returns exactly those in ~6 calls, instead
+      // of pulling a busy token's entire history (which never finishes on phone).
+      // Contracts/LP are excluded so pool trades don't merge everyone.
       const byLc = {}; nodes.forEach((n) => (byLc[n.id.toLowerCase()] = n));
+      const eoaAddrs = nodes.filter((n) => !n.contract).map((n) => n.id);
       const finish = (edges, clusterCount, colorOf) => {
         nodes.forEach((n) => { n.color = n.contract ? CONTRACT : (colorOf[n.id] || SOLO); n.cluster = !!colorOf[n.id]; });
         $('s-clusters').textContent = clusterCount;
-        if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(600, 55), 600); }
+        if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(500, 40), 600); }
       };
-      const loader = (window.STAG && window.STAG.fetchAllTransfers)
-        ? window.STAG.fetchAllTransfers(ca).then((res) => res.edges)
+      const loader = (window.STAG && window.STAG.fetchHolderEdges)
+        ? window.STAG.fetchHolderEdges(ca, eoaAddrs).then((res) => res.edges)
         : pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xf) =>
             xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]));
       loader.then((raw) => {
@@ -239,8 +241,8 @@
       Graph = ForceGraph()(el)
         .backgroundColor('rgba(6,16,9,0)')
         .nodeLabel((n) => `<div style="font-family:Inter,sans-serif;font-size:12px;padding:2px 2px"><b>${n.short}</b>${n.contract ? ' · contract/LP' : n.whale ? ' · 🐋 whale' : ''}<br><span style="color:#e6b83f">${n.pct.toFixed(2)}%</span> of supply · ${n.balDisp}</div>`)
-        .linkColor(() => 'rgba(150,230,90,.16)')
-        .linkWidth((l) => Math.min(2.4, 0.4 + l.count * 0.35))
+        .linkColor(() => 'rgba(180,240,120,.5)')
+        .linkWidth((l) => Math.min(3, 1 + l.count * 0.4))
         .linkDirectionalParticles(0)
         .onNodeClick((n) => showInfo(n))
         .onBackgroundClick(() => hideInfo())

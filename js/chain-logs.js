@@ -44,13 +44,43 @@
   // getLogs for a block range: free RPC first. A LARGE range that fails is
   // thrown back so the caller splits it (on the free RPC). Only once a range
   // is small do we spend a paid call on it — bounding Alchemy usage.
-  async function getLogsRange(token, from, to) {
-    const params = [{ address: token, topics: [TRANSFER], fromBlock: hexy(from), toBlock: hexy(to) }];
+  async function getLogsRange(token, from, to, topics) {
+    const params = [{ address: token, topics: topics || [TRANSFER], fromBlock: hexy(from), toBlock: hexy(to) }];
     try { return await rpcAt(PUBLIC_RPC, 'eth_getLogs', params); }
     catch (e) {
       if (to - from <= SMALL_RANGE) return await rpcAt(PROXY, 'eth_getLogs', params);
       throw e;
     }
+  }
+
+  // Targeted clustering query: transfers where BOTH from and to are among the
+  // given holder addresses. eth_getLogs ANDs across topic positions and ORs
+  // within one, so [TRANSFER, holders, holders] == from∈holders AND to∈holders.
+  // This returns only the wallet↔wallet edges we actually need — tiny result
+  // set, ~6 calls for the whole chain, instead of pulling every transfer.
+  async function fetchHolderEdges(token, addresses, opts) {
+    token = token.toLowerCase();
+    opts = opts || {};
+    if (!addresses || !addresses.length) return { edges: [], latest: 0 };
+    const latest = opts.latest != null ? opts.latest : await getLatestBlock();
+    const padded = addresses.map((a) => '0x' + '0'.repeat(24) + a.toLowerCase().replace(/^0x/, ''));
+    const topics = [TRANSFER, padded, padded];
+    let ranges = [];
+    for (let b = 0; b <= latest; b += CHUNK) ranges.push([b, Math.min(latest, b + CHUNK - 1)]);
+    const edges = [];
+    const worker = async ([from, to]) => {
+      try {
+        const logs = await getLogsRange(token, from, to, topics);
+        for (const l of logs) {
+          if (!l.topics || l.topics.length < 3) continue;
+          edges.push([('0x' + l.topics[1].slice(26)).toLowerCase(), ('0x' + l.topics[2].slice(26)).toLowerCase()]);
+        }
+      } catch (e) {
+        if (to > from) { const mid = (from + to) >> 1; ranges.push([from, mid], [mid + 1, to]); }
+      }
+    };
+    while (ranges.length) { const batch = ranges.splice(0, CONCURRENCY); await Promise.all(batch.map(worker)); }
+    return { edges, latest };
   }
 
   async function getLatestBlock() { return parseInt(await rpc('eth_blockNumber', []), 16); }
@@ -129,5 +159,5 @@
     return { edges, transfers: edges.length, wallets: wallets.size, calls, fromCache };
   }
 
-  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, RPC: PUBLIC_RPC });
+  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, fetchHolderEdges, RPC: PUBLIC_RPC });
 })();
