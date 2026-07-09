@@ -190,16 +190,50 @@
     }
     return 'rgba(210,232,210,.95)';
   }
-  // Compressed size scale: whales stay biggest but never swallow the map,
-  // and the smallest holder is still a clearly tappable bubble.
-  const radius = (n) => Math.max(5, Math.min(38, Math.pow(Math.max(n.val, 0.01), 0.4) * 9));
+  // Bubbles are sized RELATIVE to the biggest holder in the set, so the map has
+  // clear hierarchy whether the token is whale-heavy or evenly spread. r is
+  // precomputed per node in render(); this just reads it.
+  const MIN_R = 7, MAX_R = 48;
+  const radius = (n) => n.r || MIN_R;
+
+  // O(n²) collision force (fine for ≤120 nodes) — packs bubbles so they just
+  // touch instead of scattering like dust. This is what makes it read as a
+  // bubble map and not a starfield.
+  function makeCollide(pad) {
+    let ns = [];
+    const force = (alpha) => {
+      for (let i = 0; i < ns.length; i++) {
+        const a = ns[i]; if (!isFinite(a.x)) continue;
+        const ra = (a.r || MIN_R) + pad;
+        for (let k = i + 1; k < ns.length; k++) {
+          const b = ns[k]; if (!isFinite(b.x)) continue;
+          const rb = (b.r || MIN_R) + pad;
+          let dx = b.x - a.x, dy = b.y - a.y;
+          let dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+          const min = ra + rb;
+          if (dist < min) {
+            const push = (min - dist) / dist * alpha * 0.7;
+            const fx = dx * push, fy = dy * push;
+            a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
+          }
+        }
+      }
+    };
+    force.initialize = (nodes) => { ns = nodes; };
+    return force;
+  }
 
   function render(nodes, edges) {
     const el = $('graph');
     const W = el.clientWidth || 900, H = el.clientHeight || 620;
-    // flag the whale (largest holder)
+    // flag the whale + size every bubble relative to the biggest holder
+    let maxVal = 0; nodes.forEach((n) => { if (n.val > maxVal) maxVal = n.val; });
+    maxVal = maxVal || 1;
     let maxPct = 0; nodes.forEach((n) => { if (n.pct > maxPct) maxPct = n.pct; });
-    nodes.forEach((n) => { n.whale = (n.pct === maxPct); });
+    nodes.forEach((n) => {
+      n.whale = (n.pct === maxPct);
+      n.r = MIN_R + (MAX_R - MIN_R) * Math.sqrt(n.val / maxVal);
+    });
 
     if (!Graph) {
       Graph = ForceGraph()(el)
@@ -227,9 +261,9 @@
             ctx.beginPath(); ctx.arc(n.x, n.y, r + 1.8 / scale, 0, 2 * Math.PI);
             ctx.strokeStyle = 'rgba(248,230,160,.95)'; ctx.lineWidth = 2 / scale; ctx.stroke();
           }
-          // % label on big bubbles
-          if (n.pct >= 2 && scale > 0.75) {
-            ctx.font = `700 ${Math.max(3.5, 10 / scale)}px Inter, sans-serif`;
+          // % label on the bigger bubbles (font in graph units so it fits inside)
+          if (r >= 15) {
+            ctx.font = `700 ${(r * 0.62).toFixed(1)}px Inter, sans-serif`;
             ctx.fillStyle = 'rgba(6,12,7,.92)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(n.pct.toFixed(n.pct >= 10 ? 0 : 1) + '%', n.x, n.y);
           }
@@ -240,11 +274,14 @@
         });
     }
     Graph.width(W).height(H).graphData({ nodes, links: edges });
-    Graph.d3VelocityDecay(0.3);
-    // push bigger bubbles apart harder so nothing stacks into one blob
-    if (Graph.d3Force('charge')) Graph.d3Force('charge').strength((n) => -(radius(n) * 4.2 + 14));
+    Graph.d3VelocityDecay(0.4);
+    // mild charge + collide packing → dense bubble cluster that fills the canvas
+    if (Graph.d3Force('charge')) Graph.d3Force('charge').strength((n) => -((n.r || MIN_R) * 1.1 + 6));
+    Graph.d3Force('collide', makeCollide(1.5));
+    if (Graph.d3Force('link')) Graph.d3Force('link').distance((l) => (l.source.r || MIN_R) + (l.target.r || MIN_R) + 6).strength(0.25);
     Graph.d3ReheatSimulation && Graph.d3ReheatSimulation();
-    setTimeout(() => Graph.zoomToFit(600, 55), 450);
+    setTimeout(() => Graph.zoomToFit(500, 40), 500);
+    setTimeout(() => Graph.zoomToFit(500, 40), 1500);
   }
 
   /* ---- click a bubble → info card (no more surprise link navigation) ---- */
