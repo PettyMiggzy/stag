@@ -47,13 +47,15 @@
     try {
       const d = await j(`${BASE}/api/v2/tokens?type=ERC-20`);
       const wrap = $('example-chips');
-      (d.items || []).slice(0, 6).forEach((t) => {
-        if (!t.address_hash) return;
+      const top = (d.items || []).filter((t) => t.address_hash).slice(0, 6);
+      top.forEach((t) => {
         const c = document.createElement('button');
         c.className = 'chip'; c.type = 'button'; c.textContent = t.symbol || short(t.address_hash);
         c.onclick = () => { input.value = t.address_hash; scan(t.address_hash); };
         wrap.appendChild(c);
       });
+      // auto-load the top token so bubbles show immediately (unless a CA is already typed)
+      if (top[0] && !input.value.trim()) { input.value = top[0].address_hash; scan(top[0].address_hash); }
     } catch (_) {}
   })();
 
@@ -71,9 +73,12 @@
     return { colorOf, clusterCount: multi.length, biggest: multi[0] ? multi[0].length : 0 };
   }
 
+  let busy = false;
   async function scan(caRaw) {
     const ca = (caRaw || '').trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(ca)) { setMsg('That doesn\'t look like a contract address (0x + 40 hex).', true); return; }
+    if (busy) return;                 // ignore re-entrant scans (overlay flicker)
+    busy = true;
     goBtn.disabled = true; goBtn.textContent = 'Mapping…';
     setMsg('Reading token…'); legend.hidden = true; statsEl.hidden = true;
     try {
@@ -130,35 +135,69 @@
     } catch (e) {
       setMsg('Couldn\'t load that token — check the address is a token on Robinhood Chain. (' + (e.message || 'error') + ')', true);
     } finally {
+      busy = false;
       goBtn.disabled = false; goBtn.textContent = 'Map it';
     }
   }
 
+  function lighten(c) {
+    if (c[0] === '#') {
+      let m = c.slice(1); if (m.length === 3) m = m.split('').map((x) => x + x).join('');
+      const n = parseInt(m, 16);
+      const r = Math.min(255, ((n >> 16) & 255) + 90), g = Math.min(255, ((n >> 8) & 255) + 90), b = Math.min(255, (n & 255) + 90);
+      return `rgb(${r},${g},${b})`;
+    }
+    return 'rgba(210,232,210,.95)';
+  }
+  const radius = (n) => Math.max(2.2, Math.sqrt(n.val) * 4.4);
+
   function render(nodes, edges) {
     const el = $('graph');
     const W = el.clientWidth || 900, H = el.clientHeight || 620;
+    // flag the whale (largest holder)
+    let maxPct = 0; nodes.forEach((n) => { if (n.pct > maxPct) maxPct = n.pct; });
+    nodes.forEach((n) => { n.whale = (n.pct === maxPct); });
+
     if (!Graph) {
       Graph = ForceGraph()(el)
         .backgroundColor('rgba(6,16,9,0)')
-        .nodeRelSize(5)
-        .nodeVal((n) => n.val)
-        .nodeColor((n) => n.color)
-        .nodeLabel((n) => `<div style="font-family:Inter;font-size:12px"><b>${n.short}</b> ${n.contract ? '· contract' : ''}<br>${n.pct.toFixed(2)}% of supply · ${n.balDisp}</div>`)
-        .linkColor(() => 'rgba(150,230,90,.22)')
-        .linkWidth((l) => Math.min(3, 0.5 + l.count * 0.4))
+        .nodeLabel((n) => `<div style="font-family:Inter,sans-serif;font-size:12px;padding:2px 2px"><b>${n.short}</b>${n.contract ? ' · contract/LP' : n.whale ? ' · 🐋 whale' : ''}<br><span style="color:#e6b83f">${n.pct.toFixed(2)}%</span> of supply · ${n.balDisp}</div>`)
+        .linkColor(() => 'rgba(150,230,90,.16)')
+        .linkWidth((l) => Math.min(2.4, 0.4 + l.count * 0.35))
+        .linkDirectionalParticles(0)
         .onNodeClick((n) => window.open(`${BASE}/address/${n.id}`, '_blank'))
-        .nodeCanvasObjectMode(() => 'after')
         .nodeCanvasObject((n, ctx, scale) => {
-          if (n.pct < 2 || scale < 1.1) return;
-          const label = n.pct.toFixed(n.pct >= 10 ? 0 : 1) + '%';
-          ctx.font = `700 ${Math.max(3, 11 / scale)}px Inter, sans-serif`;
-          ctx.fillStyle = 'rgba(6,14,8,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(label, n.x, n.y);
+          if (!isFinite(n.x) || !isFinite(n.y)) return; // positions not settled yet
+          const r = radius(n);
+          // glowing gradient orb
+          ctx.save();
+          ctx.shadowColor = n.color; ctx.shadowBlur = Math.min(22, r * 1.4);
+          const grad = ctx.createRadialGradient(n.x - r * 0.35, n.y - r * 0.35, r * 0.12, n.x, n.y, r);
+          grad.addColorStop(0, 'rgba(255,255,255,.95)');
+          grad.addColorStop(0.28, lighten(n.color));
+          grad.addColorStop(1, n.color);
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fillStyle = grad; ctx.fill();
+          ctx.restore();
+          // whale gold ring
+          if (n.whale) {
+            ctx.beginPath(); ctx.arc(n.x, n.y, r + 1.8 / scale, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(248,230,160,.95)'; ctx.lineWidth = 2 / scale; ctx.stroke();
+          }
+          // % label on big bubbles
+          if (n.pct >= 2 && scale > 0.75) {
+            ctx.font = `700 ${Math.max(3.5, 10 / scale)}px Inter, sans-serif`;
+            ctx.fillStyle = 'rgba(6,12,7,.92)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(n.pct.toFixed(n.pct >= 10 ? 0 : 1) + '%', n.x, n.y);
+          }
+        })
+        .nodePointerAreaPaint((n, color, ctx) => {
+          const r = radius(n); ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fill();
         });
     }
     Graph.width(W).height(H).graphData({ nodes, links: edges });
-    Graph.d3VelocityDecay(0.28);
-    setTimeout(() => Graph.zoomToFit(500, 40), 400);
+    Graph.d3VelocityDecay(0.3);
+    setTimeout(() => Graph.zoomToFit(600, 55), 450);
   }
 
   // responsive
