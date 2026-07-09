@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bubble Map · Robinhood Chain — STAGWIFHOOD</title>
+  <meta name="description" content="Robinhood Chain holder bubble map — paste any token contract to visualize holders as bubbles, linked by transfers, with connected-wallet cluster detection. Built by $STAG." />
+  <meta property="og:title" content="Bubble Map · Robinhood Chain" />
+  <meta property="og:description" content="Paste any Robinhood Chain token → see its holders as bubbles, linked by transfers, with cluster detection. By $STAG." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stagwifhood.fun/bubble" />
+  <meta property="og:image" content="https://stagwifhood.fun/assets/img/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://stagwifhood.fun/assets/img/og.png" />
+  <link rel="icon" type="image/png" href="assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg-layer bg-forest" aria-hidden="true"></div>
+  <div class="bg-layer bg-glow" aria-hidden="true"></div>
+  <div class="bg-rays" aria-hidden="true"></div>
+
+  <div class="topbar">
+    <a class="topbar-msg" href="nfts.html">🖼️ The Hooded 20 NFT mint — <strong>Coming Soon</strong> →</a>
+    <div class="topbar-links">
+      <a href="https://x.com/StagWifHood" target="_blank" rel="noopener" data-social="x">𝕏</a>
+      <a href="https://t.me/StagWifHood" target="_blank" rel="noopener" data-social="tg">TG</a>
+      <a class="btn btn-gold btn-xs" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </div>
+
+  <header class="nav scrolled" id="nav">
+    <a class="nav-brand" href="index.html" aria-label="STAGWIFHOOD home">
+      <img src="assets/img/mark.png" alt="" class="nav-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="index.html#legend">The Legend</a>
+      <a href="index.html#lottery">Prize Heist</a>
+      <a href="nfts.html">Mint</a>
+      <a href="stake.html">Stake</a>
+      <a href="bubble.html">Bubbles</a>
+    </nav>
+    <div class="nav-social">
+      <a class="ic" href="#" aria-label="X / Twitter" data-social="x">𝕏</a>
+      <a class="ic" href="#" aria-label="Telegram" data-social="tg">✈</a>
+      <a class="btn btn-gold btn-sm" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </header>
+
+  <main>
+  <section class="bubble-hero">
+    <div class="section-head">
+      <span class="eyebrow">Robinhood Chain · Bubble Map</span>
+      <h2>Holder Bubble Map</h2>
+      <p class="section-lead">Paste any Robinhood Chain token contract. See its holders as bubbles sized by
+        supply, linked by transfers, with <strong>connected-wallet clusters</strong> auto-detected. First on the chain — by $STAG.</p>
+    </div>
+
+    <form class="ca-input-row" id="ca-form">
+      <input id="ca-input" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Paste token contract (0x…)" aria-label="Token contract address" />
+      <button class="btn btn-gold" type="submit" id="ca-go">Map it</button>
+    </form>
+    <div class="chips" id="example-chips"><span class="chips-label">Try:</span></div>
+
+    <div class="bubble-stats" id="bubble-stats" hidden>
+      <div class="mstat"><span class="mstat-v" id="s-symbol">—</span><span class="mstat-l">Token</span></div>
+      <div class="mstat"><span class="mstat-v" id="s-holders">—</span><span class="mstat-l">Holders</span></div>
+      <div class="mstat"><span class="mstat-v" id="s-top10">—</span><span class="mstat-l">Top 10 %</span></div>
+      <div class="mstat"><span class="mstat-v" id="s-clusters">—</span><span class="mstat-l">Clusters</span></div>
+      <div class="mstat"><span class="mstat-v" id="s-nodes">—</span><span class="mstat-l">Mapped</span></div>
+    </div>
+
+    <div class="graph-wrap">
+      <div id="graph"></div>
+      <div class="graph-overlay" id="graph-overlay">
+        <div class="graph-msg" id="graph-msg">Paste a Robinhood Chain token address above to map its holders.</div>
+      </div>
+      <div class="graph-legend" id="graph-legend" hidden>
+        <span><i class="dot dot-cluster"></i> Connected cluster</span>
+        <span><i class="dot dot-solo"></i> Independent</span>
+        <span><i class="dot dot-contract"></i> Contract / LP</span>
+        <span class="legend-hint">bubble size = % of supply · drag to explore</span>
+      </div>
+    </div>
+    <p class="bubble-note">Clusters are inferred from recent on-chain transfers between top holders — a strong signal for
+      linked wallets, not proof. Data via Robinhood Chain Blockscout. Not financial advice.</p>
+  </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <img src="assets/img/mark.png" alt="" class="footer-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </div>
+    <p class="footer-tag">Holder bubble maps for Robinhood Chain · by $STAG</p>
+    <div class="footer-social">
+      <a href="index.html">Home</a>
+      <a href="#" data-social="x">X / Twitter</a>
+      <a href="#" data-social="tg">Telegram</a>
+    </div>
+    <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
+  </footer>
+
+  <script src="https://unpkg.com/force-graph@1.44.4/dist/force-graph.min.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/bubble.js"></script>
+</body>
+</html>
