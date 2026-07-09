@@ -87,7 +87,17 @@
         <span><i class="dot dot-cluster"></i> Connected cluster</span>
         <span><i class="dot dot-solo"></i> Independent</span>
         <span><i class="dot dot-contract"></i> Contract / LP</span>
-        <span class="legend-hint">bubble size = % of supply · drag to explore</span>
+        <span class="legend-hint">bubble size = % of supply · tap a bubble for details</span>
+      </div>
+      <div class="bubble-info" id="bubble-info" hidden>
+        <button class="bubble-info-x" id="bubble-info-x" aria-label="Close">×</button>
+        <div class="bi-tags" id="bi-tags"></div>
+        <div class="bi-addr-row"><code id="bi-addr">0x…</code><button class="bi-copy" id="bi-copy">Copy</button></div>
+        <div class="bi-stats">
+          <div class="bi-stat"><span class="bi-v" id="bi-pct">—</span><span class="bi-l">of supply</span></div>
+          <div class="bi-stat"><span class="bi-v" id="bi-bal">—</span><span class="bi-l">balance</span></div>
+        </div>
+        <a class="btn btn-gold btn-xs bi-explorer" id="bi-explorer" href="#" target="_blank" rel="noopener">View on Explorer ↗</a>
       </div>
     </div>
     <p class="bubble-note">Clusters are computed from the token's <strong>full transfer history</strong> (every direct

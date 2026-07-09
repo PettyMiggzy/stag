@@ -165,7 +165,9 @@
     }
     return 'rgba(210,232,210,.95)';
   }
-  const radius = (n) => Math.max(2.2, Math.sqrt(n.val) * 4.4);
+  // Compressed size scale: whales stay biggest but never swallow the map,
+  // and the smallest holder is still a clearly tappable bubble.
+  const radius = (n) => Math.max(5, Math.min(38, Math.pow(Math.max(n.val, 0.01), 0.4) * 9));
 
   function render(nodes, edges) {
     const el = $('graph');
@@ -181,7 +183,8 @@
         .linkColor(() => 'rgba(150,230,90,.16)')
         .linkWidth((l) => Math.min(2.4, 0.4 + l.count * 0.35))
         .linkDirectionalParticles(0)
-        .onNodeClick((n) => window.open(`${BASE}/address/${n.id}`, '_blank'))
+        .onNodeClick((n) => showInfo(n))
+        .onBackgroundClick(() => hideInfo())
         .nodeCanvasObject((n, ctx, scale) => {
           if (!isFinite(n.x) || !isFinite(n.y)) return; // positions not settled yet
           const r = radius(n);
@@ -213,11 +216,32 @@
     }
     Graph.width(W).height(H).graphData({ nodes, links: edges });
     Graph.d3VelocityDecay(0.3);
+    // push bigger bubbles apart harder so nothing stacks into one blob
+    if (Graph.d3Force('charge')) Graph.d3Force('charge').strength((n) => -(radius(n) * 4.2 + 14));
+    Graph.d3ReheatSimulation && Graph.d3ReheatSimulation();
     setTimeout(() => Graph.zoomToFit(600, 55), 450);
   }
+
+  /* ---- click a bubble → info card (no more surprise link navigation) ---- */
+  function showInfo(n) {
+    const box = $('bubble-info'); if (!box) { window.open(`${BASE}/address/${n.id}`, '_blank'); return; }
+    const tag = n.contract ? '<span class="bi-tag ct">Contract / LP</span>'
+      : n.whale ? '<span class="bi-tag whale">🐋 Whale</span>'
+      : n.cluster ? '<span class="bi-tag cl">Linked cluster</span>'
+      : '<span class="bi-tag">Independent</span>';
+    $('bi-tags').innerHTML = tag;
+    $('bi-addr').textContent = n.short;
+    $('bi-pct').textContent = n.pct.toFixed(2) + '%';
+    $('bi-bal').textContent = n.balDisp;
+    const cp = $('bi-copy'); cp.onclick = () => navigator.clipboard?.writeText(n.id).then(() => { cp.textContent = 'Copied'; setTimeout(() => (cp.textContent = 'Copy'), 1200); });
+    $('bi-explorer').href = `${BASE}/address/${n.id}`;
+    box.hidden = false;
+  }
+  function hideInfo() { const box = $('bubble-info'); if (box) box.hidden = true; }
 
   // responsive
   window.addEventListener('resize', () => { if (Graph) { const el = $('graph'); Graph.width(el.clientWidth).height(el.clientHeight); } });
 
   form.addEventListener('submit', (e) => { e.preventDefault(); scan(input.value); });
+  const infoX = $('bubble-info-x'); if (infoX) infoX.addEventListener('click', hideInfo);
 })();
