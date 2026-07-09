@@ -20,7 +20,7 @@
 
     // Robinhood Chain (Arbitrum-Orbit L2). Native gas token = ETH per docs.robinhood.com/chain.
     chain: {
-      chainId: '0x1237',     // 4663 mainnet  (testnet 46630 => '0xB616')
+      chainId: '0x1237',     // 4663 mainnet  (testnet 46630 => '0xB626')
       chainName: 'Robinhood Chain',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
       rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
