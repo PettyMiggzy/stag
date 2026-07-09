@@ -14,7 +14,9 @@
    ============================================================ */
 (function () {
   'use strict';
-  const RPC = 'https://rpc.mainnet.chain.robinhood.com';
+  const PUBLIC_RPC = 'https://rpc.mainnet.chain.robinhood.com';  // free, primary
+  const PROXY = '/api/rpc';       // paid-RPC fallback behind our serverless fn (key server-side)
+  const SMALL_RANGE = 60000;      // only ranges this small ever fall back to the paid RPC
   const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
   const ZERO = '0x0000000000000000000000000000000000000000';
   const CHUNK = 1_000_000;      // blocks per getLogs call (splits if a range is too dense)
@@ -24,8 +26,8 @@
 
   const hexy = (n) => '0x' + n.toString(16);
 
-  async function rpc(method, params) {
-    const r = await fetch(RPC, {
+  async function rpcAt(endpoint, method, params) {
+    const r = await fetch(endpoint, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
     });
@@ -33,6 +35,22 @@
     const j = await r.json();
     if (j.error) throw new Error(j.error.message || 'rpc error');
     return j.result;
+  }
+  // one-shot calls: free public RPC first, paid proxy only if it fails
+  async function rpc(method, params) {
+    try { return await rpcAt(PUBLIC_RPC, method, params); }
+    catch (e) { try { return await rpcAt(PROXY, method, params); } catch (_) { throw e; } }
+  }
+  // getLogs for a block range: free RPC first. A LARGE range that fails is
+  // thrown back so the caller splits it (on the free RPC). Only once a range
+  // is small do we spend a paid call on it — bounding Alchemy usage.
+  async function getLogsRange(token, from, to) {
+    const params = [{ address: token, topics: [TRANSFER], fromBlock: hexy(from), toBlock: hexy(to) }];
+    try { return await rpcAt(PUBLIC_RPC, 'eth_getLogs', params); }
+    catch (e) {
+      if (to - from <= SMALL_RANGE) return await rpcAt(PROXY, 'eth_getLogs', params);
+      throw e;
+    }
   }
 
   async function getLatestBlock() { return parseInt(await rpc('eth_blockNumber', []), 16); }
@@ -64,7 +82,7 @@
 
   // ---- fetch all Transfer edges in [fromBlock, latest] ----
   async function fetchRange(token, from, to, edges) {
-    const logs = await rpc('eth_getLogs', [{ address: token, topics: [TRANSFER], fromBlock: hexy(from), toBlock: hexy(to) }]);
+    const logs = await getLogsRange(token, from, to);
     for (const l of logs) {
       if (!l.topics || l.topics.length < 3) continue;
       const f = '0x' + l.topics[1].slice(26).toLowerCase();
@@ -111,5 +129,5 @@
     return { edges, transfers: edges.length, wallets: wallets.size, calls, fromCache };
   }
 
-  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, RPC });
+  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, RPC: PUBLIC_RPC });
 })();
