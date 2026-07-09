@@ -6,7 +6,7 @@
 
   /* ---- nav scrolled state ---- */
   const nav = document.getElementById('nav');
-  const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 24);
+  const onScroll = () => nav && nav.classList.toggle('scrolled', window.scrollY > 24);
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 
@@ -98,7 +98,6 @@
         card.addEventListener('mouseleave', stop);
         card.addEventListener('focus', play);
         card.addEventListener('blur', stop);
-        card.addEventListener('click', (e) => { if (vid) e.preventDefault(); }); // let hover-preview click not navigate on touch
       });
     }).catch(() => {});
   }
