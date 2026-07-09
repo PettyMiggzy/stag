@@ -90,8 +90,9 @@
         <span class="legend-hint">bubble size = % of supply · drag to explore</span>
       </div>
     </div>
-    <p class="bubble-note">Clusters are inferred from recent on-chain transfers between top holders — a strong signal for
-      linked wallets, not proof. Data via Robinhood Chain Blockscout. Not financial advice.</p>
+    <p class="bubble-note">Clusters are computed from the token's <strong>full transfer history</strong> (every direct
+      wallet-to-wallet transfer, creation → now) — a strong signal for linked wallets, not proof. Holders via Blockscout,
+      transfers via the Robinhood Chain RPC. Not financial advice.</p>
   </section>
   </main>
 
@@ -111,6 +112,7 @@
 
   <script src="js/lib/force-graph.min.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/chain-logs.js"></script>
   <script src="js/bubble.js"></script>
 </body>
 </html>

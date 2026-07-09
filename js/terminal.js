@@ -104,15 +104,21 @@
       const supply = supplyRaw || 1;
       const supplyHuman = supplyRaw / Math.pow(10, dec);
 
-      // parallel: counters, holders, transfers, address meta
-      const [counters, holdersRaw, xferRes, addr] = await Promise.all([
+      // parallel: counters, holders, recent transfers (for the live feed),
+      // address meta, and the FULL transfer history via RPC (for clusters/bundles).
+      const fullP = (window.STAG && window.STAG.fetchAllTransfers)
+        ? window.STAG.fetchAllTransfers(ca).catch(() => null) : Promise.resolve(null);
+      const [counters, holdersRaw, xfers, addr, full] = await Promise.all([
         jSafe(`${BASE}/api/v2/tokens/${ca}/counters`),
         pages(`/api/v2/tokens/${ca}/holders`, MAX_HOLDER_PAGES),
-        pagesFull(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES),
+        pages(`/api/v2/tokens/${ca}/transfers`, 3),
         jSafe(`${BASE}/api/v2/addresses/${ca}`),
+        fullP,
       ]);
-      const xfers = xferRes.items;
-      const xferWindow = { count: xfers.length, complete: xferRes.complete };
+      // window we actually analyzed for bundles: full history if RPC succeeded
+      const xferWindow = full
+        ? { count: full.transfers, complete: true }
+        : { count: xfers.length, complete: false };
 
       const holders = (holdersRaw || []).filter((h) => h.address && h.value)
         .sort((a, b) => Number(b.value) - Number(a.value)).slice(0, MAX_NODES);
@@ -125,18 +131,22 @@
         contract: !!h.address.is_contract,
         name: h.address.name || null,
       }));
-      const idSet = new Set(nodes.map((n) => n.addr));
+      const ids = nodes.map((n) => n.addr);
+      const byLc = {}; nodes.forEach((n) => (byLc[n.addr.toLowerCase()] = n));
 
-      // transfer edges among mapped holders → clusters
+      // linked-wallet edges among top holders, from FULL history when available.
+      // Wallet↔wallet only (skip contracts/LP) so pool trades don't merge everyone.
+      const rawEdges = full ? full.edges
+        : (xfers || []).map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]);
       const edgeMap = {};
-      (xfers || []).forEach((t) => {
-        const f = t.from && t.from.hash, to = t.to && t.to.hash;
-        if (!f || !to || f === to || !idSet.has(f) || !idSet.has(to)) return;
-        const k = f < to ? f + '|' + to : to + '|' + f;
+      rawEdges.forEach(([f, to]) => {
+        const nf = byLc[f], nt = byLc[to];
+        if (!nf || !nt || nf === nt || nf.contract || nt.contract) return;
+        const k = nf.addr < nt.addr ? nf.addr + '|' + nt.addr : nt.addr + '|' + nf.addr;
         edgeMap[k] = 1;
       });
       const edges = Object.keys(edgeMap).map((k) => { const [a, b] = k.split('|'); return { a, b }; });
-      const groups = clusters([...idSet], edges);
+      const groups = clusters(ids, edges);
       const pctById = {}; nodes.forEach((n) => (pctById[n.addr] = n.pct));
 
       renderHeader(ca, tok, addr, supplyHuman);

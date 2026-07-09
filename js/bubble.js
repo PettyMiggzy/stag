@@ -118,24 +118,35 @@
       render(nodes, []);
       overlay.hidden = true; legend.hidden = false;
 
-      // ---- PHASE 2: load transfers in the background → paint clusters + links ----
+      // ---- PHASE 2: load FULL transfer history (RPC getLogs) → paint clusters + links ----
+      // Wallet↔wallet direct transfers over the token's whole life are the real
+      // "connected wallet" signal. We skip contracts (LP/router) so trades through
+      // the pool don't falsely merge everyone into one cluster.
       const scanId = ++scanSeq;
-      pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xfers) => {
+      const byLc = {}; nodes.forEach((n) => (byLc[n.id.toLowerCase()] = n));
+      const finish = (edges, clusterCount, colorOf) => {
+        nodes.forEach((n) => { n.color = n.contract ? CONTRACT : (colorOf[n.id] || SOLO); n.cluster = !!colorOf[n.id]; });
+        $('s-clusters').textContent = clusterCount;
+        if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(600, 55), 600); }
+      };
+      const loader = (window.STAG && window.STAG.fetchAllTransfers)
+        ? window.STAG.fetchAllTransfers(ca).then((res) => res.edges)
+        : pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xf) =>
+            xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]));
+      loader.then((raw) => {
         if (scanId !== scanSeq) return; // a newer scan started — drop stale result
         const edgeMap = {};
-        xfers.forEach((t) => {
-          const f = t.from && t.from.hash, to = t.to && t.to.hash;
-          if (!f || !to || f === to || !nodeMap[f] || !nodeMap[to]) return;
-          const k = f < to ? f + '|' + to : to + '|' + f;
+        raw.forEach(([f, to]) => {
+          const nf = byLc[f], nt = byLc[to];
+          if (!nf || !nt || nf === nt || nf.contract || nt.contract) return;
+          const a = nf.id, b = nt.id, k = a < b ? a + '|' + b : b + '|' + a;
           edgeMap[k] = (edgeMap[k] || 0) + 1;
         });
         const edges = Object.entries(edgeMap).map(([k, count]) => {
           const [source, target] = k.split('|'); return { source, target, count };
         });
         const { colorOf, clusterCount } = clusters(nodes, edges);
-        nodes.forEach((n) => { n.color = n.contract ? CONTRACT : (colorOf[n.id] || SOLO); n.cluster = !!colorOf[n.id]; });
-        $('s-clusters').textContent = clusterCount;
-        if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(600, 55), 600); }
+        finish(edges, clusterCount, colorOf);
       }).catch(() => { $('s-clusters').textContent = '0'; });
     } catch (e) {
       setMsg('Couldn\'t load that token — check the address is a token on Robinhood Chain. (' + (e.message || 'error') + ')', true);
