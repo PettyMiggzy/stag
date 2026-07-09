@@ -199,7 +199,7 @@
       navigator.clipboard?.writeText(ca).then(() => { const b = $('t-copy'); b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1200); });
     };
     $('t-explorer').href = `${BASE}/token/${ca}`;
-    $('t-bubble').href = `/bubble?ca=${ca}`;
+    const bl = $('t-bubble'); if (bl) bl.href = `/bubble?ca=${ca}`;
     const logo = $('t-logo');
     if (tok.icon_url) { logo.src = tok.icon_url; logo.onerror = () => (logo.src = 'assets/img/mark.png'); }
     else logo.src = 'assets/img/mark.png';
