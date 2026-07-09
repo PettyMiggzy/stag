@@ -102,7 +102,7 @@ em{color:var(--gold-lite);font-style:italic}
 }
 .nav-brand{display:flex;align-items:center;gap:.6rem;font-weight:800}
 .nav-mark,.emblem-wrap.nav-mark{width:38px;height:38px;border-radius:50%}
-.nav-mark{object-fit:cover;box-shadow:0 0 0 1.5px var(--gold),0 0 18px -4px var(--gold)}
+.nav-mark{object-fit:cover;box-shadow:0 0 0 1.5px rgba(150,230,90,.6),0 0 16px -3px rgba(150,230,90,.7)}
 .nav-brand-text{font-family:'Cinzel',serif;font-weight:900;letter-spacing:.06em;font-size:1.05rem}
 .nav-links{display:flex;gap:1.4rem;margin-left:auto;font-size:.95rem;font-weight:500}
 .nav-links a{color:var(--muted);transition:color .2s;position:relative}
@@ -295,7 +295,7 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
 /* ---------- footer ---------- */
 .footer{max-width:var(--maxw);margin:0 auto;padding:4rem clamp(1rem,4vw,2.5rem);text-align:center;border-top:1px solid var(--line)}
 .footer-brand{display:inline-flex;align-items:center;gap:.6rem;margin-bottom:1rem}
-.footer-mark{width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1.5px var(--gold)}
+.footer-mark{width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(150,230,90,.6)}
 .footer-tag{color:var(--gold-lite);font-family:'Cinzel',serif;font-size:1.05rem;margin-bottom:1.2rem}
 .footer-social{display:flex;justify-content:center;gap:1.5rem;margin-bottom:1.6rem}
 .footer-social a{color:var(--muted);font-weight:600;transition:.2s;border-bottom:1px solid transparent}
