@@ -98,18 +98,19 @@
     return Object.values(groups).filter((g) => g.length > 1).sort((a, b) => b.length - a.length);
   }
 
-  let feedTimer = null, currentCA = null, busy = false;
+  let feedTimer = null, currentCA = null, termSeq = 0;
 
   async function scan(caRaw) {
     const ca = (caRaw || '').trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(ca)) { setEmpty('That doesn\'t look like a contract address (0x + 40 hex).', true); return; }
-    if (busy) return;
-    busy = true; currentCA = ca;
+    // each scan supersedes any in-flight one so tapping a new token always switches
+    const myScan = ++termSeq; currentCA = ca;
     if (feedTimer) { clearInterval(feedTimer); feedTimer = null; }
     goBtn.disabled = true; goBtn.textContent = 'Scanning…';
     setEmpty('Reading token…');
     try {
       const tok = await j(`${BASE}/api/v2/tokens/${ca}`);
+      if (myScan !== termSeq) return;
       const dec = Number(tok.decimals || 18);
       const supplyRaw = Number(tok.total_supply || 0);
       const supply = supplyRaw || 1;
@@ -126,6 +127,7 @@
         jSafe(`${BASE}/api/v2/addresses/${ca}`),
         fullP,
       ]);
+      if (myScan !== termSeq) return;
       // window we actually analyzed for bundles: full history if RPC succeeded
       const xferWindow = full
         ? { count: full.transfers, complete: true }
@@ -178,12 +180,13 @@
         if (nx && nx.items) renderFeed(nx.items, dec, ca);
       }, FEED_MS);
     } catch (e) {
+      if (myScan !== termSeq) return;   // superseded — don't flash a stale error
       const m = e && e.message || '';
       if (e && e.notFound) setEmpty('That address isn\'t an ERC-20 token on Robinhood Chain — did you paste a wallet address instead of the token contract?', true);
       else if (/Failed to fetch|NetworkError|Load failed|429|5\d\d/i.test(m)) setEmpty('Robinhood Chain\'s explorer is busy — tap Scan to try again.', true);
       else setEmpty('Couldn\'t scan that token — tap Scan to retry. (' + (m || 'error') + ')', true);
     } finally {
-      busy = false; goBtn.disabled = false; goBtn.textContent = 'Scan';
+      if (myScan === termSeq) { goBtn.disabled = false; goBtn.textContent = 'Scan'; }
     }
   }
 

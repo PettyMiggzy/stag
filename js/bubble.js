@@ -90,20 +90,23 @@
     return { colorOf, clusterCount: multi.length, biggest: multi[0] ? multi[0].length : 0 };
   }
 
-  let busy = false;
   async function scan(caRaw) {
     const ca = (caRaw || '').trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(ca)) { setMsg('That doesn\'t look like a contract address (0x + 40 hex).', true); return; }
-    if (busy) return;                 // ignore re-entrant scans (overlay flicker)
-    busy = true;
+    // Each scan supersedes any in-flight one (so tapping a new token/chip always
+    // switches, even while another is still loading). Stale scans bail on await.
+    const myScan = ++scanSeq;
+    hideInfo();
     goBtn.disabled = true; goBtn.textContent = 'Mapping…';
     setMsg('Reading token…'); legend.hidden = true; statsEl.hidden = true;
     try {
       const tok = await j(`${BASE}/api/v2/tokens/${ca}`);
+      if (myScan !== scanSeq) return;
       const dec = Number(tok.decimals || 18);
       const supply = Number(tok.total_supply || 0) || 1;
       setMsg('Loading holders…');
       let holders = await pages(`/api/v2/tokens/${ca}/holders`, MAX_HOLDER_PAGES);
+      if (myScan !== scanSeq) return;
       holders = holders.filter((h) => h.address && h.value)
         .sort((a, b) => (Number(b.value) - Number(a.value))).slice(0, MAX_NODES);
       if (!holders.length) { setMsg('No holders found for that token.', true); return; }
@@ -138,7 +141,6 @@
       // Wallet↔wallet direct transfers over the token's whole life are the real
       // "connected wallet" signal. We skip contracts (LP/router) so trades through
       // the pool don't falsely merge everyone into one cluster.
-      const scanId = ++scanSeq;
       const byLc = {}; nodes.forEach((n) => (byLc[n.id.toLowerCase()] = n));
       const finish = (edges, clusterCount, colorOf) => {
         nodes.forEach((n) => { n.color = n.contract ? CONTRACT : (colorOf[n.id] || SOLO); n.cluster = !!colorOf[n.id]; });
@@ -150,7 +152,7 @@
         : pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xf) =>
             xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]));
       loader.then((raw) => {
-        if (scanId !== scanSeq) return; // a newer scan started — drop stale result
+        if (myScan !== scanSeq) return; // a newer scan started — drop stale result
         const edgeMap = {};
         raw.forEach(([f, to]) => {
           const nf = byLc[f], nt = byLc[to];
@@ -165,6 +167,7 @@
         finish(edges, clusterCount, colorOf);
       }).catch(() => { $('s-clusters').textContent = '0'; });
     } catch (e) {
+      if (myScan !== scanSeq) return;   // a newer scan superseded this — don't flash its error
       const m = e && e.message || '';
       if (e && e.notFound) {
         setMsg('That address isn\'t an ERC-20 token on Robinhood Chain — did you paste a <b>wallet</b> address by mistake? Use the token <b>contract</b> address.', true);
@@ -174,8 +177,7 @@
         setMsg('Couldn\'t load that token — tap <b>Map it</b> to retry. (' + (m || 'error') + ')', true);
       }
     } finally {
-      busy = false;
-      goBtn.disabled = false; goBtn.textContent = 'Map it';
+      if (myScan === scanSeq) { goBtn.disabled = false; goBtn.textContent = 'Map it'; }
     }
   }
 
