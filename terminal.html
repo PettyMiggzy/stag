@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal · Robinhood Chain Scanner — STAGWIFHOOD ($STAG)</title>
+  <meta name="description" content="The first token terminal for Robinhood Chain. Paste any contract — price, holders, security scorecard, linked-wallet bundles, and a live transaction feed. Built by $STAG." />
+  <meta property="og:title" content="Terminal · Robinhood Chain Scanner" />
+  <meta property="og:description" content="First token terminal on Robinhood Chain — security scorecard, bundle detection, live tx feed. By $STAG." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stagwifhood.fun/terminal" />
+  <meta property="og:image" content="https://stagwifhood.fun/assets/img/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://stagwifhood.fun/assets/img/og.png" />
+  <link rel="icon" type="image/png" href="assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg-layer bg-forest" aria-hidden="true"></div>
+  <div class="bg-layer bg-glow" aria-hidden="true"></div>
+  <div class="bg-rays" aria-hidden="true"></div>
+
+  <!-- STICKY TOP BAR -->
+  <div class="topbar">
+    <a class="topbar-msg" href="/nfts">🖼️ The Hooded 20 NFT mint — <strong>Coming Soon</strong> →</a>
+    <div class="topbar-links">
+      <a href="https://x.com/StagWifHood" target="_blank" rel="noopener" data-social="x">𝕏</a>
+      <a href="https://t.me/StagWifHood" target="_blank" rel="noopener" data-social="tg">TG</a>
+      <a class="btn btn-gold btn-xs" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <header class="nav scrolled" id="nav">
+    <a class="nav-brand" href="/" aria-label="STAGWIFHOOD home">
+      <img src="assets/img/mark.png" alt="" class="nav-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/#legend">The Legend</a>
+      <a href="/#lottery">Prize Heist</a>
+      <a href="/nfts">Mint</a>
+      <a href="/stake">Stake</a>
+      <a href="/bubble">Bubbles</a>
+      <a href="/terminal">Terminal</a>
+      <a href="/#buy">How to Buy</a>
+    </nav>
+    <div class="nav-social">
+      <a class="ic" href="#" aria-label="X / Twitter" data-social="x">𝕏</a>
+      <a class="ic" href="#" aria-label="Telegram" data-social="tg">✈</a>
+      <a class="btn btn-gold btn-sm" href="https://fun.noxa.fi/robinhood" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </header>
+
+  <main>
+  <section class="term-hero">
+    <div class="section-head">
+      <span class="eyebrow">Robinhood Chain · Terminal</span>
+      <h2>The Stag Terminal</h2>
+      <p class="section-lead">Paste any Robinhood Chain token. Get price &amp; market cap, a <strong>security scorecard</strong>,
+        <strong>linked-wallet bundle</strong> detection, top holders, and a <strong>live transaction feed</strong> — all on-chain, no login.
+        First terminal on the chain, by $STAG.</p>
+    </div>
+
+    <form class="ca-input-row" id="term-form">
+      <input id="term-input" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Paste token contract (0x…)" aria-label="Token contract address" />
+      <button class="btn btn-gold" type="submit" id="term-go">Scan</button>
+    </form>
+    <div class="chips" id="term-chips"><span class="chips-label">Try:</span></div>
+
+    <!-- EMPTY / LOADING STATE -->
+    <div class="term-empty" id="term-empty">
+      <div class="term-empty-inner">
+        <span class="term-empty-ico">🏹</span>
+        <p id="term-empty-msg">Paste a Robinhood Chain token address to scan it — or tap a token above.</p>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="term-board" id="term-board" hidden>
+
+      <!-- TOKEN HEADER -->
+      <div class="term-head-card">
+        <img class="term-logo" id="t-logo" src="assets/img/mark.png" alt="" />
+        <div class="term-head-main">
+          <div class="term-head-title">
+            <h3 id="t-name">—</h3>
+            <span class="term-sym" id="t-sym">—</span>
+            <span class="term-badge" id="t-verified" hidden>✓ Verified</span>
+          </div>
+          <div class="term-head-ca">
+            <code id="t-ca">—</code>
+            <button class="term-copy" id="t-copy" type="button">Copy</button>
+            <a class="term-ext" id="t-explorer" href="#" target="_blank" rel="noopener">Explorer ↗</a>
+            <a class="term-ext" id="t-bubble" href="/bubble" target="_blank" rel="noopener">Bubble map ↗</a>
+          </div>
+        </div>
+        <div class="term-score" id="t-score-wrap">
+          <div class="term-score-ring" id="t-score-ring">
+            <span class="term-score-num" id="t-score">—</span>
+            <span class="term-score-lbl">Safety</span>
+          </div>
+          <span class="term-grade" id="t-grade">—</span>
+        </div>
+      </div>
+
+      <!-- METRIC ROW -->
+      <div class="term-metrics">
+        <div class="mstat"><span class="mstat-v" id="t-price">—</span><span class="mstat-l">Price</span></div>
+        <div class="mstat"><span class="mstat-v" id="t-mcap">—</span><span class="mstat-l">Market Cap</span></div>
+        <div class="mstat"><span class="mstat-v" id="t-holders">—</span><span class="mstat-l">Holders</span></div>
+        <div class="mstat"><span class="mstat-v" id="t-txns">—</span><span class="mstat-l">Transfers</span></div>
+        <div class="mstat"><span class="mstat-v" id="t-supply">—</span><span class="mstat-l">Supply</span></div>
+        <div class="mstat"><span class="mstat-v" id="t-age">—</span><span class="mstat-l">Age</span></div>
+      </div>
+
+      <div class="term-cols">
+        <!-- LEFT: security + bundles + holders -->
+        <div class="term-col">
+          <div class="term-panel">
+            <div class="term-panel-head"><h4>🛡️ Security Scorecard</h4><span class="term-panel-sub" id="t-dex-paid">DEX paid: —</span></div>
+            <ul class="term-checks" id="t-checks"><li class="term-check muted">Scanning…</li></ul>
+          </div>
+
+          <div class="term-panel">
+            <div class="term-panel-head"><h4>🧬 Bundles &amp; Linked Wallets</h4><span class="term-panel-sub" id="t-bundle-sub">—</span></div>
+            <div class="term-bundle" id="t-bundles"><p class="term-check muted">Analyzing transfers…</p></div>
+          </div>
+
+          <div class="term-panel">
+            <div class="term-panel-head"><h4>🐋 Top Holders</h4><span class="term-panel-sub" id="t-top10">Top 10: —</span></div>
+            <div class="term-holders" id="t-holders-list"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: live feed + trade -->
+        <div class="term-col">
+          <div class="term-panel">
+            <div class="term-panel-head"><h4><span class="live-dot"></span> Live Transactions</h4><span class="term-panel-sub" id="t-feed-sub">auto-refresh</span></div>
+            <div class="term-feed" id="t-feed"></div>
+          </div>
+
+          <div class="term-panel term-trade">
+            <div class="term-panel-head"><h4>⚡ Quick Trade</h4><span class="term-panel-sub">Robinhood Chain</span></div>
+            <div class="term-trade-tabs">
+              <button class="term-trade-tab active" data-side="buy" type="button">Buy</button>
+              <button class="term-trade-tab" data-side="sell" type="button">Sell</button>
+            </div>
+            <label class="stake-field">
+              <span class="stake-field-top"><span id="trade-amt-label">You pay</span><span class="stake-bal" id="trade-bal">Balance: —</span></span>
+              <span class="stake-input"><input id="trade-amt" type="text" inputmode="decimal" placeholder="0.0" disabled /><span class="stake-tok" id="trade-tok">ETH</span></span>
+            </label>
+            <button class="btn btn-gold btn-lg" id="trade-btn" disabled>Connect Wallet</button>
+            <p class="mint-status" id="trade-status"></p>
+            <p class="term-trade-note">Non-custodial swap on Robinhood Chain. We simulate the trade (balance + gas) <strong>before</strong> you sign — so your wallet won't flash a false “malicious” warning. Routing goes live with the $STAG pool.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="bubble-note">On-chain data via Robinhood Chain Blockscout. Security score is a heuristic from verification, holder
+      distribution and linked-wallet analysis — a signal, not a guarantee. Always DYOR. Not financial advice.</p>
+  </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <img src="assets/img/mark.png" alt="" class="footer-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </div>
+    <p class="footer-tag">The first token terminal on Robinhood Chain · by $STAG</p>
+    <div class="footer-social">
+      <a href="/">Home</a>
+      <a href="/bubble">Bubble Map</a>
+      <a href="#" data-social="x">X / Twitter</a>
+      <a href="#" data-social="tg">Telegram</a>
+    </div>
+    <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/terminal-wallet.js"></script>
+</body>
+</html>

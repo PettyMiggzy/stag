@@ -8,7 +8,7 @@
   'use strict';
   const BASE = 'https://robinhoodchain.blockscout.com';
   const MAX_HOLDER_PAGES = 3;    // ~150 holders
-  const MAX_XFER_PAGES = 6;      // ~300 recent transfers
+  const MAX_XFER_PAGES = 10;     // deeper cluster coverage (async, does not block first paint)
   const MAX_NODES = 120;
   const PALETTE = ['#e6b83f', '#8ce65a', '#5ad1e6', '#c98cff', '#ff8c8c', '#ffd24a', '#7affb0', '#ff9a5a', '#9ad0ff', '#ff6fae'];
   const SOLO = 'rgba(150,190,150,.55)';
@@ -18,6 +18,7 @@
   const form = $('ca-form'), input = $('ca-input'), goBtn = $('ca-go');
   const overlay = $('graph-overlay'), msg = $('graph-msg'), legend = $('graph-legend'), statsEl = $('bubble-stats');
   let Graph = null;
+  let scanSeq = 0;
 
   const short = (a) => a.slice(0, 6) + '…' + a.slice(-4);
   const fmtNum = (n) => {
@@ -101,37 +102,41 @@
           balDisp: fmtNum(bal / Math.pow(10, dec)),
           contract: !!h.address.is_contract,
           val: Math.max(0.06, pct),
+          color: !!h.address.is_contract ? CONTRACT : SOLO, cluster: false,
         };
         nodeMap[addr] = n; return n;
       });
 
-      setMsg('Loading transfers…');
-      const xfers = await pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES);
-      const edgeMap = {};
-      xfers.forEach((t) => {
-        const f = t.from && t.from.hash, to = t.to && t.to.hash;
-        if (!f || !to || f === to || !nodeMap[f] || !nodeMap[to]) return;
-        const k = f < to ? f + '|' + to : to + '|' + f;
-        edgeMap[k] = (edgeMap[k] || 0) + 1;
-      });
-      const edges = Object.entries(edgeMap).map(([k, count]) => {
-        const [source, target] = k.split('|'); return { source, target, count };
-      });
-
-      const { colorOf, clusterCount, biggest } = clusters(nodes, edges);
-      nodes.forEach((n) => { n.color = n.contract ? CONTRACT : (colorOf[n.id] || SOLO); n.cluster = !!colorOf[n.id]; });
-
-      // stats
+      // ---- PHASE 1: show bubbles immediately from holders (no waiting on transfers) ----
       const top10 = nodes.slice(0, 10).reduce((s, n) => s + n.pct, 0);
       $('s-symbol').textContent = tok.symbol || '?';
       $('s-holders').textContent = tok.holders_count ? fmtNum(tok.holders_count) : nodes.length;
       $('s-top10').textContent = top10.toFixed(1) + '%';
-      $('s-clusters').textContent = clusterCount;
+      $('s-clusters').textContent = '…';
       $('s-nodes').textContent = nodes.length;
       statsEl.hidden = false;
-
-      render(nodes, edges);
+      render(nodes, []);
       overlay.hidden = true; legend.hidden = false;
+
+      // ---- PHASE 2: load transfers in the background → paint clusters + links ----
+      const scanId = ++scanSeq;
+      pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xfers) => {
+        if (scanId !== scanSeq) return; // a newer scan started — drop stale result
+        const edgeMap = {};
+        xfers.forEach((t) => {
+          const f = t.from && t.from.hash, to = t.to && t.to.hash;
+          if (!f || !to || f === to || !nodeMap[f] || !nodeMap[to]) return;
+          const k = f < to ? f + '|' + to : to + '|' + f;
+          edgeMap[k] = (edgeMap[k] || 0) + 1;
+        });
+        const edges = Object.entries(edgeMap).map(([k, count]) => {
+          const [source, target] = k.split('|'); return { source, target, count };
+        });
+        const { colorOf, clusterCount } = clusters(nodes, edges);
+        nodes.forEach((n) => { n.color = n.contract ? CONTRACT : (colorOf[n.id] || SOLO); n.cluster = !!colorOf[n.id]; });
+        $('s-clusters').textContent = clusterCount;
+        if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(600, 55), 600); }
+      }).catch(() => { $('s-clusters').textContent = '0'; });
     } catch (e) {
       setMsg('Couldn\'t load that token — check the address is a token on Robinhood Chain. (' + (e.message || 'error') + ')', true);
     } finally {
