@@ -90,7 +90,8 @@
           <div class="supply-label"><span id="supply-count">0 / 20 minted</span><span>Robinhood Chain</span></div>
         </div>
 
-        <button class="btn btn-gold btn-lg mint-btn" disabled>Mint — Coming Soon</button>
+        <button id="mint-btn" class="btn btn-gold btn-lg mint-btn" disabled>Mint — Coming Soon</button>
+        <p class="mint-status" id="mint-status"></p>
         <p class="mint-note">Wallet connect + minting go live at launch on Robinhood Chain. Provably-fair random draw, no duplicates.</p>
         <a class="mint-notify" href="#" data-social="tg">🔔 Get notified in Telegram →</a>
       </div>
@@ -134,7 +135,9 @@
     <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
   <script src="js/main.js"></script>
   <script src="js/mint.js"></script>
+  <script src="js/mint-wallet.js"></script>
 </body>
 </html>

@@ -387,3 +387,7 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
   .mint-panel{grid-template-columns:1fr;max-width:420px}
   .mint-preview{max-width:320px;margin:0 auto}
 }
+.mint-status{text-align:center;font-size:.9rem;font-weight:600;min-height:1.2em;margin-top:-.3rem}
+.mint-status.ok{color:var(--green-lite)}
+.mint-status.err{color:#e88a6a}
+.mint-status a{color:var(--gold-lite);text-decoration:underline}
