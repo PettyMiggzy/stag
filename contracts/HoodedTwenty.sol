@@ -22,6 +22,9 @@ contract HoodedTwenty is ERC721Enumerable, Ownable {
     bool    public mintActive;         // owner flips on at go-live
     string  private _base;             // e.g. https://stagwifhood.fun/assets/nft/stagwifhood/metadata/
 
+    address public stakingPool;        // StagStaking — receives a cut of mint sales
+    uint256 public poolBps = 3000;     // 30% of each mint's ETH goes to the stake pool
+
     // gas-efficient random-without-duplicates (Fisher–Yates on demand)
     uint256 private _remaining = MAX_SUPPLY;
     mapping(uint256 => uint256) private _slot;
@@ -40,6 +43,11 @@ contract HoodedTwenty is ERC721Enumerable, Ownable {
         require(msg.value >= mintPrice, "fee too low");
         uint256 id = _draw();
         _safeMint(msg.sender, id);
+        // route 30% of the sale into the staking reward pool (real yield for stakers)
+        if (stakingPool != address(0) && msg.value > 0) {
+            uint256 share = (msg.value * poolBps) / 10000;
+            if (share > 0) { (bool ok, ) = stakingPool.call{value: share}(""); require(ok, "pool fwd failed"); }
+        }
     }
 
     // returns a token id in 1..MAX_SUPPLY, each exactly once, in random order
@@ -66,6 +74,8 @@ contract HoodedTwenty is ERC721Enumerable, Ownable {
     function setMintActive(bool v) external onlyOwner { mintActive = v; }
     function setMintPrice(uint256 v) external onlyOwner { mintPrice = v; }
     function setBaseURI(string calldata v) external onlyOwner { _base = v; }
+    function setStakingPool(address p) external onlyOwner { stakingPool = p; }
+    function setPoolBps(uint256 bps) external onlyOwner { require(bps <= 10000, "max 100%"); poolBps = bps; }
 
     function withdraw(address payable to) external onlyOwner {
         (bool ok, ) = to.call{value: address(this).balance}("");

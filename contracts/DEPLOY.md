@@ -33,18 +33,32 @@ Button auto-flips from "Coming Soon" to live minting once `contract` is set.
 
 ## 2. Staking (`StagStaking.sol`)
 
-**Deploy:**
-- Constructor args:
-  - `_stakingToken`: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49` ($STAG)
-  - `_rewardToken`: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49` ($STAG) — or a different reward token
+**Model (per the team spec):**
+- Stake **$STAG tokens and/or Hooded 20 NFTs**.
+- **Rewards are paid in ETH** (real yield). The pool is funded by **30% of NFT mint
+  sales** (auto-forwarded from the mint contract) + owner top-ups.
+- Rewards accrue on **weight = staked tokens × NFT multiplier**. NFTs boost your
+  multiplier; **staking only NFTs (no tokens) earns nothing.**
+- **Early unstake** (before the lock): **15% penalty** on the tokens pulled **and you
+  forfeit all unclaimed rewards.** After the lock (default **7 days**): no penalty.
 
-**Fund + turn on rewards:**
-1. `approve()` the staking contract on the reward token, then `fund(amount)` to load the reward pool.
-2. `setRewardRate(tokensPerSecond)` — pick a rate your funded pool sustains.
+**Deploy order (NFT first, they reference each other):**
+1. Deploy `HoodedTwenty` (section 1) → note its address.
+2. Deploy `StagStaking` with:
+   - `_stag`: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49` ($STAG)
+   - `_hood`: the HoodedTwenty address from step 1
+3. On the NFT contract call `setStakingPool(<staking address>)` so 30% of mint sales flow to it.
 
-Flexible: users `stake`, `unstake`, `claim`, or `exit` (claim + unstake all) anytime.
-Reward accounting is the Synthetix pattern. Since reward token == staking token, always
-keep the contract holding ≥ `totalStaked` + unclaimed rewards.
+**Configure (owner):**
+- `setNftBoostBps(tokenId, bps)` per NFT to set rarity boosts (e.g. Mythic 5000 = +50%,
+  Common 500 = +5%); or leave `defaultNftBoostBps` (+10% each).
+- `setLockPeriod(seconds)` / `setEarlyPenaltyBps(1500)` if you want to change the 7-day / 15% defaults.
+- Fund rewards: send ETH to the contract (NFT sales do this automatically; you can also
+  send directly), then `notifyRewardAmount(amountWei, durationSeconds)` to stream it out.
+  The contract refuses to distribute more ETH than it holds.
+
+Users: `stakeTokens` / `stakeNFT` / `unstakeTokens` / `unstakeNFT` / `claim`. `userInfo(addr)`
+returns amount, multiplier, pending ETH, staked NFTs and whether they're still locked.
 
 **Wire the site:** the stake UI (`/stake`) is currently cosmetic. Send me the deployed
 staking address and I'll add `js/stake-wallet.js` (connect → approve → stake/unstake/claim
