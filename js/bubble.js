@@ -30,7 +30,23 @@
   };
   const setMsg = (t, err) => { overlay.hidden = false; msg.innerHTML = t; msg.className = 'graph-msg' + (err ? ' err' : ''); };
 
-  async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+  // fetch JSON with retry on transient failures (network / 429 / 5xx). A 404
+  // (not a token) fails fast so we can give the user the right message.
+  async function j(url, tries) {
+    tries = tries || 3;
+    for (let i = 0; i < tries; i++) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) return r.json();
+        if (r.status === 404) { const e = new Error('HTTP 404'); e.notFound = true; throw e; }
+        if (r.status < 500 && r.status !== 429) throw new Error('HTTP ' + r.status);
+        // 429 / 5xx → retry
+      } catch (e) {
+        if (e.notFound || i === tries - 1) throw e;
+      }
+      await new Promise((res) => setTimeout(res, 400 * (i + 1)));
+    }
+  }
   async function pages(path, maxPages) {
     let out = [], next = null, n = 0;
     do {
@@ -149,7 +165,14 @@
         finish(edges, clusterCount, colorOf);
       }).catch(() => { $('s-clusters').textContent = '0'; });
     } catch (e) {
-      setMsg('Couldn\'t load that token — check the address is a token on Robinhood Chain. (' + (e.message || 'error') + ')', true);
+      const m = e && e.message || '';
+      if (e && e.notFound) {
+        setMsg('That address isn\'t an ERC-20 token on Robinhood Chain — did you paste a <b>wallet</b> address by mistake? Use the token <b>contract</b> address.', true);
+      } else if (/Failed to fetch|NetworkError|Load failed|429|5\d\d/i.test(m)) {
+        setMsg('Robinhood Chain\'s explorer is busy right now — tap <b>Map it</b> to try again.', true);
+      } else {
+        setMsg('Couldn\'t load that token — tap <b>Map it</b> to retry. (' + (m || 'error') + ')', true);
+      }
     } finally {
       busy = false;
       goBtn.disabled = false; goBtn.textContent = 'Map it';

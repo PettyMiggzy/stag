@@ -46,7 +46,18 @@
     emptyMsg.textContent = t; empty.classList.toggle('err', !!err);
   };
 
-  async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+  async function j(url, tries) {
+    tries = tries || 3;
+    for (let i = 0; i < tries; i++) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) return r.json();
+        if (r.status === 404) { const e = new Error('HTTP 404'); e.notFound = true; throw e; }
+        if (r.status < 500 && r.status !== 429) throw new Error('HTTP ' + r.status);
+      } catch (e) { if (e.notFound || i === tries - 1) throw e; }
+      await new Promise((res) => setTimeout(res, 400 * (i + 1)));
+    }
+  }
   async function jSafe(url) { try { return await j(url); } catch (_) { return null; } }
   async function pages(path, maxPages) { return (await pagesFull(path, maxPages)).items; }
   // pages until we run out (reached creation) OR hit the cap. `complete` tells us which.
@@ -167,7 +178,10 @@
         if (nx && nx.items) renderFeed(nx.items, dec, ca);
       }, FEED_MS);
     } catch (e) {
-      setEmpty('Couldn\'t scan that token — check the address is an ERC-20 on Robinhood Chain. (' + (e.message || 'error') + ')', true);
+      const m = e && e.message || '';
+      if (e && e.notFound) setEmpty('That address isn\'t an ERC-20 token on Robinhood Chain — did you paste a wallet address instead of the token contract?', true);
+      else if (/Failed to fetch|NetworkError|Load failed|429|5\d\d/i.test(m)) setEmpty('Robinhood Chain\'s explorer is busy — tap Scan to try again.', true);
+      else setEmpty('Couldn\'t scan that token — tap Scan to retry. (' + (m || 'error') + ')', true);
     } finally {
       busy = false; goBtn.disabled = false; goBtn.textContent = 'Scan';
     }
