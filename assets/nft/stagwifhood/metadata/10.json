@@ -1,8 +1,8 @@
 {
-  "name": "The Hooded 20 #10 \u2014 Bone Reaper",
-  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
-  "image": "10.jpg",
-  "animation_url": "10.mp4",
+  "name": "The Hooded 20 #10 — Bone Reaper",
+  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/10.jpg",
+  "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/10.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",

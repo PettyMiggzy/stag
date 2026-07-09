@@ -1,8 +1,8 @@
 {
-  "name": "The Hooded 20 #5 \u2014 Crimson Assassin",
-  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
-  "image": "5.jpg",
-  "animation_url": "5.mp4",
+  "name": "The Hooded 20 #5 — Crimson Assassin",
+  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/5.jpg",
+  "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/5.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",

@@ -1,8 +1,8 @@
 {
-  "name": "The Hooded 20 #11 \u2014 Golden Archer",
-  "description": "One of The Hooded 20 \u2014 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
-  "image": "11.jpg",
-  "animation_url": "11.mp4",
+  "name": "The Hooded 20 #11 — Golden Archer",
+  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/11.jpg",
+  "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/11.mp4",
   "attributes": [
     {
       "trait_type": "Rarity",
