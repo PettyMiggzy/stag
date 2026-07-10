@@ -58,6 +58,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
     uint256 public earlyPenaltyBps = 1500;             // 15% on early token unstake
     uint256 public defaultNftBoostBps = 1000;          // +10% per NFT unless set per-id
     address public penaltyRecipient;
+    address public operator;                           // may approve stakeable tokens (owner-appointed)
     mapping(uint256 => uint256) public nftBoostBps;    // tokenId => boost bps (owner sets by rarity)
     mapping(uint256 => address) public nftStaker;      // tokenId => who staked it
 
@@ -214,8 +215,12 @@ contract StagStaking is Ownable, ReentrancyGuard {
         emit RewardAdded(amount, duration);
     }
 
+    // owner OR the appointed operator may manage the stakeable-token list
+    modifier onlyManager() { require(msg.sender == owner() || (operator != address(0) && msg.sender == operator), "not manager"); _; }
+    function setOperator(address o) external onlyOwner { operator = o; }
+
     // enable/adjust a stakeable token's weight (10000 = 1×, 20000 = 2×). 0 = stop new stakes.
-    function setTokenWeight(address token, uint256 weightBps) external onlyOwner {
+    function setTokenWeight(address token, uint256 weightBps) external onlyManager {
         require(weightBps <= 50000, "max 5x");
         tokenWeightBps[token] = weightBps;
     }
