@@ -124,16 +124,22 @@ contract StagStaking is Ownable, ReentrancyGuard {
         uint256 w = tokenWeightBps[token];
         require(w > 0, "token not approved");
         require(amount > 0, "amount=0");
+        // credit what we ACTUALLY receive (defends against fee-on-transfer tokens crediting
+        // more than was deposited, which would let a staker siphon others' principal).
+        // Rebasing tokens still shouldn't be approved — only standard ERC-20s.
+        uint256 pre = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        uint256 received = IERC20(token).balanceOf(address(this)) - pre;
+        require(received > 0, "no tokens received");
         UserInfo storage u = _u[msg.sender];
         if (u.mult == 0) u.mult = BASE;
-        uint256 add = (amount * w) / 10000;
-        stakedOf[msg.sender][token] += amount;
+        uint256 add = (received * w) / 10000;
+        stakedOf[msg.sender][token] += received;
         _weighted[msg.sender][token] += add;
         u.baseWeight += add;
         u.stakedAt = block.timestamp;
         _resync(msg.sender);
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        emit StakedTokens(msg.sender, token, amount);
+        emit StakedTokens(msg.sender, token, received);
     }
 
     function unstakeTokens(address token, uint256 amount) public nonReentrant update(msg.sender) {
