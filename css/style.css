@@ -450,6 +450,9 @@ button.btn[disabled]{cursor:not-allowed;opacity:.75;filter:saturate(.7)}
   background:rgba(6,16,9,.72);border:1px solid var(--line);border-radius:12px;padding:.5rem .8rem;font-size:.76rem;color:var(--muted);backdrop-filter:blur(6px)}
 .graph-legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.3rem;vertical-align:middle}
 .dot-cluster{background:#e6b83f}.dot-solo{background:rgba(150,190,150,.7)}.dot-contract{background:#6fa8ff}
+.graph-legend .leg-line{display:inline-block;width:16px;height:0;margin-right:.3rem;vertical-align:middle;border-top-width:2px;border-top-style:solid}
+.leg-line.solid{border-top-color:rgba(140,230,90,.85)}
+.leg-line.dashed{border-top-style:dashed;border-top-color:rgba(230,184,63,.85)}
 .legend-hint{opacity:.7;font-style:italic}
 .bubble-note{text-align:center;color:var(--muted);font-size:.82rem;max-width:760px;margin:1.2rem auto 0;line-height:1.5}
 @media (max-width:720px){.bubble-stats{grid-template-columns:repeat(3,1fr)}#graph{height:56vh}}

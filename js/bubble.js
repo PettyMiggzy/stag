@@ -137,11 +137,17 @@
       render(nodes, []);
       overlay.hidden = true; legend.hidden = false;
 
-      // ---- PHASE 2: targeted cluster detection ----
-      // We only need transfers BETWEEN top holders. eth_getLogs filtered by
-      // from∈holders AND to∈holders returns exactly those in ~6 calls, instead
-      // of pulling a busy token's entire history (which never finishes on phone).
-      // Contracts/LP are excluded so pool trades don't merge everyone.
+      // ---- PHASE 2: enhanced connected-wallet detection (direct + shared-funder) ----
+      // Two kinds of links, both validated over a 45-run sim on real chain tokens:
+      //  1. DIRECT  — a top holder transferred the token straight to another top
+      //     holder (from∈holders AND to∈holders).
+      //  2. SHARED  — two+ holders were funded/emptied by the SAME outside wallet
+      //     that touches only a FEW holders (2..D). A low-degree common source is
+      //     a bundle funder; a high-degree one is an exchange/router (a hub) and is
+      //     excluded so it doesn't false-link everyone. D=5 was the sim's sweet spot
+      //     (14.9 wallets connected/token, minimal hub-leak). Contracts/LP & the
+      //     zero address are never counterparties.
+      const D = 5;
       const byLc = {}; nodes.forEach((n) => (byLc[n.id.toLowerCase()] = n));
       const eoaAddrs = nodes.filter((n) => !n.contract).map((n) => n.id);
       const finish = (edges, clusterCount, colorOf) => {
@@ -149,21 +155,44 @@
         $('s-clusters').textContent = clusterCount;
         if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(500, 40), 600); }
       };
-      const loader = (window.STAG && window.STAG.fetchHolderEdges)
-        ? window.STAG.fetchHolderEdges(ca, eoaAddrs).then((res) => res.edges)
-        : pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xf) =>
-            xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]));
+      const enhanced = window.STAG && window.STAG.fetchHolderTransfers;
+      const loader = enhanced
+        ? window.STAG.fetchHolderTransfers(ca, eoaAddrs).then((res) => res.edges)
+        : (window.STAG && window.STAG.fetchHolderEdges)
+          ? window.STAG.fetchHolderEdges(ca, eoaAddrs).then((res) => res.edges)
+          : pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xf) =>
+              xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]));
       loader.then((raw) => {
         if (myScan !== scanSeq) return; // a newer scan started — drop stale result
-        const edgeMap = {};
+        const ZERO = '0x0000000000000000000000000000000000000000';
+        const isHolder = (a) => { const n = byLc[a]; return n && !n.contract; };
+        const edgeMap = {};      // "a|b" -> {count, shared}
+        const addEdge = (a, b, shared) => {
+          if (a === b) return;
+          const k = a < b ? a + '|' + b : b + '|' + a;
+          const e = edgeMap[k] || (edgeMap[k] = { count: 0, shared: true });
+          e.count += 1; if (!shared) e.shared = false;   // any direct hit → solid
+        };
+        // 1. direct holder↔holder edges + collect shared counterparties
+        const cp = {};           // outside wallet -> Set(holder ids it touched)
         raw.forEach(([f, to]) => {
-          const nf = byLc[f], nt = byLc[to];
-          if (!nf || !nt || nf === nt || nf.contract || nt.contract) return;
-          const a = nf.id, b = nt.id, k = a < b ? a + '|' + b : b + '|' + a;
-          edgeMap[k] = (edgeMap[k] || 0) + 1;
+          if (f === ZERO || to === ZERO) return;
+          const hf = isHolder(f), ht = isHolder(to);
+          if (hf && ht) { addEdge(byLc[f].id, byLc[to].id, false); return; }
+          if (hf && !ht) { (cp[to] = cp[to] || new Set()).add(byLc[f].id); }
+          else if (ht && !hf) { (cp[f] = cp[f] || new Set()).add(byLc[to].id); }
         });
-        const edges = Object.entries(edgeMap).map(([k, count]) => {
-          const [source, target] = k.split('|'); return { source, target, count };
+        // 2. shared-funder links (only if we pulled the wider transfer set)
+        if (enhanced) {
+          for (const c in cp) {
+            const hs = [...cp[c]];
+            if (hs.length >= 2 && hs.length <= D) {   // low-degree source = common funder, not a hub
+              for (let i = 1; i < hs.length; i++) addEdge(hs[0], hs[i], true);
+            }
+          }
+        }
+        const edges = Object.entries(edgeMap).map(([k, v]) => {
+          const [source, target] = k.split('|'); return { source, target, count: v.count, shared: v.shared };
         });
         const { colorOf, clusterCount } = clusters(nodes, edges);
         finish(edges, clusterCount, colorOf);
@@ -241,8 +270,9 @@
       Graph = ForceGraph()(el)
         .backgroundColor('rgba(6,16,9,0)')
         .nodeLabel((n) => `<div style="font-family:Inter,sans-serif;font-size:12px;padding:2px 2px"><b>${n.short}</b>${n.contract ? ' · contract/LP' : n.whale ? ' · 🐋 whale' : ''}<br><span style="color:#e6b83f">${n.pct.toFixed(2)}%</span> of supply · ${n.balDisp}</div>`)
-        .linkColor(() => 'rgba(180,240,120,.5)')
-        .linkWidth((l) => Math.min(3, 1 + l.count * 0.4))
+        .linkColor((l) => l.shared ? 'rgba(230,184,63,.42)' : 'rgba(140,230,90,.6)')
+        .linkLineDash((l) => l.shared ? [3, 3] : null)
+        .linkWidth((l) => l.shared ? 1 : Math.min(3, 1.2 + l.count * 0.4))
         .linkDirectionalParticles(0)
         .onNodeClick((n) => showInfo(n))
         .onBackgroundClick(() => hideInfo())

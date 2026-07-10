@@ -83,6 +83,41 @@
     return { edges, latest };
   }
 
+  // Wider clustering query for the shared-funder algorithm: EVERY transfer that
+  // TOUCHES a top holder — from∈holders (any recipient) OR to∈holders (any
+  // sender). Two getLogs passes ([TRANSFER, holders] and [TRANSFER, null,
+  // holders]). Returns raw [from,to] pairs including non-holder counterparties,
+  // so bubble.js can detect wallets funded by a shared source (bundles) even
+  // when they never transferred to each other directly. Still targeted (topic-
+  // filtered), so it stays ~12 calls for the whole chain, not a full history pull.
+  async function fetchHolderTransfers(token, addresses, opts) {
+    token = token.toLowerCase();
+    opts = opts || {};
+    if (!addresses || !addresses.length) return { edges: [], latest: 0 };
+    const latest = opts.latest != null ? opts.latest : await getLatestBlock();
+    const padded = addresses.map((a) => '0x' + '0'.repeat(24) + a.toLowerCase().replace(/^0x/, ''));
+    const edges = [];
+    const run = async (topics) => {
+      let ranges = [];
+      for (let b = 0; b <= latest; b += CHUNK) ranges.push([b, Math.min(latest, b + CHUNK - 1)]);
+      const worker = async ([from, to]) => {
+        try {
+          const logs = await getLogsRange(token, from, to, topics);
+          for (const l of logs) {
+            if (!l.topics || l.topics.length < 3) continue;
+            edges.push([('0x' + l.topics[1].slice(26)).toLowerCase(), ('0x' + l.topics[2].slice(26)).toLowerCase()]);
+          }
+        } catch (e) {
+          if (to > from) { const mid = (from + to) >> 1; ranges.push([from, mid], [mid + 1, to]); }
+        }
+      };
+      while (ranges.length) { const batch = ranges.splice(0, CONCURRENCY); await Promise.all(batch.map(worker)); }
+    };
+    // from-only and to-only, in parallel
+    await Promise.all([run([TRANSFER, padded]), run([TRANSFER, null, padded])]);
+    return { edges, latest };
+  }
+
   async function getLatestBlock() { return parseInt(await rpc('eth_blockNumber', []), 16); }
 
   // ---- localStorage cache (compact: addresses stored without the 0x) ----
@@ -159,5 +194,5 @@
     return { edges, transfers: edges.length, wallets: wallets.size, calls, fromCache };
   }
 
-  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, fetchHolderEdges, RPC: PUBLIC_RPC });
+  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, fetchHolderEdges, fetchHolderTransfers, RPC: PUBLIC_RPC });
 })();
