@@ -107,6 +107,8 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable {
     function setLocker(address v) external onlyOwner { locker = v; }
     function setSplitter(address payable v) external onlyOwner { splitter = v; }
     function setRoyalty(address receiver, uint96 bps) external onlyOwner { _setDefaultRoyalty(receiver, bps); }
+    // recover any ETH that got stuck here (e.g. a mint while splitter was unset) — normally 0
+    function withdrawETH(address to) external onlyOwner { (bool ok, ) = payable(to).call{value: address(this).balance}(""); require(ok, "eth send failed"); }
 
     /* ---------------- plumbing ---------------- */
     function supportsInterface(bytes4 id) public view override(ERC721Enumerable, ERC2981) returns (bool) {

@@ -195,11 +195,15 @@ contract StagStaking is Ownable, ReentrancyGuard {
         u.mult = u.mult > boost ? u.mult - boost : BASE;
         if (early) { uint256 f = u.rewards; u.rewards = 0; reserved = reserved >= f ? reserved - f : 0; } // forfeit
         _resync(msg.sender);
-        hood.unlock(tokenId);
+        try hood.unlock(tokenId) {} catch {}   // clean up staking state even if locker was migrated
         emit UnstakedNFT(msg.sender, tokenId, early);
     }
 
     function claim() public nonReentrant update(msg.sender) {
+        // rewards are claimable only after the lock — otherwise you could claim, then
+        // early-unstake forfeiting nothing, defeating the "lose rewards if you exit early" rule.
+        // (Adding to your stake restarts the lock; see stakedAt.)
+        require(block.timestamp >= _u[msg.sender].stakedAt + lockPeriod, "locked");
         uint256 r = _u[msg.sender].rewards;
         if (r > 0) {
             _u[msg.sender].rewards = 0;
