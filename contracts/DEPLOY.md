@@ -17,12 +17,15 @@ and I'll flip the site's mint + stake pages live.
 - **Mint paid in native ETH.** Proceeds → RevenueSplitter → **60% to the staking pool,
   40% to your wallet.**
 - **Stakers earn ETH** (real yield) from that 60%. Owner streams it via `notifyRewardAmount`.
-- Stake **$STAG and/or Hooded 20 NFTs**. NFTs **boost** your reward weight (rarity-weighted).
-  **Staking only NFTs (no tokens) earns nothing.**
+- Stake **approved Robinhood-Chain tokens and/or Hooded 20 NFTs**. **$STAG counts 2×**;
+  other owner-approved tokens 1× (or whatever weight you set). NFTs **boost** your weight
+  (rarity-weighted). **Staking only NFTs (no tokens) earns nothing.**
+  ⚠️ Tokens are an owner-approved list on purpose — accepting *any* token by raw amount is a
+  drain vector. You enable the ones you want to support.
 - **NFT staking is lock-in-place** — the NFT stays in your wallet, just can't be sold while
   staked (no custody, no `setApprovalForAll`).
-- **Early unstake** (before the 7-day lock, tunable): **15% penalty** on tokens pulled +
-  **forfeit unclaimed rewards.**
+- **Early unstake** (before the 7-day lock, tunable): tokens → **15% penalty + forfeit
+  rewards**; NFTs → **forfeit rewards** (no penalty, you keep the NFT).
 
 ---
 
@@ -49,6 +52,9 @@ and I'll flip the site's mint + stake pages live.
 - `setMintPrice(...)`, `setMaxPerWallet(2)`, then `setMintActive(true)` at go-live
 
 **5. Configure staking (as owner):**
+- $STAG is already 2× from the constructor. To let people stake other Robinhood-Chain
+  tokens, `setTokenWeight(token, 10000)` (1×) for each one you approve — set the weight to
+  reflect its decimals/value; only approve tokens you trust.
 - Set rarity boosts: `setNftBoostBps(tokenId, bps)` per NFT (e.g. Mythic `5000` = +50% …
   Common `500` = +5%), or leave `defaultNftBoostBps` (+10% each).
 - Optionally tune `setLockPeriod(seconds)` / `setEarlyPenaltyBps(1500)`.
@@ -60,7 +66,7 @@ and I'll flip the site's mint + stake pages live.
 
 ## Users
 - **Mint:** `mint()` payable (≤ maxPerWallet).
-- **Token staking:** approve exact amount → `stakeTokens` / `unstakeTokens` / `claim`.
+- **Token staking:** approve exact amount → `stakeTokens(token, amount)` / `unstakeTokens(token, amount)` / `claim`.
 - **NFT staking:** `stakeNFT(id)` / `unstakeNFT(id)` (locks in place — NFT never leaves wallet).
 - `userInfo(addr)` → amount, multiplier, pending ETH, staked NFTs, locked?
 

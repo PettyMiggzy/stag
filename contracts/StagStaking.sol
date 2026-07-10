@@ -1,36 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/*  STAGWIFHOOD staking (Robinhood Chain) — v2
+/*  STAGWIFHOOD staking (Robinhood Chain) — v3
  *
- *  Model (per project spec):
- *   • Stake $STAG tokens and/or The Hooded 20 NFTs.
- *   • Rewards are paid in ETH (real yield). The pool is funded by 60% of NFT
- *     mint sales (via RevenueSplitter → this contract) plus owner top-ups.
- *   • Rewards accrue on your WEIGHT = stakedTokens × nftMultiplier.
- *     Staking NFTs boosts your multiplier (by rarity, owner-configurable).
- *     Staking ONLY NFTs (zero tokens) = weight 0 = no rewards. ✓
- *   • NFT staking is LOCK-IN-PLACE — the NFT never leaves your wallet (we call
- *     the NFT's lock()/unlock(); no custody, no setApprovalForAll).
- *   • Early unstake (before lockPeriod): 15% penalty on the tokens unstaked
- *     AND you forfeit all unclaimed rewards. After the lock: no penalty.
+ *  Model:
+ *   • Stake approved Robinhood-Chain tokens AND/OR Hooded 20 NFTs.
+ *   • Each approved token has a weight; $STAG is 2× (weight 20000 bps) vs a
+ *     1× (10000 bps) baseline for other approved tokens.
+ *     ⚠️ Owner-APPROVED list on purpose: letting the contract accept ANY token
+ *     by raw amount is a drain vector (mint a quadrillion junk tokens → steal
+ *     the pool). Owner enables the tokens to support + sets each weight.
+ *   • Rewards paid in ETH (real yield), funded by 60% of NFT mint sales (via
+ *     RevenueSplitter → this contract) + owner top-ups.
+ *   • Reward WEIGHT = (Σ stakedAmount×tokenWeight) × nftMultiplier.
+ *     NFTs boost your multiplier (rarity, owner-set). Staking ONLY NFTs = weight 0
+ *     = no rewards.
+ *   • NFT staking is LOCK-IN-PLACE (NFT never leaves the wallet; we call the
+ *     NFT's lock()/unlock(); no custody, no setApprovalForAll).
+ *   • Early unstake (before the lock): tokens → 15% penalty + forfeit rewards;
+ *     NFTs → forfeit rewards (no penalty, you keep the NFT).
  *
- *  Reward accounting is the Synthetix notifyRewardAmount pattern, adapted to a
- *  weighted stake and native-ETH rewards, so payouts can never exceed funding.
- *
- *  ⚠️ Holds real funds — TEST on Robinhood Chain testnet (46630) and get a
- *  review before mainnet.
+ *  Synthetix notifyRewardAmount accounting so ETH payouts never exceed funding.
+ *  ⚠️ Holds real funds — test on testnet (46630), get a review before mainnet.
  */
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-// The lockable NFT (HoodedTwenty). NFT staking is LOCK-IN-PLACE: we call
-// lock()/unlock() — the NFT never leaves the holder's wallet, and we never
-// take custody or setApprovalForAll (the classic NFT-drain vector).
 interface IHoodLockable {
     function ownerOf(uint256 tokenId) external view returns (address);
     function lock(uint256 tokenId) external;
@@ -40,14 +38,16 @@ interface IHoodLockable {
 contract StagStaking is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    IERC20        public immutable stag;   // $STAG staking token
-    IHoodLockable public immutable hood;   // The Hooded 20 NFT (address(0) to disable NFT staking)
-    mapping(uint256 => address) public nftStaker;   // tokenId => who staked it
+    IHoodLockable public immutable hood;                 // Hooded 20 NFT (0 to disable NFT staking)
+    uint256 public constant BASE = 1e18;
 
-    uint256 public constant BASE = 1e18;              // multiplier base = 1.0x
+    // approved staking tokens → weight bps (10000 = 1×). 0 = not stakeable. $STAG = 20000 (2×).
+    mapping(address => uint256) public tokenWeightBps;
+    mapping(address => mapping(address => uint256)) public stakedOf;        // user => token => amount
+    mapping(address => mapping(address => uint256)) private _weighted;      // user => token => amount×weight/1e4 recorded at stake
 
-    // ---- ETH reward distribution (Synthetix-style) ----
-    uint256 public rewardRate;        // wei/sec
+    // ---- ETH reward distribution (Synthetix) ----
+    uint256 public rewardRate;         // wei/sec
     uint256 public periodFinish;
     uint256 public lastUpdateTime;
     uint256 public rewardPerWeightStored;
@@ -55,33 +55,34 @@ contract StagStaking is Ownable, ReentrancyGuard {
 
     // ---- policy (owner-tunable) ----
     uint256 public lockPeriod = 7 days;
-    uint256 public earlyPenaltyBps = 1500;            // 15%
-    uint256 public defaultNftBoostBps = 1000;         // +10% per NFT unless set per-id
-    address public penaltyRecipient;                  // where penalty $STAG goes (default owner)
-    mapping(uint256 => uint256) public nftBoostBps;   // tokenId => boost bps (owner sets by rarity)
+    uint256 public earlyPenaltyBps = 1500;             // 15% on early token unstake
+    uint256 public defaultNftBoostBps = 1000;          // +10% per NFT unless set per-id
+    address public penaltyRecipient;
+    mapping(uint256 => uint256) public nftBoostBps;    // tokenId => boost bps (owner sets by rarity)
+    mapping(uint256 => address) public nftStaker;      // tokenId => who staked it
 
     struct UserInfo {
-        uint256 amount;               // $STAG staked
-        uint256 mult;                 // BASE + sum of NFT boosts
-        uint256 weight;               // amount * mult / BASE
-        uint256 stakedAt;             // set when tokens are added (lock timer)
+        uint256 baseWeight;            // Σ amount×tokenWeight/1e4 across staked tokens
+        uint256 mult;                  // BASE + NFT boosts
+        uint256 weight;                // baseWeight × mult / BASE
+        uint256 stakedAt;             // reset on any stake (lock timer)
         uint256 rewardPerWeightPaid;
-        uint256 rewards;              // accrued ETH
-        uint256[] nfts;               // staked token ids
+        uint256 rewards;
+        uint256[] nfts;
     }
     mapping(address => UserInfo) private _u;
 
-    event StakedTokens(address indexed user, uint256 amount);
-    event UnstakedTokens(address indexed user, uint256 amount, uint256 penalty, bool early);
+    event StakedTokens(address indexed user, address indexed token, uint256 amount);
+    event UnstakedTokens(address indexed user, address indexed token, uint256 amount, uint256 penalty, bool early);
     event StakedNFT(address indexed user, uint256 tokenId);
-    event UnstakedNFT(address indexed user, uint256 tokenId);
+    event UnstakedNFT(address indexed user, uint256 tokenId, bool early);
     event Claimed(address indexed user, uint256 ethAmount);
     event RewardAdded(uint256 amount, uint256 duration);
 
     constructor(address _stag, address _hood) Ownable(msg.sender) {
-        stag = IERC20(_stag);
         hood = IHoodLockable(_hood);
         penaltyRecipient = msg.sender;
+        if (_stag != address(0)) tokenWeightBps[_stag] = 20000;   // $STAG = 2×
     }
 
     /* ---------------- reward math ---------------- */
@@ -96,7 +97,6 @@ contract StagStaking is Ownable, ReentrancyGuard {
         UserInfo storage u = _u[a];
         return (u.weight * (rewardPerWeight() - u.rewardPerWeightPaid)) / BASE + u.rewards;
     }
-
     modifier update(address a) {
         rewardPerWeightStored = rewardPerWeight();
         lastUpdateTime = lastTimeApplicable();
@@ -106,46 +106,54 @@ contract StagStaking is Ownable, ReentrancyGuard {
         }
         _;
     }
-
-    // recompute a user's weight after amount/mult change, keeping totalWeight in sync
     function _resync(address a) internal {
         UserInfo storage u = _u[a];
-        uint256 newW = (u.amount * u.mult) / BASE;
+        uint256 newW = (u.baseWeight * u.mult) / BASE;
         totalWeight = totalWeight - u.weight + newW;
         u.weight = newW;
     }
 
-    /* ---------------- staking ---------------- */
-    function stakeTokens(uint256 amount) external nonReentrant update(msg.sender) {
+    /* ---------------- token staking (multi-token, weighted) ---------------- */
+    function stakeTokens(address token, uint256 amount) external nonReentrant update(msg.sender) {
+        uint256 w = tokenWeightBps[token];
+        require(w > 0, "token not approved");
         require(amount > 0, "amount=0");
         UserInfo storage u = _u[msg.sender];
-        if (u.mult == 0) u.mult = BASE;      // first interaction
-        u.amount += amount;
-        u.stakedAt = block.timestamp;         // (re)start the lock on new tokens
+        if (u.mult == 0) u.mult = BASE;
+        uint256 add = (amount * w) / 10000;
+        stakedOf[msg.sender][token] += amount;
+        _weighted[msg.sender][token] += add;
+        u.baseWeight += add;
+        u.stakedAt = block.timestamp;
         _resync(msg.sender);
-        stag.safeTransferFrom(msg.sender, address(this), amount);
-        emit StakedTokens(msg.sender, amount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        emit StakedTokens(msg.sender, token, amount);
     }
 
-    function unstakeTokens(uint256 amount) public nonReentrant update(msg.sender) {
+    function unstakeTokens(address token, uint256 amount) public nonReentrant update(msg.sender) {
+        uint256 have = stakedOf[msg.sender][token];
+        require(amount > 0 && have >= amount, "bad amount");
         UserInfo storage u = _u[msg.sender];
-        require(amount > 0 && u.amount >= amount, "bad amount");
         bool early = block.timestamp < u.stakedAt + lockPeriod;
-        u.amount -= amount;
+
+        // reduce weight proportionally (robust to any weight change since staking)
+        uint256 wRemoved = (_weighted[msg.sender][token] * amount) / have;
+        _weighted[msg.sender][token] -= wRemoved;
+        u.baseWeight -= wRemoved;
+        stakedOf[msg.sender][token] = have - amount;
         _resync(msg.sender);
 
         uint256 penalty;
         if (early) {
             penalty = (amount * earlyPenaltyBps) / 10000;
-            u.rewards = 0;                    // forfeit all unclaimed rewards
-            if (penalty > 0) stag.safeTransfer(penaltyRecipient, penalty);
+            u.rewards = 0;                              // forfeit unclaimed rewards
+            if (penalty > 0) IERC20(token).safeTransfer(penaltyRecipient, penalty);
         }
-        stag.safeTransfer(msg.sender, amount - penalty);
-        emit UnstakedTokens(msg.sender, amount, penalty, early);
+        IERC20(token).safeTransfer(msg.sender, amount - penalty);
+        emit UnstakedTokens(msg.sender, token, amount, penalty, early);
     }
 
-    // LOCK-IN-PLACE: the NFT stays in the holder's wallet; we only lock it so it
-    // can't be sold while staked. No custody, no setApprovalForAll.
+    /* ---------------- NFT staking (lock-in-place) ---------------- */
     function stakeNFT(uint256 tokenId) external nonReentrant update(msg.sender) {
         require(address(hood) != address(0), "nft disabled");
         require(hood.ownerOf(tokenId) == msg.sender, "not owner");
@@ -156,14 +164,16 @@ contract StagStaking is Ownable, ReentrancyGuard {
         u.mult += (boostBps * BASE) / 10000;
         u.nfts.push(tokenId);
         nftStaker[tokenId] = msg.sender;
+        u.stakedAt = block.timestamp;
         _resync(msg.sender);
-        hood.lock(tokenId);                       // NFT becomes non-transferable, stays in wallet
+        hood.lock(tokenId);                            // NFT stays in wallet, becomes non-transferable
         emit StakedNFT(msg.sender, tokenId);
     }
 
     function unstakeNFT(uint256 tokenId) external nonReentrant update(msg.sender) {
         require(nftStaker[tokenId] == msg.sender, "not your stake");
         UserInfo storage u = _u[msg.sender];
+        bool early = block.timestamp < u.stakedAt + lockPeriod;
         uint256 n = u.nfts.length;
         uint256 idx = type(uint256).max;
         for (uint256 i; i < n; i++) { if (u.nfts[i] == tokenId) { idx = i; break; } }
@@ -173,10 +183,11 @@ contract StagStaking is Ownable, ReentrancyGuard {
         delete nftStaker[tokenId];
         uint256 boostBps = nftBoostBps[tokenId] == 0 ? defaultNftBoostBps : nftBoostBps[tokenId];
         uint256 dec = (boostBps * BASE) / 10000;
-        u.mult = u.mult > dec ? u.mult - dec : BASE; // never below base
+        u.mult = u.mult > dec ? u.mult - dec : BASE;
+        if (early) u.rewards = 0;                       // early NFT unstake forfeits rewards (no penalty)
         _resync(msg.sender);
-        hood.unlock(tokenId);                     // release the lock; NFT was never moved
-        emit UnstakedNFT(msg.sender, tokenId);
+        hood.unlock(tokenId);
+        emit UnstakedNFT(msg.sender, tokenId, early);
     }
 
     function claim() public nonReentrant update(msg.sender) {
@@ -190,18 +201,12 @@ contract StagStaking is Ownable, ReentrancyGuard {
     }
 
     /* ---------------- funding / owner ---------------- */
-    // ETH arrives here from the NFT contract's 30% split and from owner top-ups.
-    receive() external payable {}
+    receive() external payable {}     // ETH from the splitter (60% of mint sales) + owner top-ups
 
-    // start (or extend) distributing `amount` of the contract's ETH over `duration`
     function notifyRewardAmount(uint256 amount, uint256 duration) external onlyOwner update(address(0)) {
         require(duration > 0, "duration=0");
-        if (block.timestamp >= periodFinish) {
-            rewardRate = amount / duration;
-        } else {
-            uint256 remaining = (periodFinish - block.timestamp) * rewardRate;
-            rewardRate = (amount + remaining) / duration;
-        }
+        if (block.timestamp >= periodFinish) rewardRate = amount / duration;
+        else rewardRate = (amount + (periodFinish - block.timestamp) * rewardRate) / duration;
         require(rewardRate > 0, "rate=0");
         require(rewardRate * duration <= address(this).balance, "insufficient ETH funded");
         lastUpdateTime = block.timestamp;
@@ -209,6 +214,11 @@ contract StagStaking is Ownable, ReentrancyGuard {
         emit RewardAdded(amount, duration);
     }
 
+    // enable/adjust a stakeable token's weight (10000 = 1×, 20000 = 2×). 0 = stop new stakes.
+    function setTokenWeight(address token, uint256 weightBps) external onlyOwner {
+        require(weightBps <= 50000, "max 5x");
+        tokenWeightBps[token] = weightBps;
+    }
     function setLockPeriod(uint256 s) external onlyOwner { require(s <= 90 days, "too long"); lockPeriod = s; }
     function setEarlyPenaltyBps(uint256 bps) external onlyOwner { require(bps <= 3000, "max 30%"); earlyPenaltyBps = bps; }
     function setDefaultNftBoostBps(uint256 bps) external onlyOwner { require(bps <= 5000, "max 50%"); defaultNftBoostBps = bps; }
@@ -217,9 +227,9 @@ contract StagStaking is Ownable, ReentrancyGuard {
 
     /* ---------------- views ---------------- */
     function userInfo(address a) external view returns (
-        uint256 amount, uint256 mult, uint256 weight, uint256 stakedAt, uint256 pendingEth, uint256[] memory nfts, bool locked
+        uint256 baseWeight, uint256 mult, uint256 weight, uint256 stakedAt, uint256 pendingEth, uint256[] memory nfts, bool locked
     ) {
         UserInfo storage u = _u[a];
-        return (u.amount, u.mult == 0 ? BASE : u.mult, u.weight, u.stakedAt, earned(a), u.nfts, block.timestamp < u.stakedAt + lockPeriod);
+        return (u.baseWeight, u.mult == 0 ? BASE : u.mult, u.weight, u.stakedAt, earned(a), u.nfts, block.timestamp < u.stakedAt + lockPeriod);
     }
 }
