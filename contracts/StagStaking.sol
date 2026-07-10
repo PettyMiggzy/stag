@@ -226,13 +226,15 @@ contract StagStaking is Ownable, ReentrancyGuard {
         emit RewardAdded(amount, duration);
     }
 
-    // owner OR the appointed operator may manage the stakeable-token list
-    modifier onlyManager() { require(msg.sender == owner() || (operator != address(0) && msg.sender == operator), "not manager"); _; }
     function setOperator(address o) external onlyOwner { operator = o; }
 
-    // enable/adjust a stakeable token's weight (10000 = 1×, 20000 = 2×). 0 = stop new stakes.
-    function setTokenWeight(address token, uint256 weightBps) external onlyManager {
+    // Set a stakeable token's weight (10000 = 1×, 20000 = 2×). 0 = stop new stakes.
+    // Approving a NEW token is owner-only — approving a manipulable/junk token is the main
+    // drain vector, so a lower-trust operator can only ADJUST tokens the owner already vetted.
+    function setTokenWeight(address token, uint256 weightBps) external {
         require(weightBps <= 50000, "max 5x");
+        if (!everStakeable[token]) require(msg.sender == owner(), "new token: owner only");
+        else require(msg.sender == owner() || (operator != address(0) && msg.sender == operator), "not manager");
         tokenWeightBps[token] = weightBps;
         if (weightBps > 0) everStakeable[token] = true;
     }

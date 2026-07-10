@@ -55,10 +55,11 @@ and I'll flip the site's mint + stake pages live.
 - $STAG is already 2× from the constructor. To let people stake other Robinhood-Chain
   tokens, `setTokenWeight(token, 10000)` (1×) for each one you approve — set the weight to
   reflect its decimals/value; only approve tokens you trust.
-- **Admin panel / operator:** `setTokenWeight` is callable by the owner OR an appointed
-  `operator`. Call `setOperator(<wallet>)` to let a teammate approve stakeable tokens from
-  the admin panel using *their own* wallet (no key sharing, not full owner). The panel's
-  access code only hides the UI — the on-chain add is still signed by that wallet.
+- **Admin panel / operator:** **approving a NEW stakeable token is owner-only** (approving a
+  manipulable/junk token is the main pool-drain vector). Call `setOperator(<wallet>)` to let a
+  teammate **adjust the weight of already-approved tokens** from the admin panel with *their
+  own* wallet (no key sharing, not full owner). The panel's access code only hides the UI —
+  the on-chain change is still signed by that wallet.
 - Set rarity boosts: `setNftBoostBps(tokenId, bps)` per NFT (e.g. Mythic `5000` = +50% …
   Common `500` = +5%), or leave `defaultNftBoostBps` (+10% each).
 - Optionally tune `setLockPeriod(seconds)` / `setEarlyPenaltyBps(1500)`.
