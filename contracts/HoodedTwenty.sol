@@ -9,7 +9,7 @@ pragma solidity ^0.8.20;
  *  WALLET. No custody transfer — nobody can move a holder's NFT. (ERC-5192 style.)
  *
  *  Also: 20 supply, random no-duplicate draw, ERC-2981 royalties, and mint
- *  proceeds routed to the RevenueSplitter (30% pool / 10% owner / 60% dev).
+ *  proceeds routed to the RevenueSplitter (60% pool / 40% owner).
  *
  *  ⚠️ Holds real funds. Test on Robinhood Chain testnet (46630), review before mainnet.
  */
@@ -25,7 +25,7 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable {
     uint256 public maxPerWallet = 2;
     bool    public mintActive;
     string  private _base;               // https://stagwifhood.fun/assets/nft/stagwifhood/metadata/
-    address payable public splitter;     // RevenueSplitter — receives 100% of proceeds, then splits 30/10/60
+    address payable public splitter;     // RevenueSplitter — receives 100% of proceeds, then splits 60/40
     address public locker;               // staking contract allowed to lock/unlock
 
     mapping(uint256 => bool) public locked;     // ERC-5192: is the token locked?
@@ -45,11 +45,14 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable {
         mintPrice = _price;
         _base = baseURI_;
         splitter = _splitter;
-        if (_splitter != address(0)) _setDefaultRoyalty(_splitter, royaltyBps); // royalties also split 30/10/60
+        if (_splitter != address(0)) _setDefaultRoyalty(_splitter, royaltyBps); // royalties also split 60/40
     }
 
     /* ---------------- mint ---------------- */
     function mint() external payable {
+        // EOA-only: blocks a contract from reverting in onERC721Received to grind for rare
+        // ids (rarity → staking yield), and removes the _safeMint reentrancy surface entirely.
+        require(msg.sender == tx.origin, "no contracts");
         require(mintActive, "mint not active");
         require(_remaining > 0, "sold out");
         require(msg.value >= mintPrice, "fee too low");
@@ -58,7 +61,7 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable {
         uint256 id = _draw();
         _safeMint(msg.sender, id);
         if (splitter != address(0) && msg.value > 0) {
-            (bool ok, ) = splitter.call{value: msg.value}("");   // splitter splits 30/10/60 on receive
+            (bool ok, ) = splitter.call{value: msg.value}("");   // splitter splits 60/40 on receive
             require(ok, "split failed");
         }
     }
@@ -79,6 +82,9 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable {
     modifier onlyLocker() { require(msg.sender == locker && locker != address(0), "not locker"); _; }
     function lock(uint256 tokenId) external onlyLocker { locked[tokenId] = true; emit Locked(tokenId); }
     function unlock(uint256 tokenId) external onlyLocker { locked[tokenId] = false; emit Unlocked(tokenId); }
+    // emergency escape so a staked NFT can never be permanently frozen (e.g. after a locker
+    // migration, when the old staking contract can no longer unlock). Owner-only.
+    function adminUnlock(uint256 tokenId) external onlyOwner { locked[tokenId] = false; emit Unlocked(tokenId); }
 
     // block transfers of a locked token; mint (from==0) and burn (to==0) still allowed
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
