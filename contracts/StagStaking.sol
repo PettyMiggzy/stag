@@ -5,11 +5,13 @@ pragma solidity ^0.8.20;
  *
  *  Model (per project spec):
  *   • Stake $STAG tokens and/or The Hooded 20 NFTs.
- *   • Rewards are paid in ETH (real yield). The pool is funded by 30% of NFT
- *     mint sales (auto-forwarded from HoodedTwenty) plus owner top-ups.
+ *   • Rewards are paid in ETH (real yield). The pool is funded by 60% of NFT
+ *     mint sales (via RevenueSplitter → this contract) plus owner top-ups.
  *   • Rewards accrue on your WEIGHT = stakedTokens × nftMultiplier.
  *     Staking NFTs boosts your multiplier (by rarity, owner-configurable).
  *     Staking ONLY NFTs (zero tokens) = weight 0 = no rewards. ✓
+ *   • NFT staking is LOCK-IN-PLACE — the NFT never leaves your wallet (we call
+ *     the NFT's lock()/unlock(); no custody, no setApprovalForAll).
  *   • Early unstake (before lockPeriod): 15% penalty on the tokens unstaked
  *     AND you forfeit all unclaimed rewards. After the lock: no penalty.
  *
@@ -23,15 +25,24 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract StagStaking is Ownable, ReentrancyGuard, IERC721Receiver {
+// The lockable NFT (HoodedTwenty). NFT staking is LOCK-IN-PLACE: we call
+// lock()/unlock() — the NFT never leaves the holder's wallet, and we never
+// take custody or setApprovalForAll (the classic NFT-drain vector).
+interface IHoodLockable {
+    function ownerOf(uint256 tokenId) external view returns (address);
+    function lock(uint256 tokenId) external;
+    function unlock(uint256 tokenId) external;
+}
+
+contract StagStaking is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    IERC20  public immutable stag;   // $STAG staking token
-    IERC721 public immutable hood;   // The Hooded 20 NFT (address(0) to disable NFT staking)
+    IERC20        public immutable stag;   // $STAG staking token
+    IHoodLockable public immutable hood;   // The Hooded 20 NFT (address(0) to disable NFT staking)
+    mapping(uint256 => address) public nftStaker;   // tokenId => who staked it
 
     uint256 public constant BASE = 1e18;              // multiplier base = 1.0x
 
@@ -69,7 +80,7 @@ contract StagStaking is Ownable, ReentrancyGuard, IERC721Receiver {
 
     constructor(address _stag, address _hood) Ownable(msg.sender) {
         stag = IERC20(_stag);
-        hood = IERC721(_hood);
+        hood = IHoodLockable(_hood);
         penaltyRecipient = msg.sender;
     }
 
@@ -133,19 +144,25 @@ contract StagStaking is Ownable, ReentrancyGuard, IERC721Receiver {
         emit UnstakedTokens(msg.sender, amount, penalty, early);
     }
 
+    // LOCK-IN-PLACE: the NFT stays in the holder's wallet; we only lock it so it
+    // can't be sold while staked. No custody, no setApprovalForAll.
     function stakeNFT(uint256 tokenId) external nonReentrant update(msg.sender) {
         require(address(hood) != address(0), "nft disabled");
+        require(hood.ownerOf(tokenId) == msg.sender, "not owner");
+        require(nftStaker[tokenId] == address(0), "already staked");
         UserInfo storage u = _u[msg.sender];
         if (u.mult == 0) u.mult = BASE;
         uint256 boostBps = nftBoostBps[tokenId] == 0 ? defaultNftBoostBps : nftBoostBps[tokenId];
         u.mult += (boostBps * BASE) / 10000;
         u.nfts.push(tokenId);
+        nftStaker[tokenId] = msg.sender;
         _resync(msg.sender);
-        hood.safeTransferFrom(msg.sender, address(this), tokenId);
+        hood.lock(tokenId);                       // NFT becomes non-transferable, stays in wallet
         emit StakedNFT(msg.sender, tokenId);
     }
 
     function unstakeNFT(uint256 tokenId) external nonReentrant update(msg.sender) {
+        require(nftStaker[tokenId] == msg.sender, "not your stake");
         UserInfo storage u = _u[msg.sender];
         uint256 n = u.nfts.length;
         uint256 idx = type(uint256).max;
@@ -153,11 +170,12 @@ contract StagStaking is Ownable, ReentrancyGuard, IERC721Receiver {
         require(idx != type(uint256).max, "not staked");
         u.nfts[idx] = u.nfts[n - 1];
         u.nfts.pop();
+        delete nftStaker[tokenId];
         uint256 boostBps = nftBoostBps[tokenId] == 0 ? defaultNftBoostBps : nftBoostBps[tokenId];
         uint256 dec = (boostBps * BASE) / 10000;
         u.mult = u.mult > dec ? u.mult - dec : BASE; // never below base
         _resync(msg.sender);
-        hood.safeTransferFrom(address(this), msg.sender, tokenId);
+        hood.unlock(tokenId);                     // release the lock; NFT was never moved
         emit UnstakedNFT(msg.sender, tokenId);
     }
 
@@ -203,9 +221,5 @@ contract StagStaking is Ownable, ReentrancyGuard, IERC721Receiver {
     ) {
         UserInfo storage u = _u[a];
         return (u.amount, u.mult == 0 ? BASE : u.mult, u.weight, u.stakedAt, earned(a), u.nfts, block.timestamp < u.stakedAt + lockPeriod);
-    }
-
-    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
-        return IERC721Receiver.onERC721Received.selector;
     }
 }
