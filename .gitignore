@@ -21,3 +21,7 @@ node_modules/
 
 # animated NFT collection (intentional)
 !assets/nft/stagwifhood/anim/*.mp4
+
+# solidity toolchain
+contracts/node_modules/
+contracts/package-lock.json

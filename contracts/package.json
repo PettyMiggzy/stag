@@ -1,0 +1,10 @@
+{
+  "name": "hooded-contracts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The Hooded 20 — mint/staking/Sherwood Pact contracts (Robinhood Chain)",
+  "devDependencies": {
+    "solc": "0.8.24",
+    "@openzeppelin/contracts": "5.0.2"
+  }
+}
