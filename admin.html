@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>STAGWIFHOOD — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  :root{ --adm-glow:0 0 0 1px rgba(230,184,63,.14), 0 24px 60px -30px rgba(0,0,0,.85); }
+  body{ background:
+      radial-gradient(1200px 640px at 78% -12%, rgba(47,107,57,.35) 0%, transparent 60%),
+      radial-gradient(900px 560px at 6% 108%, rgba(230,184,63,.08) 0%, transparent 55%),
+      var(--bg); min-height:100vh; }
+  .adm-wrap{ max-width:1180px; margin:0 auto; padding:1.4rem clamp(1rem,4vw,2.2rem) 5rem; }
+
+  /* top bar */
+  .adm-top{ display:flex; align-items:center; gap:1rem; padding:.9rem 0 1.4rem; flex-wrap:wrap; }
+  .adm-brand{ font-family:'Cinzel',serif; font-weight:900; letter-spacing:.02em; font-size:1.15rem; }
+  .adm-brand .gold{ color:var(--gold); }
+  .adm-chip{ font-family:'Space Grotesk',monospace; font-size:.7rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold-lite); border:1px solid var(--line); border-radius:999px; padding:.4em .8em; }
+  .adm-top .spacer{ margin-left:auto; }
+  #btn-connect{ font-family:'Space Grotesk',monospace; }
+  .adm-owner{ width:100%; font-size:.82rem; font-family:'Space Grotesk',monospace; padding:.5em .9em; border-radius:12px;
+    border:1px solid var(--line); background:rgba(0,0,0,.25); color:var(--muted); }
+  .adm-owner.ok{ color:#8ff0a4; border-color:rgba(90,168,105,.4); background:rgba(47,107,57,.14); }
+  .adm-owner.warn{ color:var(--gold-lite); border-color:rgba(230,184,63,.35); }
+
+  /* hero title */
+  .adm-h1{ font-family:'Cinzel',serif; font-weight:900; font-size:clamp(1.8rem,4vw,2.7rem); line-height:1.02; margin:.4rem 0 .3rem;
+    background:var(--grad-gold); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .adm-sub{ color:var(--muted); max-width:56ch; margin:0 0 2rem; }
+
+  /* KPI tiles */
+  .adm-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:2.4rem; }
+  .adm-kpi{ position:relative; overflow:hidden; background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line); border-radius:var(--radius); padding:1.5rem 1.3rem; box-shadow:var(--adm-glow); }
+  .adm-kpi::before{ content:""; position:absolute; inset:0 0 auto 0; height:2px; background:var(--grad-gold); opacity:.7; }
+  .adm-kpi-k{ color:var(--muted); font-size:.74rem; letter-spacing:.14em; text-transform:uppercase; }
+  .adm-kpi-v{ font-family:'Space Grotesk',monospace; font-weight:700; font-variant-numeric:tabular-nums;
+    font-size:clamp(1.35rem,2.4vw,1.9rem); color:var(--gold-lite); margin-top:.5rem; word-break:break-word; }
+  .adm-kpi-tag{ display:inline-block; margin-top:.5rem; font-family:'Space Grotesk',monospace; font-size:.66rem;
+    letter-spacing:.14em; text-transform:uppercase; padding:.28em .7em; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .adm-kpi-tag.on{ color:#8ff0a4; border-color:rgba(90,168,105,.45); background:rgba(47,107,57,.16); }
+  .adm-kpi-tag.off{ color:var(--gold-lite); }
+
+  /* cards */
+  .adm-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; align-items:start; }
+  .adm-card{ background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line);
+    border-radius:var(--radius); padding:1.4rem 1.4rem 1.5rem; box-shadow:var(--adm-glow); }
+  .adm-card.wide{ grid-column:1 / -1; }
+  .adm-card h2{ font-family:'Cinzel',serif; font-weight:800; font-size:1.05rem; margin:0 0 .3rem; }
+  .adm-card .hint{ color:var(--muted); font-size:.82rem; margin:0 0 1.1rem; }
+  .adm-soon{ opacity:.55; }
+  .adm-soon-tag{ float:right; font-family:'Space Grotesk',monospace; font-size:.62rem; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold-lite); border:1px solid var(--line); border-radius:999px; padding:.3em .7em; }
+
+  .adm-field{ display:flex; gap:.6rem; align-items:center; margin-bottom:.7rem; flex-wrap:wrap; }
+  .adm-field label{ min-width:120px; font-size:.82rem; color:var(--muted); }
+  .adm-input{ flex:1; min-width:140px; background:rgba(0,0,0,.32); border:1px solid var(--line); border-radius:10px;
+    color:var(--ink); padding:.55em .7em; font-family:'Space Grotesk',monospace; font-size:.86rem; }
+  .adm-input:focus{ outline:none; border-color:rgba(230,184,63,.5); }
+  .btn-mini{ font-family:'Space Grotesk',monospace; font-size:.78rem; padding:.5em 1em; border-radius:10px; cursor:pointer;
+    border:1px solid var(--line); background:rgba(230,184,63,.1); color:var(--gold-lite); transition:.2s; white-space:nowrap; }
+  .btn-mini:hover{ background:rgba(230,184,63,.2); }
+  .btn-mini.danger{ color:#ffb4a1; border-color:rgba(255,120,90,.35); background:rgba(255,90,60,.08); }
+
+  /* tier pricing table */
+  .adm-tiers{ width:100%; border-collapse:collapse; font-size:.85rem; }
+  .adm-tiers th{ text-align:left; color:var(--muted); font-weight:600; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; padding:.4rem .5rem; }
+  .adm-tiers td{ padding:.35rem .5rem; border-top:1px solid var(--line); }
+  .adm-tiers .tname{ font-weight:600; }
+  .adm-tiers .tname.t4{ color:#f8e6a0 } .adm-tiers .tname.t3{ color:#c9a0ff } .adm-tiers .tname.t2{ color:#7fd4ff }
+  .adm-tiers .tname.t1{ color:#8ff0a4 } .adm-tiers .tname.t0{ color:var(--muted) }
+  .adm-tiers .adm-input{ width:88px; min-width:0; padding:.35em .5em; }
+  .adm-odds{ font-family:'Space Grotesk',monospace; font-variant-numeric:tabular-nums; color:var(--gold-lite); font-weight:700; }
+
+  .mint-toggle{ display:flex; gap:.6rem; margin-bottom:1rem; }
+  .mint-toggle .btn-mini{ flex:1; text-align:center; padding:.7em 1em; }
+
+  /* toast */
+  .adm-toast{ position:fixed; left:50%; bottom:24px; transform:translate(-50%,120%); background:rgba(9,20,12,.97);
+    border:1px solid var(--line); color:var(--ink); font-family:'Space Grotesk',monospace; font-size:.86rem;
+    padding:.8em 1.2em; border-radius:12px; box-shadow:var(--shadow); transition:transform .25s var(--ease); z-index:50; max-width:90vw; }
+  .adm-toast.show{ transform:translate(-50%,0); }
+  .adm-toast.ok{ border-color:rgba(90,168,105,.5); } .adm-toast.err{ border-color:rgba(255,120,90,.5); color:#ffcabb; }
+
+  /* owner-only controls dimmed until verified */
+  body:not(.is-owner) .owner-only{ opacity:.6; }
+
+  @media (max-width:820px){ .adm-kpis{ grid-template-columns:repeat(2,1fr); } .adm-grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="adm-wrap">
+
+  <div class="adm-top">
+    <span class="adm-brand">STAG<span class="gold">WIF</span>HOOD</span>
+    <span class="adm-chip">Command Center</span>
+    <span class="adm-chip">Robinhood Chain · 4663</span>
+    <span class="spacer"></span>
+    <button id="btn-connect" class="btn btn-gold btn-sm">Connect Wallet</button>
+    <div id="owner-flag" class="adm-owner">connect your owner wallet to unlock controls</div>
+  </div>
+
+  <h1 class="adm-h1">The Hooded 20 — Control Center</h1>
+  <p class="adm-sub">Live pool telemetry and owner controls for the mint, staking rewards, and the Sherwood Pact. Every change is guarded before it ever hits your wallet.</p>
+
+  <!-- KPIs -->
+  <div class="adm-kpis">
+    <div class="adm-kpi"><div class="adm-kpi-k">Reward Pool</div><div class="adm-kpi-v" id="kpi-pool">—</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-k">Total Staked</div><div class="adm-kpi-v" id="kpi-staked">—</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-k">Stakeable Projects</div><div class="adm-kpi-v" id="kpi-projects">—</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-k">Hooded 20 Minted</div><div class="adm-kpi-v" id="kpi-minted">—</div><span class="adm-kpi-tag off" id="kpi-mintstate">—</span></div>
+  </div>
+
+  <div class="adm-grid">
+
+    <!-- Mint control -->
+    <div class="adm-card owner-only">
+      <h2>Mint Control</h2>
+      <p class="hint">Open/close the mint and set the shared settings.</p>
+      <div class="mint-toggle">
+        <button id="btn-mint-on" class="btn-mini">▶ Activate Mint</button>
+        <button id="btn-mint-off" class="btn-mini danger">⏸ Pause Mint</button>
+      </div>
+      <div class="adm-field"><label>Gamble price (ETH)</label><input id="in-random" class="adm-input" placeholder="0.010" /><button id="btn-random" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Max per wallet</label><input id="in-mpw" class="adm-input" placeholder="2" /><button id="btn-mpw" class="btn-mini">Set</button></div>
+    </div>
+
+    <!-- Tier pricing + odds -->
+    <div class="adm-card owner-only">
+      <h2>Tier Pricing &amp; Gamble Odds</h2>
+      <p class="hint">Pick price per tier · gamble weight (lower = rarer) · live odds on the 0.010 draw.</p>
+      <table class="adm-tiers">
+        <thead><tr><th>Tier</th><th>Pick (ETH)</th><th></th><th>Weight</th><th></th><th>Odds</th></tr></thead>
+        <tbody>
+          <tr><td class="tname t0">Common</td><td><input id="price-0" class="adm-input"/></td><td><button id="btn-price-0" class="btn-mini">↑</button></td><td><input id="weight-0" class="adm-input"/></td><td><button id="btn-weight-0" class="btn-mini">↑</button></td><td class="adm-odds" id="odds-0">—</td></tr>
+          <tr><td class="tname t1">Rare</td><td><input id="price-1" class="adm-input"/></td><td><button id="btn-price-1" class="btn-mini">↑</button></td><td><input id="weight-1" class="adm-input"/></td><td><button id="btn-weight-1" class="btn-mini">↑</button></td><td class="adm-odds" id="odds-1">—</td></tr>
+          <tr><td class="tname t2">Epic</td><td><input id="price-2" class="adm-input"/></td><td><button id="btn-price-2" class="btn-mini">↑</button></td><td><input id="weight-2" class="adm-input"/></td><td><button id="btn-weight-2" class="btn-mini">↑</button></td><td class="adm-odds" id="odds-2">—</td></tr>
+          <tr><td class="tname t3">Legendary</td><td><input id="price-3" class="adm-input"/></td><td><button id="btn-price-3" class="btn-mini">↑</button></td><td><input id="weight-3" class="adm-input"/></td><td><button id="btn-weight-3" class="btn-mini">↑</button></td><td class="adm-odds" id="odds-3">—</td></tr>
+          <tr><td class="tname t4">Mythic</td><td><input id="price-4" class="adm-input"/></td><td><button id="btn-price-4" class="btn-mini">↑</button></td><td><input id="weight-4" class="adm-input"/></td><td><button id="btn-weight-4" class="btn-mini">↑</button></td><td class="adm-odds" id="odds-4">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Whitelist -->
+    <div class="adm-card owner-only">
+      <h2>Whitelist · Free Mints</h2>
+      <p class="hint">Grant free mints to a wallet (bypasses payment). Prefilled with your test wallet.</p>
+      <div class="adm-field"><label>Wallet</label><input id="in-free-addr" class="adm-input" /></div>
+      <div class="adm-field"><label>Free mints</label><input id="in-free-n" class="adm-input" /><button id="btn-free" class="btn-mini">Grant</button></div>
+    </div>
+
+    <!-- Contract meta -->
+    <div class="adm-card owner-only">
+      <h2>Contract Settings</h2>
+      <p class="hint">Metadata, revenue routing and royalties.</p>
+      <div class="adm-field"><label>Base URI</label><input id="in-baseuri" class="adm-input" placeholder="https://…/metadata/" /><button id="btn-baseuri" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Splitter</label><input id="in-splitter" class="adm-input" placeholder="0x…" /><button id="btn-splitter" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Locker (staking)</label><input id="in-locker" class="adm-input" placeholder="0x…" /><button id="btn-locker" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Royalty</label><input id="in-roy-addr" class="adm-input" placeholder="receiver 0x…" style="min-width:110px" /><input id="in-roy-bps" class="adm-input" placeholder="bps (500=5%)" style="max-width:110px" /><button id="btn-royalty" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Withdraw stuck ETH</label><input id="in-withdraw" class="adm-input" placeholder="to 0x… (blank = you)" /><button id="btn-withdraw" class="btn-mini danger">Send</button></div>
+    </div>
+
+    <!-- Staking (coming) -->
+    <div class="adm-card adm-soon">
+      <span class="adm-soon-tag">deploying soon</span>
+      <h2>Staking Pool</h2>
+      <p class="hint">30/60/90 lock tiers · holding multipliers (1M→2×, 10M→3×) · fund the ETH reward pool · approve stakeable projects. Wires up once StagStaking v4 is deployed.</p>
+    </div>
+
+    <!-- Sherwood Pact (coming) -->
+    <div class="adm-card adm-soon">
+      <span class="adm-soon-tag">deploying soon</span>
+      <h2>Sherwood Pact</h2>
+      <p class="hint">Proof-of-hold review queue — approve/deny payout claims verified by the indexer, set entry/refund amounts, manage the Pact treasury.</p>
+    </div>
+
+    <!-- Config -->
+    <div class="adm-card wide">
+      <h2>Deployed Addresses</h2>
+      <p class="hint">Paste addresses after deploy — saved to this browser, no redeploy needed to wire the dashboard.</p>
+      <div class="adm-field"><label>Mint (Hooded 20)</label><input id="cfg-mint" class="adm-input" placeholder="0x…" /></div>
+      <div class="adm-field"><label>Staking</label><input id="cfg-staking" class="adm-input" placeholder="0x…" /></div>
+      <div class="adm-field"><label>Splitter</label><input id="cfg-splitter" class="adm-input" placeholder="0x…" /></div>
+      <div class="adm-field"><label>Stakeable projects</label><input id="cfg-projects" class="adm-input" placeholder="1" style="max-width:90px" /><button id="btn-cfg-save" class="btn-mini">Save Config</button></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" class="adm-toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
