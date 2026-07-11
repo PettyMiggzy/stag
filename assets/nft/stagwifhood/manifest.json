@@ -6,163 +6,385 @@
   "items": [
     {
       "id": 1,
-      "name": "The Hooded 20 #1 \u2014 Golden Sovereign",
+      "name": "The Hooded 20 #1 — Golden Sovereign",
       "rarity": "Mythic",
       "character": "Golden Sovereign",
+      "rank": 2,
       "image": "1.jpg",
-      "animation": "1.mp4"
+      "animation": "1.mp4",
+      "traits": {
+        "Rarity": "Mythic",
+        "Hood": "Golden Crown-Helm",
+        "Weapon": "Golden Bow",
+        "Background": "Neon City",
+        "Aura": "Golden",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 2,
-      "name": "The Hooded 20 #2 \u2014 Shadow Rogue",
+      "name": "The Hooded 20 #2 — Shadow Rogue",
       "rarity": "Legendary",
       "character": "Shadow Rogue",
+      "rank": 4,
       "image": "2.jpg",
-      "animation": "2.mp4"
+      "animation": "2.mp4",
+      "traits": {
+        "Rarity": "Legendary",
+        "Hood": "Shadow Cloak",
+        "Weapon": "Twin Daggers",
+        "Background": "Dark Forest",
+        "Aura": "Shadow",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 3,
-      "name": "The Hooded 20 #3 \u2014 Forest Ranger",
+      "name": "The Hooded 20 #3 — Forest Ranger",
       "rarity": "Common",
       "character": "Forest Ranger",
+      "rank": 20,
       "image": "3.jpg",
-      "animation": "3.mp4"
+      "animation": "3.mp4",
+      "traits": {
+        "Rarity": "Common",
+        "Hood": "Robin Hood Cap",
+        "Weapon": "Wooden Longbow",
+        "Background": "Emerald Forest",
+        "Aura": "None",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 4,
-      "name": "The Hooded 20 #4 \u2014 Scarred Outlaw",
+      "name": "The Hooded 20 #4 — Scarred Outlaw",
       "rarity": "Rare",
       "character": "Scarred Outlaw",
+      "rank": 12,
       "image": "4.jpg",
-      "animation": "4.mp4"
+      "animation": "4.mp4",
+      "traits": {
+        "Rarity": "Rare",
+        "Hood": "Tattered Hood",
+        "Weapon": "Energy Bow",
+        "Background": "Ember Forest",
+        "Aura": "Ember",
+        "Eyes": "Scarred Eye",
+        "Antlers": "Natural",
+        "Expression": "Snarling",
+        "Accessory": "Battle Scar"
+      }
     },
     {
       "id": 5,
-      "name": "The Hooded 20 #5 \u2014 Crimson Assassin",
+      "name": "The Hooded 20 #5 — Crimson Assassin",
       "rarity": "Rare",
       "character": "Crimson Assassin",
+      "rank": 14,
       "image": "5.jpg",
-      "animation": "5.mp4"
+      "animation": "5.mp4",
+      "traits": {
+        "Rarity": "Rare",
+        "Hood": "Crimson Cloak",
+        "Weapon": "Throwing Knives",
+        "Background": "Crimson Smoke",
+        "Aura": "Crimson Smoke",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 6,
-      "name": "The Hooded 20 #6 \u2014 Emerald King",
+      "name": "The Hooded 20 #6 — Emerald King",
       "rarity": "Legendary",
       "character": "Emerald King",
+      "rank": 5,
       "image": "6.jpg",
-      "animation": "6.mp4"
+      "animation": "6.mp4",
+      "traits": {
+        "Rarity": "Legendary",
+        "Hood": "Emerald Crown",
+        "Weapon": "Wooden Bow",
+        "Background": "Emerald Forest",
+        "Aura": "Emerald",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Accessory": "Emerald Regalia"
+      }
     },
     {
       "id": 7,
-      "name": "The Hooded 20 #7 \u2014 Cyber Ranger",
+      "name": "The Hooded 20 #7 — Cyber Ranger",
       "rarity": "Epic",
       "character": "Cyber Ranger",
+      "rank": 7,
       "image": "7.jpg",
-      "animation": "7.mp4"
+      "animation": "7.mp4",
+      "traits": {
+        "Rarity": "Epic",
+        "Hood": "Circuit Hood",
+        "Weapon": "Neon Bow",
+        "Background": "Cyber City",
+        "Aura": "Neon Green",
+        "Eyes": "Cyber Visor",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 8,
-      "name": "The Hooded 20 #8 \u2014 Frost Hunter",
+      "name": "The Hooded 20 #8 — Frost Hunter",
       "rarity": "Rare",
       "character": "Frost Hunter",
+      "rank": 13,
       "image": "8.jpg",
-      "animation": "8.mp4"
+      "animation": "8.mp4",
+      "traits": {
+        "Rarity": "Rare",
+        "Hood": "Frost Hood",
+        "Weapon": "Frost Bow",
+        "Background": "Aurora Tundra",
+        "Aura": "Frost",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Frosted"
+      }
     },
     {
       "id": 9,
-      "name": "The Hooded 20 #9 \u2014 Ember Berserker",
+      "name": "The Hooded 20 #9 — Ember Berserker",
       "rarity": "Epic",
       "character": "Ember Berserker",
+      "rank": 9,
       "image": "9.jpg",
-      "animation": "9.mp4"
+      "animation": "9.mp4",
+      "traits": {
+        "Rarity": "Epic",
+        "Hood": "Ember Hood",
+        "Weapon": "None",
+        "Background": "Ember Forest",
+        "Aura": "Ember",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Expression": "Roaring"
+      }
     },
     {
       "id": 10,
-      "name": "The Hooded 20 #10 \u2014 Bone Reaper",
+      "name": "The Hooded 20 #10 — Bone Reaper",
       "rarity": "Epic",
       "character": "Bone Reaper",
+      "rank": 10,
       "image": "10.jpg",
-      "animation": "10.mp4"
+      "animation": "10.mp4",
+      "traits": {
+        "Rarity": "Epic",
+        "Hood": "Skull Helm",
+        "Weapon": "Bone Scythe",
+        "Background": "Cyber City",
+        "Aura": "Neon Green",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 11,
-      "name": "The Hooded 20 #11 \u2014 Golden Archer",
+      "name": "The Hooded 20 #11 — Golden Archer",
       "rarity": "Rare",
       "character": "Golden Archer",
+      "rank": 16,
       "image": "11.jpg",
-      "animation": "11.mp4"
+      "animation": "11.mp4",
+      "traits": {
+        "Rarity": "Rare",
+        "Hood": "Golden Helm",
+        "Weapon": "Golden Bow",
+        "Background": "Forest Grid",
+        "Aura": "Golden",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 12,
-      "name": "The Hooded 20 #12 \u2014 Forest Druid",
+      "name": "The Hooded 20 #12 — Forest Druid",
       "rarity": "Common",
       "character": "Forest Druid",
+      "rank": 17,
       "image": "12.jpg",
-      "animation": "12.mp4"
+      "animation": "12.mp4",
+      "traits": {
+        "Rarity": "Common",
+        "Hood": "Mossy Druid Hood",
+        "Weapon": "Crystal Staff",
+        "Background": "Enchanted Forest",
+        "Aura": "Emerald",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Accessory": "Nature's Growth"
+      }
     },
     {
       "id": 13,
-      "name": "The Hooded 20 #13 \u2014 Matrix Hacker",
+      "name": "The Hooded 20 #13 — Matrix Hacker",
       "rarity": "Epic",
       "character": "Matrix Hacker",
+      "rank": 8,
       "image": "13.jpg",
-      "animation": "13.mp4"
+      "animation": "13.mp4",
+      "traits": {
+        "Rarity": "Epic",
+        "Hood": "Matrix Hood",
+        "Weapon": "Energy Bow",
+        "Background": "Matrix Rain",
+        "Aura": "Matrix",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 14,
-      "name": "The Hooded 20 #14 \u2014 Royal Hood",
+      "name": "The Hooded 20 #14 — Royal Hood",
       "rarity": "Legendary",
       "character": "Royal Hood",
+      "rank": 6,
       "image": "14.jpg",
-      "animation": "14.mp4"
+      "animation": "14.mp4",
+      "traits": {
+        "Rarity": "Legendary",
+        "Hood": "Royal Purple Hood",
+        "Weapon": "Wooden Bow",
+        "Background": "Neon City",
+        "Aura": "Royal",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 15,
-      "name": "The Hooded 20 #15 \u2014 Camo Scout",
+      "name": "The Hooded 20 #15 — Camo Scout",
       "rarity": "Common",
       "character": "Camo Scout",
+      "rank": 18,
       "image": "15.jpg",
-      "animation": "15.mp4"
+      "animation": "15.mp4",
+      "traits": {
+        "Rarity": "Common",
+        "Hood": "Camo Hood",
+        "Weapon": "Camo Crossbow",
+        "Background": "Emerald Forest",
+        "Aura": "None",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Accessory": "War Paint"
+      }
     },
     {
       "id": 16,
-      "name": "The Hooded 20 #16 \u2014 Street Outlaw",
+      "name": "The Hooded 20 #16 — Street Outlaw",
       "rarity": "Common",
       "character": "Street Outlaw",
+      "rank": 19,
       "image": "16.jpg",
-      "animation": "16.mp4"
+      "animation": "16.mp4",
+      "traits": {
+        "Rarity": "Common",
+        "Hood": "Streetwear Hoodie",
+        "Weapon": "Wooden Bow",
+        "Background": "Neon City",
+        "Aura": "None",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Accessory": "Gold Chains"
+      }
     },
     {
       "id": 17,
-      "name": "The Hooded 20 #17 \u2014 Sunrise Ranger",
+      "name": "The Hooded 20 #17 — Sunrise Ranger",
       "rarity": "Rare",
       "character": "Sunrise Ranger",
+      "rank": 15,
       "image": "17.jpg",
-      "animation": "17.mp4"
+      "animation": "17.mp4",
+      "traits": {
+        "Rarity": "Rare",
+        "Hood": "Robin Hood Cap",
+        "Weapon": "Wooden Bow",
+        "Background": "Sunrise Forest",
+        "Aura": "Sunrise",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 18,
-      "name": "The Hooded 20 #18 \u2014 Shadow Lord",
+      "name": "The Hooded 20 #18 — Shadow Lord",
       "rarity": "Legendary",
       "character": "Shadow Lord",
+      "rank": 3,
       "image": "18.jpg",
-      "animation": "18.mp4"
+      "animation": "18.mp4",
+      "traits": {
+        "Rarity": "Legendary",
+        "Hood": "Shadow Cloak",
+        "Weapon": "None",
+        "Background": "Cyber Forest",
+        "Aura": "Shadow",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Expression": "Menacing Grin"
+      }
     },
     {
       "id": 19,
-      "name": "The Hooded 20 #19 \u2014 Gilded Duelist",
+      "name": "The Hooded 20 #19 — Gilded Duelist",
       "rarity": "Epic",
       "character": "Gilded Duelist",
+      "rank": 11,
       "image": "19.jpg",
-      "animation": "19.mp4"
+      "animation": "19.mp4",
+      "traits": {
+        "Rarity": "Epic",
+        "Hood": "Golden Helm",
+        "Weapon": "Wooden Bow",
+        "Background": "Forest Grid",
+        "Aura": "Golden",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural"
+      }
     },
     {
       "id": 20,
-      "name": "The Hooded 20 #20 \u2014 Arena Champion",
+      "name": "The Hooded 20 #20 — Arena Champion",
       "rarity": "Mythic",
       "character": "Arena Champion",
+      "rank": 1,
       "image": "20.jpg",
-      "animation": "20.mp4"
+      "animation": "20.mp4",
+      "traits": {
+        "Rarity": "Mythic",
+        "Hood": "Laurel Hood",
+        "Weapon": "Wooden Bow",
+        "Background": "Emerald Forest",
+        "Aura": "Golden",
+        "Eyes": "Emerald Glow",
+        "Antlers": "Natural",
+        "Expression": "Roaring",
+        "Accessory": "Laurel Wreath"
+      }
     }
+  ],
+  "trait_types": [
+    "Rarity",
+    "Character",
+    "Hood",
+    "Weapon",
+    "Background",
+    "Aura",
+    "Eyes",
+    "Antlers",
+    "Expression",
+    "Accessory"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "The Hooded 20 #19 — Gilded Duelist",
-  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "description": "Gilded armour, dueling stance — trades blows on the neon grid. One of The Hooded 20 — twenty legendary animated stags who wear the stolen hood of Robin Hood. The face of Robinhood Chain. $STAGWIFHOOD.",
   "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/19.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/19.mp4",
   "attributes": [
@@ -13,12 +13,48 @@
       "value": "Gilded Duelist"
     },
     {
+      "trait_type": "Hood",
+      "value": "Golden Helm"
+    },
+    {
+      "trait_type": "Weapon",
+      "value": "Wooden Bow"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Forest Grid"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Golden"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Emerald Glow"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Natural"
+    },
+    {
       "trait_type": "Collection",
       "value": "The Hooded 20"
     },
     {
       "trait_type": "Chain",
       "value": "Robinhood Chain"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 11,
+      "max_value": 20
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Edition",
+      "value": 19,
+      "max_value": 20
     }
   ]
 }

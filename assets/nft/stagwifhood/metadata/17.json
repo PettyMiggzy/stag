@@ -1,6 +1,6 @@
 {
   "name": "The Hooded 20 #17 — Sunrise Ranger",
-  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "description": "Fist to the dawn as the green sun breaks over the skyline. One of The Hooded 20 — twenty legendary animated stags who wear the stolen hood of Robin Hood. The face of Robinhood Chain. $STAGWIFHOOD.",
   "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/17.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/17.mp4",
   "attributes": [
@@ -13,12 +13,48 @@
       "value": "Sunrise Ranger"
     },
     {
+      "trait_type": "Hood",
+      "value": "Robin Hood Cap"
+    },
+    {
+      "trait_type": "Weapon",
+      "value": "Wooden Bow"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Sunrise Forest"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Sunrise"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Emerald Glow"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Natural"
+    },
+    {
       "trait_type": "Collection",
       "value": "The Hooded 20"
     },
     {
       "trait_type": "Chain",
       "value": "Robinhood Chain"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 15,
+      "max_value": 20
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Edition",
+      "value": 17,
+      "max_value": 20
     }
   ]
 }

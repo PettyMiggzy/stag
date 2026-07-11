@@ -1,6 +1,6 @@
 {
   "name": "The Hooded 20 #7 — Cyber Ranger",
-  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "description": "Half ranger, half machine — targeting overlay locked on the wick. One of The Hooded 20 — twenty legendary animated stags who wear the stolen hood of Robin Hood. The face of Robinhood Chain. $STAGWIFHOOD.",
   "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/7.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/7.mp4",
   "attributes": [
@@ -13,12 +13,48 @@
       "value": "Cyber Ranger"
     },
     {
+      "trait_type": "Hood",
+      "value": "Circuit Hood"
+    },
+    {
+      "trait_type": "Weapon",
+      "value": "Neon Bow"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Cyber City"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Neon Green"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Cyber Visor"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Natural"
+    },
+    {
       "trait_type": "Collection",
       "value": "The Hooded 20"
     },
     {
       "trait_type": "Chain",
       "value": "Robinhood Chain"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 7,
+      "max_value": 20
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Edition",
+      "value": 7,
+      "max_value": 20
     }
   ]
 }

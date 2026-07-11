@@ -1,6 +1,6 @@
 {
   "name": "The Hooded 20 #4 — Scarred Outlaw",
-  "description": "One of The Hooded 20 — 20 legendary animated stags who wear the stolen hood of Robin Hood. Face of Robinhood Chain. $STAGWIFHOOD.",
+  "description": "Every rip in the hood is a debt collected. Draws with a snarl. One of The Hooded 20 — twenty legendary animated stags who wear the stolen hood of Robin Hood. The face of Robinhood Chain. $STAGWIFHOOD.",
   "image": "https://stagwifhood.fun/assets/nft/stagwifhood/img/4.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/stagwifhood/anim/4.mp4",
   "attributes": [
@@ -13,12 +13,56 @@
       "value": "Scarred Outlaw"
     },
     {
+      "trait_type": "Hood",
+      "value": "Tattered Hood"
+    },
+    {
+      "trait_type": "Weapon",
+      "value": "Energy Bow"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Ember Forest"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Ember"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Scarred Eye"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Natural"
+    },
+    {
+      "trait_type": "Expression",
+      "value": "Snarling"
+    },
+    {
+      "trait_type": "Accessory",
+      "value": "Battle Scar"
+    },
+    {
       "trait_type": "Collection",
       "value": "The Hooded 20"
     },
     {
       "trait_type": "Chain",
       "value": "Robinhood Chain"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 12,
+      "max_value": 20
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Edition",
+      "value": 4,
+      "max_value": 20
     }
   ]
 }
