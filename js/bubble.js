@@ -10,6 +10,7 @@
   const MAX_HOLDER_PAGES = 3;    // ~150 holders
   const MAX_XFER_PAGES = 10;     // deeper cluster coverage (async, does not block first paint)
   const MAX_NODES = 120;
+  const FULL_HISTORY_MAX = 15000; // ≤ this many transfers → pull the whole graph; above → targeted fetch
   const PALETTE = ['#e6b83f', '#8ce65a', '#5ad1e6', '#c98cff', '#ff8c8c', '#ffd24a', '#7affb0', '#ff9a5a', '#9ad0ff', '#ff6fae'];
   const SOLO = 'rgba(150,190,150,.55)';
   const CONTRACT = '#6fa8ff';
@@ -155,13 +156,23 @@
         $('s-clusters').textContent = clusterCount;
         if (Graph) { Graph.graphData({ nodes, links: edges }); setTimeout(() => Graph.zoomToFit(500, 40), 600); }
       };
-      const enhanced = window.STAG && window.STAG.fetchHolderTransfers;
-      const loader = enhanced
-        ? window.STAG.fetchHolderTransfers(ca, eoaAddrs).then((res) => res.edges)
-        : (window.STAG && window.STAG.fetchHolderEdges)
-          ? window.STAG.fetchHolderEdges(ca, eoaAddrs).then((res) => res.edges)
-          : pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES).then((xf) =>
-              xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]));
+      // Index-aware fetch: ask Blockscout's counters how many transfers this token
+      // has (cheap, pre-indexed). Small/young tokens → pull the COMPLETE transfer
+      // graph (every wallet, ~7 calls) so shared-funder detection sees bundles even
+      // among non-top-holders. Busy tokens → stay targeted (transfers touching top
+      // holders only) so a phone never chokes on a 200k-transfer history.
+      const S = window.STAG || {};
+      const enhanced = !!(S.fetchHolderTransfers || S.fetchAllTransfers);
+      const loader = (async () => {
+        const count = S.getTransferCount ? await S.getTransferCount(ca) : null;
+        if (count != null && count <= FULL_HISTORY_MAX && S.fetchAllTransfers) {
+          return (await S.fetchAllTransfers(ca)).edges;            // complete graph
+        }
+        if (S.fetchHolderTransfers) return (await S.fetchHolderTransfers(ca, eoaAddrs)).edges;  // targeted + shared
+        if (S.fetchHolderEdges) return (await S.fetchHolderEdges(ca, eoaAddrs)).edges;          // targeted direct-only
+        const xf = await pages(`/api/v2/tokens/${ca}/transfers`, MAX_XFER_PAGES);               // Blockscout fallback
+        return xf.map((t) => [((t.from && t.from.hash) || '').toLowerCase(), ((t.to && t.to.hash) || '').toLowerCase()]);
+      })();
       loader.then((raw) => {
         if (myScan !== scanSeq) return; // a newer scan started — drop stale result
         const ZERO = '0x0000000000000000000000000000000000000000';

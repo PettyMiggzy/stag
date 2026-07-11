@@ -120,6 +120,21 @@
 
   async function getLatestBlock() { return parseInt(await rpc('eth_blockNumber', []), 16); }
 
+  // Cheap upfront index signal from Blockscout's counters (already indexed at
+  // ingestion). Lets the bubble map choose its fetch strategy per token: pull
+  // the COMPLETE transfer graph for small/young tokens (most accurate cluster
+  // detection), stay targeted for busy ones. Returns null if unavailable.
+  const BLOCKSCOUT = 'https://robinhoodchain.blockscout.com';
+  async function getTransferCount(token) {
+    try {
+      const r = await fetch(`${BLOCKSCOUT}/api/v2/tokens/${token.toLowerCase()}/counters`);
+      if (!r.ok) return null;
+      const j = await r.json();
+      const n = parseInt(j.transfers_count, 10);
+      return isFinite(n) ? n : null;
+    } catch (_) { return null; }
+  }
+
   // ---- localStorage cache (compact: addresses stored without the 0x) ----
   function loadCache(token) {
     try {
@@ -194,5 +209,5 @@
     return { edges, transfers: edges.length, wallets: wallets.size, calls, fromCache };
   }
 
-  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, fetchAllTransfers, fetchHolderEdges, fetchHolderTransfers, RPC: PUBLIC_RPC });
+  window.STAG = Object.assign(window.STAG || {}, { getLatestBlock, getTransferCount, fetchAllTransfers, fetchHolderEdges, fetchHolderTransfers, RPC: PUBLIC_RPC });
 })();
