@@ -81,6 +81,7 @@
     'function setEntryFee(uint256)',
     'function setRefundAmount(uint256)',
     'function setOracle(address)',
+    'function verify(uint256,bool,uint256)',
   ];
 
   // generic owner write against any contract (guarded)
@@ -309,6 +310,13 @@
       if ((await provider.getCode(addr)) === '0x') return toast('No contract at the Pact address — check Config.', 'err');
       try { const tx = await signer.sendTransaction({ to: addr, value: parseEth($('pk-fund-v').value) }); await tx.wait(); toast('Pact treasury funded ✓', 'ok'); }
       catch (e) { toast(pretty(e), 'err'); }
+    });
+    $('pk-verify') && ($('pk-verify').onclick = () => {
+      const id = ($('pk-vid').value || '').trim();
+      if (id === '' || isNaN(+id)) return toast('Enter a pact ID.', 'err');
+      const held = !!($('pk-vheld') && $('pk-vheld').checked);
+      const reward = held ? parseEth($('pk-vreward').value || '0') : 0n;
+      ownerSend(pk(), PACT_ABI, 'verify', [BigInt(id), held, reward], held ? 'Pact verified — payout ready to claim ✓' : 'Pact forfeited ✓');
     });
     $('cfg-pact') && ($('cfg-pact').value = store.get('pact'));
 
