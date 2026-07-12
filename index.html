@@ -45,7 +45,7 @@
     html.splash-lock,body.splash-lock{overflow:hidden;height:100%}
   </style>
   <div id="splash" role="dialog" aria-label="Intro">
-    <video id="splash-vid" muted autoplay playsinline preload="auto" poster="assets/img/hero-poster.jpg">
+    <video id="splash-vid" muted autoplay loop playsinline preload="auto" poster="assets/img/splash-poster.jpg">
       <source src="assets/media/intro-stag.mp4" type="video/mp4" />
     </video>
     <audio id="splash-song" src="assets/media/stagwifhood.mp3" preload="auto"></audio>
@@ -433,23 +433,23 @@
       setTimeout(function () { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 800);
     }
 
-    // video: autoplay muted (always allowed); dismiss when it finishes
+    // video: autoplay muted + loop (always allowed) so the splash holds for a set beat
     if (vid) {
       var play = vid.play(); if (play && play.catch) play.catch(function () {});
-      vid.addEventListener('ended', end);
       vid.addEventListener('error', end);
     }
-    // best-effort song autoplay; fall back to first user gesture
+    // best-effort song autoplay; the FIRST touch/scroll/click anywhere starts it instantly
     startSong();
-    ['pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (ev) {
-      window.addEventListener(ev, startSong, { once: true, passive: true });
+    ['pointerdown', 'touchstart', 'keydown', 'wheel', 'click'].forEach(function (ev) {
+      window.addEventListener(ev, startSong, { once: true, passive: true, capture: true });
     });
-    // tapping the splash (not Skip) also just turns sound on without dismissing
+    // tapping the splash (not Skip) turns sound on without dismissing
     splash.addEventListener('click', function (e) { if (e.target !== skip) startSong(); });
     if (skip) skip.addEventListener('click', function (e) { e.stopPropagation(); end(); });
-    // hard caps so the splash can never trap the visitor
-    setTimeout(function () { if (hint && song && (song.paused || song.currentTime === 0)) hint.hidden = false; }, 900);
-    setTimeout(end, 20000); // absolute fallback
+    // show the sound hint only if audio was actually blocked
+    setTimeout(function () { if (hint && song && (song.paused || song.currentTime === 0)) hint.hidden = false; }, 1000);
+    // hold the splash ~7s (a snippet), then reveal the site
+    setTimeout(end, 7000);
   })();
   </script>
 </body>

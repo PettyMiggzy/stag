@@ -81,7 +81,19 @@
 
   // ---------------- wallet ----------------
   async function connect(silent) {
-    if (!window.ethereum) { if (!silent) flashConnect('No EVM wallet found — install MetaMask.'); return; }
+    if (!window.ethereum) {
+      if (silent) return;
+      // Mobile browsers (Safari/Chrome) have no injected wallet — open the dApp inside the
+      // wallet app's own browser via deep link, where window.ethereum exists.
+      if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+        const dapp = location.host + location.pathname + location.search;
+        flashConnect('Opening in your wallet app…');
+        window.location.href = 'https://metamask.app.link/dapp/' + dapp;
+        return;
+      }
+      flashConnect('No EVM wallet found — install MetaMask.');
+      return;
+    }
     try {
       // silent = reuse an existing authorization (no popup); bail if not already authorized
       const accs = await window.ethereum.request({ method: silent ? 'eth_accounts' : 'eth_requestAccounts' });
