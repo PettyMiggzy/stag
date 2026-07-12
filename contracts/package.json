@@ -4,7 +4,14 @@
   "version": "0.1.0",
   "description": "The Hooded 20 — mint/staking/Sherwood Pact contracts (Robinhood Chain)",
   "devDependencies": {
-    "solc": "0.8.24",
-    "@openzeppelin/contracts": "5.0.2"
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.2",
+    "@nomicfoundation/hardhat-ethers": "^3.1.3",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "5.0.2",
+    "chai": "^4.5.0",
+    "ethers": "^6.17.0",
+    "hardhat": "^2.22.17",
+    "solc": "0.8.24"
   }
 }

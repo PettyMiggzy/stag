@@ -7,12 +7,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const srcDir = resolve(here, "src");
 const targets = process.argv.slice(2).length
   ? process.argv.slice(2)
-  : readdirSync(here).filter((f) => f.endsWith(".sol"));
+  : readdirSync(srcDir).filter((f) => f.endsWith(".sol"));
 
 const sources = {};
-for (const f of targets) sources[f] = { content: readFileSync(resolve(here, f), "utf8") };
+for (const f of targets) sources[f] = { content: readFileSync(resolve(srcDir, f), "utf8") };
 
 function findImports(path) {
   try {
@@ -28,6 +29,7 @@ const input = {
   sources,
   settings: {
     optimizer: { enabled: true, runs: 200 },
+    viaIR: true,
     outputSelection: { "*": { "*": ["abi", "evm.bytecode.object"] } },
   },
 };
