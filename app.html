@@ -24,24 +24,9 @@
     .app-head{text-align:center;padding:2.2rem 0 1rem}
     .app-head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,4.4vw,2.9rem);line-height:1.04;margin:.3rem 0 .5rem}
     .app-head p{color:var(--muted);max-width:560px;margin:0 auto;font-size:.95rem}
-
-    /* splash intro */
-    .splash{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg);transition:opacity .6s ease,visibility .6s}
-    .splash.gone{opacity:0;visibility:hidden}
-    .splash-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
-    .splash::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 120% at 50% 40%,rgba(6,18,10,.25),rgba(6,18,10,.9))}
-    .splash-inner{position:relative;z-index:2;text-align:center;padding:2rem;display:flex;flex-direction:column;align-items:center;gap:.7rem}
-    .splash-mark{width:92px;height:92px;border-radius:50%;box-shadow:0 0 0 2px rgba(150,230,90,.6),0 0 30px -4px rgba(150,230,90,.7);margin-bottom:.3rem}
-    .splash-title{font-family:'Cinzel',serif;font-weight:900;letter-spacing:.05em;font-size:clamp(2rem,6vw,3.4rem);line-height:1}
-    .splash-sub{color:var(--muted);font:600 .82rem/1 'Space Grotesk',monospace;letter-spacing:.18em;text-transform:uppercase;margin-bottom:1rem}
-    #splash-enter{max-width:280px}
-    .splash-skip{background:none;border:none;color:var(--muted);font:600 .8rem/1 'Space Grotesk',monospace;cursor:pointer;margin-top:.3rem;text-decoration:underline;text-underline-offset:3px}
-    .splash-skip:hover{color:var(--gold-lite)}
     .music-toggle{position:fixed;right:16px;bottom:16px;z-index:120;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
       color:#1a1206;background:var(--grad-gold);border:none;cursor:pointer;box-shadow:0 10px 26px -8px rgba(230,184,63,.7);transition:transform .2s}
     .music-toggle:hover{transform:translateY(-2px)}
-    .splash[hidden]{display:none}
-    .flourish{cursor:pointer}
 
     /* wallet bar */
     .wbar{position:sticky;top:calc(40px + 62px);z-index:40;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
@@ -175,25 +160,8 @@
   </style>
 </head>
 <body>
-  <!-- SPLASH INTRO -->
-  <div class="splash" id="splash">
-    <video class="splash-vid" autoplay muted loop playsinline poster="assets/img/hero-poster.jpg"><source src="assets/media/splash.mp4" type="video/mp4"></video>
-    <div class="splash-inner">
-      <img src="assets/img/mark.png" class="splash-mark" alt="STAGWIFHOOD" />
-      <div class="splash-title">STAG<span class="gold">WIF</span>HOOD</div>
-      <div class="splash-sub">The Hooded 20 · Stake · Sherwood Pact</div>
-      <button id="splash-enter" class="btn btn-gold btn-lg">Enter with Sound</button>
-      <button id="splash-skip" class="splash-skip">Enter muted</button>
-    </div>
-  </div>
   <audio id="bg-song" src="assets/media/stagwifhood.mp3" loop preload="auto"></audio>
   <button id="music-toggle" class="music-toggle" hidden title="Play music" aria-label="Toggle music"></button>
-
-  <!-- quick flourish when entering Stake (video flash + sound snippet) -->
-  <div class="splash flourish" id="flourish" hidden title="skip">
-    <video class="splash-vid" id="flourish-vid" muted loop playsinline><source src="assets/media/splash.mp4" type="video/mp4"></video>
-    <div class="splash-inner"><img src="assets/img/mark.png" class="splash-mark" alt="" /><div class="splash-title" style="font-size:clamp(1.6rem,5vw,2.6rem)">STAG<span class="gold">WIF</span>HOOD</div></div>
-  </div>
 
   <div class="bg-layer bg-forest" aria-hidden="true"></div>
   <div class="bg-layer bg-glow" aria-hidden="true"></div>
@@ -433,62 +401,24 @@
   <script src="js/hooded-config.js"></script>
   <script src="js/app.js"></script>
   <script>
-  /* splash + background music. Video autoplays muted (allowed); the song starts on the
-     Enter click (browsers block audio autoplay without a gesture). Plays looped until paused. */
+  /* Background music — plays when you hit the site. Browsers block audio autoplay without a
+     gesture, so if the immediate play() is rejected we start on the first click/keypress anywhere.
+     Floating button pauses/plays. */
   (function () {
-    var splash = document.getElementById('splash'), enter = document.getElementById('splash-enter'), skip = document.getElementById('splash-skip');
     var song = document.getElementById('bg-song'), toggle = document.getElementById('music-toggle');
-    var ICON_PLAY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-    var ICON_PAUSE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
-    function setIcon(playing) { if (toggle) { toggle.innerHTML = playing ? ICON_PAUSE : ICON_PLAY; toggle.title = playing ? 'Pause music' : 'Play music'; } }
-    function showToggle() { if (toggle) toggle.hidden = false; }
-    function dismiss(withSound) {
-      try { sessionStorage.setItem('h20_splash', '1'); } catch (e) {}
-      if (splash) { splash.classList.add('gone'); setTimeout(function () { splash.style.display = 'none'; }, 650); }
-      showToggle();
-      if (withSound && song) { song.volume = 0.6; song.play().then(function () { setIcon(true); }).catch(function () { setIcon(false); }); }
-      else setIcon(false);
-    }
-    var seen = false; try { seen = sessionStorage.getItem('h20_splash') === '1'; } catch (e) {}
-    if (seen) { if (splash) splash.style.display = 'none'; showToggle(); setIcon(false); }
-    if (enter) enter.onclick = function () { dismiss(true); };
-    if (skip) skip.onclick = function () { dismiss(false); };
-    if (toggle) toggle.onclick = function () {
-      if (!song) return;
-      if (song.paused) song.play().then(function () { setIcon(true); }).catch(function () {});
-      else { song.pause(); setIcon(false); }
-    };
-    // keep the button icon honest if playback ends/stalls
-    if (song) { song.addEventListener('pause', function () { setIcon(false); }); song.addEventListener('play', function () { setIcon(true); }); }
-
-    /* Stake flourish — clicking the Stake tab flashes the splash video + a ~3s snippet of the
-       track. Clicking the tab is a user gesture, so the snippet is allowed to play. Pauses the
-       looping background music during the snippet to avoid overlap, then resumes it. */
-    var flourish = document.getElementById('flourish'), fvid = document.getElementById('flourish-vid');
-    var busy = false;
-    function stakeFlourish() {
-      if (busy || !flourish) return; busy = true;
-      var bgWas = song && !song.paused; if (bgWas) song.pause();
-      flourish.hidden = false; flourish.classList.remove('gone');
-      if (fvid) { try { fvid.currentTime = 0; fvid.play().catch(function () {}); } catch (e) {} }
-      var snip = new Audio('assets/media/stagwifhood.mp3'); snip.volume = 0.65;
-      snip.play().catch(function () {});
-      var ended = false;
-      function done() {
-        if (ended) return; ended = true;
-        var v = snip.volume; var fade = setInterval(function () { v -= 0.13; if (v <= 0) { snip.pause(); clearInterval(fade); } else snip.volume = v; }, 55);
-        flourish.classList.add('gone');
-        setTimeout(function () { flourish.hidden = true; busy = false; }, 550);
-        if (bgWas && song) setTimeout(function () { song.play().then(function () { setIcon(true); }).catch(function () {}); }, 350);
-      }
-      var timer = setTimeout(done, 3200);
-      flourish.onclick = function () { clearTimeout(timer); done(); }; // click to skip
-    }
-    // expose so the tab router (app.js) can fire it however Stake is entered (tab, nav link, hash),
-    // but never while the main splash is still up.
-    window.__stakeFlourish = function () { if (splash && splash.style.display !== 'none' && !splash.classList.contains('gone')) return; stakeFlourish(); };
-    var stakeTab = document.querySelector('.app-tab[data-tab="stake"]');
-    if (stakeTab) stakeTab.addEventListener('click', function () { window.__stakeFlourish(); });
+    if (!song) return;
+    var PLAY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    var PAUSE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+    function setIcon() { if (toggle) { toggle.innerHTML = song.paused ? PLAY : PAUSE; toggle.title = song.paused ? 'Play music' : 'Pause music'; } }
+    song.volume = 0.55;
+    song.play().catch(function () {
+      var once = function () { song.play().catch(function () {}); document.removeEventListener('pointerdown', once); document.removeEventListener('keydown', once); };
+      document.addEventListener('pointerdown', once, { once: true });
+      document.addEventListener('keydown', once, { once: true });
+    });
+    song.addEventListener('play', setIcon); song.addEventListener('pause', setIcon);
+    if (toggle) { toggle.hidden = false; toggle.onclick = function () { if (song.paused) song.play().catch(function () {}); else song.pause(); }; }
+    setIcon();
   })();
   </script>
 </body>
