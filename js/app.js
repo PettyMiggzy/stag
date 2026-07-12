@@ -343,7 +343,33 @@
           }
         } else { $('s-lock').textContent = ''; $('p-lock').textContent = ''; if (claimBtn) claimBtn.disabled = false; }
         this.renderStakedNfts(info.nfts);
+        this.loadMyNfts();
       } catch (e) {}
+    },
+    // Show every Hooded 20 the wallet owns with a Stake/Unstake button (lock-in-place).
+    async loadMyNfts() {
+      const card = $('s-mynfts-card'), grid = $('s-mynfts'), empty = $('s-mynfts-empty');
+      if (!grid) return;
+      if (!me || !H.mint) { if (card) card.hidden = true; if (empty) empty.hidden = false; return; }
+      try {
+        if (!items.length) { try { const r = await fetch(`${BASE}/manifest.json`); items = (await r.json()).items || []; } catch {} }
+        const c = new ethers.Contract(H.mint, NFT_ABI, ro());
+        const bal = Number(await c.balanceOf(me));
+        if (bal === 0) { if (card) card.hidden = true; if (empty) { empty.hidden = false; empty.innerHTML = "You don't own any Hooded 20 yet. <a href=\"/nfts\" style=\"color:var(--gold-lite)\">Mint one →</a> to stake it in place."; } return; }
+        const ids = [];
+        for (let i = 0; i < bal; i++) ids.push(Number(await c.tokenOfOwnerByIndex(me, i)));
+        const locks = {}; await Promise.all(ids.map(async (id) => { locks[id] = await c.locked(id); }));
+        grid.innerHTML = '';
+        for (const id of ids) {
+          const it = items.find((x) => parseInt(x.id, 10) === id) || { id, rarity: '', character: 'Hooded #' + id, rank: id };
+          const staked = locks[id];
+          grid.appendChild(Mint.card(it, {
+            badge: staked ? { cls: 'staked', txt: 'STAKED' } : { cls: 'owned', txt: 'OWNED' },
+            btn: staked ? { txt: 'Unstake', on: () => this.unstakeNFT(id) } : { txt: 'Stake NFT', on: () => this.stakeNFT(id) },
+          }));
+        }
+        if (empty) empty.hidden = true; if (card) card.hidden = false;
+      } catch (e) { if (card) card.hidden = true; }
     },
     renderStakedNfts(nfts) {
       const wrap = $('s-nfts-wrap'), grid = $('p-nfts'); if (!grid) return;
