@@ -29,19 +29,24 @@
   <!-- ============ INTRO SPLASH (video + song snippet, every visit) ============ -->
   <style>
     #splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;
-      opacity:1;transition:opacity .7s ease}
+      opacity:1;transition:opacity .8s ease}
     #splash.hide{opacity:0;pointer-events:none}
-    #splash video{width:100%;height:100%;object-fit:cover}
-    #splash-skip{position:absolute;right:18px;bottom:18px;z-index:2;cursor:pointer;
-      font:600 .8rem/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.06em;color:#eafff0;
-      background:rgba(8,16,10,.55);border:1px solid rgba(0,200,5,.4);border-radius:999px;padding:.6rem 1.1rem;
-      backdrop-filter:blur(6px);transition:.15s}
-    #splash-skip:hover{background:rgba(0,200,5,.18);border-color:#00c805}
-    #splash-sound{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:2;
-      font:600 .78rem/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.05em;color:#eafff0;
-      background:rgba(8,16,10,.55);border:1px solid rgba(230,184,63,.45);border-radius:999px;padding:.55rem 1rem;
-      backdrop-filter:blur(6px);animation:splashPulse 1.6s ease-in-out infinite}
-    @keyframes splashPulse{0%,100%{opacity:.55}50%{opacity:1}}
+    #splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    #splash-scrim{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 60%,transparent 30%,rgba(2,8,4,.72) 100%)}
+    #splash-cta{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:1.1rem;text-align:center;padding:1.5rem}
+    #splash-wordmark{font:900 clamp(1.5rem,6vw,2.6rem)/1 'Cinzel',serif;letter-spacing:.04em;color:#eafff0;
+      text-shadow:0 2px 24px rgba(0,0,0,.7)}
+    #splash-wordmark span{color:#e6b83f}
+    #splash-enter{cursor:pointer;font:800 1.05rem/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.14em;
+      color:#08130a;background:linear-gradient(180deg,#f4e08a,#e6b83f);border:none;border-radius:999px;
+      padding:1.05rem 2.6rem;box-shadow:0 14px 40px -12px rgba(230,184,63,.8),0 0 0 1px rgba(255,255,255,.25) inset;
+      animation:splashBob 1.8s ease-in-out infinite;transition:transform .15s}
+    #splash-enter:hover{transform:scale(1.04)}
+    #splash-enter:active{transform:scale(.98)}
+    @keyframes splashBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+    #splash-skip{cursor:pointer;font:600 .78rem/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.08em;
+      color:#c9d8c9;background:none;border:none;opacity:.7;padding:.3rem .6rem;transition:.15s}
+    #splash-skip:hover{opacity:1;color:#fff}
     html.splash-lock,body.splash-lock{overflow:hidden;height:100%}
   </style>
   <div id="splash" role="dialog" aria-label="Intro">
@@ -49,8 +54,12 @@
       <source src="assets/media/intro-stag.mp4" type="video/mp4" />
     </video>
     <audio id="splash-song" src="assets/media/stagwifhood.mp3" preload="auto"></audio>
-    <button id="splash-skip" type="button" aria-label="Skip intro">Skip ▶</button>
-    <div id="splash-sound" hidden>🔊 Tap for sound</div>
+    <div id="splash-scrim"></div>
+    <div id="splash-cta">
+      <div id="splash-wordmark">STAG<span>WIF</span>HOOD</div>
+      <button id="splash-enter" type="button">▶ ENTER</button>
+      <button id="splash-skip" type="button" aria-label="Skip intro">skip →</button>
+    </div>
   </div>
   <!-- ========================================================================== -->
 
@@ -385,44 +394,30 @@
 
   <script src="js/main.js"></script>
   <script>
-  /* Intro splash: play the (silent) video + a snippet of the song every visit.
-     Video autoplays muted (always allowed). We try to autoplay the song; if the
-     browser blocks audio until a gesture, we start it on the first tap/scroll/key
-     and show a subtle "tap for sound" hint. The splash dismisses when the video
-     ends, on Skip, or after a hard cap — then the song fades and stops (snippet). */
+  /* Intro splash with an ENTER gate for GUARANTEED sound. The (silent) video
+     autoplays muted as the backdrop. Tapping ENTER is a user gesture, so the song
+     is allowed to play with sound — video + song run together for a snippet, then
+     the splash fades and reveals the site. If the browser already allows audio
+     (desktop / trusted returning visitors), we auto-enter without a tap. */
   (function () {
     var splash = document.getElementById('splash');
     if (!splash) return;
     var vid = document.getElementById('splash-vid');
     var song = document.getElementById('splash-song');
+    var enter = document.getElementById('splash-enter');
     var skip = document.getElementById('splash-skip');
-    var hint = document.getElementById('splash-sound');
-    var done = false;
+    var done = false, entered = false;
     document.documentElement.classList.add('splash-lock');
     document.body.classList.add('splash-lock');
-    if (song) { song.volume = 0; song.currentTime = 0; }
+    if (song) { song.volume = 0.9; song.currentTime = 0; }
 
     function fadeSong() {
       if (!song) return;
       var v = song.volume;
       var t = setInterval(function () {
-        v -= 0.08; if (v <= 0) { v = 0; clearInterval(t); try { song.pause(); } catch (e) {} }
+        v -= 0.07; if (v <= 0) { v = 0; clearInterval(t); try { song.pause(); } catch (e) {} }
         song.volume = Math.max(0, v);
       }, 60);
-    }
-    function fadeInSong() {
-      if (!song) return;
-      var target = 0.85, v = song.volume;
-      var t = setInterval(function () {
-        v += 0.06; if (v >= target) { v = target; clearInterval(t); }
-        song.volume = Math.min(target, v);
-      }, 70);
-    }
-    function startSong() {
-      if (!song || done) return;
-      var p = song.play();
-      if (p && p.then) p.then(function () { if (hint) hint.hidden = true; fadeInSong(); })
-        .catch(function () { if (hint) hint.hidden = false; });
     }
     function end() {
       if (done) return; done = true;
@@ -430,26 +425,32 @@
       fadeSong();
       document.documentElement.classList.remove('splash-lock');
       document.body.classList.remove('splash-lock');
-      setTimeout(function () { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 800);
+      setTimeout(function () { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 850);
+    }
+    // ENTER: play the song with sound (this tap is the gesture that unlocks audio),
+    // let video + song play together for a snippet, then reveal the site.
+    function goEnter() {
+      if (entered || done) return; entered = true;
+      try { song.currentTime = 0; song.play(); } catch (e) {}
+      splash.classList.add('entered');
+      setTimeout(end, 6000); // snippet length once entered
     }
 
-    // video: autoplay muted + loop (always allowed) so the splash holds for a set beat
-    if (vid) {
-      var play = vid.play(); if (play && play.catch) play.catch(function () {});
-      vid.addEventListener('error', end);
-    }
-    // best-effort song autoplay; the FIRST touch/scroll/click anywhere starts it instantly
-    startSong();
-    ['pointerdown', 'touchstart', 'keydown', 'wheel', 'click'].forEach(function (ev) {
-      window.addEventListener(ev, startSong, { once: true, passive: true, capture: true });
-    });
-    // tapping the splash (not Skip) turns sound on without dismissing
-    splash.addEventListener('click', function (e) { if (e.target !== skip) startSong(); });
+    // video backdrop: muted autoplay + loop (always allowed)
+    if (vid) { var pv = vid.play(); if (pv && pv.catch) pv.catch(function () {}); vid.addEventListener('error', end); }
+
+    if (enter) enter.addEventListener('click', function (e) { e.stopPropagation(); goEnter(); });
     if (skip) skip.addEventListener('click', function (e) { e.stopPropagation(); end(); });
-    // show the sound hint only if audio was actually blocked
-    setTimeout(function () { if (hint && song && (song.paused || song.currentTime === 0)) hint.hidden = false; }, 1000);
-    // hold the splash ~7s (a snippet), then reveal the site
-    setTimeout(end, 7000);
+    // tapping anywhere on the splash also counts as entering (with sound)
+    splash.addEventListener('click', goEnter);
+
+    // Best-effort auto-enter: if the browser lets audio play without a tap, take it.
+    if (song) {
+      var p = song.play();
+      if (p && p.then) p.then(function () { goEnter(); }).catch(function () { /* need the ENTER tap */ });
+    }
+    // absolute safety net so the splash can never trap a visitor
+    setTimeout(end, 22000);
   })();
   </script>
 </body>
