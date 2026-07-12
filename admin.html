@@ -167,18 +167,28 @@
       <div class="adm-field"><label>Withdraw stuck ETH</label><input id="in-withdraw" class="adm-input" placeholder="to 0x… (blank = you)" /><button id="btn-withdraw" class="btn-mini danger">Send</button></div>
     </div>
 
-    <!-- Staking (coming) -->
-    <div class="adm-card adm-soon">
-      <span class="adm-soon-tag">deploying soon</span>
+    <!-- Staking -->
+    <div class="adm-card owner-only">
       <h2>Staking Pool</h2>
-      <p class="hint">30/60/90 lock tiers · holding multipliers (1M→2×, 10M→3×) · fund the ETH reward pool · approve stakeable projects. Wires up once StagStaking v4 is deployed.</p>
+      <p class="hint">Fund the ETH reward pool, start a reward period, tune lock &amp; holding multipliers, approve projects.</p>
+      <div class="adm-field"><label>Fund pool (ETH)</label><input id="sk-fund-amt" class="adm-input" placeholder="0.5" /><button id="sk-fund" class="btn-mini">Send</button></div>
+      <div class="adm-field"><label>Rewards (ETH)</label><input id="sk-notify-amt" class="adm-input" placeholder="0.5" style="min-width:90px" /><input id="sk-notify-days" class="adm-input" placeholder="days" style="max-width:80px" /><button id="sk-notify" class="btn-mini">Start</button></div>
+      <div class="adm-field"><label>Lock mult 30/60/90</label>
+        <input id="sk-mult-in-0" class="adm-input" placeholder="1" style="max-width:64px" /><button id="sk-mult-0" class="btn-mini">↑</button>
+        <input id="sk-mult-in-1" class="adm-input" placeholder="1.5" style="max-width:64px" /><button id="sk-mult-1" class="btn-mini">↑</button>
+        <input id="sk-mult-in-2" class="adm-input" placeholder="2" style="max-width:64px" /><button id="sk-mult-2" class="btn-mini">↑</button></div>
+      <div class="adm-field"><label>Holding 1M→ / 10M→ (×)</label><input id="sk-h1" class="adm-input" value="1000000" style="max-width:96px"/><input id="sk-hm1" class="adm-input" placeholder="2" style="max-width:56px"/><input id="sk-h2" class="adm-input" value="10000000" style="max-width:96px"/><input id="sk-hm2" class="adm-input" placeholder="3" style="max-width:56px"/><button id="sk-hold" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Approve project</label><input id="sk-tok" class="adm-input" placeholder="token 0x…" /><input id="sk-tokw" class="adm-input" placeholder="× (1)" style="max-width:70px"/><button id="sk-approve" class="btn-mini">Approve</button></div>
     </div>
 
-    <!-- Sherwood Pact (coming) -->
-    <div class="adm-card adm-soon">
-      <span class="adm-soon-tag">deploying soon</span>
+    <!-- Sherwood Pact -->
+    <div class="adm-card owner-only">
       <h2>Sherwood Pact</h2>
-      <p class="hint">Proof-of-hold review queue — approve/deny payout claims verified by the indexer, set entry/refund amounts, manage the Pact treasury.</p>
+      <p class="hint">Proof-of-hold: set entry/refund, the indexer oracle, and fund the reward treasury.</p>
+      <div class="adm-field"><label>Entry fee (ETH)</label><input id="pk-entry-v" class="adm-input" placeholder="0.01" /><button id="pk-entry" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Refund (ETH)</label><input id="pk-refund-v" class="adm-input" placeholder="0.005" /><button id="pk-refund" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Oracle</label><input id="pk-oracle-v" class="adm-input" placeholder="0x… indexer signer" /><button id="pk-oracle" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Fund treasury (ETH)</label><input id="pk-fund-v" class="adm-input" placeholder="0.1" /><button id="pk-fund" class="btn-mini">Send</button></div>
     </div>
 
     <!-- Config -->
@@ -188,6 +198,7 @@
       <div class="adm-field"><label>Mint (Hooded 20)</label><input id="cfg-mint" class="adm-input" placeholder="0x…" /></div>
       <div class="adm-field"><label>Staking</label><input id="cfg-staking" class="adm-input" placeholder="0x…" /></div>
       <div class="adm-field"><label>Splitter</label><input id="cfg-splitter" class="adm-input" placeholder="0x…" /></div>
+      <div class="adm-field"><label>Sherwood Pact</label><input id="cfg-pact" class="adm-input" placeholder="0x…" /></div>
       <div class="adm-field"><label>Stakeable projects</label><input id="cfg-projects" class="adm-input" placeholder="1" style="max-width:90px" /><button id="btn-cfg-save" class="btn-mini">Save Config</button></div>
     </div>
 

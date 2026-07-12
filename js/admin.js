@@ -58,6 +58,45 @@
     'function withdrawETH(address)',
   ];
   const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
+  const STAKING_ABI = [
+    'function owner() view returns (address)',
+    'function totalWeight() view returns (uint256)',
+    'function reserved() view returns (uint256)',
+    'function tierInfo() view returns (uint256[3],uint256[3])',
+    'function notifyRewardAmount(uint256,uint256)',
+    'function setTierMultBps(uint8,uint256)',
+    'function setHoldingTiers(uint256[],uint256[])',
+    'function setTokenWeight(address,uint256)',
+    'function setEarlyPenaltyBps(uint256)',
+  ];
+  const PACT_ABI = [
+    'function owner() view returns (address)',
+    'function entryFee() view returns (uint256)',
+    'function refundAmount() view returns (uint256)',
+    'function oracle() view returns (address)',
+    'function freeTreasury() view returns (uint256)',
+    'function pactCount() view returns (uint256)',
+    'function setEntryFee(uint256)',
+    'function setRefundAmount(uint256)',
+    'function setOracle(address)',
+  ];
+
+  // generic owner write against any contract (guarded)
+  async function ownerSend(addr, abi, method, args, okMsg, valueWei) {
+    if (!signer) return toast('Connect your wallet first.', 'err');
+    if (!addr) return toast('Set the contract address in Config first.', 'err');
+    const c = new ethers.Contract(addr, abi, signer);
+    const ov = valueWei != null ? { value: valueWei } : {};
+    try { await c[method].estimateGas(...args, ov); } catch (e) { return toast('Would revert: ' + pretty(e), 'err'); }
+    try {
+      toast('Confirm in wallet…');
+      const tx = await c[method](...args, ov);
+      toast('Submitted — waiting…');
+      await tx.wait();
+      toast(okMsg || 'Done ✓', 'ok');
+      await loadDashboard();
+    } catch (e) { toast(pretty(e), 'err'); }
+  }
 
   let provider, signer, me, isOwner = false;
   const $ = (id) => document.getElementById(id);
@@ -216,10 +255,41 @@
       store.set('mint', $('cfg-mint').value.trim());
       store.set('staking', $('cfg-staking').value.trim());
       store.set('splitter', $('cfg-splitter').value.trim());
+      if ($('cfg-pact')) store.set('pact', $('cfg-pact').value.trim());
       store.set('projects', $('cfg-projects').value.trim());
       toast('Config saved ✓', 'ok');
       if (signer) await connect(); else await loadDashboard();
     };
+
+    // ----- staking admin -----
+    const stk = () => store.get('staking');
+    $('sk-fund') && ($('sk-fund').onclick = async () => {
+      if (!signer) return toast('Connect wallet first.', 'err');
+      if (!stk()) return toast('Set staking address in Config.', 'err');
+      try { const tx = await signer.sendTransaction({ to: stk(), value: parseEth($('sk-fund-amt').value) }); await tx.wait(); toast('Pool funded ✓', 'ok'); await loadDashboard(); }
+      catch (e) { toast(pretty(e), 'err'); }
+    });
+    $('sk-notify') && ($('sk-notify').onclick = () => ownerSend(stk(), STAKING_ABI, 'notifyRewardAmount',
+      [parseEth($('sk-notify-amt').value), BigInt(Math.round((+$('sk-notify-days').value || 0) * 86400))], 'Reward period started ✓'));
+    for (let t = 0; t < 3; t++) $('sk-mult-' + t) && ($('sk-mult-' + t).onclick = () =>
+      ownerSend(stk(), STAKING_ABI, 'setTierMultBps', [t, BigInt(Math.round((+$('sk-mult-in-' + t).value || 1) * 10000))], 'Lock multiplier set ✓'));
+    $('sk-hold') && ($('sk-hold').onclick = () => ownerSend(stk(), STAKING_ABI, 'setHoldingTiers',
+      [[0n, ethers.parseEther($('sk-h1').value || '1000000'), ethers.parseEther($('sk-h2').value || '10000000')],
+       [10000n, BigInt(Math.round((+$('sk-hm1').value || 2) * 10000)), BigInt(Math.round((+$('sk-hm2').value || 3) * 10000))]], 'Holding tiers set ✓'));
+    $('sk-approve') && ($('sk-approve').onclick = () => ownerSend(stk(), STAKING_ABI, 'setTokenWeight',
+      [$('sk-tok').value.trim(), BigInt(Math.round((+$('sk-tokw').value || 1) * 10000))], 'Token approved ✓'));
+
+    // ----- pact admin -----
+    const pk = () => store.get('pact');
+    $('pk-entry') && ($('pk-entry').onclick = () => ownerSend(pk(), PACT_ABI, 'setEntryFee', [parseEth($('pk-entry-v').value)], 'Entry fee set ✓'));
+    $('pk-refund') && ($('pk-refund').onclick = () => ownerSend(pk(), PACT_ABI, 'setRefundAmount', [parseEth($('pk-refund-v').value)], 'Refund set ✓'));
+    $('pk-oracle') && ($('pk-oracle').onclick = () => ownerSend(pk(), PACT_ABI, 'setOracle', [$('pk-oracle-v').value.trim()], 'Oracle set ✓'));
+    $('pk-fund') && ($('pk-fund').onclick = async () => {
+      if (!signer || !pk()) return toast('Connect wallet + set pact address.', 'err');
+      try { const tx = await signer.sendTransaction({ to: pk(), value: parseEth($('pk-fund-v').value) }); await tx.wait(); toast('Pact treasury funded ✓', 'ok'); }
+      catch (e) { toast(pretty(e), 'err'); }
+    });
+    $('cfg-pact') && ($('cfg-pact').value = store.get('pact'));
 
     // prefill whitelist
     $('in-free-addr').value = WHITELIST_DEFAULT; $('in-free-n').value = '20';
