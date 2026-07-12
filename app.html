@@ -253,12 +253,16 @@
       <div class="cols">
         <!-- stake form -->
         <div class="card">
-          <h3>Stake $STAG</h3>
+          <h3>Stake <span id="s-token-h">$STAG</span></h3>
+          <div class="fld" id="s-token-row" hidden style="margin-bottom:.8rem">
+            <span class="tok">Token</span>
+            <select id="s-token" style="flex:1;background:none;border:none;color:var(--ink);font:600 .95rem/1 'Space Grotesk',monospace;outline:none;text-align:right"></select>
+          </div>
           <div class="tiers" id="s-tiers"></div>
           <p class="hint" id="s-preview"></p>
           <div class="fld">
             <input id="s-amount" type="text" inputmode="decimal" placeholder="0.0" />
-            <button class="mx" id="s-max">MAX</button><span class="tok">$STAG</span>
+            <button class="mx" id="s-max">MAX</button><span class="tok" id="s-amount-tok">$STAG</span>
           </div>
           <div class="hint" id="s-bal">Balance: — $STAG</div>
           <div class="actions">
@@ -300,7 +304,7 @@
         <!-- withdraw split -->
         <div class="card">
           <h3>Withdraw Wallets · optional</h3>
-          <p class="hint">Split your staked $STAG into up to 3 wallets when you unstake (share %). Remainder returns to you. Only this staking wallet can change it.</p>
+          <p class="hint">Split your staked tokens into up to 3 wallets when you unstake (share %) — applies to whichever token you withdraw. Remainder returns to you. Only this staking wallet can change it.</p>
           <div class="fld" style="gap:.4rem"><input id="col-a1" placeholder="0x wallet 1" style="flex:1;background:none;border:none;color:var(--ink);font:500 .8rem/1 'Space Grotesk',monospace;outline:none" /><input id="col-b1" placeholder="%" style="width:56px;background:none;border:none;color:var(--ink);font:600 .8rem/1 'Space Grotesk',monospace;outline:none;text-align:right" /></div>
           <div class="fld" style="gap:.4rem"><input id="col-a2" placeholder="0x wallet 2" style="flex:1;background:none;border:none;color:var(--ink);font:500 .8rem/1 'Space Grotesk',monospace;outline:none" /><input id="col-b2" placeholder="%" style="width:56px;background:none;border:none;color:var(--ink);font:600 .8rem/1 'Space Grotesk',monospace;outline:none;text-align:right" /></div>
           <div class="fld" style="gap:.4rem"><input id="col-a3" placeholder="0x wallet 3" style="flex:1;background:none;border:none;color:var(--ink);font:500 .8rem/1 'Space Grotesk',monospace;outline:none" /><input id="col-b3" placeholder="%" style="width:56px;background:none;border:none;color:var(--ink);font:600 .8rem/1 'Space Grotesk',monospace;outline:none;text-align:right" /></div>

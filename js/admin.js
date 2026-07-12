@@ -297,6 +297,25 @@
        [10000n, BigInt(Math.round((+$('sk-hm1').value || 2) * 10000)), BigInt(Math.round((+$('sk-hm2').value || 3) * 10000))]], 'Holding tiers set ✓'));
     $('sk-approve') && ($('sk-approve').onclick = () => ownerSend(stk(), STAKING_ABI, 'setTokenWeight',
       [$('sk-tok').value.trim(), BigInt(Math.round((+$('sk-tokw').value || 1) * 10000))], 'Token approved ✓'));
+    // Whitelist a stakeable token: set weight on-chain AND add it to the site's stake picker.
+    $('wl-tok') && ($('wl-tok').onclick = async () => {
+      const addr = ($('wl-tok-addr').value || '').trim();
+      const sym = ($('wl-tok-sym').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+      const dec = parseInt($('wl-tok-dec').value || '18', 10);
+      const w = BigInt(Math.round(+($('wl-tok-w').value || '20000')));
+      if (!ethers.isAddress(addr)) return toast('Enter a valid token address.', 'err');
+      if (!sym) return toast('Enter a token symbol.', 'err');
+      if (!(w > 0n && w <= 100000n)) return toast('Weight must be 1–100000 bps.', 'err');
+      await ownerSend(stk(), STAKING_ABI, 'setTokenWeight', [addr, w], `Whitelisted $${sym} on-chain ✓`);
+      // add to the browser token list the stake page reads (merge, dedupe by address)
+      try {
+        const base = (window.HOODED && window.HOODED.stakeTokens) ? window.HOODED.stakeTokens.slice() : [];
+        const list = base.filter((t) => t.address.toLowerCase() !== addr.toLowerCase());
+        list.push({ address: addr, symbol: sym, decimals: isNaN(dec) ? 18 : dec });
+        localStorage.setItem('h20_stakeTokens', JSON.stringify(list));
+        toast(`$${sym} added to the stake picker (this browser). Deploy it in hooded-config.js to show for everyone.`, 'ok');
+      } catch (e) { toast('Set on-chain, but could not update the local picker: ' + e.message, 'err'); }
+    });
 
     // ----- pact admin -----
     const pk = () => store.get('pact');

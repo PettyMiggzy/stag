@@ -9,6 +9,12 @@ window.HOODED = {
   pact: '0xc36662D2db9432702f018963ABdab19432AA488B',     // SherwoodPact
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
+  // Stakeable tokens (each must be whitelisted on-chain via admin setTokenWeight). $STAG is
+  // whitelisted by default in the contract. Add more here (or from /admin) and the stake tab
+  // shows a token picker; the withdraw-split applies to whichever token you unstake.
+  stakeTokens: [
+    { address: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49', symbol: 'STAG', decimals: 18 },
+  ],
   chain: {
     chainId: '0x1237', // 4663 mainnet (testnet 46630 => '0xB626')
     chainName: 'Robinhood Chain',
@@ -24,6 +30,8 @@ window.HOODED = {
 (function () {
   const g = (k) => localStorage.getItem('h20_' + k);
   ['mint', 'staking', 'splitter', 'pact'].forEach((k) => { const v = g(k); if (v) window.HOODED[k] = v; });
+  // admin can extend the stakeable-token list from the browser (JSON array of {address,symbol,decimals})
+  try { const st = g('stakeTokens'); if (st) { const arr = JSON.parse(st); if (Array.isArray(arr) && arr.length) window.HOODED.stakeTokens = arr; } } catch (e) {}
 })();
 
 // Read provider: FREE public RPC first, then the /api/rpc proxy (which uses the PAID Alchemy RPC

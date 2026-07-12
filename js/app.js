@@ -47,6 +47,14 @@
   let items = [];
   let tier = 0, durations = [30, 60, 90], mults = [10000, 15000, 20000];
   let active = 'mint';
+  // stakeable tokens (default $STAG). The withdraw-split applies to whichever token is unstaked.
+  const TOKENS = (H.stakeTokens && H.stakeTokens.length) ? H.stakeTokens
+    : [{ address: STAG, symbol: 'STAG', decimals: 18 }];
+  let curTok = TOKENS[0];
+  const tdec = (t) => (t && t.decimals != null ? t.decimals : 18);
+  const parseTok = (amtStr, t) => ethers.parseUnits(String(amtStr), tdec(t));
+  const numTok = (raw, t) => { try { return Number(ethers.formatUnits(raw, tdec(t))).toLocaleString(undefined, { maximumFractionDigits: 0 }); } catch { return '—'; } };
+  const fmtTokFull = (raw, t) => { try { return ethers.formatUnits(raw, tdec(t)); } catch { return '0'; } };
 
   const ro = () => (H.readProvider ? H.readProvider() : new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) }));
   const short = (a) => a.slice(0, 6) + '…' + a.slice(-4);
@@ -259,13 +267,27 @@
       try {
         const c = new ethers.Contract(H.staking, STK_ABI, p);
         if (!this.booted) {
-          const ti = await c.tierInfo(); durations = ti[0].map(days); mults = ti[1].map(Number); this.renderTiers(); this.booted = true;
+          const ti = await c.tierInfo(); durations = ti[0].map(days); mults = ti[1].map(Number); this.renderTiers(); this.renderTokens(); this.booted = true;
         }
-        // global stats
+        this.setTokLabels();
+        // global stats (per selected token)
         try { $('s-pool').textContent = eth(await p.getBalance(H.staking)) + ' Ξ'; } catch {}
-        try { $('s-total').textContent = num(await new ethers.Contract(STAG, ERC20, p).balanceOf(H.staking)) + ' STAG'; } catch {}
+        try { $('s-total').textContent = numTok(await new ethers.Contract(curTok.address, ERC20, p).balanceOf(H.staking), curTok) + ' ' + curTok.symbol; } catch {}
         if (withUser && me) await this.loadUser(c, p);
       } catch (e) { setStatus('s-status', 'Could not reach the staking contract yet.', ''); }
+    },
+    renderTokens() {
+      const row = $('s-token-row'), sel = $('s-token'); if (!sel) return;
+      if (TOKENS.length <= 1) { if (row) row.hidden = true; return; }
+      if (row) row.hidden = false;
+      sel.innerHTML = TOKENS.map((t, i) => `<option value="${i}">${esc(t.symbol)}</option>`).join('');
+      sel.value = String(TOKENS.indexOf(curTok));
+      sel.onchange = () => { curTok = TOKENS[+sel.value] || TOKENS[0]; this.setTokLabels(); this.load(!!me); };
+    },
+    setTokLabels() {
+      const sym = '$' + curTok.symbol;
+      const h = $('s-token-h'); if (h) h.textContent = sym;
+      const at = $('s-amount-tok'); if (at) at.textContent = sym;
     },
     renderTiers() {
       const w = $('s-tiers'); if (!w) return;
@@ -278,15 +300,15 @@
       p = p || provider || ro();
       c = c || new ethers.Contract(H.staking, STK_ABI, p);
       try {
-        const [info, staked, bal] = await Promise.all([c.userInfo(me), c.stakedOf(me, STAG), new ethers.Contract(STAG, ERC20, p).balanceOf(me)]);
-        const stakedN = num(staked);
-        $('s-your').textContent = stakedN + ' STAG'; $('p-staked').textContent = stakedN;
+        const [info, staked, bal] = await Promise.all([c.userInfo(me), c.stakedOf(me, curTok.address), new ethers.Contract(curTok.address, ERC20, p).balanceOf(me)]);
+        const stakedN = numTok(staked, curTok);
+        $('s-your').textContent = stakedN + ' ' + curTok.symbol; $('p-staked').textContent = stakedN;
         $('s-claim').textContent = eth(info.pendingEth) + ' Ξ'; $('p-claim').textContent = eth(info.pendingEth) + ' Ξ';
         const mult = (Number(info.lockMultBps) / 10000) * (Number(info.holdMult) / 10000);
         const mtxt = mult ? (mult.toFixed(2).replace(/\.00$/, '') + '×') : '1×';
         $('p-mult').textContent = mtxt;
         $('p-tier').textContent = Number(staked) > 0 ? durations[Number(info.lockTier)] + 'd' : '—';
-        $('s-bal').textContent = 'Balance: ' + num(bal) + ' $STAG';
+        $('s-bal').textContent = 'Balance: ' + numTok(bal, curTok) + ' $' + curTok.symbol;
         const claimBtn = $('s-claimbtn');
         if (Number(staked) > 0) {
           const unlock = new Date(Number(info.unlockAt) * 1000);
@@ -318,23 +340,23 @@
     async stake() {
       const s = ($('s-amount').value || '').trim(); if (!s || +s <= 0) return setStatus('s-status', 'Enter an amount to stake.', 'err');
       if (!signer) return connect();
-      const amount = ethers.parseEther(s);
-      const stag = new ethers.Contract(STAG, ERC20, signer);
+      const amount = parseTok(s, curTok);
+      const erc = new ethers.Contract(curTok.address, ERC20, signer);
       try {
-        if ((await stag.allowance(me, H.staking)) < amount) {
-          setStatus('s-status', 'Approve $STAG spending…');
-          await (await stag.approve(H.staking, amount)).wait();
+        if ((await erc.allowance(me, H.staking)) < amount) {
+          setStatus('s-status', `Approve $${curTok.symbol} spending…`);
+          await (await erc.approve(H.staking, amount)).wait();
         }
       } catch (e) { return setStatus('s-status', pretty(e), 'err'); }
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.stakeTokens(STAG, amount, tier), `Staked ${s} $STAG for ${durations[tier]} days ✓`, 's-status', () => this.load(true));
+      await tx(() => c.stakeTokens(curTok.address, amount, tier), `Staked ${s} $${curTok.symbol} for ${durations[tier]} days ✓`, 's-status', () => this.load(true));
     },
     async unstake() {
       if (!signer) return connect();
-      const staked = await new ethers.Contract(H.staking, STK_ABI, provider || ro()).stakedOf(me, STAG);
-      if (staked === 0n) return setStatus('s-status', 'Nothing staked.', 'err');
+      const staked = await new ethers.Contract(H.staking, STK_ABI, provider || ro()).stakedOf(me, curTok.address);
+      if (staked === 0n) return setStatus('s-status', `Nothing staked in $${curTok.symbol}.`, 'err');
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.unstakeTokens(STAG, staked), 'Unstaked ✓', 's-status', () => this.load(true));
+      await tx(() => c.unstakeTokens(curTok.address, staked), `Unstaked $${curTok.symbol} ✓ — split applied if set`, 's-status', () => this.load(true));
     },
     async claim() { if (!signer) return connect(); const c = new ethers.Contract(H.staking, STK_ABI, signer); await tx(() => c.claim(), 'Rewards claimed ✓', 's-status', () => this.load(true)); },
     async donate() {
@@ -443,7 +465,7 @@
     const bind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
     bind('s-stake', () => Stake.stake()); bind('s-unstake', () => Stake.unstake()); bind('s-claimbtn', () => Stake.claim());
     bind('s-donate', () => Stake.donate()); bind('s-setsplit', () => Stake.setSplit());
-    const mx = $('s-max'); if (mx) mx.onclick = async () => { if (!me) return; const bal = await new ethers.Contract(STAG, ERC20, ro()).balanceOf(me); $('s-amount').value = ethers.formatEther(bal); };
+    const mx = $('s-max'); if (mx) mx.onclick = async () => { if (!me) return; const bal = await new ethers.Contract(curTok.address, ERC20, ro()).balanceOf(me); $('s-amount').value = fmtTokFull(bal, curTok); };
     bind('pc-create', () => Pact.create());
     // enable action buttons once connected is handled per-load; enable base buttons now (they call connect() if no signer)
     ['s-stake', 's-unstake', 's-claimbtn', 's-donate', 's-setsplit'].forEach((id) => { const b = $(id); if (b) b.disabled = false; });
