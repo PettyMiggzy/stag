@@ -308,7 +308,7 @@
       w.querySelectorAll('.tier').forEach((b) => b.onclick = () => { tier = +b.dataset.t; this.renderTiers(); this.preview(); });
       this.preview();
     },
-    preview() { const h = $('s-preview'); if (h) h.textContent = `${durations[tier]}-day lock · ${(mults[tier] / 10000)}× lock multiplier (stacks with your $STAG holding tier).`; },
+    preview() { const h = $('s-preview'); if (h) h.textContent = `${durations[tier]}-day lock · ${(mults[tier] / 10000)}× reward multiplier.`; },
     async loadUser(c, p) {
       p = p || provider || ro();
       c = c || new ethers.Contract(H.staking, STK_ABI, p);

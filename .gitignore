@@ -25,6 +25,9 @@ node_modules/
 # splash intro video (intentional)
 !assets/media/*.mp4
 
+# splash intro video (intentional)
+!assets/media/*.mp4
+
 # solidity toolchain
 contracts/node_modules/
 contracts/package-lock.json

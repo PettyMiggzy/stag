@@ -27,6 +27,16 @@
     .music-toggle{position:fixed;right:16px;bottom:16px;z-index:120;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
       color:#1a1206;background:var(--grad-gold);border:none;cursor:pointer;box-shadow:0 10px 26px -8px rgba(230,184,63,.7);transition:transform .2s}
     .music-toggle:hover{transform:translateY(-2px)}
+    /* splash intro */
+    .splash{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;transition:opacity .6s ease,visibility .6s}
+    .splash.gone{opacity:0;visibility:hidden}
+    .splash[hidden]{display:none}
+    .splash-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .splash::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 120% at 50% 55%,rgba(6,18,10,.05),rgba(6,18,10,.82))}
+    .splash-inner{position:relative;z-index:2;text-align:center;padding:2rem;display:flex;flex-direction:column;align-items:center;gap:.9rem}
+    .splash-mark{width:88px;height:88px;border-radius:50%;box-shadow:0 0 0 2px rgba(150,230,90,.6),0 0 30px -4px rgba(150,230,90,.7)}
+    .splash-title{font-family:'Cinzel',serif;font-weight:900;letter-spacing:.05em;font-size:clamp(2rem,6vw,3.4rem);line-height:1}
+    #splash-enter{max-width:260px;margin-top:.4rem}
 
     /* wallet bar */
     .wbar{position:sticky;top:calc(40px + 62px);z-index:40;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
@@ -160,6 +170,15 @@
   </style>
 </head>
 <body>
+  <!-- SPLASH INTRO -->
+  <div class="splash" id="splash">
+    <video class="splash-vid" autoplay muted loop playsinline><source src="assets/media/splash.mp4" type="video/mp4"></video>
+    <div class="splash-inner">
+      <img src="assets/img/mark.png" class="splash-mark" alt="STAGWIFHOOD" />
+      <div class="splash-title">STAG<span class="gold">WIF</span>HOOD</div>
+      <button id="splash-enter" class="btn btn-gold btn-lg">Enter</button>
+    </div>
+  </div>
   <audio id="bg-song" src="assets/media/stagwifhood.mp3" loop preload="auto"></audio>
   <button id="music-toggle" class="music-toggle" hidden title="Play music" aria-label="Toggle music"></button>
 
@@ -401,24 +420,32 @@
   <script src="js/hooded-config.js"></script>
   <script src="js/app.js"></script>
   <script>
-  /* Background music — plays when you hit the site. Browsers block audio autoplay without a
-     gesture, so if the immediate play() is rejected we start on the first click/keypress anywhere.
-     Floating button pauses/plays. */
+  /* Splash intro (video) + background song. The splash video autoplays muted (allowed). The
+     song needs a gesture, so it starts when you tap Enter. Splash shows once per session; on
+     later loads the song starts on your first click. Floating button pauses/plays. */
   (function () {
+    var splash = document.getElementById('splash'), enter = document.getElementById('splash-enter');
     var song = document.getElementById('bg-song'), toggle = document.getElementById('music-toggle');
-    if (!song) return;
     var PLAY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     var PAUSE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
-    function setIcon() { if (toggle) { toggle.innerHTML = song.paused ? PLAY : PAUSE; toggle.title = song.paused ? 'Play music' : 'Pause music'; } }
-    song.volume = 0.55;
-    song.play().catch(function () {
-      var once = function () { song.play().catch(function () {}); document.removeEventListener('pointerdown', once); document.removeEventListener('keydown', once); };
+    function setIcon() { if (toggle) { toggle.innerHTML = (song && !song.paused) ? PAUSE : PLAY; toggle.title = (song && !song.paused) ? 'Pause music' : 'Play music'; } }
+    if (song) { song.volume = 0.55; song.addEventListener('play', setIcon); song.addEventListener('pause', setIcon); }
+    if (toggle) { toggle.hidden = false; toggle.onclick = function () { if (!song) return; if (song.paused) song.play().catch(function () {}); else song.pause(); }; }
+    setIcon();
+    function playSong() { return song ? song.play() : Promise.reject(); }
+    function firstGestureStart() {
+      var once = function () { playSong().catch(function () {}); document.removeEventListener('pointerdown', once); document.removeEventListener('keydown', once); };
       document.addEventListener('pointerdown', once, { once: true });
       document.addEventListener('keydown', once, { once: true });
-    });
-    song.addEventListener('play', setIcon); song.addEventListener('pause', setIcon);
-    if (toggle) { toggle.hidden = false; toggle.onclick = function () { if (song.paused) song.play().catch(function () {}); else song.pause(); }; }
-    setIcon();
+    }
+    function dismiss() {
+      try { sessionStorage.setItem('h20_splash', '1'); } catch (e) {}
+      if (splash) { splash.classList.add('gone'); setTimeout(function () { splash.style.display = 'none'; }, 620); }
+      playSong().catch(function () {});
+    }
+    var seen = false; try { seen = sessionStorage.getItem('h20_splash') === '1'; } catch (e) {}
+    if (seen) { if (splash) splash.style.display = 'none'; playSong().catch(firstGestureStart); }
+    else { if (enter) enter.onclick = dismiss; }
   })();
   </script>
 </body>
