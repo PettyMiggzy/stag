@@ -21,6 +21,7 @@
     'function minted() view returns (uint256)', 'function mintActive() view returns (bool)',
     'function balanceOf(address) view returns (uint256)', 'function tokenOfOwnerByIndex(address,uint256) view returns (uint256)',
     'function tierOf(uint256) view returns (uint8)', 'function locked(uint256) view returns (bool)',
+    'function freeMints(address) view returns (uint256)',
   ];
   const STK_ABI = [
     'function stakeTokens(address,uint256,uint8)', 'function unstakeTokens(address,uint256)',
@@ -253,7 +254,9 @@
       const c = new ethers.Contract(H.mint, NFT_ABI, signer); const id = parseInt(it.id, 10);
       this.inFlight = true;
       try {
-        const value = await c.priceOf(id);
+        // free-mint wallets must send exactly 0 (contract requires msg.value == due, due=0 when free)
+        const free = await c.freeMints(me);
+        const value = free > 0n ? 0n : await c.priceOf(id);
         await c.mintPick.estimateGas(id, { value });
         await tx(() => c.mintPick(id, { value }), `Minted ${it.character || '#' + id}! Welcome to The Hooded 20.`, 'm-status', () => this.load(true));
       } catch (e) { setStatus('m-status', pretty(e), 'err'); } finally { this.inFlight = false; }
@@ -264,7 +267,9 @@
       const c = new ethers.Contract(H.mint, NFT_ABI, signer);
       this.inFlight = true;
       try {
-        const value = await c.randomPrice();
+        // free-mint wallets pay exactly 0 (contract: msg.value == due, due=0 when free)
+        const free = await c.freeMints(me);
+        const value = free > 0n ? 0n : await c.randomPrice();
         await c.mintRandom.estimateGas({ value });
         await tx(() => c.mintRandom({ value }), 'The forest chose your stag! Check your wallet.', 'm-status', () => this.load(true));
       } catch (e) { setStatus('m-status', pretty(e), 'err'); } finally { this.inFlight = false; }
