@@ -23,7 +23,10 @@ Paste the four addresses into **`js/hooded-config.js`** (or the **/admin → Dep
 which stores them in your browser). Mint, stake, and admin pages all read from there.
 
 ## 3. Fund + open (all from /admin, connect the owner wallet)
-- **Staking → Fund pool** (send ETH) then **Start** a reward period (amount + days).
+- **Staking → Fund pool** (send ETH) then **Start** a reward period (amount + days). Mint proceeds
+  accumulate in the NFT contract (kept out of the signed mint tx for wallet-scanner safety — see
+  `WALLET_SAFETY.md`); periodically hit **Mint Control → Forward** (`forwardProceeds`) to split them
+  90/10 into the pool, then re-notify. A cron/keeper can call `forwardProceeds()` instead.
 - **Mint Control → Activate Mint.**
 - Tune tier prices / gamble weights / lock & holding multipliers if desired (defaults are already set:
   pick 0.010→0.030, gamble 0.010 with Mythic ~0.7%; locks 1×/1.5×/2×; holdings 1M→2× / 10M→3×).

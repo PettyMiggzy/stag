@@ -22,7 +22,7 @@ describe("HoodedTwenty + RevenueSplitter", function () {
   it("pick mode charges the tier price and rejects underpayment", async () => {
     const { hood, alice } = await loadFixture(deploy);
     const commonId = idsOfTier(0)[0]; // Common → 0.010
-    await expect(hood.connect(alice).mintPick(commonId, { value: E("0.009") })).to.be.revertedWith("fee too low");
+    await expect(hood.connect(alice).mintPick(commonId, { value: E("0.009") })).to.be.revertedWith("wrong price");
     await expect(hood.connect(alice).mintPick(commonId, { value: E("0.010") })).to.emit(hood, "Minted");
     expect(await hood.ownerOf(commonId)).to.equal(alice.address);
     expect(await hood.isAvailable(commonId)).to.equal(false);
@@ -75,13 +75,19 @@ describe("HoodedTwenty + RevenueSplitter", function () {
     expect(await hood.ownerOf(id)).to.equal(alice.address);
   });
 
-  it("forwards proceeds through the splitter 90/10", async () => {
+  it("keeps mint proceeds in-contract, splits 90/10 only via forwardProceeds (scanner-safe)", async () => {
     const { hood, pool, backend, alice } = await loadFixture(deploy);
     const p0 = await ethers.provider.getBalance(pool.address);
     const b0 = await ethers.provider.getBalance(backend.address);
     await hood.connect(alice).mintPick(idsOfTier(4)[0], { value: E("0.030") }); // Mythic 0.03
+    // no ETH fan-out in the signed mint tx — proceeds stay in the NFT contract
+    expect(await ethers.provider.getBalance(await hood.getAddress())).to.equal(E("0.030"));
+    expect(await ethers.provider.getBalance(pool.address) - p0).to.equal(0n);
+    // out-of-band forward does the 90/10 split
+    await hood.forwardProceeds();
     expect(await ethers.provider.getBalance(pool.address) - p0).to.equal(E("0.027")); // 90%
     expect(await ethers.provider.getBalance(backend.address) - b0).to.equal(E("0.003")); // 10%
+    expect(await ethers.provider.getBalance(await hood.getAddress())).to.equal(0n);
   });
 
   it("tokenURI is baseURI + id + .json", async () => {
@@ -113,13 +119,11 @@ describe("HoodedTwenty + RevenueSplitter", function () {
     expect(await hood.balanceOf(alice.address)).to.equal(3);
   });
 
-  it("refunds overpayment on a pick", async () => {
+  it("requires exact price (no overpay refund leg in the signed tx)", async () => {
     const { hood, alice } = await loadFixture(deploy);
     const id = idsOfTier(0)[0]; // 0.010
-    const b0 = await ethers.provider.getBalance(alice.address);
-    const tx = await hood.connect(alice).mintPick(id, { value: E("0.5") }); // overpay
-    const rc = await tx.wait();
-    expect(b0 - (await ethers.provider.getBalance(alice.address)) - rc.gasUsed * rc.gasPrice).to.equal(E("0.010"));
+    await expect(hood.connect(alice).mintPick(id, { value: E("0.5") })).to.be.revertedWith("wrong price");
+    await expect(hood.connect(alice).mintPick(id, { value: E("0.010") })).to.emit(hood, "Minted");
   });
 
   it("rejects setting a tier weight to zero", async () => {

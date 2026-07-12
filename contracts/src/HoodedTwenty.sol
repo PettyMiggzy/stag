@@ -59,7 +59,7 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     event Locked(uint256 tokenId);           // ERC-5192
     event Unlocked(uint256 tokenId);
     event Minted(address indexed to, uint256 indexed tokenId, uint8 tier, bool gamble, uint256 paid);
-    event SplitterForwardFailed(uint256 amount); // proceeds stuck here (recover via withdrawETH); pool went unfunded
+    event ProceedsForwarded(uint256 amount); // batch-forwarded to the splitter out-of-band (not in a mint tx)
 
     constructor(string memory baseURI_, address payable _splitter, uint96 royaltyBps)
         ERC721("The Hooded 20", "HOOD20")
@@ -118,21 +118,30 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
         if (isFree) freeMints[msg.sender] -= 1;
         else require(mintedBy[msg.sender] < maxPerWallet, "wallet limit");
         uint256 due = isFree ? 0 : price;
-        require(msg.value >= due, "fee too low");
+        require(msg.value == due, "wrong price"); // EXACT — no refund leg needed
 
-        // effects (CEI). Free mints don't consume the paid per-wallet cap, so a whitelisted
-        // wallet can still buy its normal allocation later.
+        // effects (CEI). Free mints don't consume the paid per-wallet cap.
         if (!isFree) mintedBy[msg.sender] += 1;
         _take(id);
         _safeMint(msg.sender, id);
         emit Minted(msg.sender, id, _tier(id), gamble, due);
 
-        // forward exactly `due` to the splitter. BEST-EFFORT: a reverting/mis-set splitter must
-        // not be able to brick minting — on failure the ETH stays here, recoverable via withdrawETH.
-        if (due > 0 && splitter != address(0)) { (bool ok, ) = splitter.call{value: due}(""); if (!ok) emit SplitterForwardFailed(due); }
-        // refund any overpayment to the minter
-        uint256 over = msg.value - due;
-        if (over > 0) { (bool r, ) = payable(msg.sender).call{value: over}(""); require(r, "refund failed"); }
+        // WALLET-SCANNER SAFETY: proceeds STAY in this contract. There is deliberately NO ETH
+        // fan-out inside the user's signed mint tx — a single-recipient "mint + pay this contract"
+        // action is what MetaMask/Blockaid (and Phantom/Blowfish) expect. The 90/10 split is done
+        // out-of-band via forwardProceeds(); a multi-recipient transfer in the signed tx reads as a
+        // "drainer" and gets the whole domain blocked at Connect.
+    }
+
+    // Batch-forward accumulated mint proceeds to the splitter (90% pool / 10% owner). Permissionless
+    // and NOT part of any user-signed mint — run it from a keeper/cron/admin. Keeps mints scanner-clean.
+    function forwardProceeds() external {
+        uint256 bal = address(this).balance;
+        require(bal > 0, "nothing to forward");
+        require(splitter != address(0), "no splitter");
+        (bool ok, ) = splitter.call{value: bal}("");
+        require(ok, "forward failed");
+        emit ProceedsForwarded(bal);
     }
 
     // weighted random over the remaining pool: rarer tiers have lower weight → less likely.

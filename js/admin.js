@@ -57,6 +57,7 @@
     'function setRoyalty(address,uint96)',
     'function grantFreeMints(address,uint256)',
     'function withdrawETH(address)',
+    'function forwardProceeds()',
   ];
   const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
   const STAKING_ABI = [
@@ -239,6 +240,7 @@
     $('btn-mint-off').onclick = () => send('setMintActive', [false], 'Mint paused ✓');
     $('btn-random').onclick = () => send('setRandomPrice', [parseEth($('in-random').value)], 'Gamble price set ✓');
     $('btn-mpw').onclick = () => send('setMaxPerWallet', [BigInt($('in-mpw').value || '0')], 'Max/wallet set ✓');
+    $('btn-forward') && ($('btn-forward').onclick = () => ownerSend(ADDR.mint(), HOODED_ABI, 'forwardProceeds', [], 'Mint proceeds forwarded to the pool ✓'));
     $('btn-baseuri').onclick = () => send('setBaseURI', [$('in-baseuri').value.trim()], 'Base URI set ✓');
     $('btn-splitter').onclick = () => send('setSplitter', [$('in-splitter').value.trim()], 'Splitter set ✓');
     $('btn-locker').onclick = () => send('setLocker', [$('in-locker').value.trim()], 'Locker set ✓');

@@ -72,7 +72,7 @@ async function main() {
     // MINT pool integrity
     const minted = await hood.minted(), rem = await hood.remaining();
     if (minted + rem !== 20n) throw new Error(`[${step}] mint supply drift ${minted}+${rem}`);
-    if (await ethers.provider.getBalance(HD) !== 0n) throw new Error(`[${step}] hood holds ETH (should forward/refund all)`);
+    // (mint proceeds intentionally accumulate in the NFT contract until forwardProceeds — scanner-safe)
     // SPLITTER never accumulates
     if (await ethers.provider.getBalance(SP) !== 0n) throw new Error(`[${step}] splitter holds ETH`);
     // PACT solvency
@@ -112,9 +112,8 @@ async function main() {
           if (mode === 0) { // pick exact
             const rem = await hood.remainingIds(); const id = Number(rem[pick(rem.length)]);
             await hood.connect(a).mintPick(id, { value: E(PRICE[TIER[id - 1]]) }); bump("pick");
-          } else if (mode === 1) { // pick overpay (refund path)
-            const rem = await hood.remainingIds(); const id = Number(rem[pick(rem.length)]);
-            await hood.connect(a).mintPick(id, { value: E(PRICE[TIER[id - 1]]) + E("0.05") }); bump("pickOver");
+          } else if (mode === 1) { // forward accumulated proceeds to the pool (out-of-band 90/10 split)
+            try { await hood.forwardProceeds(); bump("forward"); } catch { bump("forwardEmpty"); }
           } else if (mode === 2) { await hood.connect(a).mintRandom({ value: E("0.010") }); bump("gamble"); }
           else { await hood.grantFreeMints(a.address, 1); await hood.connect(a).mintRandom({ value: 0 }); bump("free"); }
         }
