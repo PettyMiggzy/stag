@@ -119,8 +119,9 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
         uint256 due = isFree ? 0 : price;
         require(msg.value >= due, "fee too low");
 
-        // effects (CEI)
-        mintedBy[msg.sender] += 1;
+        // effects (CEI). Free mints don't consume the paid per-wallet cap, so a whitelisted
+        // wallet can still buy its normal allocation later.
+        if (!isFree) mintedBy[msg.sender] += 1;
         _take(id);
         _safeMint(msg.sender, id);
         emit Minted(msg.sender, id, _tier(id), gamble, due);

@@ -58,6 +58,15 @@ Permissionless `distribute`/`splitETH` are safe (funds can only reach the two im
   and the holder `reclaim` escape hatch.
 - Config changes (multipliers/weights) apply on a user's next interaction (prospective).
 
+## Second-pass (regression) re-audit
+A fresh reviewer re-audited the fixed code specifically for regressions and new issues:
+- Confirmed the `totalWeight == Σ user.weight` invariant, `appliedBaseWeight` snapshot correctness
+  (safe even if `nftBaseWeight` changes between stake/unstake), no proportional-forfeit underflow
+  (`f ≤ rewards` always), best-effort collector sends disburse exactly `r` with no loss, and the Pact
+  solvency invariant `balance ≥ reservedPayouts + reservedEntries` with no double-decrement.
+- **No new medium/high issues, no regressions.** One low note actioned: free mints no longer increment
+  the paid `mintedBy` counter, so a whitelisted wallet can still buy its normal allocation later.
+
 ## Verification after fixes
-`npx hardhat test` → 34 passing. `SIM_RUNS=300 SIM_SEED=<1..5> npx hardhat run scripts/simulate.js`
-→ all invariants held across 1,500 random steps.
+`npx hardhat test` → 34 passing. `scripts/simulate.js` → all invariants held across 2,100+ random steps
+(seeds 1–5 × 300, seed 99 × 600, re-checked seeds 1 & 7 after the final fix).
