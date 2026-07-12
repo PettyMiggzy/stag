@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mint · The Hooded 20 — STAGWIFHOOD ($STAG)</title>
-  <meta name="description" content="Mint The Hooded 20 — pick a stag at its tier price or take the rarity-weighted Surprise Draw. 20 unique animated NFTs on Robinhood Chain. No duplicates, ever." />
-  <meta property="og:title" content="Mint · The Hooded 20 — STAGWIFHOOD" />
-  <meta property="og:description" content="Pick your stag at its tier price or roll the Surprise Draw. 20 unique animated NFTs on Robinhood Chain — no duplicates." />
+  <title>Pact · The Hooded 20 — STAGWIFHOOD ($STAG)</title>
+  <meta name="description" content="Seal a Sherwood Pact — wallet-free, proof-of-hold staking. Pledge to hold your $STAG for a set window without moving it and earn a refund + reward. No custody, no transfer." />
+  <meta property="og:title" content="Pact · The Hooded 20 — STAGWIFHOOD" />
+  <meta property="og:description" content="Seal a Sherwood Pact — proof-of-hold, no custody. Hold your $STAG and earn a refund + reward. Robinhood Chain." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://stagwifhood.fun/nfts" />
+  <meta property="og:url" content="https://stagwifhood.fun/pact" />
   <meta property="og:image" content="https://stagwifhood.fun/assets/img/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://stagwifhood.fun/assets/img/og.png" />
@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/app.css" />
 </head>
-<body data-page="mint">
+<body data-page="pact">
   <div class="bg-layer bg-forest" aria-hidden="true"></div>
   <div class="bg-layer bg-glow" aria-hidden="true"></div>
   <div class="bg-layer bg-fog" aria-hidden="true"></div>
@@ -65,8 +65,8 @@
   <div class="app">
     <div class="app-head">
       <span class="eyebrow">The Hooded 20 · Robinhood Chain</span>
-      <h1>Mint</h1>
-      <p>Pick your stag at its tier price, or take the rarity-weighted Surprise Draw. Twenty 1-of-1 animated legends — no duplicates, ever.</p>
+      <h1>Pact</h1>
+      <p>Seal a Sherwood Pact — wallet-free, proof-of-hold staking. Pledge to hold your $STAG for a set window without moving it; hold the whole time and claim your refund + reward.</p>
     </div>
 
     <!-- WALLET BAR -->
@@ -81,41 +81,33 @@
       <button id="w-disconnect" class="btn btn-ghost btn-sm" hidden title="Disconnect wallet" aria-label="Disconnect">Disconnect</button>
     </div>
 
-    <!-- ================= MINT ================= -->
-    <section class="app-panel" id="panel-mint" role="tabpanel">
-      <div class="supply-wrap">
-        <div class="supply-bar"><div class="supply-fill" id="m-fill"></div></div>
-        <div class="supply-label"><span id="m-count">— / 20 minted</span><span id="m-net">Robinhood Chain · 4663</span></div>
+    <!-- ================= PACT ================= -->
+    <section class="app-panel" id="panel-pact" role="tabpanel">
+      <div class="stat-row s3">
+        <div class="stat"><div class="v" id="pc-entry">—</div><div class="l">Entry Fee</div></div>
+        <div class="stat"><div class="v" id="pc-refund">—</div><div class="l">Refund If Held</div></div>
+        <div class="stat"><div class="v" id="pc-grace">—</div><div class="l">Reclaim Grace</div></div>
       </div>
 
-      <div class="modes">
-        <div class="mode">
-          <div class="k">Pick</div>
-          <h4>Choose Your Stag</h4>
-          <p>Pick a specific available stag below and mint it at its tier price.</p>
-          <div class="price" id="m-pick-price">from — Ξ</div>
-          <div class="hint">Scroll to the grid → hit <em>Pick</em> on the one you want.</div>
+      <div class="cols">
+        <!-- create -->
+        <div class="card">
+          <h3>Seal a Sherwood Pact</h3>
+          <p class="hint">Proof-of-hold, no custody. Pledge to <b>hold ≥ X $STAG</b> for a set window without moving it. Pay the entry now; if you held the whole time you get your refund + reward, if not you forfeit. Your tokens never leave your wallet.</p>
+          <div class="fld"><input id="pc-hold" type="text" inputmode="decimal" placeholder="1000000" /><span class="tok">$STAG to hold</span></div>
+          <div class="fld"><input id="pc-days" type="text" inputmode="numeric" placeholder="30" /><span class="tok">days</span></div>
+          <div class="hint" id="pc-range">Duration 7–365 days.</div>
+          <button class="btn btn-gold" id="pc-create" disabled style="width:100%">Seal Pact · pay entry</button>
         </div>
-        <div class="mode gamble">
-          <div class="k">Surprise Draw</div>
-          <h4>Roll the Forest 🎲</h4>
-          <p>A rarity-weighted gamble — cheaper, but the top tiers are rare to hit. No duplicates.</p>
-          <div class="price" id="m-gamble-price">— Ξ</div>
-          <button class="btn btn-gold" id="m-gamble" disabled style="width:100%"><svg class="ti" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg> Surprise Draw</button>
-          <div class="odds" id="m-odds"></div>
+
+        <!-- your pacts -->
+        <div class="card">
+          <h3>Your Pacts</h3>
+          <div id="pc-list"><div class="empty">Connect your wallet to see your pacts.</div></div>
         </div>
       </div>
-      <p class="status" id="m-status"></p>
-
-      <div class="card" id="m-owned-card" hidden style="margin-top:1.4rem">
-        <h3>Your Hooded 20</h3>
-        <div class="hgrid" id="m-owned"></div>
-      </div>
-
-      <div style="margin-top:1.8rem">
-        <h3 style="font:700 .82rem/1 'Space Grotesk',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center">All 20 Stags · Pick to mint</h3>
-        <div class="hgrid" id="m-grid"></div>
-      </div>
+      <p class="status" id="pc-status"></p>
+      <p class="note">How verification works: a contract can't read your past balance, so continuous holding is checked off-chain by the bubble-map indexer, then an oracle key resolves your pact. Held the whole window → claim refund + reward. Didn't → entry is forfeited to backend costs. If the oracle never resolves, you can reclaim your full entry after the window + grace period.</p>
     </section>
   </div>
   </main>

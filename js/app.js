@@ -477,14 +477,20 @@
 
   // ---------------- init ----------------
   document.addEventListener('DOMContentLoaded', () => {
+    // Which panels are present? A hub has the tab bar + all three; a split page has exactly one.
+    const PAGE = document.body.getAttribute('data-page');
+    const panels = ['mint', 'stake', 'pact'].filter((n) => $('panel-' + n));
+    const isHub = !!document.querySelector('.app-tabs') && panels.length > 1;
+
     $('w-connect').onclick = () => connect(false);
     { const d = $('w-disconnect'); if (d) d.onclick = disconnect; }
-    { const p = $('s-to-pact'); if (p) p.onclick = () => showTab('pact'); }
+    // "Go to Pact" — switch tabs on the hub, navigate to the standalone page otherwise.
+    { const p = $('s-to-pact'); if (p) p.onclick = () => { if (isHub) showTab('pact'); else location.href = '/pact'; }; }
     // show the reward-pool address + copy button (direct-send donations)
     { const pa = $('s-pool-addr'); if (pa && H.staking) pa.textContent = H.staking;
       const cp = $('s-pool-copy'); if (cp) cp.onclick = async () => {
         try { await navigator.clipboard.writeText(H.staking); cp.textContent = 'Copied ✓'; setTimeout(() => cp.textContent = 'Copy', 1500); } catch { setStatus('s-status', 'Pool address: ' + H.staking, ''); } }; }
-    document.querySelectorAll('.app-tab').forEach((b) => b.onclick = () => showTab(b.dataset.tab));
+    if (isHub) document.querySelectorAll('.app-tab').forEach((b) => b.onclick = () => showTab(b.dataset.tab));
     // stake bindings
     const bind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
     bind('s-stake', () => Stake.stake()); bind('s-unstake', () => Stake.unstake()); bind('s-claimbtn', () => Stake.claim());
@@ -494,17 +500,23 @@
     // enable action buttons once connected is handled per-load; enable base buttons now (they call connect() if no signer)
     ['s-stake', 's-unstake', 's-claimbtn', 's-donate', 's-setsplit'].forEach((id) => { const b = $(id); if (b) b.disabled = false; });
 
-    // initial tab from hash
+    // pick the active section: split pages declare it via <body data-page>; the hub reads the hash
     const h = (location.hash || '').replace('#', '');
-    active = ['mint', 'stake', 'pact'].includes(h) ? h : 'mint';
-    showTab(active);
-    // nav links (/app#mint etc.) only change the hash — switch the tab when it changes
-    window.addEventListener('hashchange', () => {
-      const t = (location.hash || '').replace('#', '');
-      if (['mint', 'stake', 'pact'].includes(t) && t !== active) showTab(t);
-    });
-    // pre-load the other tabs' read-only data so switching is instant
-    Mint.load(false); Stake.load(false); Pact.load(false);
+    active = ['mint', 'stake', 'pact'].includes(PAGE) ? PAGE
+      : (['mint', 'stake', 'pact'].includes(h) ? h : (panels[0] || 'mint'));
+    if (isHub) {
+      showTab(active);
+      // nav links (/app#mint etc.) only change the hash — switch the tab when it changes
+      window.addEventListener('hashchange', () => {
+        const t = (location.hash || '').replace('#', '');
+        if (['mint', 'stake', 'pact'].includes(t) && t !== active) showTab(t);
+      });
+      // pre-load the other tabs' read-only data so switching is instant
+      Mint.load(false); Stake.load(false); Pact.load(false);
+    } else {
+      // standalone split page — just render this page's single section
+      loadTab(active, false);
+    }
     // remember the wallet across visits — silently reconnect if previously authorized (no popup)
     try { if (localStorage.getItem('h20_wc') && window.ethereum) connect(true); } catch {}
   });

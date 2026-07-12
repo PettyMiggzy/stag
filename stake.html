@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <script>location.replace('/app#stake' + location.search);</script>
-  <meta http-equiv="refresh" content="0; url=/app#stake" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stake · STAGWIFHOOD ($STAG)</title>
-  <meta name="description" content="Stake $STAG tokens and The Hooded 20 NFTs to earn rewards and boost your Prize Heist odds on Robinhood Chain." />
-  <meta property="og:title" content="Stake · $STAG" />
-  <meta property="og:description" content="Stake $STAG and Hooded 20 NFTs to earn rewards + boost your Prize Heist odds. Robinhood Chain." />
+  <title>Stake · The Hooded 20 — STAGWIFHOOD ($STAG)</title>
+  <meta name="description" content="Stake $STAG for real Robinhood ETH rewards — 30/60/90 day locks with stacking multipliers. Stake The Hooded 20 NFTs in place, no transfer. Robinhood Chain." />
+  <meta property="og:title" content="Stake · The Hooded 20 — STAGWIFHOOD" />
+  <meta property="og:description" content="Lock $STAG for real ETH rewards with stacking multipliers, stake Hooded 20 NFTs in place. Robinhood Chain." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://stagwifhood.fun/stake" />
   <meta property="og:image" content="https://stagwifhood.fun/assets/img/og.png" />
@@ -20,42 +18,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
-  <style>
-    .sk-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;max-width:var(--maxw);margin:1.6rem auto 0;padding:0 clamp(1rem,4vw,2rem)}
-    .sk-stat{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:14px;padding:1rem .9rem;text-align:center}
-    .sk-stat .v{font:700 1.15rem/1 'Space Grotesk',monospace;color:var(--gold-lite);font-variant-numeric:tabular-nums;word-break:break-word}
-    .sk-stat .l{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:.4rem}
-    .sk-wrap{max-width:640px;margin:1.8rem auto 0;padding:0 1rem}
-    .sk-card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:var(--radius);padding:1.5rem;box-shadow:0 24px 60px -30px rgba(0,0,0,.85)}
-    .sk-tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1.1rem}
-    .sk-tier{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:12px;padding:.85rem .4rem;cursor:pointer;text-align:center;transition:.2s;color:var(--muted)}
-    .sk-tier:hover{border-color:rgba(230,184,63,.4)}
-    .sk-tier.active{border-color:var(--gold);background:rgba(230,184,63,.12)}
-    .sk-tier-d{display:block;font:700 1.1rem/1 'Space Grotesk',monospace;color:var(--ink)}
-    .sk-tier-m{display:block;font-size:.7rem;color:var(--gold-lite);margin-top:.3rem}
-    .sk-preview{text-align:center;font-size:.78rem;color:var(--muted);margin:-.4rem 0 1rem}
-    .sk-inp{display:flex;align-items:center;gap:.5rem;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:.5rem .7rem;margin-bottom:.4rem}
-    .sk-inp input{flex:1;background:none;border:none;color:var(--ink);font:600 1.05rem/1 'Space Grotesk',monospace;outline:none}
-    .sk-inp .sk-max{font:600 .72rem/1 'Space Grotesk',monospace;color:var(--gold-lite);background:rgba(230,184,63,.14);border:1px solid var(--line);border-radius:8px;padding:.4em .7em;cursor:pointer}
-    .sk-inp .tok{color:var(--muted);font:600 .85rem/1 'Space Grotesk',monospace}
-    .sk-bal{font-size:.75rem;color:var(--muted);text-align:right;margin-bottom:1rem}
-    .sk-actions{display:flex;gap:.6rem;flex-wrap:wrap}
-    .sk-actions .btn{flex:1;min-width:120px}
-    .sk-unlock{text-align:center;font:600 .8rem/1.4 'Space Grotesk',monospace;color:var(--gold-lite);margin-top:.8rem;min-height:1.2em}
-    .sk-donate{margin-top:1.2rem;border-top:1px solid var(--line);padding-top:1.1rem}
-    .sk-donate h3{font:700 .8rem/1 'Space Grotesk',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
-    .sk-donate p{font-size:.76rem;color:var(--muted);margin:0 0 .8rem}
-    .sk-collectors{margin-top:1.2rem;border-top:1px solid var(--line);padding-top:1.1rem}
-    .sk-collectors h3{font:700 .8rem/1 'Space Grotesk',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
-    .sk-collectors p{font-size:.76rem;color:var(--muted);margin:0 0 .8rem}
-    .sk-col-row{display:flex;gap:.5rem;margin-bottom:.5rem}
-    .sk-col-row input{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:.5em .6em;font:500 .8rem/1 'Space Grotesk',monospace}
-    .sk-col-row input.a{flex:1}.sk-col-row input.b{width:78px}
-    .hooded-banner{position:relative;height:clamp(180px,26vw,300px);max-width:var(--maxw);margin:0 auto 1.4rem;border-radius:20px;overflow:hidden;background:center/cover no-repeat;border:1px solid var(--line)}
-    .hooded-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,18,10,.05) 40%,var(--bg) 98%)}
-  </style>
+  <link rel="stylesheet" href="css/app.css" />
 </head>
-<body>
+<body data-page="stake">
   <div class="bg-layer bg-forest" aria-hidden="true"></div>
   <div class="bg-layer bg-glow" aria-hidden="true"></div>
   <div class="bg-layer bg-fog" aria-hidden="true"></div>
@@ -83,6 +48,7 @@
       <a href="/#lottery">Prize Heist</a>
       <a href="/nfts">Mint</a>
       <a href="/stake">Stake</a>
+      <a href="/pact">Pact</a>
       <a href="/terminal">Terminal</a>
       <a href="https://maps.stagwifhood.fun">Hooded Maps</a>
       <a href="/play">Play</a>
@@ -96,76 +62,112 @@
   </header>
 
   <main>
-  <section class="stake-hero">
-    <div class="hooded-banner reveal" style="background-image:url('assets/img/hero-hooded.webp')" aria-hidden="true"></div>
-    <div class="section-head reveal">
-      <span class="eyebrow">Stake · Robinhood Chain</span>
-      <h2>Stake &amp; Earn ETH</h2>
-      <p class="section-lead">Lock <strong>$STAG</strong> for 30 / 60 / 90 days and earn <strong>real Robinhood ETH</strong>.
-        Longer locks and bigger $STAG holdings <strong>stack multipliers</strong>. Rewards funded by NFT sales.</p>
+  <div class="app">
+    <div class="app-head">
+      <span class="eyebrow">The Hooded 20 · Robinhood Chain</span>
+      <h1>Stake</h1>
+      <p>Lock $STAG for 30 / 60 / 90 days and earn real Robinhood ETH. Longer locks and bigger holdings stack multipliers — stake your Hooded 20 NFTs in place too.</p>
     </div>
 
-    <!-- LIVE POOL STATS -->
-    <div class="sk-stats reveal">
-      <div class="sk-stat"><div class="v" id="sk-pool">—</div><div class="l">Reward Pool</div></div>
-      <div class="sk-stat"><div class="v" id="sk-total">—</div><div class="l">Total Staked</div></div>
-      <div class="sk-stat"><div class="v" id="sk-your">0</div><div class="l">Your Stake</div></div>
-      <div class="sk-stat"><div class="v" id="sk-mult">1×</div><div class="l">Your Multiplier</div></div>
-      <div class="sk-stat"><div class="v" id="sk-claimable">0 Ξ</div><div class="l">Claimable</div></div>
+    <!-- WALLET BAR -->
+    <div class="wbar">
+      <div class="wbar-net off" id="w-net"><span class="dot"></span><span id="w-net-txt">Not connected</span></div>
+      <div class="wbar-bals" id="w-bals" hidden>
+        <div class="b"><span>ETH</span><div id="w-eth">—</div></div>
+        <div class="b"><span>$STAG</span><div id="w-stag">—</div></div>
+      </div>
+      <div class="wbar-spacer"></div>
+      <button id="w-connect" class="btn btn-gold btn-sm">Connect Wallet</button>
+      <button id="w-disconnect" class="btn btn-ghost btn-sm" hidden title="Disconnect wallet" aria-label="Disconnect">Disconnect</button>
     </div>
 
-    <div class="sk-wrap reveal">
-      <div class="sk-card">
-        <div style="text-align:center;margin-bottom:1rem">
-          <button id="sk-connect" class="btn btn-gold btn-sm" disabled>Connect Wallet</button>
-        </div>
+    <!-- ================= STAKE ================= -->
+    <section class="app-panel" id="panel-stake" role="tabpanel">
+      <div class="stat-row s4">
+        <div class="stat"><div class="v" id="s-pool">—</div><div class="l">Reward Pool</div></div>
+        <div class="stat"><div class="v" id="s-total">—</div><div class="l">Total Staked</div></div>
+        <div class="stat"><div class="v" id="s-your">0</div><div class="l">Your Stake</div></div>
+        <div class="stat"><div class="v" id="s-claim">0 Ξ</div><div class="l">Claimable ETH</div></div>
+      </div>
 
-        <div class="sk-tiers" id="sk-tiers"></div>
-        <p class="sk-preview" id="sk-preview"></p>
-
-        <div class="sk-inp">
-          <input id="sk-amount" type="text" inputmode="decimal" placeholder="0.0" />
-          <button class="sk-max" id="sk-max">MAX</button>
-          <span class="tok">$STAG</span>
-        </div>
-        <div class="sk-bal" id="sk-bal">Balance: — $STAG</div>
-
-        <div class="sk-actions">
-          <button class="btn btn-gold" id="sk-stake" disabled>Stake</button>
-          <button class="btn btn-ghost" id="sk-unstake" disabled>Unstake</button>
-          <button class="btn btn-ghost" id="sk-claim" disabled>Claim ETH</button>
-        </div>
-        <div class="sk-unlock" id="sk-unlock"></div>
-        <p class="mint-status" id="sk-status"></p>
-
-        <div class="sk-donate">
-          <h3>Fuel the Pool · anyone</h3>
-          <p>Send Robinhood ETH straight into the reward pool — grows the rewards every staker earns. No stake required.</p>
-          <div class="sk-inp">
-            <input id="sk-donate-amt" type="text" inputmode="decimal" placeholder="0.0" />
-            <span class="tok">Ξ ETH</span>
+      <div class="cols">
+        <!-- stake form -->
+        <div class="card">
+          <h3>Stake <span id="s-token-h">$STAG</span></h3>
+          <div class="fld" id="s-token-row" hidden style="margin-bottom:.8rem">
+            <span class="tok">Token</span>
+            <select id="s-token" style="flex:1;background:none;border:none;color:var(--ink);font:600 .95rem/1 'Space Grotesk',monospace;outline:none;text-align:right"></select>
           </div>
-          <button class="btn btn-ghost btn-sm" id="sk-donate" disabled>Donate to Pool</button>
+          <div class="tiers" id="s-tiers"></div>
+          <p class="hint" id="s-preview"></p>
+          <div class="fld">
+            <input id="s-amount" type="text" inputmode="decimal" placeholder="0.0" />
+            <button class="mx" id="s-max">MAX</button><span class="tok" id="s-amount-tok">$STAG</span>
+          </div>
+          <div class="hint" id="s-bal">Balance: — $STAG</div>
+          <div class="actions">
+            <button class="btn btn-gold" id="s-stake" disabled>Stake</button>
+            <button class="btn btn-ghost" id="s-unstake" disabled>Unstake</button>
+            <button class="btn btn-ghost" id="s-claimbtn" disabled>Claim ETH</button>
+          </div>
+          <div class="lockbar" id="s-lock"></div>
         </div>
 
-        <div class="sk-collectors">
-          <h3>Withdraw Wallets · optional</h3>
-          <p>Split your staked $STAG into up to 3 wallets when you unstake (share %). Remainder returns here. Change anytime from this staking wallet.</p>
-          <div class="sk-col-row"><input class="a" id="col-a1" placeholder="0x wallet 1" /><input class="b" id="col-b1" placeholder="%" /></div>
-          <div class="sk-col-row"><input class="a" id="col-a2" placeholder="0x wallet 2" /><input class="b" id="col-b2" placeholder="%" /></div>
-          <div class="sk-col-row"><input class="a" id="col-a3" placeholder="0x wallet 3" /><input class="b" id="col-b3" placeholder="%" /></div>
-          <button class="btn btn-ghost btn-sm" id="sk-setcol" disabled>Save Withdraw Wallets</button>
+        <!-- your position -->
+        <div class="card">
+          <h3>Your Position</h3>
+          <div class="pos">
+            <div class="p"><div class="l">Staked</div><div class="v" id="p-staked">0</div></div>
+            <div class="p"><div class="l">Multiplier</div><div class="v" id="p-mult">1×</div></div>
+            <div class="p"><div class="l">Lock Tier</div><div class="v" id="p-tier">—</div></div>
+            <div class="p"><div class="l">Claimable</div><div class="v" id="p-claim">0 Ξ</div></div>
+          </div>
+          <div class="lockbar" id="p-lock"></div>
+          <div id="s-nfts-wrap" hidden style="margin-top:1rem">
+            <div class="l" style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem">Staked NFTs</div>
+            <div class="hgrid" id="p-nfts"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <ul class="mint-perks reveal">
-      <li><span>💎</span> Earn real ETH</li>
-      <li><span>⏳</span> 30/60/90 lock tiers</li>
-      <li><span>🦌</span> Hold-1M → 2× · 10M → 3×</li>
-      <li><span>👛</span> Up to 3 collector wallets</li>
-    </ul>
-  </section>
+      <div class="cols" style="margin-top:1.1rem">
+        <!-- donate -->
+        <div class="card">
+          <h3>Fuel the Pool</h3>
+          <p class="hint">Anyone can top up the reward pool with ETH — grows what every staker earns. No stake required.</p>
+          <div class="fld">
+            <input id="s-donate-amt" type="text" inputmode="decimal" placeholder="0.0" /><span class="tok">Ξ ETH</span>
+          </div>
+          <button class="btn btn-ghost" id="s-donate" disabled style="width:100%">Donate to Pool</button>
+          <div class="pooladdr">
+            <span>Or send RH-ETH straight to the pool:</span>
+            <div class="pooladdr-row"><code id="s-pool-addr">—</code><button id="s-pool-copy" type="button">Copy</button></div>
+          </div>
+        </div>
+
+        <!-- withdraw split -->
+        <div class="card">
+          <h3>Withdraw Wallets · optional</h3>
+          <p class="hint">Split your staked tokens into up to 3 wallets when you unstake (share %) — applies to whichever token you withdraw. Remainder returns to you. Only this staking wallet can change it.</p>
+          <div class="fld" style="gap:.4rem"><input id="col-a1" placeholder="0x wallet 1" style="flex:1;background:none;border:none;color:var(--ink);font:500 .8rem/1 'Space Grotesk',monospace;outline:none" /><input id="col-b1" placeholder="%" style="width:56px;background:none;border:none;color:var(--ink);font:600 .8rem/1 'Space Grotesk',monospace;outline:none;text-align:right" /></div>
+          <div class="fld" style="gap:.4rem"><input id="col-a2" placeholder="0x wallet 2" style="flex:1;background:none;border:none;color:var(--ink);font:500 .8rem/1 'Space Grotesk',monospace;outline:none" /><input id="col-b2" placeholder="%" style="width:56px;background:none;border:none;color:var(--ink);font:600 .8rem/1 'Space Grotesk',monospace;outline:none;text-align:right" /></div>
+          <div class="fld" style="gap:.4rem"><input id="col-a3" placeholder="0x wallet 3" style="flex:1;background:none;border:none;color:var(--ink);font:500 .8rem/1 'Space Grotesk',monospace;outline:none" /><input id="col-b3" placeholder="%" style="width:56px;background:none;border:none;color:var(--ink);font:600 .8rem/1 'Space Grotesk',monospace;outline:none;text-align:right" /></div>
+          <button class="btn btn-ghost btn-sm" id="s-setsplit" disabled style="width:100%;margin-top:.3rem">Save Withdraw Wallets</button>
+        </div>
+      </div>
+      <p class="status" id="s-status"></p>
+
+      <!-- wallet-free staking -> Pact -->
+      <div class="wfree">
+        <div class="wfree-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 12h6M9 15.5h4"/></svg></div>
+        <div class="wfree-txt">
+          <b>Don't want to connect your wallet?</b>
+          <span>Wallet-free staking — keep holding your $STAG in your own wallet and earn by sealing a <em>Sherwood Pact</em>. No custody, no transfer.</span>
+        </div>
+        <button class="btn btn-gold btn-sm" id="s-to-pact">Go to Pact →</button>
+      </div>
+    </section>
+  </div>
   </main>
 
   <footer class="footer">
@@ -175,17 +177,15 @@
     </div>
     <p class="footer-tag">The stag who stole Robin Hood's hood. $STAG.</p>
     <div class="footer-social">
-      <a href="/">Home</a>
-      <a href="#" data-social="x">X / Twitter</a>
-      <a href="#" data-social="tg">Telegram</a>
+      <a href="/">Home</a><a href="#" data-social="x">X / Twitter</a><a href="#" data-social="tg">Telegram</a>
     </div>
-    <p class="footer-fine">Staking parameters (APR, lock terms, multipliers) are illustrative and subject to change before launch. Nothing here is financial advice. DYOR.</p>
+    <p class="footer-fine">The Hooded 20 are collectible NFTs. Staking/pact parameters are subject to change. Nothing here is financial advice. DYOR.</p>
     <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
   <script src="js/main.js"></script>
   <script src="js/hooded-config.js"></script>
-  <script src="js/stake-hooded.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
