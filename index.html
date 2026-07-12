@@ -26,6 +26,34 @@
 </head>
 <body>
 
+  <!-- ============ INTRO SPLASH (video + song snippet, every visit) ============ -->
+  <style>
+    #splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;
+      opacity:1;transition:opacity .7s ease}
+    #splash.hide{opacity:0;pointer-events:none}
+    #splash video{width:100%;height:100%;object-fit:cover}
+    #splash-skip{position:absolute;right:18px;bottom:18px;z-index:2;cursor:pointer;
+      font:600 .8rem/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.06em;color:#eafff0;
+      background:rgba(8,16,10,.55);border:1px solid rgba(0,200,5,.4);border-radius:999px;padding:.6rem 1.1rem;
+      backdrop-filter:blur(6px);transition:.15s}
+    #splash-skip:hover{background:rgba(0,200,5,.18);border-color:#00c805}
+    #splash-sound{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:2;
+      font:600 .78rem/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.05em;color:#eafff0;
+      background:rgba(8,16,10,.55);border:1px solid rgba(230,184,63,.45);border-radius:999px;padding:.55rem 1rem;
+      backdrop-filter:blur(6px);animation:splashPulse 1.6s ease-in-out infinite}
+    @keyframes splashPulse{0%,100%{opacity:.55}50%{opacity:1}}
+    html.splash-lock,body.splash-lock{overflow:hidden;height:100%}
+  </style>
+  <div id="splash" role="dialog" aria-label="Intro">
+    <video id="splash-vid" muted autoplay playsinline preload="auto" poster="assets/img/hero-poster.jpg">
+      <source src="assets/media/splash.mp4" type="video/mp4" />
+    </video>
+    <audio id="splash-song" src="assets/media/stagwifhood.mp3" preload="auto"></audio>
+    <button id="splash-skip" type="button" aria-label="Skip intro">Skip ▶</button>
+    <div id="splash-sound" hidden>🔊 Tap for sound</div>
+  </div>
+  <!-- ========================================================================== -->
+
   <!-- ambient background layers -->
   <div class="bg-layer bg-forest" aria-hidden="true"></div>
   <div class="bg-layer bg-glow" aria-hidden="true"></div>
@@ -356,5 +384,73 @@
   </footer>
 
   <script src="js/main.js"></script>
+  <script>
+  /* Intro splash: play the (silent) video + a snippet of the song every visit.
+     Video autoplays muted (always allowed). We try to autoplay the song; if the
+     browser blocks audio until a gesture, we start it on the first tap/scroll/key
+     and show a subtle "tap for sound" hint. The splash dismisses when the video
+     ends, on Skip, or after a hard cap — then the song fades and stops (snippet). */
+  (function () {
+    var splash = document.getElementById('splash');
+    if (!splash) return;
+    var vid = document.getElementById('splash-vid');
+    var song = document.getElementById('splash-song');
+    var skip = document.getElementById('splash-skip');
+    var hint = document.getElementById('splash-sound');
+    var done = false;
+    document.documentElement.classList.add('splash-lock');
+    document.body.classList.add('splash-lock');
+    if (song) { song.volume = 0; song.currentTime = 0; }
+
+    function fadeSong() {
+      if (!song) return;
+      var v = song.volume;
+      var t = setInterval(function () {
+        v -= 0.08; if (v <= 0) { v = 0; clearInterval(t); try { song.pause(); } catch (e) {} }
+        song.volume = Math.max(0, v);
+      }, 60);
+    }
+    function fadeInSong() {
+      if (!song) return;
+      var target = 0.85, v = song.volume;
+      var t = setInterval(function () {
+        v += 0.06; if (v >= target) { v = target; clearInterval(t); }
+        song.volume = Math.min(target, v);
+      }, 70);
+    }
+    function startSong() {
+      if (!song || done) return;
+      var p = song.play();
+      if (p && p.then) p.then(function () { if (hint) hint.hidden = true; fadeInSong(); })
+        .catch(function () { if (hint) hint.hidden = false; });
+    }
+    function end() {
+      if (done) return; done = true;
+      splash.classList.add('hide');
+      fadeSong();
+      document.documentElement.classList.remove('splash-lock');
+      document.body.classList.remove('splash-lock');
+      setTimeout(function () { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }, 800);
+    }
+
+    // video: autoplay muted (always allowed); dismiss when it finishes
+    if (vid) {
+      var play = vid.play(); if (play && play.catch) play.catch(function () {});
+      vid.addEventListener('ended', end);
+      vid.addEventListener('error', end);
+    }
+    // best-effort song autoplay; fall back to first user gesture
+    startSong();
+    ['pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (ev) {
+      window.addEventListener(ev, startSong, { once: true, passive: true });
+    });
+    // tapping the splash (not Skip) also just turns sound on without dismissing
+    splash.addEventListener('click', function (e) { if (e.target !== skip) startSong(); });
+    if (skip) skip.addEventListener('click', function (e) { e.stopPropagation(); end(); });
+    // hard caps so the splash can never trap the visitor
+    setTimeout(function () { if (hint && song && (song.paused || song.currentTime === 0)) hint.hidden = false; }, 900);
+    setTimeout(end, 20000); // absolute fallback
+  })();
+  </script>
 </body>
 </html>
