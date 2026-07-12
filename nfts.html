@@ -20,6 +20,37 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .mint-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin:1.5rem 0 1rem}
+    .gamble-odds{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin:.2rem auto 1rem;max-width:640px}
+    .gamble-odds .odd{font:600 .72rem/1 'Space Grotesk',monospace;letter-spacing:.04em;color:var(--muted);
+      border:1px solid var(--line);border-radius:999px;padding:.45em .8em}
+    .gamble-odds .odd b{color:var(--gold-lite)}
+    .gamble-odds .odd.t4 b{color:#f8e6a0}.gamble-odds .odd.t3 b{color:#c9a0ff}.gamble-odds .odd.t2 b{color:#7fd4ff}.gamble-odds .odd.t1 b{color:#8ff0a4}
+    .hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1.1rem;max-width:var(--maxw);margin:2rem auto 0;padding:0 clamp(1rem,4vw,2rem)}
+    .hcard{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;overflow:hidden;
+      box-shadow:0 20px 44px -30px rgba(0,0,0,.85);transition:transform .25s var(--ease),box-shadow .25s,border-color .25s}
+    .hcard:hover{transform:translateY(-4px);border-color:rgba(230,184,63,.4)}
+    .hcard.sold{opacity:.5;filter:grayscale(.5)}
+    .hcard-media{position:relative;aspect-ratio:1;overflow:hidden}
+    .hcard-media img,.hcard-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .hcard-media video{opacity:0;transition:opacity .3s}.hcard:hover video{opacity:1}
+    .hcard-rank{position:absolute;top:8px;left:8px;font:700 .68rem/1 'Space Grotesk',monospace;color:var(--gold-lite);
+      background:rgba(6,18,10,.8);border:1px solid var(--line);border-radius:999px;padding:.35em .6em}
+    .hcard-tier{position:absolute;top:8px;right:8px;font:700 .6rem/1 'Space Grotesk',monospace;letter-spacing:.1em;text-transform:uppercase;
+      border-radius:999px;padding:.4em .6em;background:rgba(6,18,10,.85);border:1px solid var(--line)}
+    .hcard-tier.t0{color:#b7c6b3}.hcard-tier.t1{color:#8ff0a4}.hcard-tier.t2{color:#7fd4ff}.hcard-tier.t3{color:#c9a0ff}.hcard-tier.t4{color:#f8e6a0}
+    .hcard-sold{position:absolute;inset:auto 0 0 0;text-align:center;font:700 .7rem/1 'Space Grotesk',monospace;letter-spacing:.2em;
+      color:#ffcabb;background:rgba(6,18,10,.75);padding:.5em}
+    .hcard-foot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.7rem .8rem}
+    .hcard-name{font:600 .82rem/1.2 'Space Grotesk',monospace;color:var(--ink)}
+    .hcard-btn{font:600 .74rem/1 'Space Grotesk',monospace;padding:.5em .8em;border-radius:9px;cursor:pointer;white-space:nowrap;
+      border:1px solid var(--line);background:rgba(230,184,63,.12);color:var(--gold-lite);transition:.2s}
+    .hcard-btn:hover:not(:disabled){background:rgba(230,184,63,.24)}
+    .hcard-btn:disabled{opacity:.5;cursor:default}
+    .mint-status{text-align:center;font:500 .9rem/1.4 'Space Grotesk',monospace;color:var(--muted);min-height:1.3em;margin:.4rem 0}
+    .mint-status.ok{color:#8ff0a4}.mint-status.err{color:#ffcabb}
+  </style>
 </head>
 <body>
 
@@ -67,55 +98,31 @@
     <div class="section-head reveal">
       <span class="eyebrow">Mint · Robinhood Chain</span>
       <h2>The Hooded 20</h2>
-      <p class="section-lead">Pay the mint fee and get a <strong>random</strong> Hooded Stag. Twenty unique animated
-        legends — <strong>no duplicates, ever.</strong> Once a stag is minted, it's gone.</p>
+      <p class="section-lead"><strong>Pick your stag</strong> at its tier price, or take the <strong>Surprise Draw</strong> —
+        a rarity-weighted gamble where the top tiers are rare. Twenty 1-of-1 animated legends. <strong>No duplicates, ever.</strong></p>
     </div>
 
-    <div class="mint-panel reveal">
-      <div class="mint-preview">
-        <div class="mint-frame">
-          <img id="mint-shuffle" src="assets/nft/stagwifhood/img/1.jpg" alt="Random Hooded Stag preview" />
-          <div class="mint-q">?</div>
-        </div>
-        <div class="mint-preview-cap">Your stag is chosen at random on mint</div>
-      </div>
-
-      <div class="mint-info">
-        <div class="mint-stats">
-          <div class="mstat"><span class="mstat-v" id="m-supply">20</span><span class="mstat-l">Supply</span></div>
-          <div class="mstat"><span class="mstat-v" id="m-minted">0</span><span class="mstat-l">Minted</span></div>
-          <div class="mstat"><span class="mstat-v">TBA</span><span class="mstat-l">Mint Fee</span></div>
-          <div class="mstat"><span class="mstat-v">ETH</span><span class="mstat-l">Paid in</span></div>
-        </div>
-
-        <div class="supply-wrap">
-          <div class="supply-bar"><div class="supply-fill" id="supply-fill"></div></div>
-          <div class="supply-label"><span id="supply-count">0 / 20 minted</span><span>Robinhood Chain</span></div>
-        </div>
-
-        <button id="mint-btn" class="btn btn-gold btn-lg mint-btn" disabled>Mint — Coming Soon</button>
-        <p class="mint-status" id="mint-status"></p>
-        <p class="mint-note">Wallet connect + minting go live at launch on Robinhood Chain. Provably-fair random draw, no duplicates.</p>
-        <a class="mint-notify" href="#" data-social="tg">🔔 Get notified in Telegram →</a>
-      </div>
+    <div class="mint-cta reveal">
+      <button id="mint-connect" class="btn btn-gold btn-lg" disabled>Connect Wallet</button>
+      <button id="gamble-btn" class="btn btn-ghost btn-lg" disabled>🎲 Surprise Draw</button>
     </div>
+    <div id="gamble-odds" class="gamble-odds"></div>
+    <p class="mint-status" id="mint-status"></p>
 
-    <ul class="mint-perks reveal">
-      <li><span>🎲</span> Random draw</li>
-      <li><span>🚫</span> No duplicates</li>
-      <li><span>🎬</span> Fully animated</li>
-      <li><span>🏹</span> Prize Heist whitelist priority</li>
-    </ul>
+    <div class="supply-wrap reveal" style="max-width:560px;margin:1rem auto 0">
+      <div class="supply-bar"><div class="supply-fill" id="supply-fill"></div></div>
+      <div class="supply-label"><span id="supply-count">0 / 20 minted</span><span>Robinhood Chain · 4663</span></div>
+    </div>
   </section>
 
-  <!-- COLLECTION -->
+  <!-- PICK GRID -->
   <section class="nfts" id="nfts">
     <div class="section-head reveal">
-      <span class="eyebrow">The Collection</span>
-      <h2>All 20 Legends</h2>
-      <p class="section-lead">Every Hooded Stag is 1-of-1. Hover to see them move. Rarity ranges from Common to Mythic.</p>
+      <span class="eyebrow">Pick Your Legend</span>
+      <h2>All 20 Stags</h2>
+      <p class="section-lead">Hover to watch them move. Hit <em>Pick</em> to mint that exact stag at its tier price — or roll the Surprise Draw above.</p>
     </div>
-    <div class="nft-grid" id="nft-grid"><!-- populated by main.js --></div>
+    <div class="hgrid" id="mint-grid"></div>
   </section>
   </main>
 
@@ -140,7 +147,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
   <script src="js/main.js"></script>
-  <script src="js/mint.js"></script>
-  <script src="js/mint-wallet.js"></script>
+  <script src="js/hooded-config.js"></script>
+  <script src="js/mint-hooded.js"></script>
 </body>
 </html>
