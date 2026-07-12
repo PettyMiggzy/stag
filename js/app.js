@@ -493,6 +493,11 @@
     const h = (location.hash || '').replace('#', '');
     active = ['mint', 'stake', 'pact'].includes(h) ? h : 'mint';
     showTab(active);
+    // nav links (/app#mint etc.) only change the hash — switch the tab when it changes
+    window.addEventListener('hashchange', () => {
+      const t = (location.hash || '').replace('#', '');
+      if (['mint', 'stake', 'pact'].includes(t) && t !== active) showTab(t);
+    });
     // pre-load the other tabs' read-only data so switching is instant
     Mint.load(false); Stake.load(false); Pact.load(false);
     // remember the wallet across visits — silently reconnect if previously authorized (no popup)
