@@ -67,6 +67,48 @@ A fresh reviewer re-audited the fixed code specifically for regressions and new 
 - **No new medium/high issues, no regressions.** One low note actioned: free mints no longer increment
   the paid `mintedBy` counter, so a whitelisted wallet can still buy its normal allocation later.
 
-## Verification after fixes
-`npx hardhat test` → 34 passing. `scripts/simulate.js` → all invariants held across 2,100+ random steps
-(seeds 1–5 × 300, seed 99 × 600, re-checked seeds 1 & 7 after the final fix).
+## Verification after round-1 fixes
+`npx hardhat test` → 34 passing. `scripts/simulate.js` → all invariants held across 2,100+ random steps.
+
+---
+
+# Round 2 — "ultracode" 8-agent deep audit
+
+Eight independent adversarial auditors (per-contract deep dives + cross-contract + whole-system
+economic/MEV + deploy script + frontend wallet-safety + compiler/OZ-v5), each hunting what round 1
+missed. Consolidated, verified, and fixed.
+
+## Confirmed fixed
+| Sev | Area | Finding | Fix |
+|-----|------|---------|-----|
+| **HIGH** | StagStaking | `sweepEth` used stale `reserved` and excluded the still-streaming reward schedule — owner could sweep ETH backing an active period and brick claims (a regression from the round-1 sweepEth add) | `sweepEth` now settles first and subtracts `reserved` **and** `rewardRate*(periodFinish-now)`; can never unfund live rewards |
+| **CRIT (frontend)** | mint/stake/admin JS | no chainId check before sending value → a user on the wrong network could send real ETH into the void (estimateGas guard doesn't catch it) | verify `chainId==4663` after connect + before every value path; drop signer on `chainChanged` |
+| MED | SherwoodPact | owner could raise the live-read, unbounded `grace` to permanently strand holder entries | `grace` snapshotted per pact; `setGrace` capped at 90d; oracle can't forfeit after window+grace (holder reclaim wins) |
+| MED | SherwoodPact | same STAG bag → unlimited pacts → farm rewards | one open pact per wallet |
+| MED | StagStaking↔NFT | re-pointing the locker while NFTs staked silently bricked the NFT (swallowed `unlock` revert) | `pendingUnlock` + `NftUnlockFailed` event + `retryUnlock()` |
+| MED | StagStaking | config changes only applied on a user's next action → stale-weight unfairness; tier duration could be set to 0 (enables notify-sandwich) | permissionless `poke()`; lock-tier floor of 1h |
+| MED | StagStaking | `nftBaseWeight` default (100k) let NFTs cheaply dominate the pool | lowered default; documented as a tokenomics knob |
+| LOW | frontend | double-click double-mint; unescaped manifest via innerHTML (XSS); unvalidated admin fund address; price mapped from manifest not chain | in-flight lock; escape + textContent; isAddress+getCode; read `priceOf`/`randomPrice` on-chain |
+| LOW | RevenueSplitter | `distribute` reverted/stranded fee-on-transfer tokens | second leg pays live remaining balance |
+| LOW | HoodedTwenty | silent unfunded pool if splitter forward failed | `SplitterForwardFailed` event |
+| LOW | all | missing events; unpinned evmVersion (Cancun `MCOPY` risk on L2) | added events; pinned `evmVersion=paris` |
+| HIGH (ops) | deploy | 20-count free-mint could mint the whole collection free; immutable `poolBps`/owner typo misroutes funds; no ownership handover | count→2 + guard; checksum + `poolBps` assert; transfer ownership/penaltyRecipient/oracle to admin; apply prices from config |
+
+## Verified sound (no fix needed)
+Reward accounting & `totalWeight == Σ weight` invariant, proportional-forfeit math (no underflow),
+reentrancy/CEI everywhere, Pact escrow solvency on every path, mint pool integrity & weighted-draw,
+OZ-v5 overrides (`supportsInterface`, `_update`), ERC-5192/2981, holding-multiplier can't be flashed,
+the notify-sandwich (defended by drip+lock+forfeit), and the self-mint-then-stake loop (bounded by the
+10% owner cut).
+
+## Residual — need a product decision (documented, not silently shipped)
+1. **Gamble randomness** — on-chain entropy is sequencer-influenceable; a real fix needs a VRF (not on
+   Robinhood Chain). Options: commit-reveal (keeps gamble, 2-tx), PICK-only, or accept for a 20-piece drop.
+2. **Gamble pricing** — flat 0.010 gamble has higher expected pick-value (~0.0142) than its price, so a
+   rational buyer always gambles over PICK. This is your intended "cheap gamble" design; raise
+   `randomPrice`, draw uniformly, or accept. Both are owner-tunable, not code bugs.
+
+## Verification after round-2 fixes
+`npx hardhat test` → **38 passing** (added sweepEth-solvency, one-pact, grace-snapshot, reclaim tests).
+`scripts/simulate-full.js` (whole-system, every action) → **2,100 steps across 9 seeds, all invariants
+held**, including the strengthened `balance ≥ reserved + outstanding-schedule` solvency check.
