@@ -14,8 +14,9 @@ pragma solidity ^0.8.20;
  *     ≥1M → 2×, ≥10M → 3× (owner-tunable thresholds/mults). Staked (not wallet) so it
  *     can't be flash-borrowed. Stacks MULTIPLICATIVELY with the lock tier.
  *        weight = Σ(amount×tokenWeight) × lockMult × holdMult × nftMult
- *   • COLLECTORS: name up to 3 payout wallets with a bps share each; claimed ETH is split
- *     to them, remainder to you. Change anytime — only the original staker wallet can.
+ *   • WITHDRAW SPLIT: name up to 3 wallets with a bps share each; when you UNSTAKE, your withdrawn
+ *     $STAG principal is split to them (remainder back to you). ETH rewards on claim go to the staker.
+ *     Change anytime — only the original staking wallet can.
  *   • NFT staking is LOCK-IN-PLACE (NFT never leaves the wallet; we call lock()/unlock()).
  *   • Early unstake (before the lock): tokens → 15% penalty + forfeit rewards; NFTs →
  *     forfeit rewards (no penalty, keep the NFT).
@@ -264,7 +265,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
         require(wallets.length == bps.length && wallets.length <= 3, "bad len");
         uint256 sum;
         for (uint256 i; i < wallets.length; i++) {
-            require(wallets[i] != address(0), "zero wallet");
+            require(wallets[i] != address(0) && wallets[i] != address(this), "bad wallet"); // no self-strand
             sum += bps[i];
         }
         require(sum <= 10000, "bps > 100%");

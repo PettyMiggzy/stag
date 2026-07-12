@@ -64,10 +64,13 @@ async function main() {
     const nowT = (await ethers.provider.getBlock("latest")).timestamp;
     const outstanding = pf > nowT ? rate * BigInt(pf - nowT) : 0n;
     if (reserved + outstanding > skBal + 10n ** 12n) throw new Error(`[${step}] SCHEDULE-INSOLVENT: reserved ${reserved} + outstanding ${outstanding} > bal ${skBal}`);
-    let sumW = 0n, owed = 0n;
+    let sumW = 0n, owed = 0n, sumStaked = 0n;
     for (const a of actors) { const info = await staking.userInfo(a.address); sumW += info.weight; owed += info.pendingEth;
-      const on = await staking.stakedOf(a.address, STAG); if (on !== staked[a.address]) throw new Error(`[${step}] principal drift ${a.address}`); }
+      const on = await staking.stakedOf(a.address, STAG); sumStaked += on; if (on !== staked[a.address]) throw new Error(`[${step}] principal drift ${a.address}`); }
     if (sumW !== await staking.totalWeight()) throw new Error(`[${step}] staking WEIGHT DRIFT sum ${sumW} != total ${await staking.totalWeight()}`);
+    // TOKEN CONSERVATION: the contract's live $STAG balance must equal Σ stakedOf (nothing stranded/over-sent by the withdraw split)
+    const heldStag = await stag.balanceOf(SK);
+    if (heldStag !== sumStaked) throw new Error(`[${step}] TOKEN CONSERVATION broken: contract holds ${heldStag} STAG != Σ staked ${sumStaked}`);
     if (owed > skBal + 1n) throw new Error(`[${step}] staking OVER-ACCRUAL ${owed} > ${skBal}`);
     // MINT pool integrity
     const minted = await hood.minted(), rem = await hood.remaining();
