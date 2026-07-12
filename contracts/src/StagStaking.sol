@@ -83,8 +83,8 @@ contract StagStaking is Ownable, ReentrancyGuard {
         uint256 rewardPerWeightPaid;
         uint256 rewards;
         uint256[] nfts;
-        address[] collectors;
-        uint256[] collectorBps;
+        address[] splitTo;      // up to 3 wallets that receive the STAKED TOKENS on unstake
+        uint256[] splitBps;     // their shares (bps); remainder goes back to the staking wallet
     }
     mapping(address => UserInfo) private _u;
 
@@ -93,7 +93,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
     event StakedNFT(address indexed user, uint256 tokenId);
     event UnstakedNFT(address indexed user, uint256 tokenId, bool early);
     event Claimed(address indexed user, uint256 ethAmount);
-    event CollectorsSet(address indexed user, address[] wallets, uint256[] bps);
+    event WithdrawSplitSet(address indexed user, address[] wallets, uint256[] bps);
     event RewardAdded(uint256 amount, uint256 duration);
     event EthSwept(address indexed to, uint256 amount);
     event NftUnlockFailed(uint256 indexed tokenId, address indexed staker); // unlock() reverted (locker migrated) — recover via retryUnlock or hood.adminUnlock
@@ -201,7 +201,8 @@ contract StagStaking is Ownable, ReentrancyGuard {
             reserved = reserved >= f ? reserved - f : 0;
             if (penalty > 0) IERC20(token).safeTransfer(penaltyRecipient, penalty);
         }
-        IERC20(token).safeTransfer(msg.sender, amount - penalty);
+        // withdrawn tokens go to the staker's chosen split wallets (up to 3), remainder to the staker
+        _distributeWithdrawal(token, u, amount - penalty);
         emit UnstakedTokens(msg.sender, token, amount, penalty, early);
     }
 
@@ -256,8 +257,10 @@ contract StagStaking is Ownable, ReentrancyGuard {
         emit UnstakedNFT(msg.sender, tokenId, early);
     }
 
-    /* ---------------- collectors (up to 3 payout wallets) ---------------- */
-    function setCollectors(address[] calldata wallets, uint256[] calldata bps) external {
+    /* ---------------- withdraw split (up to 3 destination wallets for the STAKED TOKENS) ---------------- */
+    // Name up to 3 wallets + a share (bps) each; when you unstake, your withdrawn $STAG is split to
+    // them (remainder back to you). Change anytime — only the original staking wallet can.
+    function setWithdrawSplit(address[] calldata wallets, uint256[] calldata bps) external {
         require(wallets.length == bps.length && wallets.length <= 3, "bad len");
         uint256 sum;
         for (uint256 i; i < wallets.length; i++) {
@@ -266,9 +269,23 @@ contract StagStaking is Ownable, ReentrancyGuard {
         }
         require(sum <= 10000, "bps > 100%");
         UserInfo storage u = _u[msg.sender];
-        u.collectors = wallets;
-        u.collectorBps = bps;
-        emit CollectorsSet(msg.sender, wallets, bps);
+        u.splitTo = wallets;
+        u.splitBps = bps;
+        emit WithdrawSplitSet(msg.sender, wallets, bps);
+    }
+
+    // Split `net` withdrawn tokens across the staker's chosen wallets (best-effort so a bad
+    // destination can't brick unstaking); anything unsent goes back to the staker.
+    function _distributeWithdrawal(address token, UserInfo storage u, uint256 net) internal {
+        uint256 paidOut;
+        uint256 n = u.splitTo.length;
+        for (uint256 i; i < n; i++) {
+            uint256 part = (net * u.splitBps[i]) / 10000;
+            if (part > 0) {
+                try IERC20(token).transfer(u.splitTo[i], part) returns (bool ok) { if (ok) paidOut += part; } catch {}
+            }
+        }
+        if (net > paidOut) IERC20(token).safeTransfer(msg.sender, net - paidOut);
     }
 
     function claim() public nonReentrant update(msg.sender) {
@@ -278,15 +295,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
         if (r == 0) return;
         u.rewards = 0;
         reserved = reserved >= r ? reserved - r : 0;
-
-        // split to collectors (bps of r), remainder to the staker. Collector sends are BEST-EFFORT:
-        // a reverting collector can't brick your claim — its share simply falls through to you.
-        uint256 paidOut;
-        for (uint256 i; i < u.collectors.length; i++) {
-            uint256 part = (r * u.collectorBps[i]) / 10000;
-            if (part > 0) { (bool ok, ) = payable(u.collectors[i]).call{value: part}(""); if (ok) paidOut += part; }
-        }
-        if (r > paidOut) _sendEth(msg.sender, r - paidOut);
+        _sendEth(msg.sender, r);   // ETH rewards go to the staker; the up-to-3 split is on the TOKENS at unstake
         emit Claimed(msg.sender, r);
     }
 
@@ -381,8 +390,8 @@ contract StagStaking is Ownable, ReentrancyGuard {
         return (u.baseWeight, tierMultBps[u.lockTier], holdMultBpsOf(a), u.weight,
                 u.stakedAt, u.lockTier, unlock, earned(a), u.nfts, block.timestamp < unlock);
     }
-    function collectorsOf(address a) external view returns (address[] memory, uint256[] memory) {
-        return (_u[a].collectors, _u[a].collectorBps);
+    function withdrawSplitOf(address a) external view returns (address[] memory, uint256[] memory) {
+        return (_u[a].splitTo, _u[a].splitBps);
     }
     function tierInfo() external view returns (uint256[3] memory durations, uint256[3] memory mults) {
         return (tierDuration, tierMultBps);

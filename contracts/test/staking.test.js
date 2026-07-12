@@ -82,20 +82,32 @@ describe("StagStaking v4", function () {
     await expect(staking.connect(alice).claim()).to.be.revertedWith("locked");
   });
 
-  it("splits claimed ETH to collectors, remainder to staker", async () => {
-    const { owner, staking, stag, alice, c1, c2 } = await loadFixture(deploy);
-    await stake(staking, stag, alice, E("1000000"), 0); // 30d
+  it("splits withdrawn $STAG into up to 3 wallets on unstake, remainder to the staker", async () => {
+    const { staking, stag, alice, c1, c2 } = await loadFixture(deploy);
+    await stake(staking, stag, alice, E("1000000"), 0);
+    await staking.connect(alice).setWithdrawSplit([c1.address, c2.address], [5000, 3000]); // 50% / 30%
+    await time.increase(30 * 24 * 3600 + 1); // past the lock (no penalty)
+    const a0 = await stag.balanceOf(alice.address);
+    await staking.connect(alice).unstakeTokens(await stag.getAddress(), E("1000000"));
+    expect(await stag.balanceOf(c1.address)).to.equal(E("500000"));                 // 50% -> wallet 1
+    expect(await stag.balanceOf(c2.address)).to.equal(E("300000"));                 // 30% -> wallet 2
+    expect((await stag.balanceOf(alice.address)) - a0).to.equal(E("200000"));       // 20% remainder back
+  });
+
+  it("claim pays ETH rewards fully to the staker (no split on rewards)", async () => {
+    const { owner, staking, stag, alice, c1 } = await loadFixture(deploy);
+    await stake(staking, stag, alice, E("1000000"), 0);
+    await staking.connect(alice).setWithdrawSplit([c1.address], [10000]); // split config is for TOKENS only
     await owner.sendTransaction({ to: await staking.getAddress(), value: E("1") });
     await staking.notifyRewardAmount(E("1"), 100);
-    await time.increase(101);                            // period done: ~1 ETH earned, lock elapsed? 30d > 101s? NO
-    await time.increase(30 * 24 * 3600);                // pass the 30-day lock
-    await staking.connect(alice).setCollectors([c1.address, c2.address], [5000, 3000]); // 50% / 30%
+    await time.increase(30 * 24 * 3600 + 1);
     const p = await staking.earned(alice.address);
+    const a0 = await ethers.provider.getBalance(alice.address);
     const c1b = await ethers.provider.getBalance(c1.address);
-    const c2b = await ethers.provider.getBalance(c2.address);
-    await staking.connect(alice).claim();
-    expect((await ethers.provider.getBalance(c1.address)) - c1b).to.equal(p * 5000n / 10000n);
-    expect((await ethers.provider.getBalance(c2.address)) - c2b).to.equal(p * 3000n / 10000n);
+    const tx = await staking.connect(alice).claim();
+    const rc = await tx.wait();
+    expect(await ethers.provider.getBalance(c1.address) - c1b).to.equal(0n);         // reward NOT split
+    expect((await ethers.provider.getBalance(alice.address)) - a0 + rc.gasUsed * rc.gasPrice).to.equal(p);
   });
 
   it("rejects unapproved tokens and bad tiers", async () => {

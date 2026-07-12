@@ -97,10 +97,10 @@ async function main() {
         if (cur > 0n) { const amt = (cur * BigInt(1 + pick(100))) / 100n; const use = amt > cur ? cur : amt;
           await staking.connect(a).unstakeTokens(STAG, use); staked[a.address] -= use; bump("unstake"); }
       } else if (r < 0.30) { try { await staking.connect(a).claim(); bump("claim"); } catch { bump("claimLocked"); } }
-      else if (r < 0.36) { // set collectors, sometimes including the reverting contract
+      else if (r < 0.36) { // set withdraw-split wallets (tokens on unstake), incl. a hostile recipient
         const k = pick(4); const w = [], b = []; let left = 100;
         for (let i = 0; i < k; i++) { const share = pick(left + 1); w.push(rng() < 0.3 ? revAddr : cols[i]); b.push(share * 100); left -= share; }
-        await staking.connect(a).setCollectors(w, b); bump("collectors");
+        await staking.connect(a).setWithdrawSplit(w, b); bump("split");
       } else if (r < 0.40) { // stake NFT if owned+free
         const bal = await hood.balanceOf(a.address);
         for (let i = 0; i < bal; i++) { const id = await hood.tokenOfOwnerByIndex(a.address, i);

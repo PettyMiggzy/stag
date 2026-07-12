@@ -50,8 +50,9 @@ top tiers (Mythic/Legendary) be **gamble-only**, with Pick limited to Rare/Epic/
   - `≥ 10M STAG` → **3×**
 - **Stacking:** rewardWeight = stakedAmount×tokenWeight × lockMult × holdMult (multiplicative).
 - **Early unstake:** 15% token penalty + forfeit rewards → pool. NFT early = forfeit rewards, keep NFT. ✔ v3.
-- **Designated collector wallet:** named at stake time; rewards claimable by it. **Changeable only by the
-  original staker wallet** (reconnect the wallet that started the stake to re-point the collector).
+- **Withdraw split:** name up to 3 wallets + a share %; when you **unstake**, your withdrawn **$STAG
+  principal** is split to them (remainder back to the staking wallet). ETH rewards on `claim` go to the
+  staker. **Changeable only by the original staking wallet.**
 - **Whitelist** so your wallet can stake/test free on testnet.
 
 ⚠️ **CONFIRM #2:** Multipliers stack multiplicatively (lock × hold), and the defaults above are fine to

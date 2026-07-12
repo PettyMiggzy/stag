@@ -15,7 +15,7 @@
     'function stakeTokens(address,uint256,uint8)',
     'function unstakeTokens(address,uint256)',
     'function claim()',
-    'function setCollectors(address[],uint256[])',
+    'function setWithdrawSplit(address[],uint256[])',
     'function stakedOf(address,address) view returns (uint256)',
     'function holdMultBpsOf(address) view returns (uint256)',
     'function totalWeight() view returns (uint256)',
@@ -149,19 +149,19 @@
     const c = new ethers.Contract(STAKE(), ABI, signer);
     await tx(() => c.claim(), 'Rewards claimed ✓');
   }
-  async function setCollectors() {
+  async function setWithdrawSplit() {
     const rows = [1, 2, 3].map((i) => ({ a: ($('col-a' + i).value || '').trim(), b: ($('col-b' + i).value || '').trim() }))
       .filter((r) => r.a && r.b);
     const wallets = rows.map((r) => r.a), bps = rows.map((r) => Math.round(+r.b * 100)); // % -> bps
-    if (!wallets.every((w) => ethers.isAddress(w))) return setStatus('One of the collector addresses is invalid.', 'err');
-    if (bps.reduce((s, x) => s + x, 0) > 10000) return setStatus('Collector shares add up to more than 100%.', 'err');
+    if (!wallets.every((w) => ethers.isAddress(w))) return setStatus('One of the withdraw addresses is invalid.', 'err');
+    if (bps.reduce((s, x) => s + x, 0) > 10000) return setStatus('Withdraw shares add up to more than 100%.', 'err');
     const c = new ethers.Contract(STAKE(), ABI, signer);
-    await tx(() => c.setCollectors(wallets, bps), 'Collector wallets saved ✓');
+    await tx(() => c.setWithdrawSplit(wallets, bps), 'Withdraw wallets saved ✓');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     const bind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
-    bind('sk-stake', stake); bind('sk-unstake', unstake); bind('sk-claim', claim); bind('sk-setcol', setCollectors);
+    bind('sk-stake', stake); bind('sk-unstake', unstake); bind('sk-claim', claim); bind('sk-setcol', setWithdrawSplit);
     const max = $('sk-max'); if (max) max.onclick = async () => {
       if (!me) return; const bal = await new ethers.Contract(STAG, ERC20, ro()).balanceOf(me);
       $('sk-amount').value = ethers.formatEther(bal);
