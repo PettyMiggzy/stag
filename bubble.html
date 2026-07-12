@@ -57,6 +57,86 @@
   </header>
 
   <main>
+  <style>
+    /* ===== Hooded Maps — scoped bubble-map styles (forest/gold theme) ===== */
+    .bubble-hero .ca-input-row{display:flex;gap:.6rem;max-width:680px;margin:1.6rem auto 0}
+    .bubble-hero .ca-input-row input{flex:1;min-width:0;background:rgba(6,16,9,.72);border:1px solid var(--line);
+      border-radius:100px;color:var(--ink);padding:.72rem 1.15rem;font-size:.95rem;font-family:inherit;transition:border-color .2s}
+    .bubble-hero .ca-input-row input:focus{outline:none;border-color:var(--gold)}
+    .bubble-hero .ca-input-row input::placeholder{color:var(--muted)}
+
+    /* two-column body: graph + address list */
+    .bubble-body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:1rem;max-width:1240px;margin:1.6rem auto 0;align-items:stretch}
+    .bubble-body .graph-col{min-width:0;display:flex}
+    .bubble-body .graph-wrap{max-width:none;margin:0;width:100%}
+    .bubble-hero #graph{height:min(66vh,660px)}
+
+    /* address list sidebar */
+    .addr-panel{display:flex;flex-direction:column;min-height:0;max-height:min(66vh,660px);
+      background:linear-gradient(180deg,rgba(14,36,21,.82),rgba(8,22,13,.9));border:1px solid var(--line);
+      border-radius:var(--radius);overflow:hidden;backdrop-filter:blur(8px);box-shadow:0 24px 48px -34px #000}
+    .addr-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.8rem .95rem;
+      border-bottom:1px solid var(--line);background:rgba(6,16,9,.5)}
+    .addr-title{font-family:'Space Grotesk',monospace;font-weight:700;font-size:.95rem;color:var(--gold-lite);letter-spacing:.02em}
+    .ungroup-toggle{display:inline-flex;align-items:center;gap:.42rem;font-size:.7rem;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+    .ungroup-toggle input{appearance:none;-webkit-appearance:none;width:30px;height:16px;border-radius:100px;flex:none;
+      background:rgba(255,255,255,.1);border:1px solid var(--line);position:relative;cursor:pointer;transition:.2s;margin:0}
+    .ungroup-toggle input::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;border-radius:50%;
+      background:var(--muted);transition:.2s}
+    .ungroup-toggle input:checked{background:rgba(230,184,63,.35);border-color:var(--gold)}
+    .ungroup-toggle input:checked::after{transform:translateX(14px);background:var(--gold-lite)}
+    .addr-search-wrap{padding:.6rem .7rem;border-bottom:1px solid var(--line)}
+    #addr-search{width:100%;background:rgba(6,16,9,.6);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+      font-size:.82rem;padding:.5rem .7rem;font-family:inherit}
+    #addr-search:focus{outline:none;border-color:var(--gold)}
+    #addr-search::placeholder{color:var(--muted)}
+    .addr-rows{overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:160px;padding:.35rem;
+      scrollbar-width:thin;scrollbar-color:rgba(230,184,63,.3) transparent}
+    .addr-rows::-webkit-scrollbar{width:8px}
+    .addr-rows::-webkit-scrollbar-thumb{background:rgba(230,184,63,.28);border-radius:8px}
+    .addr-rows::-webkit-scrollbar-track{background:transparent}
+
+    .arow{display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;border-radius:9px;cursor:pointer;transition:background .15s}
+    .arow:hover{background:rgba(230,184,63,.08)}
+    .arow.sel{background:rgba(230,184,63,.17);box-shadow:inset 0 0 0 1px var(--line)}
+    .arow .rank{font-family:'Space Grotesk',monospace;font-size:.72rem;color:var(--muted);width:2.2em;text-align:right;flex:none}
+    .arow .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 6px -1px currentColor}
+    .arow .addr{font-family:'Space Grotesk',monospace;font-size:.8rem;color:var(--ink);flex:1;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap}
+    .arow .pct{font-family:'Space Grotesk',monospace;font-size:.8rem;color:var(--gold-lite);flex:none;text-align:right;min-width:3.7em}
+    .arow.dim{opacity:.62}
+    .arow.dim .addr{color:var(--muted)}
+    .atag{font-size:.56rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:.08em .42em;border-radius:5px;
+      background:rgba(111,168,255,.18);color:#9ac6ff;flex:none}
+    .atag.dead{background:rgba(232,138,106,.16);color:#e8a68a}
+    .eye{flex:none;width:22px;height:22px;display:grid;place-items:center;border:0;background:none;color:var(--muted);
+      cursor:pointer;border-radius:6px;opacity:.55;transition:.15s;padding:0}
+    .eye:hover{color:var(--gold-lite);background:rgba(230,184,63,.12);opacity:1}
+    .eye.off{color:var(--gold-deep);opacity:.95}
+
+    .cgroup{margin:.15rem 0}
+    .crow{display:flex;align-items:center;gap:.5rem;padding:.5rem .5rem;cursor:pointer;border-radius:9px;transition:background .15s}
+    .crow:hover{background:rgba(230,184,63,.08)}
+    .crow .caret{font-size:.62rem;color:var(--muted);transition:transform .2s;flex:none;width:.85em;text-align:center}
+    .cgroup.open .crow .caret{transform:rotate(90deg)}
+    .crow .cdot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 9px currentColor}
+    .crow .cname{font-weight:700;font-size:.83rem;color:var(--ink);flex:none}
+    .crow .cmeta{font-size:.72rem;color:var(--muted);flex:1}
+    .crow .pct{font-family:'Space Grotesk',monospace;font-size:.82rem;color:var(--gold-lite);flex:none;min-width:3.7em;text-align:right}
+    .cmembers{display:none;padding:.1rem 0 .25rem;margin-left:.75rem;border-left:2px solid rgba(230,184,63,.16)}
+    .cgroup.open .cmembers{display:block}
+    .cmembers .arow{padding-left:.6rem}
+    .section-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);
+      padding:.7rem .5rem .3rem;font-weight:700}
+    .addr-empty{padding:1.5rem .9rem;text-align:center;color:var(--muted);font-size:.82rem;line-height:1.5}
+
+    @media (max-width:900px){
+      .bubble-body{grid-template-columns:1fr}
+      .addr-panel{max-height:60vh;order:2}
+      .bubble-body .graph-col{order:1}
+      .bubble-hero #graph{height:56vh}
+    }
+  </style>
   <section class="bubble-hero">
     <div class="section-head">
       <span class="eyebrow">Robinhood Chain · Hooded Maps</span>
@@ -80,31 +160,53 @@
       <div class="mstat"><span class="mstat-v" id="s-nodes">—</span><span class="mstat-l">Mapped</span></div>
     </div>
 
-    <div class="graph-wrap">
-      <div id="graph"></div>
-      <div class="graph-overlay" id="graph-overlay">
-        <div class="graph-msg" id="graph-msg">Paste a Robinhood Chain token address above to map its holders.</div>
-      </div>
-      <div class="graph-legend" id="graph-legend" hidden>
-        <span><i class="dot dot-cluster"></i> Connected cluster</span>
-        <span><i class="dot dot-solo"></i> Independent</span>
-        <span><i class="dot dot-contract"></i> Contract / LP</span>
-        <span class="legend-hint">bubble size = % of supply · tap a bubble for details</span>
-      </div>
-      <div class="bubble-info" id="bubble-info" hidden>
-        <button class="bubble-info-x" id="bubble-info-x" aria-label="Close">×</button>
-        <div class="bi-tags" id="bi-tags"></div>
-        <div class="bi-addr-row"><code id="bi-addr">0x…</code><button class="bi-copy" id="bi-copy">Copy</button></div>
-        <div class="bi-stats">
-          <div class="bi-stat"><span class="bi-v" id="bi-pct">—</span><span class="bi-l">of supply</span></div>
-          <div class="bi-stat"><span class="bi-v" id="bi-bal">—</span><span class="bi-l">balance</span></div>
+    <div class="bubble-body">
+      <div class="graph-col">
+        <div class="graph-wrap">
+          <div id="graph"></div>
+          <div class="graph-overlay" id="graph-overlay">
+            <div class="graph-msg" id="graph-msg">Paste a Robinhood Chain token address above to map its holders.</div>
+          </div>
+          <div class="graph-legend" id="graph-legend" hidden>
+            <span><i class="dot dot-cluster"></i> Connected cluster</span>
+            <span><i class="dot dot-solo"></i> Independent</span>
+            <span><i class="dot dot-contract"></i> Contract / LP</span>
+            <span class="legend-hint">bubble size = % of supply · lines = linked wallets · tap a bubble for details</span>
+          </div>
+          <div class="bubble-info" id="bubble-info" hidden>
+            <button class="bubble-info-x" id="bubble-info-x" aria-label="Close">×</button>
+            <div class="bi-tags" id="bi-tags"></div>
+            <div class="bi-addr-row"><code id="bi-addr">0x…</code><button class="bi-copy" id="bi-copy">Copy</button></div>
+            <div class="bi-stats">
+              <div class="bi-stat"><span class="bi-v" id="bi-pct">—</span><span class="bi-l">of supply</span></div>
+              <div class="bi-stat"><span class="bi-v" id="bi-bal">—</span><span class="bi-l">balance</span></div>
+            </div>
+            <a class="btn btn-gold btn-xs bi-explorer" id="bi-explorer" href="#" target="_blank" rel="noopener">View on Explorer ↗</a>
+          </div>
         </div>
-        <a class="btn btn-gold btn-xs bi-explorer" id="bi-explorer" href="#" target="_blank" rel="noopener">View on Explorer ↗</a>
       </div>
+
+      <aside class="addr-panel" id="addr-panel" aria-label="Address list">
+        <div class="addr-head">
+          <span class="addr-title">Address List</span>
+          <label class="ungroup-toggle" title="Show every holder as a flat ranked list">
+            <input type="checkbox" id="ungroup" /><span>Ungroup Clusters</span>
+          </label>
+        </div>
+        <div class="addr-search-wrap">
+          <input id="addr-search" type="text" spellcheck="false" autocomplete="off"
+                 placeholder="Search address…" aria-label="Search addresses" />
+        </div>
+        <div class="addr-rows" id="addr-rows">
+          <div class="addr-empty">Map a token to see its holders ranked here.</div>
+        </div>
+      </aside>
     </div>
-    <p class="bubble-note">Clusters are computed from the token's <strong>full transfer history</strong> (every direct
-      wallet-to-wallet transfer, creation → now) — a strong signal for linked wallets, not proof. Holders via Blockscout,
-      transfers via the Robinhood Chain RPC. Not financial advice.</p>
+
+    <p class="bubble-note">Clusters combine <strong>direct wallet-to-wallet transfers</strong> with
+      <strong>same-block acquisitions</strong> (wallets whose first buy landed in the same block — a strong bundle/sniper
+      signal). A strong signal for linked wallets, not proof. Holders via Blockscout, transfers via the Robinhood Chain RPC.
+      Not financial advice.</p>
   </section>
   </main>
 
