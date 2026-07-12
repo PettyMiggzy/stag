@@ -484,8 +484,11 @@
       var timer = setTimeout(done, 3200);
       flourish.onclick = function () { clearTimeout(timer); done(); }; // click to skip
     }
+    // expose so the tab router (app.js) can fire it however Stake is entered (tab, nav link, hash),
+    // but never while the main splash is still up.
+    window.__stakeFlourish = function () { if (splash && splash.style.display !== 'none' && !splash.classList.contains('gone')) return; stakeFlourish(); };
     var stakeTab = document.querySelector('.app-tab[data-tab="stake"]');
-    if (stakeTab) stakeTab.addEventListener('click', stakeFlourish);
+    if (stakeTab) stakeTab.addEventListener('click', function () { window.__stakeFlourish(); });
   })();
   </script>
 </body>

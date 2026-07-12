@@ -151,6 +151,7 @@
     ['mint', 'stake', 'pact'].forEach((n) => { const p = $('panel-' + n); if (p) p.hidden = n !== name; });
     if (history.replaceState) history.replaceState(null, '', '#' + name);
     loadTab(name, !!me);
+    if (name === 'stake' && window.__stakeFlourish) window.__stakeFlourish();
   }
 
   /* ================= MINT ================= */
