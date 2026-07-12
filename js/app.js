@@ -79,10 +79,12 @@
   }
 
   // ---------------- wallet ----------------
-  async function connect() {
-    if (!window.ethereum) { flashConnect('No EVM wallet found — install MetaMask.'); return; }
+  async function connect(silent) {
+    if (!window.ethereum) { if (!silent) flashConnect('No EVM wallet found — install MetaMask.'); return; }
     try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      // silent = reuse an existing authorization (no popup); bail if not already authorized
+      const accs = await window.ethereum.request({ method: silent ? 'eth_accounts' : 'eth_requestAccounts' });
+      if (silent && (!accs || !accs.length)) return;
       try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }); }
       catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [H.chain] }); }
       provider = new ethers.BrowserProvider(window.ethereum);
@@ -92,10 +94,21 @@
       window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; me = null; setNet('off', 'Reconnect on Robinhood Chain'); $('w-connect').textContent = 'Connect Wallet'; });
       window.ethereum.on && window.ethereum.on('accountsChanged', () => location.reload());
       $('w-connect').textContent = short(me);
+      const dc = $('w-disconnect'); if (dc) dc.hidden = false;
+      try { localStorage.setItem('h20_wc', '1'); } catch {} // remember across visits
       setNet('ok', 'Robinhood Chain');
       await refreshWallet();
       loadTab(active, true);
-    } catch (e) { flashConnect(pretty(e)); }
+    } catch (e) { if (!silent) flashConnect(pretty(e)); }
+  }
+  function disconnect() {
+    signer = null; me = null; provider = null;
+    try { localStorage.removeItem('h20_wc'); } catch {}
+    $('w-connect').textContent = 'Connect Wallet';
+    const dc = $('w-disconnect'); if (dc) dc.hidden = true;
+    const bals = $('w-bals'); if (bals) bals.hidden = true;
+    setNet('off', 'Not connected');
+    loadTab(active, false); // drop back to read-only view
   }
   function flashConnect(msg) { setStatus(active === 'mint' ? 'm-status' : active === 'stake' ? 's-status' : 'pc-status', msg, 'err'); }
   function setNet(state, txt) {
@@ -242,7 +255,7 @@
       try {
         const value = await c.priceOf(id);
         await c.mintPick.estimateGas(id, { value });
-        await tx(() => c.mintPick(id, { value }), `🦌 Minted ${it.character || '#' + id}! Welcome to The Hooded 20.`, 'm-status', () => this.load(true));
+        await tx(() => c.mintPick(id, { value }), `Minted ${it.character || '#' + id}! Welcome to The Hooded 20.`, 'm-status', () => this.load(true));
       } catch (e) { setStatus('m-status', pretty(e), 'err'); } finally { this.inFlight = false; }
     },
     async mintGamble() {
@@ -253,7 +266,7 @@
       try {
         const value = await c.randomPrice();
         await c.mintRandom.estimateGas({ value });
-        await tx(() => c.mintRandom({ value }), '🎲 The forest chose your stag! Check your wallet.', 'm-status', () => this.load(true));
+        await tx(() => c.mintRandom({ value }), 'The forest chose your stag! Check your wallet.', 'm-status', () => this.load(true));
       } catch (e) { setStatus('m-status', pretty(e), 'err'); } finally { this.inFlight = false; }
     },
   };
@@ -314,13 +327,13 @@
           const unlock = new Date(Number(info.unlockAt) * 1000);
           if (info.locked) {
             const left = Math.max(1, Math.ceil((Number(info.unlockAt) - Date.now() / 1000) / 86400));
-            const msg = `🔒 Rewards accrue now but unlock in ${left} day${left === 1 ? '' : 's'} — claimable ${unlock.toLocaleDateString()}.`;
+            const msg = `Rewards accrue now but unlock in ${left} day${left === 1 ? '' : 's'} — claimable ${unlock.toLocaleDateString()}.`;
             $('s-lock').textContent = msg; $('s-lock').className = 'lockbar';
             $('p-lock').textContent = `Locked until ${unlock.toLocaleDateString()} · early unstake = 15% + forfeit`; $('p-lock').className = 'lockbar';
             if (claimBtn) claimBtn.disabled = true;
           } else {
-            $('s-lock').textContent = '🔓 Unlocked — claim your ETH or unstake anytime.'; $('s-lock').className = 'lockbar unlocked';
-            $('p-lock').textContent = '🔓 Unlocked'; $('p-lock').className = 'lockbar unlocked';
+            $('s-lock').textContent = 'Unlocked — claim your ETH or unstake anytime.'; $('s-lock').className = 'lockbar unlocked';
+            $('p-lock').textContent = 'Unlocked'; $('p-lock').className = 'lockbar unlocked';
             if (claimBtn) claimBtn.disabled = false;
           }
         } else { $('s-lock').textContent = ''; $('p-lock').textContent = ''; if (claimBtn) claimBtn.disabled = false; }
@@ -363,7 +376,7 @@
       const s = ($('s-donate-amt').value || '').trim(); if (!s || +s <= 0) return setStatus('s-status', 'Enter an ETH amount to donate.', 'err');
       if (!signer) return connect();
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.donate({ value: ethers.parseEther(s) }), `Donated ${s} Ξ to the pool — thank you 🦌`, 's-status', () => this.load(true));
+      await tx(() => c.donate({ value: ethers.parseEther(s) }), `Donated ${s} Ξ to the pool — thank you`, 's-status', () => this.load(true));
     },
     async setSplit() {
       if (!signer) return connect();
@@ -451,7 +464,7 @@
       if (!d || +d <= 0) return setStatus('pc-status', 'Enter a duration in days.', 'err');
       const minHold = ethers.parseEther(hold), dur = Math.round(+d * 86400);
       const c = new ethers.Contract(H.pact, PACT_ABI, signer);
-      await tx(() => c.createPact(minHold, dur, { value: this.entryFee }), 'Pact sealed 🤝 — hold tight and return to claim.', 'pc-status', () => this.load(true));
+      await tx(() => c.createPact(minHold, dur, { value: this.entryFee }), 'Pact sealed — hold tight and return to claim.', 'pc-status', () => this.load(true));
     },
     async claim(id) { if (!signer) return connect(); const c = new ethers.Contract(H.pact, PACT_ABI, signer); await tx(() => c.claim(id), 'Pact reward claimed ✓', 'pc-status', () => this.load(true)); },
     async reclaim(id) { if (!signer) return connect(); const c = new ethers.Contract(H.pact, PACT_ABI, signer); await tx(() => c.reclaim(id), 'Entry reclaimed ✓', 'pc-status', () => this.load(true)); },
@@ -459,7 +472,9 @@
 
   // ---------------- init ----------------
   document.addEventListener('DOMContentLoaded', () => {
-    $('w-connect').onclick = connect;
+    $('w-connect').onclick = () => connect(false);
+    { const d = $('w-disconnect'); if (d) d.onclick = disconnect; }
+    { const p = $('s-to-pact'); if (p) p.onclick = () => showTab('pact'); }
     document.querySelectorAll('.app-tab').forEach((b) => b.onclick = () => showTab(b.dataset.tab));
     // stake bindings
     const bind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
@@ -476,5 +491,7 @@
     showTab(active);
     // pre-load the other tabs' read-only data so switching is instant
     Mint.load(false); Stake.load(false); Pact.load(false);
+    // remember the wallet across visits — silently reconnect if previously authorized (no popup)
+    try { if (localStorage.getItem('h20_wc') && window.ethereum) connect(true); } catch {}
   });
 })();
