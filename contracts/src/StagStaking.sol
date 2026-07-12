@@ -71,6 +71,8 @@ contract StagStaking is Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) public nftBoostBps;
     mapping(uint256 => address) public nftStaker;
     mapping(uint256 => uint256) public appliedBoost;
+    uint256 public nftBaseWeight = 100_000 ether;         // base weight each staked NFT adds (so NFT-only staking earns)
+    mapping(uint256 => uint256) public appliedBaseWeight;  // snapshot of base weight added per staked NFT
 
     struct UserInfo {
         uint256 baseWeight;   // Σ amount×tokenWeight/1e4
@@ -159,13 +161,15 @@ contract StagStaking is Ownable, ReentrancyGuard {
         uint256 received = IERC20(token).balanceOf(address(this)) - pre;
         require(received > 0, "no tokens received");
         UserInfo storage u = _u[msg.sender];
+        // adding to an active position may raise the lock tier but never lower it (no multiplier downgrade)
+        if (u.baseWeight > 0) require(tier >= u.lockTier, "cannot lower lock tier");
         if (u.mult == 0) u.mult = BASE;
         uint256 add = (received * w) / 10000;
         stakedOf[msg.sender][token] += received;
         _weighted[msg.sender][token] += add;
         u.baseWeight += add;
         u.lockTier = tier;             // adding to a stake (re)commits to this tier…
-        u.stakedAt = block.timestamp;  // …and restarts the lock timer
+        u.stakedAt = block.timestamp;  // …and restarts the lock timer (claim before topping up)
         _resync(msg.sender);
         emit StakedTokens(msg.sender, token, received, tier);
     }
@@ -176,6 +180,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
         UserInfo storage u = _u[msg.sender];
         bool early = block.timestamp < u.stakedAt + tierDuration[u.lockTier];
 
+        uint256 baseBefore = u.baseWeight;
         uint256 wRemoved = (_weighted[msg.sender][token] * amount) / have;
         _weighted[msg.sender][token] -= wRemoved;
         u.baseWeight -= wRemoved;
@@ -185,7 +190,9 @@ contract StagStaking is Ownable, ReentrancyGuard {
         uint256 penalty;
         if (early) {
             penalty = (amount * earlyPenaltyBps) / 10000;
-            uint256 f = u.rewards; u.rewards = 0;
+            // forfeit rewards PROPORTIONAL to the base weight withdrawn (not the whole position)
+            uint256 f = baseBefore > 0 ? (u.rewards * wRemoved) / baseBefore : u.rewards;
+            u.rewards -= f;
             reserved = reserved >= f ? reserved - f : 0;
             if (penalty > 0) IERC20(token).safeTransfer(penaltyRecipient, penalty);
         }
@@ -204,6 +211,9 @@ contract StagStaking is Ownable, ReentrancyGuard {
         uint256 boost = (boostBps * BASE) / 10000;
         u.mult += boost;
         appliedBoost[tokenId] = boost;
+        // NFTs also add BASE weight so NFT-only staking actually earns (not just a multiplier on 0)
+        u.baseWeight += nftBaseWeight;
+        appliedBaseWeight[tokenId] = nftBaseWeight;
         u.nfts.push(tokenId);
         nftStaker[tokenId] = msg.sender;
         u.stakedAt = block.timestamp;
@@ -226,7 +236,15 @@ contract StagStaking is Ownable, ReentrancyGuard {
         uint256 boost = appliedBoost[tokenId];
         delete appliedBoost[tokenId];
         u.mult = u.mult > boost ? u.mult - boost : BASE;
-        if (early) { uint256 f = u.rewards; u.rewards = 0; reserved = reserved >= f ? reserved - f : 0; }
+        uint256 baseBefore = u.baseWeight;
+        uint256 bw = appliedBaseWeight[tokenId];
+        delete appliedBaseWeight[tokenId];
+        u.baseWeight = u.baseWeight > bw ? u.baseWeight - bw : 0;
+        if (early) {  // forfeit rewards proportional to the base weight this NFT contributed
+            uint256 f = baseBefore > 0 ? (u.rewards * bw) / baseBefore : u.rewards;
+            u.rewards -= f;
+            reserved = reserved >= f ? reserved - f : 0;
+        }
         _resync(msg.sender);
         try hood.unlock(tokenId) {} catch {}
         emit UnstakedNFT(msg.sender, tokenId, early);
@@ -255,11 +273,12 @@ contract StagStaking is Ownable, ReentrancyGuard {
         u.rewards = 0;
         reserved = reserved >= r ? reserved - r : 0;
 
-        // split to collectors (bps of r), remainder to the staker
+        // split to collectors (bps of r), remainder to the staker. Collector sends are BEST-EFFORT:
+        // a reverting collector can't brick your claim — its share simply falls through to you.
         uint256 paidOut;
         for (uint256 i; i < u.collectors.length; i++) {
             uint256 part = (r * u.collectorBps[i]) / 10000;
-            if (part > 0) { _sendEth(u.collectors[i], part); paidOut += part; }
+            if (part > 0) { (bool ok, ) = payable(u.collectors[i]).call{value: part}(""); if (ok) paidOut += part; }
         }
         if (r > paidOut) _sendEth(msg.sender, r - paidOut);
         emit Claimed(msg.sender, r);
@@ -295,8 +314,9 @@ contract StagStaking is Ownable, ReentrancyGuard {
     }
     function setTierDuration(uint8 tier, uint256 secs) external onlyOwner { require(tier < 3 && secs <= 365 days, "bad"); tierDuration[tier] = secs; }
     function setTierMultBps(uint8 tier, uint256 bps) external onlyOwner { require(tier < 3 && bps >= 10000 && bps <= 100000, "bad"); tierMultBps[tier] = bps; }
+    function setNftBaseWeight(uint256 v) external onlyOwner { nftBaseWeight = v; }
     function setHoldingTiers(uint256[] calldata thresholds, uint256[] calldata mults) external onlyOwner {
-        require(thresholds.length == mults.length && thresholds.length > 0, "len");
+        require(thresholds.length == mults.length && thresholds.length > 0 && thresholds.length <= 10, "len");
         for (uint256 i; i < mults.length; i++) {
             require(mults[i] >= 10000 && mults[i] <= 100000, "mult");
             if (i > 0) require(thresholds[i] > thresholds[i - 1], "ascending");
@@ -312,6 +332,14 @@ contract StagStaking is Ownable, ReentrancyGuard {
     function rescueToken(address token, address to, uint256 amount) external onlyOwner {
         require(!everStakeable[token], "staking token");
         IERC20(token).safeTransfer(to, amount);
+    }
+
+    // Sweep only ETH NOT owed to stakers (e.g. dust funded while totalWeight was 0, or over-funding).
+    // Can never touch `reserved` liabilities, so it cannot make the contract unable to pay claims.
+    function sweepEth(address to, uint256 amount) external onlyOwner {
+        uint256 free = address(this).balance > reserved ? address(this).balance - reserved : 0;
+        require(amount <= free, "exceeds free ETH");
+        (bool ok, ) = payable(to).call{value: amount}(""); require(ok, "eth send failed");
     }
 
     /* ---------------- views ---------------- */

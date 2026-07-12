@@ -107,33 +107,41 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
 
     function _mintOne(uint256 id, uint256 price, bool gamble) internal {
         // EOA-only: blocks a contract from grinding onERC721Received for rare ids and removes
-        // the _safeMint reentrancy surface.
+        // the _safeMint reentrancy surface. (Trade-off: smart-contract wallets can't mint.)
         require(msg.sender == tx.origin, "no contracts");
         require(mintActive, "mint not active");
-        require(mintedBy[msg.sender] < maxPerWallet, "wallet limit");
 
-        // free-mint allowlist (owner testing): consumes an allowance, price becomes 0
-        uint256 due = price;
-        if (freeMints[msg.sender] > 0) { freeMints[msg.sender] -= 1; due = 0; }
+        // free-mint allowlist (owner testing / reserves): consumes an allowance, price = 0, and
+        // bypasses the per-wallet cap so an owner-granted allowance is fully usable.
+        bool isFree = freeMints[msg.sender] > 0;
+        if (isFree) freeMints[msg.sender] -= 1;
+        else require(mintedBy[msg.sender] < maxPerWallet, "wallet limit");
+        uint256 due = isFree ? 0 : price;
         require(msg.value >= due, "fee too low");
 
-        // effects
+        // effects (CEI)
         mintedBy[msg.sender] += 1;
         _take(id);
         _safeMint(msg.sender, id);
-        emit Minted(msg.sender, id, _tier(id), gamble, msg.value);
+        emit Minted(msg.sender, id, _tier(id), gamble, due);
 
-        // interaction: forward proceeds to the splitter (splits 90/10 on arrival)
-        if (msg.value > 0 && splitter != address(0)) {
-            (bool ok, ) = splitter.call{value: msg.value}("");
-            require(ok, "split failed");
-        }
+        // forward exactly `due` to the splitter. BEST-EFFORT: a reverting/mis-set splitter must
+        // not be able to brick minting — on failure the ETH stays here, recoverable via withdrawETH.
+        if (due > 0 && splitter != address(0)) { (bool ok, ) = splitter.call{value: due}(""); ok; }
+        // refund any overpayment to the minter
+        uint256 over = msg.value - due;
+        if (over > 0) { (bool r, ) = payable(msg.sender).call{value: over}(""); require(r, "refund failed"); }
     }
 
     // weighted random over the remaining pool: rarer tiers have lower weight → less likely.
+    // NOTE: on-chain entropy on an L2 is influenceable by the sequencer/searcher who orders txs.
+    // For a 20-piece art mint this is an accepted trade-off; tiered PICK pricing bounds the
+    // incentive to snipe rares via GAMBLE. Use PICK-only (setTierWeight aside) if that matters.
     function _drawWeighted() internal returns (uint256) {
+        require(totalWeight > 0, "no weight");
         uint256 r = uint256(keccak256(abi.encodePacked(
-            block.prevrandao, block.timestamp, msg.sender, _pool.length, _nonce++
+            blockhash(block.number - 1), block.prevrandao, block.timestamp,
+            msg.sender, _pool.length, totalWeight, address(this).balance, _nonce++
         ))) % totalWeight;
         uint256 cum = 0;
         uint256 n = _pool.length;
@@ -181,6 +189,7 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     function setRandomPrice(uint256 v) external onlyOwner { randomPrice = v; }
     function setTierWeight(uint8 tier, uint256 v) external onlyOwner {
         require(tier < NUM_TIERS, "tier");
+        require(v > 0, "weight=0"); // never let a tier hit 0 weight (would brick the gamble draw)
         // keep totalWeight consistent for tokens of this tier still in the pool
         uint256 old = tierWeight[tier];
         if (v != old) {

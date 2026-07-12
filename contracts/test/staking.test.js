@@ -113,4 +113,39 @@ describe("StagStaking v4", function () {
     const { staking } = await loadFixture(deploy);
     await expect(staking.notifyRewardAmount(E("1"), 100)).to.be.revertedWith("insufficient ETH funded");
   });
+
+  it("NFT-only staking earns (base weight), and cannot lower lock tier", async () => {
+    const { owner, staking, stag, hood, alice } = await loadFixture(deploy);
+    // give alice a free NFT and stake it (no tokens)
+    await hood.grantFreeMints(alice.address, 1);
+    await hood.connect(alice).mintRandom({ value: 0 });
+    const id = await hood.tokenOfOwnerByIndex(alice.address, 0);
+    await staking.connect(alice).stakeNFT(id);
+    const info = await staking.userInfo(alice.address);
+    expect(info.baseWeight).to.be.greaterThan(0n);   // H1 fix: NFT contributes base weight
+    expect(info.weight).to.be.greaterThan(0n);
+    await owner.sendTransaction({ to: await staking.getAddress(), value: E("1") });
+    await staking.notifyRewardAmount(E("1"), 100);
+    await time.increase(50);
+    expect(await staking.earned(alice.address)).to.be.greaterThan(0n); // actually earns
+
+    // now stake tokens at tier 2, then adding tier 0 must revert (no downgrade)
+    await stake(staking, stag, alice, E("1000000"), 2);
+    await stag.connect(alice).approve(await staking.getAddress(), E("1"));
+    await expect(staking.connect(alice).stakeTokens(await stag.getAddress(), E("1"), 0)).to.be.revertedWith("cannot lower lock tier");
+  });
+
+  it("partial early unstake forfeits rewards proportionally, not entirely", async () => {
+    const { owner, staking, stag, alice } = await loadFixture(deploy);
+    await stake(staking, stag, alice, E("1000000"), 0);
+    await owner.sendTransaction({ to: await staking.getAddress(), value: E("1") });
+    await staking.notifyRewardAmount(E("1"), 100);
+    await time.increase(101); // ~1 ETH accrued, still locked (30d)
+    const before = await staking.earned(alice.address);
+    expect(before).to.be.closeTo(E("1"), E("0.02"));
+    await staking.connect(alice).unstakeTokens(await stag.getAddress(), E("250000")); // pull 25%
+    const after = await staking.earned(alice.address);
+    // ~75% of rewards retained (proportional forfeit of the 25% withdrawn)
+    expect(after).to.be.closeTo(before * 75n / 100n, E("0.03"));
+  });
 });

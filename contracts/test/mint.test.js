@@ -103,6 +103,30 @@ describe("HoodedTwenty + RevenueSplitter", function () {
     expect(await hood.ownerOf(id)).to.equal(bob.address);
   });
 
+  it("free mints bypass the per-wallet cap", async () => {
+    const { hood, alice } = await loadFixture(deploy);
+    await hood.grantFreeMints(alice.address, 3); // more than maxPerWallet (2)
+    const [a, b, c] = idsOfTier(0);
+    await hood.connect(alice).mintPick(a, { value: 0 });
+    await hood.connect(alice).mintPick(b, { value: 0 });
+    await hood.connect(alice).mintPick(c, { value: 0 }); // 3rd would normally hit "wallet limit"
+    expect(await hood.balanceOf(alice.address)).to.equal(3);
+  });
+
+  it("refunds overpayment on a pick", async () => {
+    const { hood, alice } = await loadFixture(deploy);
+    const id = idsOfTier(0)[0]; // 0.010
+    const b0 = await ethers.provider.getBalance(alice.address);
+    const tx = await hood.connect(alice).mintPick(id, { value: E("0.5") }); // overpay
+    const rc = await tx.wait();
+    expect(b0 - (await ethers.provider.getBalance(alice.address)) - rc.gasUsed * rc.gasPrice).to.equal(E("0.010"));
+  });
+
+  it("rejects setting a tier weight to zero", async () => {
+    const { hood } = await loadFixture(deploy);
+    await expect(hood.setTierWeight(0, 0)).to.be.revertedWith("weight=0");
+  });
+
   it("only owner can flip settings", async () => {
     const { hood, alice } = await loadFixture(deploy);
     await expect(hood.connect(alice).setMintActive(false)).to.be.revertedWithCustomError(hood, "OwnableUnauthorizedAccount");
