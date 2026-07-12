@@ -46,6 +46,8 @@
     .sk-col-row{display:flex;gap:.5rem;margin-bottom:.5rem}
     .sk-col-row input{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:.5em .6em;font:500 .8rem/1 'Space Grotesk',monospace}
     .sk-col-row input.a{flex:1}.sk-col-row input.b{width:78px}
+    .hooded-banner{position:relative;height:clamp(180px,26vw,300px);max-width:var(--maxw);margin:0 auto 1.4rem;border-radius:20px;overflow:hidden;background:center/cover no-repeat;border:1px solid var(--line)}
+    .hooded-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,18,10,.05) 40%,var(--bg) 98%)}
   </style>
 </head>
 <body>
@@ -89,6 +91,7 @@
 
   <main>
   <section class="stake-hero">
+    <div class="hooded-banner reveal" style="background-image:url('assets/img/hero-hooded.webp')" aria-hidden="true"></div>
     <div class="section-head reveal">
       <span class="eyebrow">Stake · Robinhood Chain</span>
       <h2>Stake &amp; Earn ETH</h2>

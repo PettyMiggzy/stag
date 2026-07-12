@@ -50,6 +50,8 @@
     .hcard-btn:disabled{opacity:.5;cursor:default}
     .mint-status{text-align:center;font:500 .9rem/1.4 'Space Grotesk',monospace;color:var(--muted);min-height:1.3em;margin:.4rem 0}
     .mint-status.ok{color:#8ff0a4}.mint-status.err{color:#ffcabb}
+    .hooded-banner{position:relative;height:clamp(190px,30vw,330px);max-width:var(--maxw);margin:0 auto 1.4rem;border-radius:20px;overflow:hidden;background:center/cover no-repeat;border:1px solid var(--line)}
+    .hooded-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,18,10,.05) 40%,var(--bg) 98%)}
   </style>
 </head>
 <body>
@@ -95,6 +97,7 @@
   <main>
   <!-- MINT HERO -->
   <section class="mint-hero">
+    <div class="hooded-banner reveal" style="background-image:url('assets/img/hero-hooded.webp')" aria-hidden="true"></div>
     <div class="section-head reveal">
       <span class="eyebrow">Mint · Robinhood Chain</span>
       <h2>The Hooded 20</h2>
