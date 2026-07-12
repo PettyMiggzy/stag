@@ -17,6 +17,7 @@
     blockExplorerUrls: ['https://robinhoodchain.blockscout.com'],
   };
   const STAG = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+  const CHAIN_ID = BigInt(parseInt(CHAIN.chainId, 16)); // 4663
   const WHITELIST_DEFAULT = '0x5db7ca9d2ce3f414b3fd94ec0fcaf9f3ab1a575f';
   const TIERS = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'];
   const TIER_COUNT = [4, 5, 5, 4, 2]; // supply per tier (for odds preview)
@@ -180,8 +181,11 @@
       try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN.chainId }] }); }
       catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CHAIN] }); }
       provider = new ethers.BrowserProvider(window.ethereum);
+      if ((await provider.getNetwork()).chainId !== CHAIN_ID) { signer = null; toast('Wrong network — switch to Robinhood Chain (4663) and reconnect.', 'err'); return; }
       signer = await provider.getSigner();
       me = (await signer.getAddress());
+      if (window.ethereum.removeAllListeners) window.ethereum.removeAllListeners('chainChanged');
+      window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; isOwner = false; $('btn-connect').textContent = 'Connect Wallet'; toast('Network changed — reconnect on Robinhood Chain.', 'err'); });
       $('btn-connect').textContent = short(me);
       // owner check against the mint contract
       const mint = ADDR.mint();
@@ -265,8 +269,10 @@
     const stk = () => store.get('staking');
     $('sk-fund') && ($('sk-fund').onclick = async () => {
       if (!signer) return toast('Connect wallet first.', 'err');
-      if (!stk()) return toast('Set staking address in Config.', 'err');
-      try { const tx = await signer.sendTransaction({ to: stk(), value: parseEth($('sk-fund-amt').value) }); await tx.wait(); toast('Pool funded ✓', 'ok'); await loadDashboard(); }
+      const addr = stk();
+      if (!ethers.isAddress(addr)) return toast('Set a valid staking address in Config.', 'err');
+      if ((await provider.getCode(addr)) === '0x') return toast('No contract at the staking address — check Config.', 'err');
+      try { const tx = await signer.sendTransaction({ to: addr, value: parseEth($('sk-fund-amt').value) }); await tx.wait(); toast('Pool funded ✓', 'ok'); await loadDashboard(); }
       catch (e) { toast(pretty(e), 'err'); }
     });
     $('sk-notify') && ($('sk-notify').onclick = () => ownerSend(stk(), STAKING_ABI, 'notifyRewardAmount',
@@ -285,8 +291,11 @@
     $('pk-refund') && ($('pk-refund').onclick = () => ownerSend(pk(), PACT_ABI, 'setRefundAmount', [parseEth($('pk-refund-v').value)], 'Refund set ✓'));
     $('pk-oracle') && ($('pk-oracle').onclick = () => ownerSend(pk(), PACT_ABI, 'setOracle', [$('pk-oracle-v').value.trim()], 'Oracle set ✓'));
     $('pk-fund') && ($('pk-fund').onclick = async () => {
-      if (!signer || !pk()) return toast('Connect wallet + set pact address.', 'err');
-      try { const tx = await signer.sendTransaction({ to: pk(), value: parseEth($('pk-fund-v').value) }); await tx.wait(); toast('Pact treasury funded ✓', 'ok'); }
+      if (!signer) return toast('Connect wallet first.', 'err');
+      const addr = pk();
+      if (!ethers.isAddress(addr)) return toast('Set a valid Pact address in Config.', 'err');
+      if ((await provider.getCode(addr)) === '0x') return toast('No contract at the Pact address — check Config.', 'err');
+      try { const tx = await signer.sendTransaction({ to: addr, value: parseEth($('pk-fund-v').value) }); await tx.wait(); toast('Pact treasury funded ✓', 'ok'); }
       catch (e) { toast(pretty(e), 'err'); }
     });
     $('cfg-pact') && ($('cfg-pact').value = store.get('pact'));

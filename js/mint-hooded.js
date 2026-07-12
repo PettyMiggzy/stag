@@ -6,8 +6,11 @@
 (function () {
   'use strict';
   const H = window.HOODED || {};
+  const CHAIN_ID = BigInt(parseInt((H.chain && H.chain.chainId) || '0x1237', 16)); // 4663
   const TIERS = H.tiers || ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'];
   const BASE = H.metaBase || 'assets/nft/stagwifhood';
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let inFlight = false;
   const grid = document.getElementById('mint-grid');
   const gambleBtn = document.getElementById('gamble-btn');
   const connectBtn = document.getElementById('mint-connect');
@@ -23,6 +26,7 @@
     'function tierWeight(uint256) view returns (uint256)',
     'function randomPrice() view returns (uint256)',
     'function tierOf(uint256) view returns (uint8)',
+    'function priceOf(uint256) view returns (uint256)',
     'function isAvailable(uint256) view returns (bool)',
     'function remaining() view returns (uint256)',
     'function minted() view returns (uint256)',
@@ -31,7 +35,8 @@
 
   let provider, signer, me, prices = [], randomPrice = 0n, items = [];
   const ro = () => new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) });
-  const setStatus = (m, c) => { if (statusEl) { statusEl.innerHTML = m; statusEl.className = 'mint-status ' + (c || ''); } };
+  const setStatus = (m, c) => { if (statusEl) { statusEl.textContent = m; statusEl.className = 'mint-status ' + (c || ''); } };
+  async function chainOk() { try { return provider && (await provider.getNetwork()).chainId === CHAIN_ID; } catch { return false; } }
   const eth = (w) => { try { return (+ethers.formatEther(w)).toFixed(3); } catch { return '—'; } };
 
   async function boot() {
@@ -65,17 +70,18 @@
       const sold = avail && avail[it.id] === false;
       const card = document.createElement('div');
       card.className = 'hcard t' + t + (sold ? ' sold' : '');
+      const id = parseInt(it.id, 10) || 0;
       card.innerHTML = `
         <div class="hcard-media">
-          <img src="${BASE}/img/${it.id}.jpg" alt="${it.character || 'Stag #' + it.id}" loading="lazy" />
-          <video muted loop playsinline preload="none" poster="${BASE}/img/${it.id}.jpg"><source src="${BASE}/anim/${it.id}.mp4" type="video/mp4"></video>
-          <span class="hcard-rank">#${it.rank || it.id}</span>
-          <span class="hcard-tier t${t}">${it.rarity || ''}</span>
+          <img src="${BASE}/img/${id}.jpg" alt="${esc(it.character || 'Stag #' + id)}" loading="lazy" />
+          <video muted loop playsinline preload="none" poster="${BASE}/img/${id}.jpg"><source src="${BASE}/anim/${id}.mp4" type="video/mp4"></video>
+          <span class="hcard-rank">#${esc(it.rank || id)}</span>
+          <span class="hcard-tier t${t}">${esc(it.rarity || '')}</span>
           ${sold ? '<span class="hcard-sold">MINTED</span>' : ''}
         </div>
         <div class="hcard-foot">
-          <div class="hcard-name">${it.character || 'Hooded #' + it.id}</div>
-          <button class="btn-mini hcard-btn" data-id="${it.id}" ${sold ? 'disabled' : ''}>${sold ? 'Gone' : 'Pick · ' + eth(priceFor(it)) + ' Ξ'}</button>
+          <div class="hcard-name">${esc(it.character || 'Hooded #' + id)}</div>
+          <button class="btn-mini hcard-btn" data-id="${id}" ${sold ? 'disabled' : ''}>${sold ? 'Gone' : 'Pick · ' + eth(priceFor(it)) + ' Ξ'}</button>
         </div>`;
       const v = card.querySelector('video');
       card.querySelector('.hcard-media').addEventListener('mouseenter', () => { v.play().catch(() => {}); });
@@ -110,7 +116,8 @@
   function renderComingSoon() {
     grid.innerHTML = items.map((it) => {
       const t = tierIdx(it.rarity);
-      return `<div class="hcard t${t}"><div class="hcard-media"><img src="${BASE}/img/${it.id}.jpg" loading="lazy"/><span class="hcard-tier t${t}">${it.rarity || ''}</span></div><div class="hcard-foot"><div class="hcard-name">${it.character || 'Hooded #' + it.id}</div></div></div>`;
+      const id = parseInt(it.id, 10) || 0;
+      return `<div class="hcard t${t}"><div class="hcard-media"><img src="${BASE}/img/${id}.jpg" loading="lazy"/><span class="hcard-tier t${t}">${esc(it.rarity || '')}</span></div><div class="hcard-foot"><div class="hcard-name">${esc(it.character || 'Hooded #' + id)}</div></div></div>`;
     }).join('');
     if (gambleBtn) { gambleBtn.textContent = 'Mint — Coming Soon'; gambleBtn.disabled = true; }
     if (connectBtn) connectBtn.style.display = 'none';
@@ -130,10 +137,13 @@
       try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }); }
       catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [H.chain] }); }
       provider = new ethers.BrowserProvider(window.ethereum);
+      if (!(await chainOk())) { signer = null; setStatus('Wrong network — switch to Robinhood Chain (4663) and reconnect.', 'err'); return; }
       signer = await provider.getSigner();
       me = await signer.getAddress();
       connectBtn.textContent = me.slice(0, 6) + '…' + me.slice(-4);
       setStatus('Wallet connected — pick a stag or take the draw.', 'ok');
+      if (window.ethereum.removeAllListeners) window.ethereum.removeAllListeners('chainChanged');
+      window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; if (connectBtn) connectBtn.textContent = 'Connect Wallet'; setStatus('Network changed — reconnect on Robinhood Chain.', 'err'); });
     } catch (e) { setStatus(pretty(e), 'err'); }
   }
 
@@ -153,34 +163,42 @@
   }
 
   async function mintPick(it) {
+    if (inFlight) return;
     if (!(await ensure())) return;
+    if (!(await chainOk())) return setStatus('Wrong network — switch to Robinhood Chain (4663).', 'err');
     const c = new ethers.Contract(H.mint, ABI, signer);
-    const value = priceFor(it);
-    try { await c.mintPick.estimateGas(it.id, { value }); }
-    catch (e) { return setStatus(pretty(e), 'err'); }
+    const id = parseInt(it.id, 10);
+    const value = await c.priceOf(id); // authoritative on-chain price for THIS token
+    inFlight = true;
     try {
-      setStatus(`Confirm in wallet — minting ${it.character || '#' + it.id}…`);
-      const tx = await c.mintPick(it.id, { value });
+      await c.mintPick.estimateGas(id, { value });
+      setStatus(`Confirm in wallet — minting ${it.character || '#' + id}…`);
+      const tx = await c.mintPick(id, { value });
       setStatus('Minting… waiting for confirmation');
       await tx.wait();
-      setStatus(`🦌 Minted ${it.character || '#' + it.id}! Welcome to The Hooded 20.`, 'ok');
+      setStatus(`🦌 Minted ${it.character || '#' + id}! Welcome to The Hooded 20.`, 'ok');
       boot();
     } catch (e) { setStatus(pretty(e), 'err'); }
+    finally { inFlight = false; }
   }
 
   async function mintGamble() {
+    if (inFlight) return;
     if (!(await ensure())) return;
+    if (!(await chainOk())) return setStatus('Wrong network — switch to Robinhood Chain (4663).', 'err');
     const c = new ethers.Contract(H.mint, ABI, signer);
-    try { await c.mintRandom.estimateGas({ value: randomPrice }); }
-    catch (e) { return setStatus(pretty(e), 'err'); }
+    const value = await c.randomPrice(); // authoritative on-chain price
+    inFlight = true;
     try {
+      await c.mintRandom.estimateGas({ value });
       setStatus('Confirm in wallet — drawing a random stag…');
-      const tx = await c.mintRandom({ value: randomPrice });
+      const tx = await c.mintRandom({ value });
       setStatus('Drawing… waiting for confirmation');
       await tx.wait();
       setStatus('🎲 The forest chose your stag! Check your wallet.', 'ok');
       boot();
     } catch (e) { setStatus(pretty(e), 'err'); }
+    finally { inFlight = false; }
   }
 
   boot();

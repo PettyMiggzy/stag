@@ -6,6 +6,7 @@
 (function () {
   'use strict';
   const H = window.HOODED || {};
+  const CHAIN_ID = BigInt(parseInt((H.chain && H.chain.chainId) || '0x1237', 16)); // 4663
   const $ = (id) => document.getElementById(id);
   const STAKE = () => H.staking;
   const STAG = H.stag;
@@ -30,7 +31,8 @@
 
   let provider, signer, me, tier = 0, durations = [30, 60, 90], mults = [10000, 15000, 20000];
   const ro = () => new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) });
-  const setStatus = (m, c) => { const e = $('sk-status'); if (e) { e.innerHTML = m; e.className = 'mint-status ' + (c || ''); } };
+  const setStatus = (m, c) => { const e = $('sk-status'); if (e) { e.textContent = m; e.className = 'mint-status ' + (c || ''); } };
+  async function chainOk() { try { return provider && (await provider.getNetwork()).chainId === CHAIN_ID; } catch { return false; } }
   const fmt = (v, d = 4) => { try { return (+ethers.formatEther(v)).toLocaleString(undefined, { maximumFractionDigits: d }); } catch { return '—'; } };
   const days = (s) => Math.round(Number(s) / 86400);
 
@@ -98,7 +100,10 @@
       try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }); }
       catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [H.chain] }); }
       provider = new ethers.BrowserProvider(window.ethereum);
+      if (!(await chainOk())) { signer = null; setStatus('Wrong network — switch to Robinhood Chain (4663) and reconnect.', 'err'); return; }
       signer = await provider.getSigner(); me = await signer.getAddress();
+      if (window.ethereum.removeAllListeners) window.ethereum.removeAllListeners('chainChanged');
+      window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; $('sk-connect').textContent = 'Connect Wallet'; setStatus('Network changed — reconnect on Robinhood Chain.', 'err'); });
       $('sk-connect').textContent = me.slice(0, 6) + '…' + me.slice(-4);
       ['sk-stake', 'sk-unstake', 'sk-claim', 'sk-setcol'].forEach((id) => { const b = $(id); if (b) b.disabled = false; });
       setStatus('Wallet connected.', 'ok');
@@ -116,6 +121,7 @@
 
   async function tx(run, okMsg) {
     if (!signer) return connect();
+    if (!(await chainOk())) return setStatus('Wrong network — switch to Robinhood Chain (4663).', 'err');
     try { const t = await run(); setStatus('Confirming…'); await t.wait(); setStatus(okMsg, 'ok'); await loadStats(); }
     catch (e) { setStatus(pretty(e), 'err'); }
   }
@@ -147,6 +153,8 @@
     const rows = [1, 2, 3].map((i) => ({ a: ($('col-a' + i).value || '').trim(), b: ($('col-b' + i).value || '').trim() }))
       .filter((r) => r.a && r.b);
     const wallets = rows.map((r) => r.a), bps = rows.map((r) => Math.round(+r.b * 100)); // % -> bps
+    if (!wallets.every((w) => ethers.isAddress(w))) return setStatus('One of the collector addresses is invalid.', 'err');
+    if (bps.reduce((s, x) => s + x, 0) > 10000) return setStatus('Collector shares add up to more than 100%.', 'err');
     const c = new ethers.Contract(STAKE(), ABI, signer);
     await tx(() => c.setCollectors(wallets, bps), 'Collector wallets saved ✓');
   }
