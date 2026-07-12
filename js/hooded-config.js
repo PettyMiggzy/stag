@@ -2,12 +2,12 @@
    After deploy, paste the addresses below ONCE (or set them in /admin, which stores
    overrides in localStorage). Every page (mint, stake, admin) reads from here. */
 window.HOODED = {
-  // ===== FILL AFTER DEPLOY =====
-  mint: '',       // HoodedTwenty (0x…)  — empty => mint shows "coming soon"
-  staking: '',    // StagStaking (0x…)
-  splitter: '',   // RevenueSplitter (0x…)
-  pact: '',       // SherwoodPact (0x…)
-  // =============================
+  // ===== DEPLOYED — Robinhood Chain mainnet 4663 (2026-07-12) =====
+  mint: '0x4384cB362D908d36266bDF3C31F18DB95EB127dc',     // HoodedTwenty
+  staking: '0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF',  // StagStaking
+  splitter: '0x1F6D791108635ac4522b1cfaD86FD7B435aDFe2a', // RevenueSplitter (90/10)
+  pact: '0xc36662D2db9432702f018963ABdab19432AA488B',     // SherwoodPact
+  // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
   chain: {
     chainId: '0x1237', // 4663 mainnet (testnet 46630 => '0xB626')
