@@ -28,3 +28,4 @@ contracts/package-lock.json
 contracts/artifacts/
 contracts/cache/
 contracts/typechain-types/
+contracts/deployed.json
