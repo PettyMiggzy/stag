@@ -56,6 +56,12 @@
     .wfree-txt b{font:700 .92rem/1.2 'Space Grotesk',monospace;color:var(--ink)}
     .wfree-txt span{font-size:.8rem;color:var(--muted);line-height:1.45}
     .wfree #s-to-pact{flex:none;white-space:nowrap}
+    .pooladdr{margin-top:.9rem;border-top:1px solid var(--line);padding-top:.8rem}
+    .pooladdr>span{font-size:.7rem;color:var(--muted);letter-spacing:.04em}
+    .pooladdr-row{display:flex;align-items:center;gap:.5rem;margin-top:.4rem}
+    .pooladdr-row code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 .74rem/1.4 'Space Grotesk',monospace;color:var(--gold-lite);background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:8px;padding:.5em .6em}
+    .pooladdr-row button{font:600 .7rem/1 'Space Grotesk',monospace;color:var(--gold-lite);background:rgba(230,184,63,.14);border:1px solid var(--line);border-radius:8px;padding:.55em .8em;cursor:pointer;white-space:nowrap}
+    .pooladdr-row button:hover{background:rgba(230,184,63,.24)}
     .app-panel[hidden]{display:none}
     .app-panel{animation:fade .4s var(--ease)}
     @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -310,6 +316,10 @@
             <input id="s-donate-amt" type="text" inputmode="decimal" placeholder="0.0" /><span class="tok">Ξ ETH</span>
           </div>
           <button class="btn btn-ghost" id="s-donate" disabled style="width:100%">Donate to Pool</button>
+          <div class="pooladdr">
+            <span>Or send RH-ETH straight to the pool:</span>
+            <div class="pooladdr-row"><code id="s-pool-addr">—</code><button id="s-pool-copy" type="button">Copy</button></div>
+          </div>
         </div>
 
         <!-- withdraw split -->

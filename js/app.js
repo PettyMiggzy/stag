@@ -475,6 +475,10 @@
     $('w-connect').onclick = () => connect(false);
     { const d = $('w-disconnect'); if (d) d.onclick = disconnect; }
     { const p = $('s-to-pact'); if (p) p.onclick = () => showTab('pact'); }
+    // show the reward-pool address + copy button (direct-send donations)
+    { const pa = $('s-pool-addr'); if (pa && H.staking) pa.textContent = H.staking;
+      const cp = $('s-pool-copy'); if (cp) cp.onclick = async () => {
+        try { await navigator.clipboard.writeText(H.staking); cp.textContent = 'Copied ✓'; setTimeout(() => cp.textContent = 'Copy', 1500); } catch { setStatus('s-status', 'Pool address: ' + H.staking, ''); } }; }
     document.querySelectorAll('.app-tab').forEach((b) => b.onclick = () => showTab(b.dataset.tab));
     // stake bindings
     const bind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
