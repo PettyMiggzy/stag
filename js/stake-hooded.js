@@ -15,6 +15,7 @@
     'function stakeTokens(address,uint256,uint8)',
     'function unstakeTokens(address,uint256)',
     'function claim()',
+    'function donate() payable',
     'function setWithdrawSplit(address[],uint256[])',
     'function stakedOf(address,address) view returns (uint256)',
     'function holdMultBpsOf(address) view returns (uint256)',
@@ -80,10 +81,18 @@
       const mult = (Number(info.lockMultBps) / 10000) * (Number(info.holdMult) / 10000);
       $('sk-mult').textContent = mult ? mult.toFixed(2).replace(/\.00$/, '') + '×' : '1×';
       const balEl = $('sk-bal'); if (balEl) balEl.textContent = 'Balance: ' + Number(ethers.formatEther(bal)).toLocaleString() + ' $STAG';
+      const claimBtn = $('sk-claim');
       if (Number(staked) > 0) {
         const unlock = new Date(Number(info.unlockAt) * 1000);
-        $('sk-unlock').textContent = info.locked ? `Locked until ${unlock.toLocaleDateString()}` : 'Unlocked — claim/unstake anytime';
-      } else $('sk-unlock').textContent = '';
+        if (info.locked) {
+          const left = Math.max(1, Math.ceil((Number(info.unlockAt) - Date.now() / 1000) / 86400));
+          $('sk-unlock').textContent = `🔒 Rewards accrue now but unlock in ${left} day${left === 1 ? '' : 's'} — claimable ${unlock.toLocaleDateString()}. Early unstake = 15% + forfeit rewards.`;
+          if (claimBtn) claimBtn.disabled = true; // can't claim until the lock ends
+        } else {
+          $('sk-unlock').textContent = '🔓 Unlocked — claim your ETH or unstake anytime.';
+          if (claimBtn) claimBtn.disabled = false;
+        }
+      } else { $('sk-unlock').textContent = ''; if (claimBtn) claimBtn.disabled = false; }
     } catch (e) {}
   }
 
@@ -105,7 +114,7 @@
       if (window.ethereum.removeAllListeners) window.ethereum.removeAllListeners('chainChanged');
       window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; $('sk-connect').textContent = 'Connect Wallet'; setStatus('Network changed — reconnect on Robinhood Chain.', 'err'); });
       $('sk-connect').textContent = me.slice(0, 6) + '…' + me.slice(-4);
-      ['sk-stake', 'sk-unstake', 'sk-claim', 'sk-setcol'].forEach((id) => { const b = $(id); if (b) b.disabled = false; });
+      ['sk-stake', 'sk-unstake', 'sk-claim', 'sk-setcol', 'sk-donate'].forEach((id) => { const b = $(id); if (b) b.disabled = false; });
       setStatus('Wallet connected.', 'ok');
       await loadStats();
     } catch (e) { setStatus(pretty(e), 'err'); }
@@ -149,6 +158,12 @@
     const c = new ethers.Contract(STAKE(), ABI, signer);
     await tx(() => c.claim(), 'Rewards claimed ✓');
   }
+  async function donate() {
+    const amtStr = ($('sk-donate-amt').value || '').trim();
+    if (!amtStr || +amtStr <= 0) return setStatus('Enter an ETH amount to donate.', 'err');
+    const c = new ethers.Contract(STAKE(), ABI, signer);
+    await tx(() => c.donate({ value: ethers.parseEther(amtStr) }), `Donated ${amtStr} Ξ to the reward pool — thank you 🦌`);
+  }
   async function setWithdrawSplit() {
     const rows = [1, 2, 3].map((i) => ({ a: ($('col-a' + i).value || '').trim(), b: ($('col-b' + i).value || '').trim() }))
       .filter((r) => r.a && r.b);
@@ -161,7 +176,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     const bind = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
-    bind('sk-stake', stake); bind('sk-unstake', unstake); bind('sk-claim', claim); bind('sk-setcol', setWithdrawSplit);
+    bind('sk-stake', stake); bind('sk-unstake', unstake); bind('sk-claim', claim); bind('sk-setcol', setWithdrawSplit); bind('sk-donate', donate);
     const max = $('sk-max'); if (max) max.onclick = async () => {
       if (!me) return; const bal = await new ethers.Contract(STAG, ERC20, ro()).balanceOf(me);
       $('sk-amount').value = ethers.formatEther(bal);

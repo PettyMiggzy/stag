@@ -40,6 +40,9 @@
     .sk-actions{display:flex;gap:.6rem;flex-wrap:wrap}
     .sk-actions .btn{flex:1;min-width:120px}
     .sk-unlock{text-align:center;font:600 .8rem/1.4 'Space Grotesk',monospace;color:var(--gold-lite);margin-top:.8rem;min-height:1.2em}
+    .sk-donate{margin-top:1.2rem;border-top:1px solid var(--line);padding-top:1.1rem}
+    .sk-donate h3{font:700 .8rem/1 'Space Grotesk',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
+    .sk-donate p{font-size:.76rem;color:var(--muted);margin:0 0 .8rem}
     .sk-collectors{margin-top:1.2rem;border-top:1px solid var(--line);padding-top:1.1rem}
     .sk-collectors h3{font:700 .8rem/1 'Space Grotesk',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
     .sk-collectors p{font-size:.76rem;color:var(--muted);margin:0 0 .8rem}
@@ -131,6 +134,16 @@
         </div>
         <div class="sk-unlock" id="sk-unlock"></div>
         <p class="mint-status" id="sk-status"></p>
+
+        <div class="sk-donate">
+          <h3>Fuel the Pool · anyone</h3>
+          <p>Send Robinhood ETH straight into the reward pool — grows the rewards every staker earns. No stake required.</p>
+          <div class="sk-inp">
+            <input id="sk-donate-amt" type="text" inputmode="decimal" placeholder="0.0" />
+            <span class="tok">Ξ ETH</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="sk-donate" disabled>Donate to Pool</button>
+        </div>
 
         <div class="sk-collectors">
           <h3>Withdraw Wallets · optional</h3>

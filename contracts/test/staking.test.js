@@ -110,6 +110,20 @@ describe("StagStaking v4", function () {
     expect((await ethers.provider.getBalance(alice.address)) - a0 + rc.gasUsed * rc.gasPrice).to.equal(p);
   });
 
+  it("anyone can donate ETH to the pool (grows claimable rewards after notify)", async () => {
+    const { owner, staking, stag, alice, bob } = await loadFixture(deploy);
+    await stake(staking, stag, alice, E("1000000"), 0);
+    // bob (not a staker) donates straight into the pool
+    await expect(staking.connect(bob).donate({ value: E("2") }))
+      .to.emit(staking, "PoolDonation").withArgs(bob.address, E("2"));
+    expect(await ethers.provider.getBalance(await staking.getAddress())).to.equal(E("2"));
+    await expect(staking.connect(bob).donate({ value: 0 })).to.be.revertedWith("no value");
+    // donated ETH is streamable to stakers
+    await staking.notifyRewardAmount(E("2"), 100);
+    await time.increase(50);
+    expect(await staking.earned(alice.address)).to.be.closeTo(E("1"), E("0.04"));
+  });
+
   it("rejects unapproved tokens and bad tiers", async () => {
     const { staking, alice } = await loadFixture(deploy);
     const Mock = await ethers.getContractFactory("MockERC20");

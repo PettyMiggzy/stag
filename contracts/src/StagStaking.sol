@@ -96,6 +96,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
     event Claimed(address indexed user, uint256 ethAmount);
     event WithdrawSplitSet(address indexed user, address[] wallets, uint256[] bps);
     event RewardAdded(uint256 amount, uint256 duration);
+    event PoolDonation(address indexed from, uint256 amount);
     event EthSwept(address indexed to, uint256 amount);
     event NftUnlockFailed(uint256 indexed tokenId, address indexed staker); // unlock() reverted (locker migrated) — recover via retryUnlock or hood.adminUnlock
     event ConfigChanged(bytes32 indexed what);
@@ -326,6 +327,14 @@ contract StagStaking is Ownable, ReentrancyGuard {
 
     /* ---------------- funding / owner ---------------- */
     receive() external payable {}
+
+    /// @notice Anyone can top up the reward pool with ETH. Funds sit in the pool until the
+    /// owner streams them via `notifyRewardAmount`. Named + evented so wallets/explorers show
+    /// a clear "Donate" action (scanner-legible, single recipient = this pool).
+    function donate() external payable {
+        require(msg.value > 0, "no value");
+        emit PoolDonation(msg.sender, msg.value);
+    }
 
     function notifyRewardAmount(uint256 amount, uint256 duration) external onlyOwner update(address(0)) {
         require(duration > 0, "duration=0");
