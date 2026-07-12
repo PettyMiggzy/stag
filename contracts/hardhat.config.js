@@ -8,6 +8,7 @@ module.exports = {
     settings: {
       optimizer: { enabled: true, runs: 200 },
       viaIR: true,
+      evmVersion: "paris", // avoid Cancun-only opcodes (MCOPY/TSTORE) on the L2 target
     },
   },
   paths: { sources: "./src", tests: "./test", cache: "./cache", artifacts: "./artifacts" },

@@ -3,23 +3,24 @@
   "chain": { "id": 4663, "hex": "0x1237", "rpc": "https://rpc.mainnet.chain.robinhood.com", "explorer": "https://robinhoodchain.blockscout.com" },
   "stagToken": "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49",
 
+  "_admin": "0xb6a5059356332a0b222e9d21b1f72f3617d12516",
+  "_adminNote": "owner==backend wallet. If set and != deployer, the script transfers ownership of NFT/staking/pact to it and points penaltyRecipient at it. Deploy FROM this key to skip the transfer.",
+
   "revenueSplitter": {
-    "pool": "STAKING_CONTRACT_ADDRESS_AFTER_DEPLOY",
     "owner": "0xb6a5059356332a0b222e9d21b1f72f3617d12516",
     "poolBps": 9000,
-    "_note": "90% -> staking pool, 10% -> owner/backend (same wallet)."
+    "_note": "90% -> staking pool (address derived at deploy), 10% -> owner/backend. IMMUTABLE — the script asserts poolBps and checksums owner before deploy."
   },
 
   "hoodedTwenty": {
     "baseURI": "https://stagwifhood.fun/assets/nft/stagwifhood/metadata/",
-    "splitter": "REVENUE_SPLITTER_ADDRESS_AFTER_DEPLOY",
     "royaltyBps": 500,
     "maxPerWallet": 2,
     "tierPriceEth": { "Common": "0.010", "Rare": "0.015", "Epic": "0.020", "Legendary": "0.025", "Mythic": "0.030" },
     "randomPriceEth": "0.010",
     "tierWeight": { "Common": 100, "Rare": 60, "Epic": 30, "Legendary": 10, "Mythic": 3 },
     "freeMintAllowlist": [
-      { "wallet": "0x5db7ca9d2ce3f414b3fd94ec0fcaf9f3ab1a575f", "count": 20, "_note": "owner test wallet — free mints on mainnet" }
+      { "wallet": "0x5db7ca9d2ce3f414b3fd94ec0fcaf9f3ab1a575f", "count": 2, "_note": "owner test wallet — small free reserve for launch testing. Do NOT set near total supply: free mints bypass the cap and can PICK rares." }
     ]
   },
 

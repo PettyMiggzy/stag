@@ -58,8 +58,9 @@ contract RevenueSplitter {
         uint256 bal = IERC20(token).balanceOf(address(this));
         if (bal == 0) return;
         uint256 p = (bal * poolBps) / 10000;
-        uint256 o = bal - p;
         IERC20(token).safeTransfer(pool, p);
+        // second leg pays whatever remains — safe for fee-on-transfer tokens (no revert/stuck balance)
+        uint256 o = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransfer(owner, o);
         emit SplitToken(token, p, o);
     }

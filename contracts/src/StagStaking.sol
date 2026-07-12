@@ -71,7 +71,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) public nftBoostBps;
     mapping(uint256 => address) public nftStaker;
     mapping(uint256 => uint256) public appliedBoost;
-    uint256 public nftBaseWeight = 100_000 ether;         // base weight each staked NFT adds (so NFT-only staking earns)
+    uint256 public nftBaseWeight = 10_000 ether;          // base weight each staked NFT adds (owner-tuned tokenomics knob; keep modest vs token weights to avoid cheap pool dominance)
     mapping(uint256 => uint256) public appliedBaseWeight;  // snapshot of base weight added per staked NFT
 
     struct UserInfo {
@@ -95,6 +95,11 @@ contract StagStaking is Ownable, ReentrancyGuard {
     event Claimed(address indexed user, uint256 ethAmount);
     event CollectorsSet(address indexed user, address[] wallets, uint256[] bps);
     event RewardAdded(uint256 amount, uint256 duration);
+    event EthSwept(address indexed to, uint256 amount);
+    event NftUnlockFailed(uint256 indexed tokenId, address indexed staker); // unlock() reverted (locker migrated) — recover via retryUnlock or hood.adminUnlock
+    event ConfigChanged(bytes32 indexed what);
+
+    mapping(uint256 => bool) public pendingUnlock; // tokenId => unlock() failed and is owed
 
     constructor(address _stag, address _hood) Ownable(msg.sender) {
         hood = IHoodLockable(_hood);
@@ -246,7 +251,8 @@ contract StagStaking is Ownable, ReentrancyGuard {
             reserved = reserved >= f ? reserved - f : 0;
         }
         _resync(msg.sender);
-        try hood.unlock(tokenId) {} catch {}
+        // Don't let a migrated/broken locker brick unstaking; but DON'T fail silently — flag it.
+        try hood.unlock(tokenId) {} catch { pendingUnlock[tokenId] = true; emit NftUnlockFailed(tokenId, msg.sender); }
         emit UnstakedNFT(msg.sender, tokenId, early);
     }
 
@@ -289,6 +295,25 @@ contract StagStaking is Ownable, ReentrancyGuard {
         require(ok, "eth send failed");
     }
 
+    // Permissionless: settle + resync a batch of stakers so owner config changes (multipliers,
+    // weights, nftBaseWeight) apply to EXISTING positions immediately and fairly — not only on
+    // each user's next action. Caller pays the gas; it can only move weights to the current config.
+    function poke(address[] calldata users) external update(address(0)) {
+        for (uint256 i; i < users.length; i++) {
+            address u_ = users[i];
+            _u[u_].rewards = earned(u_);
+            _u[u_].rewardPerWeightPaid = rewardPerWeightStored;
+            _resync(u_);
+        }
+    }
+
+    // Re-attempt a previously-failed NFT unlock (e.g. after the locker is restored). No-op-safe.
+    function retryUnlock(uint256 tokenId) external {
+        require(pendingUnlock[tokenId], "no pending");
+        hood.unlock(tokenId);           // reverts (no state change) if this is still not the locker
+        pendingUnlock[tokenId] = false;
+    }
+
     /* ---------------- funding / owner ---------------- */
     receive() external payable {}
 
@@ -312,7 +337,7 @@ contract StagStaking is Ownable, ReentrancyGuard {
         tokenWeightBps[token] = weightBps;
         if (weightBps > 0) everStakeable[token] = true;
     }
-    function setTierDuration(uint8 tier, uint256 secs) external onlyOwner { require(tier < 3 && secs <= 365 days, "bad"); tierDuration[tier] = secs; }
+    function setTierDuration(uint8 tier, uint256 secs) external onlyOwner { require(tier < 3 && secs >= 1 hours && secs <= 365 days, "bad"); tierDuration[tier] = secs; emit ConfigChanged("tierDuration"); }
     function setTierMultBps(uint8 tier, uint256 bps) external onlyOwner { require(tier < 3 && bps >= 10000 && bps <= 100000, "bad"); tierMultBps[tier] = bps; }
     function setNftBaseWeight(uint256 v) external onlyOwner { nftBaseWeight = v; }
     function setHoldingTiers(uint256[] calldata thresholds, uint256[] calldata mults) external onlyOwner {
@@ -334,12 +359,16 @@ contract StagStaking is Ownable, ReentrancyGuard {
         IERC20(token).safeTransfer(to, amount);
     }
 
-    // Sweep only ETH NOT owed to stakers (e.g. dust funded while totalWeight was 0, or over-funding).
-    // Can never touch `reserved` liabilities, so it cannot make the contract unable to pay claims.
-    function sweepEth(address to, uint256 amount) external onlyOwner {
-        uint256 free = address(this).balance > reserved ? address(this).balance - reserved : 0;
+    // Sweep only ETH NOT owed to stakers. `update(address(0))` first settles accrual into `reserved`,
+    // and we ALSO subtract the still-streaming scheduled emissions of the active period. So a sweep
+    // can never unfund already-accrued rewards OR the committed remainder of a live reward schedule.
+    function sweepEth(address to, uint256 amount) external onlyOwner update(address(0)) {
+        uint256 outstanding = block.timestamp < periodFinish ? rewardRate * (periodFinish - block.timestamp) : 0;
+        uint256 locked = reserved + outstanding;
+        uint256 free = address(this).balance > locked ? address(this).balance - locked : 0;
         require(amount <= free, "exceeds free ETH");
         (bool ok, ) = payable(to).call{value: amount}(""); require(ok, "eth send failed");
+        emit EthSwept(to, amount);
     }
 
     /* ---------------- views ---------------- */

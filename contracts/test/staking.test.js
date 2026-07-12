@@ -135,6 +135,21 @@ describe("StagStaking v4", function () {
     await expect(staking.connect(alice).stakeTokens(await stag.getAddress(), E("1"), 0)).to.be.revertedWith("cannot lower lock tier");
   });
 
+  it("sweepEth cannot drain ETH backing an active reward schedule", async () => {
+    const { owner, staking, stag, alice } = await loadFixture(deploy);
+    await stake(staking, stag, alice, E("1000000"), 0);
+    await owner.sendTransaction({ to: await staking.getAddress(), value: E("10") });
+    await staking.notifyRewardAmount(E("10"), 100 * 24 * 3600); // committed 100-day schedule
+    const bal = await ethers.provider.getBalance(await staking.getAddress());
+    await expect(staking.sweepEth(owner.address, bal)).to.be.revertedWith("exceeds free ETH");
+    // genuine over-funding IS sweepable
+    await owner.sendTransaction({ to: await staking.getAddress(), value: E("1") });
+    await expect(staking.sweepEth(owner.address, E("0.9"))).to.not.be.reverted;
+    // and claims still pay out after the full schedule
+    await time.increase(101 * 24 * 3600);
+    await expect(staking.connect(alice).claim()).to.not.be.reverted;
+  });
+
   it("partial early unstake forfeits rewards proportionally, not entirely", async () => {
     const { owner, staking, stag, alice } = await loadFixture(deploy);
     await stake(staking, stag, alice, E("1000000"), 0);

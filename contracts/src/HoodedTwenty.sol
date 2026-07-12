@@ -59,6 +59,7 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     event Locked(uint256 tokenId);           // ERC-5192
     event Unlocked(uint256 tokenId);
     event Minted(address indexed to, uint256 indexed tokenId, uint8 tier, bool gamble, uint256 paid);
+    event SplitterForwardFailed(uint256 amount); // proceeds stuck here (recover via withdrawETH); pool went unfunded
 
     constructor(string memory baseURI_, address payable _splitter, uint96 royaltyBps)
         ERC721("The Hooded 20", "HOOD20")
@@ -128,7 +129,7 @@ contract HoodedTwenty is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
 
         // forward exactly `due` to the splitter. BEST-EFFORT: a reverting/mis-set splitter must
         // not be able to brick minting — on failure the ETH stays here, recoverable via withdrawETH.
-        if (due > 0 && splitter != address(0)) { (bool ok, ) = splitter.call{value: due}(""); ok; }
+        if (due > 0 && splitter != address(0)) { (bool ok, ) = splitter.call{value: due}(""); if (!ok) emit SplitterForwardFailed(due); }
         // refund any overpayment to the minter
         uint256 over = msg.value - due;
         if (over > 0) { (bool r, ) = payable(msg.sender).call{value: over}(""); require(r, "refund failed"); }

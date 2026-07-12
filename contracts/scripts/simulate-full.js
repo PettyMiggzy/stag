@@ -58,6 +58,12 @@ async function main() {
     const skBal = await ethers.provider.getBalance(SK);
     const reserved = await staking.reserved();
     if (reserved > skBal) throw new Error(`[${step}] staking INSOLVENT: reserved ${reserved} > bal ${skBal}`);
+    // stronger: balance must also cover the still-streaming reward schedule (the sweepEth guarantee)
+    const pf = Number(await staking.periodFinish());
+    const rate = await staking.rewardRate();
+    const nowT = (await ethers.provider.getBlock("latest")).timestamp;
+    const outstanding = pf > nowT ? rate * BigInt(pf - nowT) : 0n;
+    if (reserved + outstanding > skBal + 10n ** 12n) throw new Error(`[${step}] SCHEDULE-INSOLVENT: reserved ${reserved} + outstanding ${outstanding} > bal ${skBal}`);
     let sumW = 0n, owed = 0n;
     for (const a of actors) { const info = await staking.userInfo(a.address); sumW += info.weight; owed += info.pendingEth;
       const on = await staking.stakedOf(a.address, STAG); if (on !== staked[a.address]) throw new Error(`[${step}] principal drift ${a.address}`); }
@@ -115,18 +121,26 @@ async function main() {
       } else if (r < 0.60) { // owner: fund + notify
         await owner.sendTransaction({ to: SK, value: E(1 + pick(10)) });
         try { await staking.notifyRewardAmount(E(1 + pick(3)), 10 * 24 * 3600); bump("notify"); } catch {}
-      } else if (r < 0.63) { // owner: sweepEth (free ETH only)
-        const free = (await ethers.provider.getBalance(SK)) - (await staking.reserved());
-        if (free > 0n) { await staking.sweepEth(owner.address, free / 2n); bump("sweep"); }
+      } else if (r < 0.62) { // owner: sweepEth (only genuinely-free ETH, excl. reserved + schedule)
+        const pf = Number(await staking.periodFinish()); const rate = await staking.rewardRate();
+        const nowT = (await ethers.provider.getBlock("latest")).timestamp;
+        const out = pf > nowT ? rate * BigInt(pf - nowT) : 0n;
+        const bal2 = await ethers.provider.getBalance(SK); const res2 = await staking.reserved();
+        const free = bal2 > res2 + out ? bal2 - res2 - out : 0n;
+        if (free > 1000n) { await staking.sweepEth(owner.address, free / 2n); bump("sweep"); }
+      } else if (r < 0.64) { // permissionless poke to apply config changes to live positions
+        await staking.poke(actors.map((x) => x.address)); bump("poke");
       } else if (r < 0.68) { // owner: staking config changes
         const c = pick(3);
         if (c === 0) await staking.setTierMultBps(1 + pick(2), 10000 + pick(40000));
         else if (c === 1) await staking.setNftBaseWeight(E(1 + pick(500000)));
         else await staking.setHoldingTiers([0, E("1000000"), E("10000000")], [10000, 10000 + pick(20000), 20000 + pick(20000)]);
         bump("cfg");
-      } else if (r < 0.80) { // PACT: create
-        await pact.connect(a).createPact(E(1 + pick(5000000)), WEEK, { value: E("0.01") });
-        pactIds.push({ id: pactIds.length, wallet: a.address, born: step }); bump("pactCreate");
+      } else if (r < 0.80) { // PACT: create (one open pact per wallet)
+        if (!(await pact.hasOpenPact(a.address))) {
+          await pact.connect(a).createPact(E(1 + pick(5000000)), WEEK, { value: E("0.01") });
+          pactIds.push({ id: pactIds.length, wallet: a.address, born: step }); bump("pactCreate");
+        }
       } else if (r < 0.86) { // PACT: oracle verify a past-window open pact
         const openIds = await pact.openPactsPastWindow(0, 10);
         if (openIds.length) { const id = Number(openIds[pick(openIds.length)]); const held = rng() < 0.6;

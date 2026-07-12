@@ -110,6 +110,26 @@ describe("SherwoodPact", function () {
     await expect(pact.connect(owner).withdrawTreasury(owner.address, E("0.015"))).to.not.be.reverted;
   });
 
+  it("allows only one open pact per wallet", async () => {
+    const { pact, alice } = await loadFixture(deploy);
+    await pact.connect(alice).createPact(E("1000000"), WEEK, { value: E("0.01") });
+    await expect(pact.connect(alice).createPact(E("2000000"), WEEK, { value: E("0.01") })).to.be.revertedWith("already have an open pact");
+  });
+
+  it("oracle cannot forfeit after grace; grace is snapshotted so setGrace can't extend an existing pact", async () => {
+    const { owner, pact, oracle, alice } = await loadFixture(deploy);
+    await pact.connect(alice).createPact(E("1000000"), WEEK, { value: E("0.01") });
+    await time.increase(WEEK + 14 * 24 * 3600 + 1); // past window + default grace
+    await pact.connect(owner).setGrace(60 * 24 * 3600); // must NOT affect the existing pact (snapshot)
+    await expect(pact.connect(oracle).verify(0, false, 0)).to.be.revertedWith("past grace: holder reclaims");
+    await expect(pact.connect(alice).reclaim(0)).to.emit(pact, "PactReclaimed");
+  });
+
+  it("caps setGrace", async () => {
+    const { owner, pact } = await loadFixture(deploy);
+    await expect(pact.connect(owner).setGrace(200 * 24 * 3600)).to.be.revertedWith("grace too long");
+  });
+
   it("only the holder can claim, only oracle/owner can verify", async () => {
     const { pact, alice, bob, oracle } = await loadFixture(deploy);
     await pact.connect(alice).createPact(E("1000000"), WEEK, { value: E("0.01") });

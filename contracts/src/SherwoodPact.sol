@@ -55,15 +55,19 @@ contract SherwoodPact is Ownable, ReentrancyGuard {
         uint256 entryPaid;
         uint256 payout;
         Status  status;
+        uint64  reclaimGrace;   // snapshot of `grace` at creation — owner can't extend it later
     }
     Pact[] public pacts;
     mapping(address => uint256[]) public pactsOf;
+    mapping(address => bool) public hasOpenPact;   // one live pact per wallet (anti reward-farming)
 
     event PactCreated(uint256 indexed id, address indexed wallet, uint256 minHold, uint64 start, uint64 duration, uint256 entryPaid);
     event PactVerified(uint256 indexed id, bool held, uint256 payout);
     event PactClaimed(uint256 indexed id, address indexed wallet, uint256 payout);
     event PactReclaimed(uint256 indexed id, address indexed wallet, uint256 amount);
     event TreasuryFunded(address indexed from, uint256 amount);
+    event OracleChanged(address indexed oracle);
+    event ParamChanged(bytes32 indexed what, uint256 value);
 
     constructor(address _stag, uint256 _entryFee, uint256 _refundAmount) Ownable(msg.sender) {
         require(_refundAmount <= _entryFee, "refund > entry");
@@ -79,10 +83,12 @@ contract SherwoodPact is Ownable, ReentrancyGuard {
         require(msg.value >= entryFee, "entry fee too low");
         require(minHold > 0, "minHold=0");
         require(duration >= minDuration && duration <= maxDuration, "bad duration");
+        require(!hasOpenPact[msg.sender], "already have an open pact"); // one live pact per wallet
+        hasOpenPact[msg.sender] = true;
         id = pacts.length;
         pacts.push(Pact({
             wallet: msg.sender, minHold: minHold, start: uint64(block.timestamp),
-            duration: duration, entryPaid: entryFee, payout: 0, status: Status.Open
+            duration: duration, entryPaid: entryFee, payout: 0, status: Status.Open, reclaimGrace: grace
         }));
         pactsOf[msg.sender].push(id);
         reservedEntries += entryFee;         // full entry escrowed for the holder
@@ -108,9 +114,10 @@ contract SherwoodPact is Ownable, ReentrancyGuard {
         Pact storage p = pacts[id];
         require(p.wallet == msg.sender, "not your pact");
         require(p.status == Status.Open, "not open");
-        require(block.timestamp >= uint256(p.start) + p.duration + grace, "not reclaimable yet");
+        require(block.timestamp >= uint256(p.start) + p.duration + p.reclaimGrace, "not reclaimable yet");
         uint256 amt = p.entryPaid;
         p.status = Status.Reclaimed;
+        hasOpenPact[p.wallet] = false;
         reservedEntries -= amt;
         (bool ok, ) = payable(msg.sender).call{value: amt}(""); require(ok, "eth send failed");
         emit PactReclaimed(id, msg.sender, amt);
@@ -124,7 +131,11 @@ contract SherwoodPact is Ownable, ReentrancyGuard {
         Pact storage p = pacts[id];
         require(p.status == Status.Open, "not open");
         require(block.timestamp >= uint256(p.start) + p.duration, "window not ended");
+        // Past window+grace the holder's reclaim right takes precedence — a censoring oracle can't
+        // race in and FORFEIT the entry; it may still pay out (held=true) if it eventually verifies.
+        require(held || block.timestamp < uint256(p.start) + p.duration + p.reclaimGrace, "past grace: holder reclaims");
         reservedEntries -= p.entryPaid;    // this pact's entry is no longer escrowed for reclaim
+        hasOpenPact[p.wallet] = false;
         if (held) {
             require(reward <= maxReward, "reward > cap");
             uint256 payout = refundAmount + reward;
@@ -149,16 +160,17 @@ contract SherwoodPact is Ownable, ReentrancyGuard {
         uint256 locked = reservedPayouts + reservedEntries;
         return address(this).balance > locked ? address(this).balance - locked : 0;
     }
-    function withdrawTreasury(address to, uint256 amount) external onlyOwner {
+    function withdrawTreasury(address to, uint256 amount) external onlyOwner nonReentrant {
         require(amount <= freeTreasury(), "exceeds free treasury");
         (bool ok, ) = payable(to).call{value: amount}(""); require(ok, "eth send failed");
     }
 
-    function setOracle(address o) external onlyOwner { require(o != address(0), "zero"); oracle = o; }
-    function setEntryFee(uint256 v) external onlyOwner { require(v >= refundAmount, "entry < refund"); entryFee = v; }
-    function setRefundAmount(uint256 v) external onlyOwner { require(v <= entryFee, "refund > entry"); refundAmount = v; }
-    function setMaxReward(uint256 v) external onlyOwner { maxReward = v; }
-    function setGrace(uint64 v) external onlyOwner { grace = v; }
+    function setOracle(address o) external onlyOwner { require(o != address(0), "zero"); oracle = o; emit OracleChanged(o); }
+    function setEntryFee(uint256 v) external onlyOwner { require(v >= refundAmount, "entry < refund"); entryFee = v; emit ParamChanged("entryFee", v); }
+    function setRefundAmount(uint256 v) external onlyOwner { require(v <= entryFee, "refund > entry"); refundAmount = v; emit ParamChanged("refundAmount", v); }
+    function setMaxReward(uint256 v) external onlyOwner { maxReward = v; emit ParamChanged("maxReward", v); }
+    // Bounded so it can't be used to grief; snapshotted per pact so it never extends existing pacts' locks.
+    function setGrace(uint64 v) external onlyOwner { require(v <= 90 days, "grace too long"); grace = v; emit ParamChanged("grace", v); }
     function setDurationBounds(uint64 lo, uint64 hi) external onlyOwner { require(lo > 0 && hi >= lo, "bad"); minDuration = lo; maxDuration = hi; }
 
     /* ---------------- views ---------------- */
