@@ -25,3 +25,20 @@ window.HOODED = {
   const g = (k) => localStorage.getItem('h20_' + k);
   ['mint', 'staking', 'splitter', 'pact'].forEach((k) => { const v = g(k); if (v) window.HOODED[k] = v; });
 })();
+
+// Read provider: FREE public RPC first, then the /api/rpc proxy (which uses the PAID Alchemy RPC
+// server-side — key never in the browser) as a backup on failure/stall. Reads only; writes go
+// through the user's wallet. Falls back to a plain public provider if anything is unavailable.
+window.HOODED.readProvider = function () {
+  const H = window.HOODED, net = { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) };
+  const pub = new ethers.JsonRpcProvider(H.chain.rpcUrls[0], net, { staticNetwork: true });
+  try {
+    if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)) {
+      const proxy = new ethers.JsonRpcProvider(location.origin + '/api/rpc', net, { staticNetwork: true });
+      return new ethers.FallbackProvider(
+        [{ provider: pub, priority: 1, stallTimeout: 1500, weight: 1 },
+         { provider: proxy, priority: 2, stallTimeout: 3000, weight: 1 }], net, { quorum: 1 });
+    }
+  } catch (e) { /* fall through */ }
+  return pub;
+};

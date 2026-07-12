@@ -34,7 +34,7 @@
   ];
 
   let provider, signer, me, prices = [], randomPrice = 0n, items = [];
-  const ro = () => new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) });
+  const ro = () => (H.readProvider ? H.readProvider() : new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) }));
   const setStatus = (m, c) => { if (statusEl) { statusEl.textContent = m; statusEl.className = 'mint-status ' + (c || ''); } };
   async function chainOk() { try { return provider && (await provider.getNetwork()).chainId === CHAIN_ID; } catch { return false; } }
   const eth = (w) => { try { return (+ethers.formatEther(w)).toFixed(3); } catch { return '—'; } };

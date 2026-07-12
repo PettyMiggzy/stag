@@ -35,10 +35,12 @@ keeper/cron or the `/admin` "Forward" button. Not user-signed, so a multi-recipi
   staking is lock-in-place (ERC-5192) — no `setApprovalForAll`, no custody transfer.
 - **Simulate before signing** — the frontend runs `estimateGas` as a pre-flight on every write; wallets
   also simulate client-side and will show one clean action.
-- **No RPC key exposure** — the site talks to the **free public** Robinhood Chain RPC
-  (`rpc.mainnet.chain.robinhood.com`), which carries no key. Alchemy is used **server-side only** (env
-  var) in the bubble-map indexer. If you ever put a keyed RPC in the browser, proxy it through a
-  server-side `/api/rpc` instead of shipping the key.
+- **No RPC key exposure, with a paid backup.** Browser reads hit the **free public** Robinhood Chain
+  RPC first (no key), and fall back to **`/api/rpc`** — a serverless proxy that uses the **paid Alchemy
+  RPC** (`ALCHEMY_RPC_URL` env var, server-side only, never shipped to the browser). Reads only; writes
+  go through the user's wallet on the public RPC. The proxy allowlists read methods, caches, and checks
+  Origin so it can't be used as an open relay or to burn quota. **Set `ALCHEMY_RPC_URL` in the stag
+  Vercel project** to enable the backup (it no-ops to public if unset).
 
 ## If you ever get flagged anyway
 1. Remove the offending pattern and redeploy — Blockaid/Blowfish auto-re-scan and usually clear.

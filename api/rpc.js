@@ -69,22 +69,28 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const upstream = process.env.ALCHEMY_RPC_URL || PUBLIC_RPC;
-  try {
-    const r = await fetch(upstream, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id, method: body.method, params: body.params || [] }),
-    });
-    const j = await r.json();
-    if (j && !j.error) {
-      cache.set(key, { t: Date.now(), body: j });
-      if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value); // evict oldest
-    }
-    res.setHeader('content-type', 'application/json');
-    res.setHeader('x-cache', 'MISS');
-    res.end(JSON.stringify(j));
-  } catch (e) {
-    res.statusCode = 502;
-    res.end(JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32000, message: 'upstream error' } }));
+  // This endpoint is the BACKUP path (the browser already tried the free public RPC and failed),
+  // so prefer the PAID Alchemy RPC here, then fall back to the public RPC as a last resort.
+  const upstreams = [process.env.ALCHEMY_RPC_URL, PUBLIC_RPC].filter(Boolean);
+  let last = { jsonrpc: '2.0', id, error: { code: -32000, message: 'no upstream' } };
+  for (const upstream of upstreams) {
+    try {
+      const r = await fetch(upstream, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id, method: body.method, params: body.params || [] }),
+      });
+      const j = await r.json();
+      // a JSON-RPC-level error is a valid response for this method — return it (don't try the next node)
+      if (j && !j.error) {
+        cache.set(key, { t: Date.now(), body: j });
+        if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value); // evict oldest
+      }
+      res.setHeader('content-type', 'application/json');
+      res.setHeader('x-cache', 'MISS');
+      res.end(JSON.stringify(j));
+      return;
+    } catch (e) { last = { jsonrpc: '2.0', id, error: { code: -32000, message: 'upstream error' } }; }
   }
+  res.statusCode = 502;
+  res.end(JSON.stringify(last));
 };

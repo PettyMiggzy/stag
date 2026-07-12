@@ -106,9 +106,19 @@
   const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '—';
   const toast = (m, cls) => { const t = $('toast'); if (!t) return; t.textContent = m; t.className = 'adm-toast show ' + (cls || ''); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 5000); };
 
-  /* ---------- read-only provider (dashboard works before connecting) ---------- */
+  /* ---------- read-only provider: FREE public RPC first, /api/rpc (paid Alchemy) backup ---------- */
   function ro() {
-    return new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], { name: CHAIN.chainName, chainId: parseInt(CHAIN.chainId, 16) });
+    const net = { name: CHAIN.chainName, chainId: parseInt(CHAIN.chainId, 16) };
+    const pub = new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], net, { staticNetwork: true });
+    try {
+      if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)) {
+        const proxy = new ethers.JsonRpcProvider(location.origin + '/api/rpc', net, { staticNetwork: true });
+        return new ethers.FallbackProvider(
+          [{ provider: pub, priority: 1, stallTimeout: 1500, weight: 1 },
+           { provider: proxy, priority: 2, stallTimeout: 3000, weight: 1 }], net, { quorum: 1 });
+      }
+    } catch (e) { /* fall through */ }
+    return pub;
   }
 
   async function loadDashboard() {

@@ -30,7 +30,7 @@
   ];
 
   let provider, signer, me, tier = 0, durations = [30, 60, 90], mults = [10000, 15000, 20000];
-  const ro = () => new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) });
+  const ro = () => (H.readProvider ? H.readProvider() : new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) }));
   const setStatus = (m, c) => { const e = $('sk-status'); if (e) { e.textContent = m; e.className = 'mint-status ' + (c || ''); } };
   async function chainOk() { try { return provider && (await provider.getNetwork()).chainId === CHAIN_ID; } catch { return false; } }
   const fmt = (v, d = 4) => { try { return (+ethers.formatEther(v)).toLocaleString(undefined, { maximumFractionDigits: d }); } catch { return '—'; } };
