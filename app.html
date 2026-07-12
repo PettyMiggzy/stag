@@ -40,6 +40,8 @@
     .music-toggle{position:fixed;right:16px;bottom:16px;z-index:120;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
       color:#1a1206;background:var(--grad-gold);border:none;cursor:pointer;box-shadow:0 10px 26px -8px rgba(230,184,63,.7);transition:transform .2s}
     .music-toggle:hover{transform:translateY(-2px)}
+    .splash[hidden]{display:none}
+    .flourish{cursor:pointer}
 
     /* wallet bar */
     .wbar{position:sticky;top:calc(40px + 62px);z-index:40;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
@@ -186,6 +188,12 @@
   </div>
   <audio id="bg-song" src="assets/media/stagwifhood.mp3" loop preload="auto"></audio>
   <button id="music-toggle" class="music-toggle" hidden title="Play music" aria-label="Toggle music"></button>
+
+  <!-- quick flourish when entering Stake (video flash + sound snippet) -->
+  <div class="splash flourish" id="flourish" hidden title="skip">
+    <video class="splash-vid" id="flourish-vid" muted loop playsinline><source src="assets/media/splash.mp4" type="video/mp4"></video>
+    <div class="splash-inner"><img src="assets/img/mark.png" class="splash-mark" alt="" /><div class="splash-title" style="font-size:clamp(1.6rem,5vw,2.6rem)">STAG<span class="gold">WIF</span>HOOD</div></div>
+  </div>
 
   <div class="bg-layer bg-forest" aria-hidden="true"></div>
   <div class="bg-layer bg-glow" aria-hidden="true"></div>
@@ -452,6 +460,32 @@
     };
     // keep the button icon honest if playback ends/stalls
     if (song) { song.addEventListener('pause', function () { setIcon(false); }); song.addEventListener('play', function () { setIcon(true); }); }
+
+    /* Stake flourish — clicking the Stake tab flashes the splash video + a ~3s snippet of the
+       track. Clicking the tab is a user gesture, so the snippet is allowed to play. Pauses the
+       looping background music during the snippet to avoid overlap, then resumes it. */
+    var flourish = document.getElementById('flourish'), fvid = document.getElementById('flourish-vid');
+    var busy = false;
+    function stakeFlourish() {
+      if (busy || !flourish) return; busy = true;
+      var bgWas = song && !song.paused; if (bgWas) song.pause();
+      flourish.hidden = false; flourish.classList.remove('gone');
+      if (fvid) { try { fvid.currentTime = 0; fvid.play().catch(function () {}); } catch (e) {} }
+      var snip = new Audio('assets/media/stagwifhood.mp3'); snip.volume = 0.65;
+      snip.play().catch(function () {});
+      var ended = false;
+      function done() {
+        if (ended) return; ended = true;
+        var v = snip.volume; var fade = setInterval(function () { v -= 0.13; if (v <= 0) { snip.pause(); clearInterval(fade); } else snip.volume = v; }, 55);
+        flourish.classList.add('gone');
+        setTimeout(function () { flourish.hidden = true; busy = false; }, 550);
+        if (bgWas && song) setTimeout(function () { song.play().then(function () { setIcon(true); }).catch(function () {}); }, 350);
+      }
+      var timer = setTimeout(done, 3200);
+      flourish.onclick = function () { clearTimeout(timer); done(); }; // click to skip
+    }
+    var stakeTab = document.querySelector('.app-tab[data-tab="stake"]');
+    if (stakeTab) stakeTab.addEventListener('click', stakeFlourish);
   })();
   </script>
 </body>
