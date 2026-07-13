@@ -274,36 +274,39 @@ function makeAntler(mat, s){ // s = +1 / -1 (mirror)
 }
 function makeStag(color, scale=1){
   const g=new THREE.Group();
-  const skin=new THREE.MeshStandardMaterial({color,roughness:0.85});
-  const dark=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(0.62),roughness:1});
-  // muscular torso: big chest, barrel belly, powerful rump + shoulder hump
-  const chest=new THREE.Mesh(new THREE.SphereGeometry(1.5,12,10),skin); chest.scale.set(1.15,1.3,1.55); chest.position.set(0.95,2.7,0); chest.castShadow=true; g.add(chest);
-  const belly=new THREE.Mesh(new THREE.CapsuleGeometry(1.02,2.3,6,12),skin); belly.rotation.z=Math.PI/2; belly.position.set(-0.25,2.45,0); belly.castShadow=true; g.add(belly);
-  const rump=new THREE.Mesh(new THREE.SphereGeometry(1.2,12,10),skin); rump.scale.set(1.05,1.2,1.35); rump.position.set(-1.75,2.55,0); rump.castShadow=true; g.add(rump);
-  const hump=new THREE.Mesh(new THREE.SphereGeometry(0.9,10,8),skin); hump.scale.set(1.25,1.0,1.35); hump.position.set(0.75,3.65,0); g.add(hump);
-  // HEAD group — neck, head, snout, ears, eyes, antlers on a pivot at the shoulders so it can
-  // LOWER and thrust the antlers to gore (not the hooves).
-  const head=new THREE.Group(); head.position.set(1.5,3.35,0);
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.98,2.5,10),skin); neck.position.set(0.55,0.15,0); neck.rotation.z=-0.58; neck.castShadow=true; head.add(neck);
-  const hd=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.98,0.98),skin); hd.position.set(1.55,0.95,0); hd.castShadow=true; head.add(hd);
-  const snout=new THREE.Mesh(new THREE.BoxGeometry(0.95,0.56,0.62),skin); snout.position.set(2.25,0.67,0); snout.castShadow=true; head.add(snout);
-  const nose=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.42,0.58),dark); nose.position.set(2.7,0.63,0); head.add(nose);
-  const em=new THREE.MeshStandardMaterial({color:0x0d0906,roughness:0.25});
-  for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,8),em); eye.position.set(1.92,1.1,s*0.44); head.add(eye);
-    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.24,0.7,6),skin); ear.position.set(1.35,1.4,s*0.52); ear.rotation.z=-0.25; ear.rotation.x=s*0.5; ear.castShadow=true; head.add(ear); }
-  const am=new THREE.MeshStandardMaterial({color:0xcdb98f,roughness:0.5});
-  for(const s of [-1,1]){ const a=makeAntler(am,s); a.position.set(1.3,1.35,s*0.3); a.rotation.z=-0.15; head.add(a); }
+  const skin=new THREE.MeshStandardMaterial({color,roughness:0.8});
+  const dark=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(0.5),roughness:1});
+  const light=new THREE.MeshStandardMaterial({color:new THREE.Color(color).lerp(new THREE.Color(0xffffff),0.55),roughness:0.9});
+  // sleek deer torso: a horizontal capsule with a deeper chest and a rounded rump
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.9,2.5,8,14),skin); body.rotation.z=Math.PI/2; body.position.set(-0.15,2.65,0); body.scale.set(1,1,0.85); body.castShadow=true; g.add(body);
+  const chest=new THREE.Mesh(new THREE.SphereGeometry(1.0,12,10),skin); chest.scale.set(1.05,1.2,1.15); chest.position.set(1.15,2.78,0); chest.castShadow=true; g.add(chest);
+  const rump=new THREE.Mesh(new THREE.SphereGeometry(0.96,12,10),skin); rump.scale.set(1.0,1.12,1.15); rump.position.set(-1.5,2.72,0); rump.castShadow=true; g.add(rump);
+  const belly=new THREE.Mesh(new THREE.CapsuleGeometry(0.6,1.9,6,10),light); belly.rotation.z=Math.PI/2; belly.position.set(-0.1,2.15,0); g.add(belly);
+  // white rump patch + flag tail
+  const patch=new THREE.Mesh(new THREE.SphereGeometry(0.5,8,8),light); patch.scale.set(0.55,0.85,0.9); patch.position.set(-2.28,2.92,0); g.add(patch);
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.85,6),light); tail.position.set(-2.5,2.72,0); tail.rotation.z=0.85; g.add(tail);
+  // HEAD group — slender neck angled UP, refined head + snout, ears, antlers. Pivots at the
+  // shoulders so it can LOWER and thrust the antlers to gore (not the hooves).
+  const head=new THREE.Group(); head.position.set(1.3,3.1,0);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.44,0.7,2.35,10),skin); neck.position.set(0.5,0.62,0); neck.rotation.z=-0.72; neck.castShadow=true; head.add(neck);
+  const hd=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,9),skin); hd.scale.set(1.2,0.95,0.9); hd.position.set(1.4,1.45,0); hd.castShadow=true; head.add(hd);
+  const snout=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.34,1.15,8),skin); snout.rotation.z=-1.32; snout.position.set(2.02,1.12,0); head.add(snout);
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(0.2,8,8),dark); nose.position.set(2.4,0.9,0); head.add(nose);
+  const em=new THREE.MeshStandardMaterial({color:0x0a0705,roughness:0.2});
+  for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.13,8,8),em); eye.position.set(1.56,1.6,s*0.34); head.add(eye);
+    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.2,0.75,7),skin); ear.position.set(1.05,1.72,s*0.46); ear.rotation.z=0.35; ear.rotation.x=s*0.7; ear.scale.set(1,1,0.5); ear.castShadow=true; head.add(ear); }
+  const am=new THREE.MeshStandardMaterial({color:0xd8c39a,roughness:0.45});
+  for(const s of [-1,1]){ const a=makeAntler(am,s); a.position.set(1.18,1.85,s*0.26); a.scale.setScalar(1.3); a.rotation.z=-0.08; head.add(a); }
   g.add(head); g.userData.head=head;
-  // muscular legs (thigh + shin + hoof) pivoting from the hip
+  // long slender deer legs (thin shins + small hooves) pivoting from the hip
   const legs=[];
-  for(const [lx,lz] of [[1.55,0.78],[1.55,-0.78],[-1.65,0.78],[-1.65,-0.78]]){
-    const leg=new THREE.Group(); leg.position.set(lx,2.25,lz);
-    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(0.36,0.85,4,8),skin); thigh.position.y=-0.55; leg.add(thigh);
-    const shin=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.22,1.35,6),dark); shin.position.y=-1.5; leg.add(shin);
-    const hoof=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.16,0.28,6),new THREE.MeshStandardMaterial({color:0x150f0a})); hoof.position.y=-2.2; leg.add(hoof);
+  for(const [lx,lz] of [[1.28,0.6],[1.28,-0.6],[-1.42,0.6],[-1.42,-0.6]]){
+    const leg=new THREE.Group(); leg.position.set(lx,2.4,lz);
+    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(0.26,0.82,4,8),skin); thigh.position.y=-0.5; leg.add(thigh);
+    const shin=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.15,1.55,6),skin); shin.position.y=-1.6; leg.add(shin);
+    const hoof=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.1,0.3,6),dark); hoof.position.y=-2.5; leg.add(hoof);
     leg.traverse(o=>{o.castShadow=true;}); g.add(leg); legs.push(leg);
   }
-  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.32,0.85,6),skin); tail.position.set(-2.75,2.75,0); tail.rotation.z=1.0; g.add(tail);
   g.scale.setScalar(scale); g.userData.legs=legs; return g;
 }
 
@@ -458,7 +461,7 @@ let dragging=false, lastX=0, lastY=0;
 renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
 addEventListener('pointerup', ()=> dragging=false);
 addEventListener('pointermove', e=>{ if(!dragging) return;
-  P.yaw += (e.clientX-lastX)*0.006;                    // drag left/right also turns the stag (360°)
+  if(!isTouch) P.yaw += (e.clientX-lastX)*0.006;       // desktop: drag turns the stag. mobile turns via joystick only.
   camPitch = clamp(camPitch+(e.clientY-lastY)*0.004,0.05,1.2);
   fpPitch = clamp(fpPitch - (e.clientY-lastY)*0.004,-0.55,0.6);
   lastX=e.clientX; lastY=e.clientY; });
@@ -470,13 +473,20 @@ const isTouch = matchMedia('(pointer:coarse)').matches;
 let joy = {x:0,y:0,active:false};
 if(isTouch){ document.body.classList.add('touch-on');
   const st=$('stick'), nub=st.querySelector('.nub'); let sid=null;
-  st.addEventListener('touchstart', e=>{ sid=e.changedTouches[0].identifier; joy.active=true; }, {passive:true});
-  st.addEventListener('touchmove', e=>{ for(const t of e.changedTouches){ if(t.identifier!==sid) continue;
-    const r=st.getBoundingClientRect(); let dx=t.clientX-(r.left+64), dy=t.clientY-(r.top+64);
+  const DZ=0.2;                                          // deadzone: a resting thumb no longer spins the stag
+  const startJ=e=>{ const t=e.changedTouches[0]; sid=t.identifier; joy.active=true; };
+  const moveJ=e=>{ if(sid===null) return; for(const t of e.changedTouches){ if(t.identifier!==sid) continue;
+    const r=st.getBoundingClientRect(); let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2);
     const d=Math.min(48,Math.hypot(dx,dy)); const a=Math.atan2(dy,dx); dx=Math.cos(a)*d; dy=Math.sin(a)*d;
-    nub.style.transform=`translate(${dx}px,${dy}px)`; joy.x=dx/48; joy.y=dy/48; } }, {passive:true});
-  const end=()=>{ joy.x=joy.y=0; joy.active=false; nub.style.transform=''; sid=null; };
-  st.addEventListener('touchend', end); st.addEventListener('touchcancel', end);
+    nub.style.transform=`translate(${dx}px,${dy}px)`;
+    let jx=dx/48, jy=dy/48; joy.x=Math.abs(jx)<DZ?0:jx; joy.y=Math.abs(jy)<DZ?0:jy; e.preventDefault(); } };
+  const endJ=e=>{ if(sid===null) return; for(const t of e.changedTouches){ if(t.identifier===sid){
+    joy.x=joy.y=0; joy.active=false; nub.style.transform=''; sid=null; } } };
+  st.addEventListener('touchstart', startJ, {passive:true});
+  // bind move/end on WINDOW so a finger sliding off the pad still registers — and release NEVER gets missed (the spin bug)
+  window.addEventListener('touchmove', moveJ, {passive:false});
+  window.addEventListener('touchend', endJ, {passive:true});
+  window.addEventListener('touchcancel', endJ, {passive:true});
   $('btnAttack').addEventListener('touchstart', e=>{ e.preventDefault(); startCharge(); }, {passive:false});
   $('btnAttack').addEventListener('touchend', e=>{ e.preventDefault(); releaseCharge(); }, {passive:false});
   $('btnAct').addEventListener('touchstart', e=>{ e.preventDefault(); interact(); }, {passive:false});
