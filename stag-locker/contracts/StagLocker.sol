@@ -67,11 +67,21 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///         NEVER brick lock creation; fees stay safely claimable later.
     uint256 public accruedFees;
 
-    /// @notice Optional fee waiver: wallets holding >= `feeExemptMinBalance` of `feeExemptToken`
-    ///         create locks for FREE. Everyone else pays `flatFeeWei`. Set both to enable
-    ///         (e.g. token = $STAG, min = 5,000,000e18). token = address(0) disables the waiver.
+    /// @notice Fee/burn waiver + burn token. Wallets holding >= `feeExemptMinBalance` of
+    ///         `feeExemptToken` (e.g. 10,000,000 $STAG) create locks for FREE — no ETH fee and
+    ///         no burn. Everyone else pays `flatFeeWei` (ETH, default 0) AND burns
+    ///         `burnPerPeriod` of `feeExemptToken` per `burnPeriod` of lock duration.
+    ///         token = address(0) (or min = 0) disables the waiver.
     IERC20 public feeExemptToken;
     uint256 public feeExemptMinBalance;
+
+    /// @notice $STAG burn cost, pro-rated by lock duration: `burnPerPeriod` tokens per `burnPeriod`
+    ///         seconds locked (e.g. 2,000,000e18 per 30 days). Burned = sent to BURN_ADDRESS.
+    ///         Charged on lockTokens / lockV3Position (full term) and extendLock (added term),
+    ///         waived for holders >= feeExemptMinBalance. burnPerPeriod = 0 disables burning.
+    uint256 public burnPerPeriod;
+    uint256 public burnPeriod;
+    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     uint256 public nextLockId;
     mapping(uint256 => Lock) private _locks;
@@ -87,6 +97,8 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     event FeeChanged(uint256 flatFeeWei, address feeRecipient);
     event FeesWithdrawn(address indexed to, uint256 amount);
     event FeeExemptionChanged(address token, uint256 minBalance);
+    event BurnConfigChanged(uint256 burnPerPeriod, uint256 burnPeriod);
+    event LockBurned(address indexed who, uint256 amount, uint256 durationSecs);
 
     error BadUnlockTime();
     error NotLockOwner();
@@ -122,6 +134,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (amount == 0) revert ZeroAmount();
         if (unlockTime <= block.timestamp) revert BadUnlockTime();
         _takeFee();
+        _burnFee(msg.sender, unlockTime - block.timestamp); // duration-scaled $STAG burn
 
         IERC20 t = IERC20(token);
         uint256 before = t.balanceOf(address(this));
@@ -144,6 +157,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (positionManager == address(0)) revert WrongKind();
         if (unlockTime <= block.timestamp) revert BadUnlockTime();
         _takeFee();
+        _burnFee(msg.sender, unlockTime - block.timestamp); // duration-scaled $STAG burn
         IERC721(positionManager).transferFrom(msg.sender, address(this), tokenId);
         id = _recordV3(msg.sender, tokenId, unlockTime);
     }
@@ -152,13 +166,16 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     // Managing a lock (owner-only, never weakens the lock)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @notice Extend a lock. `newUnlockTime` must be LATER than the current one.
-    function extendLock(uint256 id, uint64 newUnlockTime) external {
+    /// @notice Extend a lock. `newUnlockTime` must be LATER than the current one. Burns the
+    ///         duration-scaled $STAG for the ADDED time (waived for exempt holders).
+    function extendLock(uint256 id, uint64 newUnlockTime) external nonReentrant {
         Lock storage l = _locks[id];
         if (l.owner != msg.sender) revert NotLockOwner();
         if (l.withdrawn) revert AlreadyWithdrawn();
         if (newUnlockTime <= l.unlockTime) revert BadUnlockTime();
-        l.unlockTime = newUnlockTime;
+        uint256 added = uint256(newUnlockTime) - l.unlockTime; // burn only for the extra term
+        l.unlockTime = newUnlockTime;                          // effects before the external burn
+        _burnFee(msg.sender, added);
         emit LockExtended(id, newUnlockTime);
     }
 
@@ -302,21 +319,40 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         emit FeeExemptionChanged(token, minBalance);
     }
 
-    /// @notice The creation fee `who` will actually pay: 0 if they hold enough of the exempt
-    ///         token (e.g. >= 5M $STAG), otherwise `flatFeeWei`. The UI reads this to know
-    ///         how much ETH to send.
-    /// @dev    The exempt-token `balanceOf` is isolated in a gas-capped try/catch and FAILS
-    ///         CLOSED to charging `flatFeeWei`. A hostile/paused/broken exempt token therefore
-    ///         only forfeits the waiver (everyone pays the normal fee) and can NEVER brick lock
-    ///         creation — preserving the pull-payment non-bricking guarantee.
-    function feeFor(address who) public view returns (uint256) {
+    /// @notice Set the duration-scaled $STAG burn: `perPeriod` tokens per `period` seconds locked
+    ///         (e.g. 2,000,000e18 per 30 days). perPeriod = 0 disables burning. The burn token is
+    ///         `feeExemptToken`, so set the exemption first. Waived for exempt holders.
+    function setBurnConfig(uint256 perPeriod, uint256 period) external onlyOwner {
+        if (perPeriod > 0 && period == 0) revert ZeroAmount(); // avoid div-by-zero when enabled
+        burnPerPeriod = perPeriod;
+        burnPeriod = period;
+        emit BurnConfigChanged(perPeriod, period);
+    }
+
+    /// @dev True if `who` holds >= the waiver threshold of the exempt token. The balanceOf is
+    ///      isolated in a gas-capped try/catch and FAILS CLOSED (a hostile/paused/broken token
+    ///      forfeits the waiver — everyone pays — and can NEVER brick lock creation).
+    function _isExempt(address who) internal view returns (bool) {
         IERC20 tk = feeExemptToken;
         if (address(tk) != address(0) && feeExemptMinBalance > 0) {
             try tk.balanceOf{gas: 100_000}(who) returns (uint256 bal) {
-                if (bal >= feeExemptMinBalance) return 0;
+                if (bal >= feeExemptMinBalance) return true;
             } catch {}
         }
-        return flatFeeWei;
+        return false;
+    }
+
+    /// @notice The ETH creation fee `who` will pay: 0 if exempt, else `flatFeeWei`.
+    function feeFor(address who) public view returns (uint256) {
+        return _isExempt(who) ? 0 : flatFeeWei;
+    }
+
+    /// @notice The $STAG amount `who` must burn to lock for `durationSecs`: 0 if exempt or burning
+    ///         disabled, else `burnPerPeriod * durationSecs / burnPeriod`. The UI reads this and
+    ///         prompts a $STAG approval for that amount.
+    function burnFor(address who, uint256 durationSecs) public view returns (uint256) {
+        if (burnPerPeriod == 0 || burnPeriod == 0 || _isExempt(who)) return 0;
+        return (burnPerPeriod * durationSecs) / burnPeriod;
     }
 
     /// @notice Send all accrued creation fees to the CURRENT feeRecipient. Callable by
@@ -345,7 +381,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///      is still refunded to msg.sender; a failing refund only self-griefs the
     ///      caller, so it is left as a require.
     function _takeFee() private {
-        uint256 fee = feeFor(msg.sender); // 0 for exempt (e.g. >= 5M $STAG) holders
+        uint256 fee = feeFor(msg.sender); // 0 for exempt (e.g. >= 10M $STAG) holders
         if (msg.value < fee) revert FeeTooLow();
         if (fee > 0) {
             accruedFees += fee;
@@ -355,6 +391,16 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (extra > 0) {
             (bool ok2, ) = msg.sender.call{value: extra}("");
             require(ok2, "refund failed");
+        }
+    }
+
+    /// @dev Burn the duration-scaled $STAG cost by pulling it from `who` to BURN_ADDRESS.
+    ///      No-op when the caller is exempt or burning is disabled. Requires a $STAG allowance.
+    function _burnFee(address who, uint256 durationSecs) private {
+        uint256 amt = burnFor(who, durationSecs);
+        if (amt > 0) {
+            feeExemptToken.safeTransferFrom(who, BURN_ADDRESS, amt);
+            emit LockBurned(who, amt, durationSecs);
         }
     }
 
@@ -370,8 +416,10 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///      configured positionManager and carry abi.encode(uint64 unlockTime) as data,
     ///      which auto-creates the lock owned by `from`. Anything else reverts, so a
     ///      stray/mis-encoded safeTransferFrom can never strand an NFT in this contract
-    ///      with no lock recorded. (Fee-exempt by nature: safeTransferFrom carries no ETH;
-    ///      use lockV3Position if a creation fee must be charged.)
+    ///      with no lock recorded. The duration-scaled $STAG burn IS charged here (it needs no
+    ///      ETH), so this path can't dodge the burn — `from` must have approved $STAG first.
+    ///      The optional ETH `flatFeeWei` still cannot apply here (safeTransferFrom carries no
+    ///      value); use lockV3Position if an ETH fee must be collected.
     function onERC721Received(address, address from, uint256 tokenId, bytes calldata data)
         external override nonReentrant returns (bytes4)
     {
@@ -379,6 +427,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (data.length != 32) revert BadUnlockTime();
         uint64 unlockTime = abi.decode(data, (uint64));
         if (unlockTime <= block.timestamp) revert BadUnlockTime();
+        _burnFee(from, unlockTime - block.timestamp); // charge the $STAG burn on this path too
         _recordV3(from, tokenId, unlockTime);
         return this.onERC721Received.selector;
     }

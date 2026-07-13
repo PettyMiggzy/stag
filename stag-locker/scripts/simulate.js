@@ -33,17 +33,23 @@ async function main() {
   const T2 = await (await ethers.getContractFactory("MockERC20")).deploy();
   const FOT = await (await ethers.getContractFactory("MockFeeToken")).deploy(300n); // takes a % on transfer
   const tokens = [T1, T2, FOT];
-  // exempt ($STAG) token
+  // $STAG: free if held >= 10M, else burn 2M per 30 days of lock
   const STAG = await (await ethers.getContractFactory("MockERC20")).deploy();
-  const MIN = 5_000_000n * 10n ** 18n;
+  const MIN = 10_000_000n * 10n ** 18n;             // 10M $STAG → free
+  const BURN_PER = 2_000_000n * 10n ** 18n;         // 2M...
+  const BURN_PERIOD = BigInt(30 * DAY);             // ...per 30 days
+  const DEAD = "0x000000000000000000000000000000000000dEaD";
   await locker.connect(admin).setFeeExemption(await STAG.getAddress(), MIN);
+  await locker.connect(admin).setBurnConfig(BURN_PER, BURN_PERIOD);
 
-  // fund actors: some are $STAG whales (exempt), some not
+  // exempt actors (even) hold >= 10M and lock free; non-exempt (odd) hold < 10M and must burn.
   for (let i = 0; i < actors.length; i++) {
     for (const t of tokens) await t.mint(actors[i].address, 10n ** 24n);
-    if (i % 2 === 0) await STAG.mint(actors[i].address, MIN + bn(rnd() * 1e6)); // exempt
+    await STAG.mint(actors[i].address, i % 2 === 0 ? MIN + bn(rnd() * 1e6) : 9_000_000n * 10n ** 18n);
+    await STAG.connect(actors[i]).approve(LADDR, ethers.MaxUint256); // allow burns
   }
-  const isExempt = async (a) => (await STAG.balanceOf(a)) >= MIN;
+  const stagOf = async (a) => STAG.balanceOf(a);
+  const burnedTotal = async () => STAG.balanceOf(DEAD);
 
   // shadow model
   const locks = []; // {id, kind:'erc20'|'v3', asset, amount(BigInt), owner, unlock, withdrawn}

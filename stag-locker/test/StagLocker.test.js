@@ -354,3 +354,99 @@ describe("StagLocker — fee-waiver fail-closed (hostile exempt token)", () => {
       .to.emit(L, "TokenLocked");
   });
 });
+
+describe("StagLocker — $STAG burn per 30-day lock (free at 10M)", () => {
+  const MIN = 10_000_000n * 10n ** 18n;     // free threshold
+  const PER = 2_000_000n * 10n ** 18n;      // 2M...
+  const PERIOD = BigInt(30 * DAY);          // ...per 30 days
+  const DEAD = "0x000000000000000000000000000000000000dEaD";
+
+  async function setup() {
+    const [own, treasury, whale, small] = await ethers.getSigners();
+    const PM = await (await ethers.getContractFactory("MockPositionManager")).deploy();
+    const L = await (await ethers.getContractFactory("StagLocker")).deploy(await PM.getAddress(), 0, treasury.address, own.address);
+    const STAG = await (await ethers.getContractFactory("MockERC20")).deploy();
+    const TOK = await (await ethers.getContractFactory("MockERC20")).deploy();
+    await L.connect(own).setFeeExemption(await STAG.getAddress(), MIN);
+    await L.connect(own).setBurnConfig(PER, PERIOD);
+    await STAG.mint(whale.address, MIN);              // exactly 10M -> free
+    await STAG.mint(small.address, 9_000_000n * 10n ** 18n); // < 10M: non-exempt, enough to burn short locks
+    await STAG.connect(whale).approve(await L.getAddress(), ethers.MaxUint256);
+    await STAG.connect(small).approve(await L.getAddress(), ethers.MaxUint256);
+    await TOK.mint(whale.address, 10n ** 24n); await TOK.mint(small.address, 10n ** 24n);
+    await TOK.connect(whale).approve(await L.getAddress(), ethers.MaxUint256);
+    await TOK.connect(small).approve(await L.getAddress(), ethers.MaxUint256);
+    return { own, whale, small, L, STAG, TOK };
+  }
+
+  it("burnFor scales 2M per 30 days; free for >=10M holders", async () => {
+    const { whale, small, L } = await setup();
+    expect(await L.burnFor(small.address, 30 * DAY)).to.equal(PER);       // 30d -> 2M
+    expect(await L.burnFor(small.address, 90 * DAY)).to.equal(PER * 3n);  // 90d -> 6M
+    expect(await L.burnFor(small.address, 365 * DAY)).to.equal((PER * BigInt(365 * DAY)) / PERIOD);
+    expect(await L.burnFor(whale.address, 365 * DAY)).to.equal(0n);       // whale exempt -> free
+  });
+
+  it("non-holder locking 90 days burns 6M $STAG to dead; whale burns nothing", async () => {
+    const { whale, small, L, STAG, TOK } = await setup();
+    const unlock = (await now()) + 90 * DAY;
+    const before = await STAG.balanceOf(small.address);
+    await expect(L.connect(small).lockTokens(await TOK.getAddress(), 1000n, unlock, { value: 0 }))
+      .to.emit(L, "LockBurned");
+    // burn is prorated per-second, so a ~90d lock burns just under 6M (tx mines 1-2s later)
+    const burned = before - (await STAG.balanceOf(small.address));
+    const target = PER * 3n, tol = 10n ** 20n; // within 100 $STAG, and never OVER target
+    expect(burned <= target && burned >= target - tol).to.equal(true);
+    expect(await STAG.balanceOf(DEAD)).to.equal(burned);
+    // whale: no burn
+    const wbUnlock = (await now()) + 60 * DAY; const wb = await STAG.balanceOf(whale.address);
+    await L.connect(whale).lockTokens(await TOK.getAddress(), 1000n, wbUnlock, { value: 0 });
+    expect(await STAG.balanceOf(whale.address)).to.equal(wb); // unchanged
+  });
+
+  it("extendLock burns for the added term only", async () => {
+    const { small, L, STAG, TOK } = await setup();
+    const unlock = (await now()) + 30 * DAY;
+    await L.connect(small).lockTokens(await TOK.getAddress(), 1000n, unlock, { value: 0 }); // burns 2M
+    const id = Number(await L.nextLockId()) - 1;
+    const bal = await STAG.balanceOf(small.address);
+    await L.connect(small).extendLock(id, unlock + 60 * DAY); // +60d -> burn 4M
+    expect(bal - (await STAG.balanceOf(small.address))).to.equal(PER * 2n);
+  });
+
+  it("reverts if the non-holder can't cover the burn (no free ride)", async () => {
+    const { small, L, STAG, TOK } = await setup();
+    // drain small's $STAG below the 90-day burn (6M)
+    const bal = await STAG.balanceOf(small.address);
+    await STAG.connect(small).transfer("0x000000000000000000000000000000000000bEEF", bal - (PER)); // leave 2M
+    const unlock = (await now()) + 90 * DAY; // needs 6M, has 2M
+    await expect(L.connect(small).lockTokens(await TOK.getAddress(), 1000n, unlock, { value: 0 }))
+      .to.be.reverted; // ERC20 insufficient balance
+  });
+});
+
+describe("StagLocker — V3 safeTransferFrom path ALSO burns (L-1 fix)", () => {
+  const MIN = 10_000_000n * 10n ** 18n;
+  const PER = 2_000_000n * 10n ** 18n;
+  const PERIOD = BigInt(30 * DAY);
+  const DEAD = "0x000000000000000000000000000000000000dEaD";
+  it("burns $STAG when a non-holder locks a V3 NFT via safeTransferFrom", async () => {
+    const [own, treasury, small] = await ethers.getSigners();
+    const PM = await (await ethers.getContractFactory("MockPositionManager")).deploy();
+    const L = await (await ethers.getContractFactory("StagLocker")).deploy(await PM.getAddress(), 0, treasury.address, own.address);
+    const STAG = await (await ethers.getContractFactory("MockERC20")).deploy();
+    await L.connect(own).setFeeExemption(await STAG.getAddress(), MIN);
+    await L.connect(own).setBurnConfig(PER, PERIOD);
+    await STAG.mint(small.address, 9_000_000n * 10n ** 18n);
+    await STAG.connect(small).approve(await L.getAddress(), ethers.MaxUint256); // must approve $STAG
+    await PM.connect(small).mint(small.address); // id 0
+    const u = (await now()) + 30 * DAY;
+    const data = ethers.AbiCoder.defaultAbiCoder().encode(["uint64"], [u]);
+    const before = await STAG.balanceOf(small.address);
+    await PM.connect(small)["safeTransferFrom(address,address,uint256,bytes)"](small.address, await L.getAddress(), 0, data);
+    const burned = before - (await STAG.balanceOf(small.address));
+    // ~2M for 30 days (a hair under, prorated per-second)
+    expect(burned <= PER && burned >= PER - 10n ** 20n).to.equal(true);
+    expect(await STAG.balanceOf(DEAD)).to.equal(burned);
+  });
+});

@@ -93,6 +93,14 @@
   .empty{color:var(--dim);font-size:13px;padding:18px 2px;text-align:center}
   code{font-family:var(--mono);color:var(--teal);font-size:12px;word-break:break-all}
   .note{font-size:11.5px;color:var(--dim);margin-top:10px}
+  .burnpreview{margin-top:12px;font:600 13px/1.4 var(--sans);color:var(--ink);
+    border-radius:10px;padding:12px 14px;
+    background:linear-gradient(90deg,rgba(255,93,59,.10),rgba(245,179,1,.08));
+    border:1px solid #55231a}
+  .burnpreview.free{background:linear-gradient(90deg,rgba(158,244,24,.12),rgba(55,214,196,.08));border-color:var(--acc-dim)}
+  .burnpreview .big{font:800 16px/1.2 var(--sans);color:var(--hot);display:block}
+  .burnpreview.free .big{color:var(--acc)}
+  .burnpreview .sub{display:block;margin-top:3px;font:500 11px/1.4 var(--mono);color:var(--mut)}
   .foot{max-width:860px;margin:0 auto;padding:0 18px 40px;color:var(--dim);font-size:11.5px}
   .foot .powered{margin-top:12px;color:var(--mut);font:600 10.5px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;
     display:inline-flex;align-items:center;gap:7px}
@@ -188,7 +196,7 @@
     <div class="stat"><div class="snum" id="stActive">—</div><div class="slab">Still Locked</div></div>
     <div class="stat"><div class="snum" id="stDone">—</div><div class="slab">Unlocked</div></div>
   </div>
-  <div class="feebadge" id="feeBanner">🦌 Hold <b>5M+ $STAG</b> and lock for <b>FREE</b> · otherwise ~$20 in ETH</div>
+  <div class="feebadge" id="feeBanner">🔥 Burn <b>2,000,000 $STAG</b> per 30 days · or hold <b>10M+ $STAG</b> to lock <b>FREE</b></div>
 </div>
 
 <main>
@@ -232,9 +240,11 @@
         <button type="button" data-days="1095">3 years</button>
       </div>
       <div class="note" id="unlockPreview"></div>
+      <div class="burnpreview" id="burnPreview" style="display:none"></div>
 
       <div class="actions">
         <button id="approveBtn">1 · Approve</button>
+        <button id="approveStagBtn" style="display:none">2 · Approve $STAG</button>
         <button id="lockBtn" class="primary">2 · Lock</button>
       </div>
       <div class="note" id="feeNote"></div>
@@ -283,6 +293,9 @@ const RPC = "https://rpc.mainnet.chain.robinhood.com";
 const EXPLORER = "https://robinhoodchain.blockscout.com";
 const LOCKER = window.STAG_LOCKER_ADDRESS || ""; // ← paste deployed address here
 const POSITION_MANAGER = "0x73991a25c818bf1f1128deaab1492d45638de0d3";
+// $STAG token — burned (scaled by lock duration) to create/extend a lock. Holders of the
+// on-chain fee-exempt min balance lock free. Overridable via window.STAG_TOKEN.
+const STAG = window.STAG_TOKEN || "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49";
 
 const CHAIN_PARAMS = {
   chainId: CHAIN_HEX, chainName: "Robinhood Chain",
@@ -293,8 +306,11 @@ const CHAIN_PARAMS = {
 const LOCKER_ABI = [
   "function flatFeeWei() view returns (uint256)",
   "function feeFor(address) view returns (uint256)",
+  "function burnFor(address who,uint256 durationSecs) view returns (uint256)",
   "function feeExemptToken() view returns (address)",
   "function feeExemptMinBalance() view returns (uint256)",
+  "function burnPerPeriod() view returns (uint256)",
+  "function burnPeriod() view returns (uint256)",
   "function positionManager() view returns (address)",
   "function nextLockId() view returns (uint256)",
   "function getLock(uint256) view returns (tuple(uint8 kind,address asset,uint256 amountOrId,address owner,uint64 unlockTime,bool withdrawn))",
@@ -310,6 +326,7 @@ const ERC20_ABI = [
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
   "function name() view returns (string)",
+  "function balanceOf(address) view returns (uint256)",
   "function allowance(address,address) view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
 ];
@@ -398,8 +415,72 @@ document.querySelectorAll("#durs button").forEach(b => b.onclick = () => {
   lockDays = Number(b.dataset.days);
   document.querySelectorAll("#durs button").forEach(x => x.classList.toggle("on", x === b));
   renderUnlockPreview();
+  updateBurnPreview();      // recompute the $STAG burn cost for the newly-selected duration
 });
 renderUnlockPreview();
+
+// ─── $STAG burn-cost preview + helpers ───────────────────────────────────────
+// Non-exempt users BURN $STAG (scaled by lock duration) to create/extend a lock.
+// The burn is pulled inside the contract via feeExemptToken.transferFrom(user,0xdEaD,amount),
+// so the user must first APPROVE $STAG to the locker. Holders of the exempt min-balance lock free.
+let stagDecimals = 18;          // $STAG decimals (fetched once)
+let burnTokenAddr = STAG;       // burn token — resolved from feeExemptToken(), falls back to STAG const
+let exemptLabel = "10M";        // human threshold to lock free (from feeExemptMinBalance())
+let currentBurn = 0n;           // $STAG burn required for the currently-selected duration (0 = free)
+
+async function resolveBurnToken(){
+  try{ const t = await readLocker().feeExemptToken(); if(t && t !== ethers.ZeroAddress) burnTokenAddr = t; }catch{}
+  try{ stagDecimals = Number(await new ethers.Contract(burnTokenAddr, ERC20_ABI, read).decimals()); }catch{ stagDecimals = 18; }
+}
+function durLabel(){ return lockDays % 365 === 0 ? (lockDays/365) + "-year" : lockDays + "-day"; }
+
+async function updateBurnPreview(){
+  const el = $("burnPreview"), stagBtn = $("approveStagBtn");
+  currentBurn = 0n;
+  // degrade gracefully: no live preview without a deployed locker or a connected wallet
+  if(!LOCKER || !account){ el.style.display = "none"; if(stagBtn) stagBtn.style.display = "none"; return; }
+  try{
+    const burn = await readLocker().burnFor(account, lockDays * DAY);
+    currentBurn = burn;
+    if(burn === 0n){
+      el.className = "burnpreview free";
+      el.innerHTML = `<span class="big">✓ You hold ${esc(exemptLabel)}+ $STAG — locking is FREE</span>` +
+        `<span class="sub">No $STAG burn required. Approve your token and lock.</span>`;
+      el.style.display = "block";
+      if(stagBtn) stagBtn.style.display = "none";
+      $("lockBtn").textContent = "2 · Lock";           // exempt: approve token → lock
+    } else {
+      const full  = fmtFull(ethers.formatUnits(burn, stagDecimals));
+      const round = fmtAmt(ethers.formatUnits(burn, stagDecimals));
+      el.className = "burnpreview";
+      el.innerHTML = `<span class="big">🔥 Burns ${esc(round)} $STAG (${esc(durLabel())} lock)</span>` +
+        `<span class="sub">${esc(full)} $STAG · burned when you lock. Or hold ${esc(exemptLabel)}+ $STAG to lock free.</span>`;
+      el.style.display = "block";
+      if(stagBtn) stagBtn.style.display = "";
+      $("lockBtn").textContent = "3 · Lock";           // non-exempt: approve token → approve $STAG → lock
+    }
+  }catch{ el.style.display = "none"; if(stagBtn) stagBtn.style.display = "none"; }
+}
+
+// ensure the locker has enough $STAG allowance to pull the burn; verifies balance first.
+// returns false (with a friendly message) if the user can't cover the burn.
+async function ensureStagAllowance(el, burn){
+  if(burn === 0n) return true;                       // exempt / free — no $STAG needed
+  const stagRead = new ethers.Contract(burnTokenAddr, ERC20_ABI, read);
+  const bal = await stagRead.balanceOf(account);
+  if(bal < burn){
+    const need = fmtAmt(ethers.formatUnits(burn, stagDecimals));
+    msg(el, `You need ${need} $STAG to lock this long, or hold ${exemptLabel}+ to lock free.`, "err");
+    return false;
+  }
+  const allow = await stagRead.allowance(account, LOCKER);
+  if(allow < burn){
+    const stag = new ethers.Contract(burnTokenAddr, ERC20_ABI, signer);
+    msg(el, "Approving $STAG burn… confirm in wallet.", "info");
+    await (await stag.approve(LOCKER, burn)).wait();  // approve exact burn amount
+  }
+  return true;
+}
 
 $("lockerAddr").textContent = LOCKER || "not set — deploy first, then set window.STAG_LOCKER_ADDRESS";
 $("pmAddr").textContent = POSITION_MANAGER;
@@ -432,6 +513,7 @@ async function connect(){
     $("wallet").innerHTML = "connected <b>" + short(account) + "</b>";
     $("connect").textContent = "Connected";
     loadFee();
+    updateBurnPreview();   // show the caller's exact $STAG burn cost for the selected duration
     if(currentTab === "mine") loadMine();
   }catch(e){ alert("Connect failed: " + (e.message||e)); }
 }
@@ -440,31 +522,36 @@ if(window.ethereum){ window.ethereum.on?.("accountsChanged", ()=>location.reload
 async function loadFee(){
   try{
     const lk = readLocker();
-    const [flat, exToken, exMin] = await Promise.all([lk.flatFeeWei(), lk.feeExemptToken().catch(()=>ethers.ZeroAddress), lk.feeExemptMinBalance().catch(()=>0n)]);
+    const [exToken, exMin, perPeriod, period] = await Promise.all([
+      lk.feeExemptToken().catch(()=>ethers.ZeroAddress),
+      lk.feeExemptMinBalance().catch(()=>0n),
+      lk.burnPerPeriod().catch(()=>0n),
+      lk.burnPeriod().catch(()=>0n),
+    ]);
     const waiver = exToken && exToken !== ethers.ZeroAddress && exMin > 0n;
-    // human-readable threshold (assume 18 decimals for $STAG)
-    const minTok = waiver ? fmtAmt(ethers.formatUnits(exMin, 18)) : "";
-    // keep the prominent hero fee badge in sync with the real on-chain threshold
+    // human-readable free-lock threshold, from the on-chain exempt min balance
+    const minTok = waiver ? fmtAmt(ethers.formatUnits(exMin, stagDecimals)) : "10M";
+    if(waiver) exemptLabel = minTok;   // keep burn preview + friendly errors in sync
+
+    // keep the prominent hero fee badge in sync with the real on-chain burn model
     const fb = $("feeBanner");
-    if(fb && flat > 0n && waiver) fb.innerHTML = `🦌 Hold <b>${minTok}+ $STAG</b> and lock for <b>FREE</b> · otherwise <b>${ethers.formatEther(flat)} ETH</b> (~$20)`;
-    else if(fb && flat === 0n) fb.innerHTML = `🦌 <b>Locking is FREE</b> on $STAG Locker · no creation fee`;
+    if(fb && perPeriod > 0n && period > 0n){
+      const perTok = fmtAmt(ethers.formatUnits(perPeriod, stagDecimals));
+      const days = Math.round(Number(period) / DAY) || 1;
+      fb.innerHTML = `🔥 Burn <b>${perTok} $STAG</b> per ${days} days · or hold <b>${minTok}+ $STAG</b> to lock <b>FREE</b>`;
+    } else if(fb){
+      fb.innerHTML = `🔥 Burn <b>$STAG</b> to lock (scaled by duration) · or hold <b>${minTok}+ $STAG</b> to lock <b>FREE</b>`;
+    }
+
     if(!account){
-      $("feeNote").innerHTML = flat > 0n
-        ? (waiver
-            ? `🦌 Hold <b>${minTok}+ $STAG</b> and lock for <b>FREE</b>. Otherwise creation fee is <b>${ethers.formatEther(flat)} ETH</b> (~$20). Connect to see your rate.`
-            : `Creation fee: <b>${ethers.formatEther(flat)} ETH</b> (overpayment refunded).`)
-        : "No creation fee.";
+      $("feeNote").innerHTML = `🔥 Non-exempt locks <b>burn $STAG</b> (scaled by duration). Hold <b>${minTok}+ $STAG</b> to lock <b>FREE</b>. Connect to see your exact cost.`;
       return;
     }
-    // connected: show the caller's ACTUAL fee (0 if they hold enough $STAG)
+    // connected: the $STAG burn shows in the live preview above; note the ETH fee (usually 0)
     const mine = await lk.feeFor(account);
-    if(mine === 0n){
-      $("feeNote").innerHTML = waiver
-        ? `✓ You hold ${minTok}+ $STAG — <b>locking is FREE</b> for you.`
-        : "No creation fee.";
-    } else {
-      $("feeNote").innerHTML = `Your creation fee: <b>${ethers.formatEther(mine)} ETH</b> (~$20). Hold ${minTok}+ $STAG to lock free.`;
-    }
+    $("feeNote").innerHTML = mine === 0n
+      ? "No ETH creation fee — your cost is the $STAG burn shown above."
+      : `Plus an ETH creation fee of <b>${ethers.formatEther(mine)} ETH</b>.`;
   }catch{}
 }
 
@@ -512,12 +599,27 @@ $("approveBtn").onclick = async () => {
   }catch(e){ msg(el,"Approve failed: " + (e.shortMessage||e.message||e),"err"); }
 };
 
+// Step 2 (non-exempt users): approve $STAG so the contract can pull the burn on lock.
+$("approveStagBtn").onclick = async () => {
+  const el = $("lockMsg"); if(!requireReady(el)) return;
+  try{
+    const burn = await readLocker().burnFor(account, lockDays * DAY);
+    if(burn === 0n){ msg(el,"You're exempt — no $STAG burn needed. Just click Lock.","ok"); $("approveStagBtn").style.display="none"; return; }
+    const stag = new ethers.Contract(burnTokenAddr, ERC20_ABI, signer);
+    msg(el,"Approving $STAG… confirm in wallet.","info");
+    await (await stag.approve(LOCKER, burn)).wait();   // approve exact burn amount
+    msg(el,"$STAG approved. Now click Lock.","ok");
+  }catch(e){ msg(el,"$STAG approve failed: " + (e.shortMessage||e.message||e),"err"); }
+};
+
 $("lockBtn").onclick = async () => {
   const el = $("lockMsg"); if(!requireReady(el)) return;
   try{
     const c = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
-    // the caller's actual fee: 0 if they hold enough $STAG, else the flat fee
-    const fee = await readLocker().feeFor(account);
+    // ETH creation fee (usually 0). The $STAG burn is pulled inside the contract via
+    // transferFrom, so we just make sure the allowance + balance are in place first.
+    const fee  = await readLocker().feeFor(account);
+    const burn = await readLocker().burnFor(account, lockDays * DAY);
     if($("kind").value === "erc20"){
       const token = $("token").value.trim();
       const unlock = unlockFromDuration();
@@ -525,12 +627,14 @@ $("lockBtn").onclick = async () => {
       const t = new ethers.Contract(token, ERC20_ABI, read);
       const dec = await t.decimals(); const amount = ethers.parseUnits($("amount").value.trim() || "0", dec);
       if(amount <= 0n) return msg(el,"Enter an amount.","err");
+      if(!await ensureStagAllowance(el, burn)) return;   // verify $STAG balance + approve burn
       msg(el,"Locking… confirm in wallet.","info");
       const tx = await c.lockTokens(token, amount, unlock, { value: fee });
       await tx.wait(); msg(el,"Locked ✓  tx " + short(tx.hash),"ok");
     } else {
       const id = $("tokenId").value.trim(); const unlock = unlockFromDuration();
       if(id==="") return msg(el,"Enter the position token ID.","err");
+      if(!await ensureStagAllowance(el, burn)) return;   // verify $STAG balance + approve burn
       msg(el,"Locking LP… confirm in wallet.","info");
       const tx = await c.lockV3Position(id, unlock, { value: fee });
       await tx.wait(); msg(el,"LP locked ✓  tx " + short(tx.hash),"ok");
@@ -638,6 +742,15 @@ async function manage(kind, id, l){
       if(!v) return; const u = toUnix(v);
       if(!u || Number.isNaN(u)) return alert("Couldn't read that date — try YYYY-MM-DD HH:MM.");
       if(u <= Number(l.unlockTime)) return alert("Must be later than current unlock.");
+      // extending also burns $STAG (scaled by duration) unless exempt — approve first
+      const burn = await readLocker().burnFor(account, u - Math.floor(Date.now()/1000)).catch(()=>0n);
+      if(burn > 0n){
+        const stagRead = new ethers.Contract(burnTokenAddr, ERC20_ABI, read);
+        const bal = await stagRead.balanceOf(account);
+        if(bal < burn) return alert(`You need ${fmtAmt(ethers.formatUnits(burn, stagDecimals))} $STAG to extend this long, or hold ${exemptLabel}+ to extend free.`);
+        if((await stagRead.allowance(account, LOCKER)) < burn)
+          await (await new ethers.Contract(burnTokenAddr, ERC20_ABI, signer).approve(LOCKER, burn)).wait();
+      }
       await (await c.extendLock(id, u)).wait();
     } else if(kind === "topup"){
       const v = prompt("Amount to add to lock #" + id); if(!v) return;
@@ -740,7 +853,7 @@ async function renderProof(addr, locks, agg){
 
 // ─── init: hero stats, fee, and ?verify=0x… deep-link (share a proof link) ──
 loadStats();
-if(LOCKER) loadFee();
+if(LOCKER) resolveBurnToken().then(loadFee);   // resolve $STAG decimals/token, then render the fee model
 (function initDeepLink(){
   const v = new URLSearchParams(location.search).get("verify");
   if(v && ethers.isAddress(v)){
