@@ -37,7 +37,7 @@ contract SherwoodVault is Ownable, ReentrancyGuard {
     mapping(address => Collection) public collections;
     address[] public collectionList;
 
-    struct StakeInfo { address staker; uint256 weight; uint64 since; } // snapshot weight at stake time
+    struct StakeInfo { address staker; uint256 weight; uint64 since; bool lockInPlace; } // snapshot at stake time
     mapping(address => mapping(uint256 => StakeInfo)) public stakeOf; // collection => tokenId => info
 
     struct Ref { address collection; uint256 tokenId; }
@@ -75,12 +75,16 @@ contract SherwoodVault is Ownable, ReentrancyGuard {
     function earned(address a) public view returns (uint256) {
         return (weightOf[a] * (rewardPerWeight() - rewardPerWeightPaid[a])) / BASE + rewards[a];
     }
-    modifier update(address a) {
+    function _updateGlobal() internal {
         uint256 rpw = rewardPerWeight();
         reserved += ((rpw - rewardPerWeightStored) * totalWeight) / BASE;
         rewardPerWeightStored = rpw;
         lastUpdateTime = lastTimeApplicable();
-        if (a != address(0)) { rewards[a] = earned(a); rewardPerWeightPaid[a] = rewardPerWeightStored; }
+    }
+    function _updateUser(address a) internal { rewards[a] = earned(a); rewardPerWeightPaid[a] = rewardPerWeightStored; }
+    modifier update(address a) {
+        _updateGlobal();
+        if (a != address(0)) _updateUser(a);
         _;
     }
 
@@ -91,8 +95,9 @@ contract SherwoodVault is Ownable, ReentrancyGuard {
         require(stakeOf[nft][tokenId].staker == address(0), "already staked");
         require(IERC721(nft).ownerOf(tokenId) == msg.sender, "not owner");
 
-        // effects (CEI) — snapshot the weight so a later weight change can't strand accounting
-        stakeOf[nft][tokenId] = StakeInfo(msg.sender, c.weight, uint64(block.timestamp));
+        // effects (CEI) — snapshot BOTH weight and custody mode so a later addCollection update
+        // (weight or, in theory, mode) can never strand this stake or mis-route the unstake.
+        stakeOf[nft][tokenId] = StakeInfo(msg.sender, c.weight, uint64(block.timestamp), c.lockInPlace);
         weightOf[msg.sender] += c.weight;
         totalWeight += c.weight;
         _userStakes[msg.sender].push(Ref(nft, tokenId));
@@ -114,8 +119,9 @@ contract SherwoodVault is Ownable, ReentrancyGuard {
         delete stakeOf[nft][tokenId];
         _removeRef(msg.sender, nft, tokenId);
 
-        // interaction: unlock in place, or return custody
-        if (collections[nft].lockInPlace) ILockable(nft).unlock(tokenId);
+        // interaction: unlock in place, or return custody — branch on the SNAPSHOT mode (not the
+        // collection's current mode) so an owner reconfiguration can never mis-route the return.
+        if (s.lockInPlace) ILockable(nft).unlock(tokenId);
         else IERC721(nft).transferFrom(address(this), msg.sender, tokenId);
         emit Unstaked(msg.sender, nft, tokenId);
     }
@@ -158,10 +164,38 @@ contract SherwoodVault is Ownable, ReentrancyGuard {
         require(nft != address(0), "zero");
         require(weight > 0, "weight=0");
         Collection storage c = collections[nft];
-        if (!c.known) { c.known = true; collectionList.push(nft); }
-        c.enabled = true; c.lockInPlace = lockInPlace; c.weight = weight;
-        emit CollectionSet(nft, weight, lockInPlace, true);
+        if (!c.known) { c.known = true; c.lockInPlace = lockInPlace; collectionList.push(nft); }
+        // Mode is IMMUTABLE once a collection is known — flipping it would mis-route unstakes for
+        // already-staked NFTs. (Stakes also snapshot their own mode as belt-and-suspenders.)
+        else require(c.lockInPlace == lockInPlace, "mode is immutable");
+        c.enabled = true; c.weight = weight;
+        emit CollectionSet(nft, weight, c.lockInPlace, true);
     }
+
+    /// @notice Escape hatch: if a collection's unlock()/transferFrom starts reverting (e.g. it
+    ///         re-points its locker away from this vault, or blocks transfers), a staker's unstake
+    ///         would brick and their weight would inflate the pool for everyone. This clears that
+    ///         stake's accounting (un-sticking totalWeight) and BEST-EFFORT returns/unlocks the NFT
+    ///         to its staker — a failing NFT op can no longer hold the reward pool hostage. Rewards
+    ///         already earned by the staker are settled first (never lost). Owner-only.
+    function adminDetach(address nft, uint256 tokenId) external onlyOwner nonReentrant {
+        StakeInfo memory s = stakeOf[nft][tokenId];
+        require(s.staker != address(0), "not staked");
+        _updateGlobal();
+        _updateUser(s.staker);                 // settle the staker's rewards at current weight
+        weightOf[s.staker] -= s.weight;
+        totalWeight -= s.weight;
+        delete stakeOf[nft][tokenId];
+        _removeRef(s.staker, nft, tokenId);
+        if (s.lockInPlace) { try ILockable(nft).unlock(tokenId) {} catch {} }
+        else { try IERC721(nft).transferFrom(address(this), s.staker, tokenId) {} catch {} }
+        emit Unstaked(s.staker, nft, tokenId);
+    }
+
+    /// @notice Disabled: this contract streams committed ETH rewards and must stay administrable
+    ///         (notifyRewardAmount, setCollectionEnabled, adminDetach). Renouncing would freeze the
+    ///         reward engine permanently. Hand ownership to a multisig via transferOwnership instead.
+    function renounceOwnership() public view override onlyOwner { revert("renounce disabled"); }
 
     /// @notice Pause/resume NEW stakes for a collection. Existing stakes are unaffected (can always unstake).
     function setCollectionEnabled(address nft, bool enabled) external onlyOwner {

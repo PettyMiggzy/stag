@@ -100,6 +100,35 @@ describe("SherwoodVault — collection-agnostic NFT staking", () => {
     expect(after - before + rc.gasUsed * rc.gasPrice).to.be.closeTo(E("3"), E("0.001"));
   });
 
+  it("collection mode is immutable once known (can't flip custody<->lock)", async () => {
+    const { vault, nft } = await deploy();
+    const NA = await nft.getAddress();
+    await vault.addCollection(NA, W, false);
+    await vault.addCollection(NA, W * 2n, false); // same mode → OK (weight update)
+    await expect(vault.addCollection(NA, W, true)).to.be.revertedWith("mode is immutable");
+  });
+
+  it("adminDetach rescues a stuck stake: clears weight + returns the NFT, settles rewards", async () => {
+    const { vault, nft, owner, alice } = await deploy();
+    const V = await vault.getAddress(), NA = await nft.getAddress();
+    await vault.addCollection(NA, W, false);
+    await nft.mint(alice.address, 1); await nft.connect(alice).approve(V, 1); await vault.connect(alice).stake(NA, 1);
+    await vault.donate({ value: E("1") }); await vault.notifyRewardAmount(E("1"), 100);
+    await ethers.provider.send("evm_increaseTime", [100]); await ethers.provider.send("evm_mine", []);
+    await expect(vault.connect(alice).adminDetach(NA, 1)).to.be.reverted; // owner-only
+    await vault.connect(owner).adminDetach(NA, 1);
+    expect(await nft.ownerOf(1)).to.equal(alice.address);        // NFT returned
+    expect(await vault.weightOf(alice.address)).to.equal(0n);    // weight cleared
+    expect(await vault.totalWeight()).to.equal(0n);
+    expect(await vault.earned(alice.address)).to.be.closeTo(E("1"), E("0.001")); // rewards preserved
+    await vault.connect(alice).claim();
+  });
+
+  it("renounceOwnership is disabled (reward engine stays administrable)", async () => {
+    const { vault } = await deploy();
+    await expect(vault.renounceOwnership()).to.be.revertedWith("renounce disabled");
+  });
+
   it("weight change applies to FUTURE stakes only; existing keep their snapshot", async () => {
     const { vault, nft, alice } = await deploy();
     const V = await vault.getAddress(), NA = await nft.getAddress();
