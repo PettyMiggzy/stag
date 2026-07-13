@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>STAG WARS — Open-World Survival · $STAGWIFHOOD</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#06110a" />
+<meta name="description" content="STAG WARS — a bloody 3D open-world stag survival fighter. Roam the forest, eat, drink, sleep, and clash antlers to the death. $STAGWIFHOOD." />
+<link rel="icon" type="image/png" href="assets/img/favicon.png" />
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:#06110a;color:#eafff0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+  canvas{display:block}
+  /* ---- HUD ---- */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5;font:800 13px/1 ui-monospace,Menlo,monospace}
+  .bars{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:14px;display:flex;flex-direction:column;gap:7px;width:190px}
+  .bar{background:rgba(7,22,13,.72);border:1px solid rgba(120,220,120,.22);border-radius:9px;padding:5px 8px;backdrop-filter:blur(7px)}
+  .bar .lab{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:.1em;color:#9fd3af;margin-bottom:4px;text-transform:uppercase}
+  .bar .track{height:7px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar .fill{height:100%;width:100%;border-radius:5px;transition:width .18s ease}
+  .f-hp{background:linear-gradient(90deg,#ff5a4a,#ff8a5a)}
+  .f-food{background:linear-gradient(90deg,#b6ff2e,#6be000)}
+  .f-water{background:linear-gradient(90deg,#3fd6ff,#2e8cff)}
+  .f-energy{background:linear-gradient(90deg,#ffcf4a,#ffaf1e)}
+  .topR{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px;text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .chip{background:rgba(7,22,13,.72);border:1px solid rgba(120,220,120,.22);border-radius:10px;padding:7px 11px;backdrop-filter:blur(7px)}
+  .chip b{color:#b6ff2e}
+  #kills .big{font:900 22px/1 Arial;color:#fff;text-shadow:0 0 12px rgba(255,90,74,.6)}
+  #msg{position:absolute;left:50%;top:20%;transform:translateX(-50%);text-align:center;font:800 15px/1.4 system-ui;
+    color:#fff;text-shadow:0 2px 10px #000;opacity:0;transition:opacity .25s;max-width:80vw}
+  #hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 16px);transform:translateX(-50%);
+    background:rgba(7,22,13,.8);border:1px solid rgba(182,255,46,.4);border-radius:12px;padding:9px 14px;
+    color:#eafff0;font-size:12.5px;opacity:0;transition:opacity .2s;text-align:center}
+  #hint b{color:#ffcf4a}
+  /* mobile controls */
+  .touch{position:absolute;pointer-events:auto;z-index:6;display:none}
+  #stick{left:20px;bottom:calc(env(safe-area-inset-bottom) + 22px);width:128px;height:128px;border-radius:50%;
+    background:rgba(7,22,13,.5);border:1px solid rgba(120,220,120,.28)}
+  #stick .nub{position:absolute;left:44px;top:44px;width:40px;height:40px;border-radius:50%;
+    background:rgba(182,255,46,.55);border:1px solid #b6ff2e}
+  #btns{right:20px;bottom:calc(env(safe-area-inset-bottom) + 26px);display:flex;flex-direction:column;gap:12px;align-items:center}
+  .abtn{width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font:900 12px/1.1 system-ui;text-align:center;background:rgba(7,22,13,.6);border:2px solid rgba(182,255,46,.4);color:#eafff0}
+  #btnAttack{border-color:rgba(255,90,74,.7);color:#ff8a7a;font-size:22px}
+  .touch-on .touch{display:flex}
+  /* start / death overlay */
+  #ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;background:radial-gradient(120% 90% at 50% 10%,rgba(20,60,30,.6),rgba(4,10,6,.95))}
+  #ov h1{font:900 clamp(34px,9vw,72px)/.95 Arial;margin:0 0 6px;letter-spacing:1px;
+    background:linear-gradient(180deg,#fff,#b6ff2e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  #ov .blood{color:#ff5a4a;-webkit-text-fill-color:#ff5a4a}
+  #ov p{color:#9fd3af;max-width:520px;font-size:15px;line-height:1.6;margin:.3rem 0}
+  #ov .keys{margin:14px 0;color:#cfe6b6;font:700 13px/1.9 ui-monospace,Menlo,monospace}
+  #ov button{margin-top:14px;padding:15px 34px;border-radius:14px;border:none;cursor:pointer;
+    font:900 17px system-ui;background:linear-gradient(90deg,#b6ff2e,#6be000);color:#06110a;box-shadow:0 8px 30px rgba(107,224,0,.4)}
+  #ov .sub{margin-top:16px;font-size:12px;color:#6f8a5e}
+  #ov a{color:#b6ff2e}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="bars">
+    <div class="bar"><div class="lab"><span>❤ Health</span><span id="v-hp">100</span></div><div class="track"><div class="fill f-hp" id="b-hp"></div></div></div>
+    <div class="bar"><div class="lab"><span>🌿 Hunger</span><span id="v-food">100</span></div><div class="track"><div class="fill f-food" id="b-food"></div></div></div>
+    <div class="bar"><div class="lab"><span>💧 Thirst</span><span id="v-water">100</span></div><div class="track"><div class="fill f-water" id="b-water"></div></div></div>
+    <div class="bar"><div class="lab"><span>⚡ Energy</span><span id="v-energy">100</span></div><div class="track"><div class="fill f-energy" id="b-energy"></div></div></div>
+  </div>
+  <div class="topR">
+    <div class="chip" id="kills">KILLS <span class="big" id="v-kills">0</span></div>
+    <div class="chip">🦌 <b id="v-herd">0</b> stags roam</div>
+  </div>
+  <div id="msg"></div>
+  <div id="hint"></div>
+</div>
+<div id="stick" class="touch"><div class="nub"></div></div>
+<div id="btns" class="touch">
+  <div class="abtn" id="btnAct">EAT<br>DRINK</div>
+  <div class="abtn" id="btnAttack">⚔</div>
+</div>
+
+<div id="ov">
+  <h1>STAG <span class="blood">WARS</span></h1>
+  <p>An open forest. A rival herd. Only the strongest antlers survive.</p>
+  <p><b style="color:#eafff0">Stay alive:</b> graze on grass 🌿, drink from ponds 💧, sleep 😴 to recover energy. Let hunger or thirst hit zero and your health bleeds out.</p>
+  <div class="keys" id="ov-keys">
+    <span>WASD / drag — move &amp; look</span><br>
+    <span>SPACE / ⚔ — charge &amp; gore</span><br>
+    <span>E — eat grass / drink water</span> · <span>Z — sleep</span>
+  </div>
+  <button id="startBtn">ENTER THE FOREST</button>
+  <div class="sub">Part of <a href="/">$STAGWIFHOOD</a> · runs 100% in your browser</div>
+</div>
+
+<script type="module">
+import * as THREE from './assets/vendor/three.module.js';
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const rand = (a,b) => a + Math.random()*(b-a);
+const WORLD = 220; // half-extent of the play field
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8fb9d6);
+scene.fog = new THREE.Fog(0x9ec3d6, 90, 300);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+
+const hemi = new THREE.HemisphereLight(0xcfeaff, 0x314a22, 0.9); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2d0, 1.15);
+sun.position.set(60,120,40); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048); sun.shadow.camera.near=10; sun.shadow.camera.far=400;
+sun.shadow.camera.left=-160; sun.shadow.camera.right=160; sun.shadow.camera.top=160; sun.shadow.camera.bottom=-160;
+scene.add(sun); scene.add(sun.target);
+
+// ---------- ground ----------
+const groundGeo = new THREE.PlaneGeometry(WORLD*2, WORLD*2, 64, 64);
+groundGeo.rotateX(-Math.PI/2);
+const pos = groundGeo.attributes.position;
+for (let i=0;i<pos.count;i++){ const x=pos.getX(i), z=pos.getZ(i);
+  const h = Math.sin(x*0.03)*Math.cos(z*0.028)*2.2 + Math.sin(x*0.011+z*0.013)*3.0;
+  pos.setY(i, h); }
+groundGeo.computeVertexNormals();
+const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ color:0x3f7a34, roughness:1 }));
+ground.receiveShadow = true; scene.add(ground);
+function groundH(x,z){ return Math.sin(x*0.03)*Math.cos(z*0.028)*2.2 + Math.sin(x*0.011+z*0.013)*3.0; }
+
+// ---------- scatter: trees, grass, ponds ----------
+const trees = [];
+function addTree(x,z){
+  const g = new THREE.Group(); const t = rand(3,6);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.6,t,6), new THREE.MeshStandardMaterial({color:0x5b3a1e,roughness:1}));
+  trunk.position.y=t/2; trunk.castShadow=true; g.add(trunk);
+  for(let k=0;k<3;k++){ const s=rand(3.4,5)- k*0.7;
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(s,s*1.5,7), new THREE.MeshStandardMaterial({color:k%2?0x2e5e26:0x357029,roughness:1}));
+    cone.position.y=t + k*2.4; cone.castShadow=true; g.add(cone); }
+  g.position.set(x, groundH(x,z), z); scene.add(g); trees.push({x,z,r:1.5});
+}
+const ponds = [];
+function addPond(x,z,r){
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r,28), new THREE.MeshStandardMaterial({color:0x2f7fd6,roughness:0.25,metalness:0.2,transparent:true,opacity:0.9}));
+  m.rotateX(-Math.PI/2); m.position.set(x, groundH(x,z)+0.15, z); scene.add(m);
+  ponds.push({x,z,r});
+}
+const grassPatches = [];
+const grassGeo = new THREE.ConeGeometry(0.09,0.9,4);
+const grassMat = new THREE.MeshStandardMaterial({color:0x7bd23a,roughness:1});
+function addGrass(x,z){
+  const n = 26; const inst = new THREE.InstancedMesh(grassGeo, grassMat, n); const d=new THREE.Object3D();
+  for(let i=0;i<n;i++){ const px=x+rand(-2.4,2.4), pz=z+rand(-2.4,2.4);
+    d.position.set(px, groundH(px,pz)+0.4, pz); d.rotation.y=rand(0,6.28); d.scale.setScalar(rand(0.7,1.5)); d.updateMatrix(); inst.setMatrixAt(i,d.matrix);}
+  inst.receiveShadow=true; scene.add(inst); grassPatches.push({x,z,r:3,mesh:inst,full:true});
+}
+// place world
+for(let i=0;i<150;i++){ const x=rand(-WORLD,WORLD),z=rand(-WORLD,WORLD); if(Math.hypot(x,z)>10) addTree(x,z); }
+for(let i=0;i<9;i++) addPond(rand(-WORLD+30,WORLD-30), rand(-WORLD+30,WORLD-30), rand(6,12));
+for(let i=0;i<70;i++) addGrass(rand(-WORLD,WORLD), rand(-WORLD,WORLD));
+
+// ---------- stag model ----------
+function makeStag(color, scale=1){
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(1.05,2.2,4,10), new THREE.MeshStandardMaterial({color,roughness:0.9}));
+  body.rotation.z=Math.PI/2; body.position.y=2.3; body.castShadow=true; g.add(body);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.75,2.1,8), new THREE.MeshStandardMaterial({color,roughness:0.9}));
+  neck.position.set(1.9,3.1,0); neck.rotation.z=-0.7; neck.castShadow=true; g.add(neck);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.85,0.9), new THREE.MeshStandardMaterial({color,roughness:0.9}));
+  head.position.set(2.9,3.75,0); head.castShadow=true; g.add(head);
+  // antlers
+  const am = new THREE.MeshStandardMaterial({color:0xd9c39a,roughness:0.7});
+  for(const s of [-1,1]){ const a=new THREE.Group();
+    const main=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.14,1.7,5),am); main.position.y=0.85; a.add(main);
+    for(const ty of [0.5,1.0,1.5]){ const tine=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.08,0.7,5),am);
+      tine.position.set(0.25,ty,0); tine.rotation.z=-0.7; a.add(tine); }
+    a.position.set(3.1,4.15,s*0.32); a.rotation.x=s*0.35; a.rotation.z=-0.15; g.add(a);
+  }
+  // legs
+  const lm=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(0.7),roughness:1});
+  const legs=[];
+  for(const [lx,lz] of [[1.4,0.7],[1.4,-0.7],[-1.4,0.7],[-1.4,-0.7]]){
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.16,2.3,6),lm); leg.position.set(lx,1.15,lz); leg.castShadow=true; g.add(leg); legs.push(leg);
+  }
+  // tail
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.28,0.7,6),new THREE.MeshStandardMaterial({color:0xf4ead8})); tail.position.set(-2.0,2.7,0); tail.rotation.z=0.8; g.add(tail);
+  g.scale.setScalar(scale); g.userData.legs=legs; return g;
+}
+
+// ---------- player ----------
+const player = makeStag(0x8a5a30, 1.0); scene.add(player);
+const P = { x:0, z:0, yaw:0, vx:0, vz:0, speed:0, hp:100, food:100, water:100, energy:100, kills:0, dead:false, atk:0, hurt:0, sleeping:0 };
+let camYaw = 0, camPitch = 0.35, camDist = 16;
+
+// ---------- enemy herd ----------
+const enemies = [];
+function spawnEnemy(){
+  const col = new THREE.Color().setHSL(rand(0.03,0.09), rand(0.4,0.7), rand(0.22,0.4)).getHex();
+  const s = makeStag(col, rand(0.85,1.15)); scene.add(s);
+  let x,z; do { x=rand(-WORLD+20,WORLD-20); z=rand(-WORLD+20,WORLD-20); } while(Math.hypot(x-P.x,z-P.z)<50);
+  enemies.push({ mesh:s, x, z, yaw:rand(0,6.28), hp:100, state:'wander', t:rand(0,3), atk:0, hurt:0, wanderDir:rand(0,6.28), aggro:rand(0.5,1) });
+}
+function reseed(n){ for(let i=0;i<n;i++) spawnEnemy(); }
+reseed(8);
+
+// ---------- blood particles ----------
+const MAXB=400; const bGeo=new THREE.BufferGeometry();
+const bPos=new Float32Array(MAXB*3), bVel=new Float32Array(MAXB*3), bLife=new Float32Array(MAXB);
+bGeo.setAttribute('position', new THREE.BufferAttribute(bPos,3));
+const blood=new THREE.Points(bGeo, new THREE.PointsMaterial({color:0xcc1414,size:0.5,transparent:true,opacity:0.95}));
+blood.frustumCulled=false; scene.add(blood); let bHead=0;
+function splatter(x,y,z,n=26){ for(let i=0;i<n;i++){ const j=bHead%MAXB; bHead++;
+  bPos[j*3]=x; bPos[j*3+1]=y; bPos[j*3+2]=z;
+  bVel[j*3]=rand(-6,6); bVel[j*3+1]=rand(2,9); bVel[j*3+2]=rand(-6,6); bLife[j]=rand(0.5,1.1);} }
+function updateBlood(dt){ for(let i=0;i<MAXB;i++){ if(bLife[i]>0){ bLife[i]-=dt;
+  bVel[i*3+1]-=22*dt; bPos[i*3]+=bVel[i*3]*dt; bPos[i*3+1]+=bVel[i*3+1]*dt; bPos[i*3+2]+=bVel[i*3+2]*dt;
+  if(bPos[i*3+1]<0.1){bPos[i*3+1]=0.1;bVel[i*3+1]=0;bVel[i*3]*=0.6;bVel[i*3+2]*=0.6;} } else { bPos[i*3+1]=-999; } }
+  bGeo.attributes.position.needsUpdate=true; }
+
+// ---------- input ----------
+const keys = {};
+addEventListener('keydown', e=>{ keys[e.code]=true;
+  if(e.code==='Space'){ attack(); e.preventDefault(); }
+  if(e.code==='KeyE') interact();
+  if(e.code==='KeyZ') sleep();
+});
+addEventListener('keyup', e=>{ keys[e.code]=false; });
+let dragging=false, lastX=0, lastY=0;
+renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointerup', ()=> dragging=false);
+addEventListener('pointermove', e=>{ if(!dragging) return; camYaw -= (e.clientX-lastX)*0.005; camPitch = clamp(camPitch+(e.clientY-lastY)*0.004,0.05,1.2); lastX=e.clientX; lastY=e.clientY; });
+addEventListener('wheel', e=>{ camDist = clamp(camDist + e.deltaY*0.02, 8, 34); });
+
+// mobile
+const isTouch = matchMedia('(pointer:coarse)').matches;
+let joy = {x:0,y:0,active:false};
+if(isTouch){ document.body.classList.add('touch-on');
+  const st=$('stick'), nub=st.querySelector('.nub'); let sid=null;
+  st.addEventListener('touchstart', e=>{ sid=e.changedTouches[0].identifier; joy.active=true; }, {passive:true});
+  st.addEventListener('touchmove', e=>{ for(const t of e.changedTouches){ if(t.identifier!==sid) continue;
+    const r=st.getBoundingClientRect(); let dx=t.clientX-(r.left+64), dy=t.clientY-(r.top+64);
+    const d=Math.min(48,Math.hypot(dx,dy)); const a=Math.atan2(dy,dx); dx=Math.cos(a)*d; dy=Math.sin(a)*d;
+    nub.style.transform=`translate(${dx}px,${dy}px)`; joy.x=dx/48; joy.y=dy/48; } }, {passive:true});
+  const end=()=>{ joy.x=joy.y=0; joy.active=false; nub.style.transform=''; sid=null; };
+  st.addEventListener('touchend', end); st.addEventListener('touchcancel', end);
+  $('btnAttack').addEventListener('touchstart', e=>{ e.preventDefault(); attack(); }, {passive:false});
+  $('btnAct').addEventListener('touchstart', e=>{ e.preventDefault(); interact(); }, {passive:false});
+}
+
+// ---------- actions ----------
+function msg(t,ms=1400){ const m=$('msg'); m.textContent=t; m.style.opacity=1; clearTimeout(msg._t); msg._t=setTimeout(()=>m.style.opacity=0,ms); }
+function attack(){ if(P.dead||P.sleeping) return; if(P.atk>0) return; P.atk=0.45;
+  // lunge + hit enemies in a cone ahead
+  const fx=Math.sin(P.yaw), fz=Math.cos(P.yaw);
+  for(const e of enemies){ const dx=e.x-P.x, dz=e.z-P.z; const d=Math.hypot(dx,dz);
+    if(d<7){ const dot=(dx/d)*fx+(dz/d)*fz; if(dot>0.4){ e.hp-=rand(22,34); e.hurt=0.4; e.state='flee'; e.fleeT=2.5;
+      splatter(e.x, 3, e.z, 30);
+      if(e.hp<=0){ kill(e); } } } }
+}
+function interact(){ if(P.dead||P.sleeping) return;
+  for(const g of grassPatches){ if(g.full && Math.hypot(g.x-P.x,g.z-P.z)<g.r+2){ P.food=clamp(P.food+34,0,100); g.full=false; g.mesh.visible=false; msg('🌿 Grazed'); setTimeout(()=>{g.full=true;g.mesh.visible=true;},14000); return; } }
+  for(const p of ponds){ if(Math.hypot(p.x-P.x,p.z-P.z)<p.r+3){ P.water=clamp(P.water+40,0,100); msg('💧 Drank'); return; } }
+  msg('Nothing here — find 🌿 grass or 💧 water');
+}
+function sleep(){ if(P.dead) return; if(P.sleeping){return;} if(P.speed>0.5){ msg('Stop moving to sleep'); return; }
+  P.sleeping=3.0; msg('😴 Sleeping…',3000); }
+function kill(e){ splatter(e.x,3,e.z,60); scene.remove(e.mesh); const i=enemies.indexOf(e); if(i>=0) enemies.splice(i,1);
+  P.kills++; $('v-kills').textContent=P.kills; msg('☠ You gored a rival! ('+P.kills+')');
+  setTimeout(spawnEnemy, 4000); if(P.kills%5===0) spawnEnemy(); }
+function die(){ P.dead=true; const ov=$('ov'); ov.style.display='flex';
+  ov.querySelector('h1').innerHTML='YOU <span class="blood">DIED</span>';
+  ov.querySelector('p').textContent='The forest claims another. Kills this run: '+P.kills+'.';
+  ov.querySelector('.keys').style.display='none';
+  $('startBtn').textContent='RESPAWN'; }
+
+// ---------- start / respawn ----------
+let running=false;
+$('startBtn').onclick=()=>{ $('ov').style.display='none'; if(!running){ running=true; loop(); }
+  // reset
+  Object.assign(P,{x:0,z:0,yaw:0,vx:0,vz:0,speed:0,hp:100,food:100,water:100,energy:100,kills:0,dead:false,atk:0,hurt:0,sleeping:0});
+  $('v-kills').textContent=0;
+  for(const e of enemies) scene.remove(e.mesh); enemies.length=0; reseed(8);
+};
+
+// ---------- HUD ----------
+function setBar(id,v){ $('b-'+id).style.width=v+'%'; $('v-'+id).textContent=Math.round(v); }
+
+// ---------- main loop ----------
+const clock=new THREE.Clock();
+function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),0.05);
+  if(!P.dead){
+    // sleeping: fast-forward, recover energy
+    if(P.sleeping>0){ P.sleeping-=dt; P.energy=clamp(P.energy+30*dt,0,100); P.hp=clamp(P.hp+6*dt,0,100);
+      P.food=clamp(P.food-1.2*dt,0,100); P.water=clamp(P.water-1.2*dt,0,100); }
+    else {
+      // movement input (camera-relative)
+      let ix=0, iz=0;
+      if(keys.KeyW||keys.ArrowUp) iz-=1; if(keys.KeyS||keys.ArrowDown) iz+=1;
+      if(keys.KeyA||keys.ArrowLeft) ix-=1; if(keys.KeyD||keys.ArrowRight) ix+=1;
+      if(joy.active){ ix+=joy.x; iz+=joy.y; }
+      const mag=Math.hypot(ix,iz);
+      const tired = P.energy<=0 ? 0.5 : 1;
+      if(mag>0.1){ const ang=Math.atan2(ix,-iz)+camYaw; const sp=(keys.ShiftLeft?9:6)*tired;
+        P.vx=Math.sin(ang)*sp*Math.min(mag,1); P.vz=Math.cos(ang)*sp*Math.min(mag,1);
+        P.yaw=ang; P.speed=sp*Math.min(mag,1);
+        P.energy=clamp(P.energy-(keys.ShiftLeft?5:2.2)*dt,0,100);
+      } else { P.vx*=0.8; P.vz*=0.8; P.speed*=0.8; if(P.energy<100) P.energy=clamp(P.energy+3.5*dt,0,100); }
+      P.x=clamp(P.x+P.vx*dt,-WORLD,WORLD); P.z=clamp(P.z+P.vz*dt,-WORLD,WORLD);
+    }
+    // stat decay
+    P.food=clamp(P.food-1.5*dt,0,100); P.water=clamp(P.water-2.0*dt,0,100);
+    if(P.food<=0||P.water<=0) P.hp=clamp(P.hp-6*dt,0,100);
+    else if(P.hp<100 && P.food>30 && P.water>30) P.hp=clamp(P.hp+1.5*dt,0,100);
+    if(P.atk>0) P.atk-=dt; if(P.hurt>0) P.hurt-=dt;
+    if(P.hp<=0) die();
+  }
+
+  // place player
+  const py=groundH(P.x,P.z);
+  player.position.set(P.x,py,P.z); player.rotation.y = P.yaw - Math.PI/2 + (P.atk>0?Math.sin(P.atk*14)*0.15:0);
+  // simple leg bob
+  const bob=Math.sin(performance.now()*0.012)*Math.min(P.speed*0.05,0.4);
+  player.userData.legs.forEach((l,i)=> l.rotation.x = Math.sin(performance.now()*0.012 + i*1.6)*Math.min(P.speed*0.06,0.5));
+  player.position.y = py + Math.abs(bob)*0.3;
+
+  // enemies AI
+  for(const e of enemies){ e.t-=dt; if(e.atk>0)e.atk-=dt; if(e.hurt>0)e.hurt-=dt;
+    const dx=P.x-e.x, dz=P.z-e.z, d=Math.hypot(dx,dz);
+    if(e.state==='flee'){ e.fleeT-=dt; const a=Math.atan2(-dx,-dz); e.yaw=a; e.x+=Math.sin(a)*8*dt; e.z+=Math.cos(a)*8*dt; if(e.fleeT<=0&&e.hp>0) e.state='wander'; }
+    else if(d<38 && d>4.5){ e.state='chase'; const a=Math.atan2(dx,dz); e.yaw=a; e.x+=Math.sin(a)*4.5*e.aggro*dt; e.z+=Math.cos(a)*4.5*e.aggro*dt; }
+    else if(d<=4.5){ e.state='fight'; const a=Math.atan2(dx,dz); e.yaw=a;
+      if(e.atk<=0){ e.atk=1.4; if(!P.dead && !P.sleeping){ P.hp=clamp(P.hp-rand(6,12),0,100); P.hurt=0.4; splatter(P.x,3,P.z,18); } } }
+    else { e.state='wander'; e.wanderDir+=rand(-1,1)*dt; e.yaw=e.wanderDir; e.x+=Math.sin(e.wanderDir)*2.2*dt; e.z+=Math.cos(e.wanderDir)*2.2*dt; }
+    e.x=clamp(e.x,-WORLD,WORLD); e.z=clamp(e.z,-WORLD,WORLD);
+    const ey=groundH(e.x,e.z); e.mesh.position.set(e.x,ey,e.z); e.mesh.rotation.y=e.yaw-Math.PI/2;
+    e.mesh.userData.legs.forEach((l,i)=> l.rotation.x=Math.sin(performance.now()*0.012+i*1.6+e.x)* (e.state==='wander'?0.25:0.5));
+    e.mesh.scale.setScalar((e.hurt>0?1.06:1) * (e.mesh.userData._s||(e.mesh.userData._s=e.mesh.scale.x)));
+  }
+  $('v-herd').textContent=enemies.length;
+
+  updateBlood(dt);
+
+  // camera follow
+  const cx=P.x - Math.sin(camYaw)*Math.cos(camPitch)*camDist;
+  const cz=P.z - Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  const cy=py + 6 + Math.sin(camPitch)*camDist;
+  camera.position.lerp(new THREE.Vector3(cx,cy,cz), 0.12);
+  camera.lookAt(P.x, py+3.5, P.z);
+  sun.target.position.set(P.x,0,P.z); sun.position.set(P.x+60,120,P.z+40);
+
+  // HUD + hint
+  setBar('hp',P.hp); setBar('food',P.food); setBar('water',P.water); setBar('energy',P.energy);
+  let near=''; for(const g of grassPatches){ if(g.full&&Math.hypot(g.x-P.x,g.z-P.z)<g.r+2){ near='Press <b>E</b> to graze 🌿'; break; } }
+  if(!near) for(const p of ponds){ if(Math.hypot(p.x-P.x,p.z-P.z)<p.r+3){ near='Press <b>E</b> to drink 💧'; break; } }
+  const h=$('hint'); if(near&&!P.sleeping){ h.innerHTML=near; h.style.opacity=1; } else h.style.opacity=0;
+
+  renderer.render(scene,camera);
+}
+
+addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+</script>
+</body>
+</html>
