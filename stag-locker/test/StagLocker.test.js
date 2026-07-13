@@ -546,9 +546,10 @@ describe("StagLocker — vesting (cliff + linear, partial withdrawals)", () => {
     // end in the past
     await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 100n, t + 100, t))
       .to.be.revertedWithCustomError(locker, "BadUnlockTime");
-    // start in the past
+    // start in the past is CLAMPED to now (not rejected) — vesting simply begins at creation,
+    // so a literal "now" from the UI (which lands a few seconds past by mining time) still works.
     await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 100n, t - 100, t + DAY))
-      .to.be.revertedWithCustomError(locker, "BadUnlockTime");
+      .to.not.be.reverted;
     // end <= start
     await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 100n, t + 200, t + 200))
       .to.be.revertedWithCustomError(locker, "BadUnlockTime");

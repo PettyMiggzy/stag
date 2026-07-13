@@ -188,7 +188,10 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (token == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (end <= block.timestamp) revert BadUnlockTime(); // must end in the future
-        if (start < block.timestamp) revert BadUnlockTime(); // vesting can't start in the past
+        // "start now" is the common case, but the tx mines a few seconds after the UI computed
+        // `now`, so a literal now-value would be slightly in the past. Clamp any past start up to
+        // the current block instead of reverting — vesting simply begins at creation.
+        if (start < block.timestamp) start = uint64(block.timestamp);
         if (end <= start) revert BadUnlockTime();            // real (positive-length) schedule
         _takeFee();
         _burnFee(msg.sender, uint256(end) - block.timestamp); // burn on the full term
@@ -263,7 +266,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     }
 
     /// @notice Hand a lock to a new owner (e.g. to a multisig). Irreversible for old owner.
-    function transferLockOwnership(uint256 id, address newOwner) external {
+    function transferLockOwnership(uint256 id, address newOwner) external nonReentrant {
         Lock storage l = _locks[id];
         if (l.owner != msg.sender) revert NotLockOwner();
         if (l.withdrawn) revert AlreadyWithdrawn();
@@ -345,7 +348,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
 
     /// @notice Attach display-only trust metadata (name + uri) to a lock for the verify UI.
     ///         Owner-only. EVENT-ONLY: stores nothing and affects NO fund logic whatsoever.
-    function labelLock(uint256 id, string calldata name, string calldata uri) external {
+    function labelLock(uint256 id, string calldata name, string calldata uri) external nonReentrant {
         Lock storage l = _locks[id];
         if (l.owner != msg.sender) revert NotLockOwner();
         emit LockLabeled(id, name, uri);
@@ -487,6 +490,9 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///         `feeExemptToken`, so set the exemption first. Waived for exempt holders.
     function setBurnConfig(uint256 perPeriod, uint256 period) external onlyOwner {
         if (perPeriod > 0 && period == 0) revert ZeroAmount(); // avoid div-by-zero when enabled
+        // Enabling the burn requires a burn token to exist, else _burnFee would call
+        // safeTransferFrom on address(0) and revert EVERY new lock. Set the exemption first.
+        if (perPeriod > 0 && address(feeExemptToken) == address(0)) revert ZeroAddress();
         burnPerPeriod = perPeriod;
         burnPeriod = period;
         emit BurnConfigChanged(perPeriod, period);
@@ -521,7 +527,9 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///         disabled, else `burnPerPeriod * durationSecs / burnPeriod`. The UI reads this and
     ///         prompts a $STAG approval for that amount.
     function burnFor(address who, uint256 durationSecs) public view returns (uint256) {
-        if (burnPerPeriod == 0 || burnPeriod == 0 || _isExempt(who)) return 0;
+        // Fail-safe: with no burn token configured, burning is a no-op (locks stay creatable)
+        // rather than reverting on a safeTransferFrom to address(0). Never fails custody-open.
+        if (burnPerPeriod == 0 || burnPeriod == 0 || address(feeExemptToken) == address(0) || _isExempt(who)) return 0;
         uint256 amt = (burnPerPeriod * durationSecs) / burnPeriod;
         if (burnCap > 0 && amt > burnCap) amt = burnCap; // clamp to the per-action cap
         return amt;
