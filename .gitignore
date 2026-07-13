@@ -25,8 +25,9 @@ node_modules/
 # splash intro video (intentional)
 !assets/media/*.mp4
 
-# splash intro video (intentional)
-!assets/media/*.mp4
+# locker hero video (intentional)
+!brand/locker-hero.mp4
+!stag-locker/public/brand/locker-hero.mp4
 
 # solidity toolchain
 contracts/node_modules/
