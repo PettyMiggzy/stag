@@ -27,10 +27,50 @@ contract MockFeeToken is ERC20 {
 }
 
 /// @dev Stand-in for the Uniswap V3 NonfungiblePositionManager (just an ERC-721).
+///      Adds a mock `collect` that pays out preset ERC-20 fees to the recipient, so the
+///      locker's collectV3Fees (fees to owner, position untouched) can be tested.
 contract MockPositionManager is ERC721 {
     uint256 public nextId;
+    // Preloaded "swap fee" payout per tokenId, paid in these mock ERC-20s on collect().
+    MockERC20 public feeToken0;
+    MockERC20 public feeToken1;
+    mapping(uint256 => uint256) public feesOwed0;
+    mapping(uint256 => uint256) public feesOwed1;
+
+    struct CollectParams {
+        uint256 tokenId;
+        address recipient;
+        uint128 amount0Max;
+        uint128 amount1Max;
+    }
+
     constructor() ERC721("Position", "POS") {}
     function mint(address to) external returns (uint256 id) { id = nextId++; _mint(to, id); }
+
+    /// @dev Configure the fee tokens and mint them to this manager so collect() can pay out.
+    function setFeeTokens(address t0, address t1) external {
+        feeToken0 = MockERC20(t0);
+        feeToken1 = MockERC20(t1);
+    }
+    function setFeesOwed(uint256 tokenId, uint256 a0, uint256 a1) external {
+        feesOwed0[tokenId] = a0;
+        feesOwed1[tokenId] = a1;
+        if (a0 > 0) feeToken0.mint(address(this), a0);
+        if (a1 > 0) feeToken1.mint(address(this), a1);
+    }
+
+    /// @dev Pays the owed fees (capped by amountMax) to `recipient`, mirroring the real
+    ///      NPM.collect. The ERC-721 owner is NEVER changed — collecting can't unlock.
+    function collect(CollectParams calldata p) external returns (uint256 amount0, uint256 amount1) {
+        amount0 = feesOwed0[p.tokenId];
+        if (amount0 > p.amount0Max) amount0 = p.amount0Max;
+        amount1 = feesOwed1[p.tokenId];
+        if (amount1 > p.amount1Max) amount1 = p.amount1Max;
+        feesOwed0[p.tokenId] -= amount0;
+        feesOwed1[p.tokenId] -= amount1;
+        if (amount0 > 0) feeToken0.transfer(p.recipient, amount0);
+        if (amount1 > 0) feeToken1.transfer(p.recipient, amount1);
+    }
 }
 
 /// @dev A contract that REJECTS all incoming ETH. Used as a hostile feeRecipient to

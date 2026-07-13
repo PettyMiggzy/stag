@@ -45,8 +45,10 @@
   button:disabled{opacity:.45;cursor:not-allowed}
   .wallet{font:600 12px/1 var(--mono);color:var(--mut)}
   .wallet b{color:var(--teal)}
-  .hero{position:relative;height:clamp(220px,34vh,360px);overflow:hidden;border-bottom:1px solid var(--line)}
-  .hero img,.hero video{width:100%;height:100%;object-fit:cover;object-position:center 42%;display:block}
+  .hero{position:relative;height:clamp(240px,44vw,520px);overflow:hidden;border-bottom:1px solid var(--line);background:#05080a}
+  .hero img{width:100%;height:100%;object-fit:cover;object-position:center 42%;display:block}
+  /* show the ENTIRE video (no crop) — contain letterboxes against the dark hero bg */
+  .hero video{width:100%;height:100%;object-fit:contain;display:block}
   .hero .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 20px;
     background:linear-gradient(0deg,rgba(6,10,6,.92),transparent);
     font:600 13px/1.4 var(--mono);color:var(--ink)}
@@ -153,6 +155,11 @@
   .bar .fill{height:100%;border-radius:999px;width:0%;transition:width .6s ease;
     background:linear-gradient(90deg,var(--acc-dim),var(--acc));box-shadow:0 0 12px rgba(158,244,24,.5)}
   .bar .fill.full{background:linear-gradient(90deg,var(--gold),var(--acc))}
+  .bar .fill.vest{background:linear-gradient(90deg,var(--teal),var(--acc));box-shadow:0 0 12px rgba(55,214,196,.5)}
+  .vestline{position:relative;z-index:1;margin:-4px 0 12px;font:600 12px/1.4 var(--mono);color:var(--teal)}
+  .vestline b{color:var(--ink)}
+  .vesttag{font:600 9.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);
+    border:1px solid var(--line);border-radius:999px;padding:4px 8px}
 
   /* ─── shareable proof summary ─────────────────────────────────────────────── */
   .proof{position:relative;overflow:hidden;border:1px solid var(--acc-dim);border-radius:14px;padding:18px;margin-bottom:14px;
@@ -231,7 +238,20 @@
         <div class="note">Position manager: <code id="pmAddr">…</code></div>
       </div>
 
-      <label>Lock duration</label>
+      <div id="releaseTypeWrap">
+        <label>Release type</label>
+        <div class="durs" id="releaseType">
+          <button type="button" data-release="cliff" class="on">Cliff (all at once)</button>
+          <button type="button" data-release="vesting">Vesting (linear release)</button>
+        </div>
+      </div>
+
+      <div id="vestStartWrap" style="display:none">
+        <label>Vesting start <span class="dim">· linear release from start → end</span></label>
+        <input id="vestStart" type="datetime-local" spellcheck="false">
+      </div>
+
+      <label id="durLabel">Lock duration</label>
       <div class="durs" id="durs">
         <button type="button" data-days="60">60 days</button>
         <button type="button" data-days="90" class="on">90 days</button>
@@ -313,19 +333,24 @@ const LOCKER_ABI = [
   "function burnPeriod() view returns (uint256)",
   "function positionManager() view returns (address)",
   "function nextLockId() view returns (uint256)",
-  "function getLock(uint256) view returns (tuple(uint8 kind,address asset,uint256 amountOrId,address owner,uint64 unlockTime,bool withdrawn))",
+  "function getLock(uint256) view returns (tuple(uint8 kind,address asset,uint256 amountOrId,address owner,uint64 unlockTime,bool withdrawn,uint64 start,uint256 released))",
   "function ownerLockIds(address) view returns (uint256[])",
   "function assetLockIds(address) view returns (uint256[])",
   "function lockTokens(address token,uint256 amount,uint64 unlockTime) payable returns (uint256)",
+  "function lockTokensVesting(address token,uint256 amount,uint64 start,uint64 end) payable returns (uint256)",
   "function lockV3Position(uint256 tokenId,uint64 unlockTime) payable returns (uint256)",
   "function extendLock(uint256 id,uint64 newUnlockTime)",
   "function topUp(uint256 id,uint256 amount)",
   "function withdraw(uint256 id)",
+  "function vestedOf(uint256 id) view returns (uint256 vested,uint256 withdrawable)",
+  "function collectV3Fees(uint256 id)",
+  "function totalLockedOf(address token,uint256 start,uint256 count) view returns (uint256)",
 ];
 const ERC20_ABI = [
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
   "function name() view returns (string)",
+  "function totalSupply() view returns (uint256)",
   "function balanceOf(address) view returns (uint256)",
   "function allowance(address,address) view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
@@ -380,6 +405,23 @@ function tick(){
     const pct=Math.max(0,Math.min(100,((now-Number(f.dataset.start))/term)*100));
     f.style.width=pct+"%";
   });
+  // vesting lines: recompute vested / withdrawable live (linear from start→end).
+  // Matches the contract's vestedOf() formula so the "% vested" ticks between claims.
+  document.querySelectorAll(".vestline[data-vs]").forEach(vl => {
+    const start=Number(vl.dataset.vs), end=Number(vl.dataset.ve), dec=Number(vl.dataset.vdec);
+    let amount, released;
+    try{ amount=BigInt(vl.dataset.vamt); released=BigInt(vl.dataset.vrel); }catch{ return; }
+    let vested;
+    if(now>=end) vested=amount; else if(now<=start||end<=start) vested=0n;
+    else vested = amount * BigInt(now-start) / BigInt(end-start);
+    const withdrawable = vested>released ? vested-released : 0n;
+    const pct = amount>0n ? Number(vested*10000n/amount)/100 : 0;
+    const sym = vl.dataset.vsym || "TOKEN";
+    vl.innerHTML = `Vested: <b>${pct.toFixed(1)}%</b> · Withdrawable now: <b>${fmtFull(ethers.formatUnits(withdrawable, dec))} ${esc(sym)}</b>`;
+    // reflect claim progress (released / amount) in the paired vesting bar
+    const bar = vl.parentElement && vl.parentElement.querySelector(".bar .fill.vest");
+    if(bar && amount>0n){ bar.style.width = (Number(released*10000n/amount)/100) + "%"; }
+  });
 }
 setInterval(tick, 1000);
 
@@ -408,9 +450,20 @@ async function loadStats(){
 
 // ─── lock duration presets ───────────────────────────────────────────────────
 let lockDays = 90; // default
+let releaseMode = "cliff"; // "cliff" | "vesting" (declared early — renderUnlockPreview reads it)
 const DAY = 86400;
 function unlockFromDuration(){ return Math.floor(Date.now()/1000) + lockDays * DAY; }
-function renderUnlockPreview(){ const el = $("unlockPreview"); if(el) el.textContent = "Unlocks " + fmtDate(unlockFromDuration()); }
+function renderUnlockPreview(){
+  const el = $("unlockPreview"); if(!el) return;
+  if(releaseMode === "vesting" && $("kind").value === "erc20"){
+    const start = vestStartUnix(), end = unlockFromDuration();
+    el.textContent = start === end
+      ? "Cliff at " + fmtDate(end) + " (start == end)"
+      : "Linear release " + fmtDate(start) + " → " + fmtDate(end);
+  } else {
+    el.textContent = "Unlocks " + fmtDate(unlockFromDuration());
+  }
+}
 document.querySelectorAll("#durs button").forEach(b => b.onclick = () => {
   lockDays = Number(b.dataset.days);
   document.querySelectorAll("#durs button").forEach(x => x.classList.toggle("on", x === b));
@@ -418,6 +471,35 @@ document.querySelectorAll("#durs button").forEach(b => b.onclick = () => {
   updateBurnPreview();      // recompute the $STAG burn cost for the newly-selected duration
 });
 renderUnlockPreview();
+
+// ─── release type: cliff (default) vs vesting (linear release) ────────────────
+// Vesting applies to ERC-20 locks: the duration presets become the vesting END,
+// and a start (defaults to now) is added. Burn is still charged on the full term
+// (end - now), exactly like a cliff of the same length — so the preview is unchanged.
+function localDatetimeValue(unix){
+  // format a unix seconds value for an <input type=datetime-local> (local tz)
+  const d = new Date(unix * 1000); const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function defaultVestStart(){ const el = $("vestStart"); if(el && !el.value) el.value = localDatetimeValue(Math.floor(Date.now()/1000)); }
+function vestStartUnix(){
+  const el = $("vestStart"); const u = el ? toUnix(el.value) : 0;
+  return (u && !Number.isNaN(u)) ? u : Math.floor(Date.now()/1000);
+}
+function applyReleaseMode(){
+  const vesting = releaseMode === "vesting";
+  const startWrap = $("vestStartWrap"), durLbl = $("durLabel");
+  if(startWrap) startWrap.style.display = vesting ? "" : "none";
+  if(durLbl) durLbl.textContent = vesting ? "Vesting end (duration from now)" : "Lock duration";
+  if(vesting) defaultVestStart();
+  renderUnlockPreview();
+}
+document.querySelectorAll("#releaseType button").forEach(b => b.onclick = () => {
+  releaseMode = b.dataset.release;
+  document.querySelectorAll("#releaseType button").forEach(x => x.classList.toggle("on", x === b));
+  applyReleaseMode();
+});
+$("vestStart").oninput = renderUnlockPreview;
 
 // ─── $STAG burn-cost preview + helpers ───────────────────────────────────────
 // Non-exempt users BURN $STAG (scaled by lock duration) to create/extend a lock.
@@ -568,6 +650,13 @@ $("kind").onchange = () => {
   $("v3Fields").style.display = v3 ? "" : "none";
   $("erc20Fields").style.display = v3 ? "none" : "";
   $("approveBtn").textContent = v3 ? "1 · Approve NFT" : "1 · Approve";
+  // vesting is ERC-20 only — hide the release-type toggle and force cliff for V3 LP
+  $("releaseTypeWrap").style.display = v3 ? "none" : "";
+  if(v3){
+    releaseMode = "cliff";
+    document.querySelectorAll("#releaseType button").forEach(x => x.classList.toggle("on", x.dataset.release === "cliff"));
+  }
+  applyReleaseMode();
 };
 
 // ─── lock flow ─────────────────────────────────────────────────────────────
@@ -627,9 +716,17 @@ $("lockBtn").onclick = async () => {
       const t = new ethers.Contract(token, ERC20_ABI, read);
       const dec = await t.decimals(); const amount = ethers.parseUnits($("amount").value.trim() || "0", dec);
       if(amount <= 0n) return msg(el,"Enter an amount.","err");
-      if(!await ensureStagAllowance(el, burn)) return;   // verify $STAG balance + approve burn
-      msg(el,"Locking… confirm in wallet.","info");
-      const tx = await c.lockTokens(token, amount, unlock, { value: fee });
+      if(!await ensureStagAllowance(el, burn)) return;   // verify $STAG balance + approve burn (same for vesting)
+      let tx;
+      if(releaseMode === "vesting"){
+        const start = vestStartUnix();                   // vesting start (defaults to now)
+        if(start >= unlock) return msg(el,"Vesting start must be before the end (pick a longer duration).","err");
+        msg(el,"Locking (vesting)… confirm in wallet.","info");
+        tx = await c.lockTokensVesting(token, amount, start, unlock, { value: fee });
+      } else {
+        msg(el,"Locking… confirm in wallet.","info");
+        tx = await c.lockTokens(token, amount, unlock, { value: fee });
+      }
       await tx.wait(); msg(el,"Locked ✓  tx " + short(tx.hash),"ok");
     } else {
       const id = $("tokenId").value.trim(); const unlock = unlockFromDuration();

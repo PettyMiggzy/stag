@@ -7,6 +7,21 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+/// @notice Minimal Uniswap V3 NonfungiblePositionManager interface — ONLY `collect`.
+///         Deliberately does NOT expose decreaseLiquidity/burn/transfer, so the locker
+///         can sweep accrued swap fees to the lock owner without any path to unlock,
+///         reduce, or move the underlying position.
+interface INonfungiblePositionManager {
+    struct CollectParams {
+        uint256 tokenId;
+        address recipient;
+        uint128 amount0Max;
+        uint128 amount1Max;
+    }
+    function collect(CollectParams calldata params) external returns (uint256 amount0, uint256 amount1);
+}
 
 /**
  * @title StagLocker
@@ -51,8 +66,10 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         address asset;      // ERC20 token, or the V3 position manager (NFT contract)
         uint256 amountOrId; // ERC20: locked amount (actual received) · V3: the tokenId
         address owner;      // the only account that can withdraw / manage the lock
-        uint64 unlockTime;  // unix seconds; withdrawable at or after this time
-        bool withdrawn;     // true once claimed
+        uint64 unlockTime;  // unix seconds; for vesting this is the vesting END
+        bool withdrawn;     // true once fully claimed
+        uint64 start;       // vesting start; for a pure cliff (and V3) start == unlockTime
+        uint256 released;   // ERC20 vesting: cumulative amount already withdrawn
     }
 
     /// @notice Uniswap V3 NonfungiblePositionManager for this chain (LP-NFT locks).
@@ -83,6 +100,11 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     uint256 public burnPeriod;
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
+    /// @notice Optional hard cap on the $STAG burned per lock/extend action. 0 = no cap.
+    ///         Applied AFTER the duration-scaling in burnFor, so very long terms can't burn
+    ///         an unbounded amount. Does not affect the ETH fee or the exemption logic.
+    uint256 public burnCap;
+
     uint256 public nextLockId;
     mapping(uint256 => Lock) private _locks;
     mapping(address => uint256[]) private _ownerLocks; // owner => lockIds
@@ -98,7 +120,11 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     event FeesWithdrawn(address indexed to, uint256 amount);
     event FeeExemptionChanged(address token, uint256 minBalance);
     event BurnConfigChanged(uint256 burnPerPeriod, uint256 burnPeriod);
+    event BurnCapChanged(uint256 burnCap);
     event LockBurned(address indexed who, uint256 amount, uint256 durationSecs);
+    event VestingLocked(uint256 indexed id, uint64 start, uint64 end);
+    event V3FeesCollected(uint256 indexed id, address indexed owner);
+    event LockLabeled(uint256 indexed id, string name, string uri);
 
     error BadUnlockTime();
     error NotLockOwner();
@@ -143,10 +169,42 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (received == 0) revert ZeroAmount();
 
         id = nextLockId++;
-        _locks[id] = Lock(Kind.ERC20, token, received, msg.sender, unlockTime, false);
+        // Pure cliff: start == unlockTime => nothing vested until unlockTime, then all
+        // (identical behaviour to the original all-or-nothing lock).
+        _locks[id] = Lock(Kind.ERC20, token, received, msg.sender, unlockTime, false, unlockTime, 0);
         _ownerLocks[msg.sender].push(id);
         _assetLocks[token].push(id);
         emit TokenLocked(id, msg.sender, token, received, unlockTime);
+    }
+
+    /// @notice Lock ERC-20 `token` with cliff+linear vesting: nothing before `start`, then a
+    ///         straight-line release from `start` to `end`. Partial withdrawals release only
+    ///         the newly-vested portion (see withdraw/vestedOf). Fee + duration-scaled $STAG
+    ///         burn are charged on the FULL remaining term (`end - now`), like lockTokens.
+    ///         Handles fee-on-transfer tokens (vesting is computed over the amount RECEIVED).
+    function lockTokensVesting(address token, uint256 amount, uint64 start, uint64 end)
+        external payable nonReentrant returns (uint256 id)
+    {
+        if (token == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
+        if (end <= block.timestamp) revert BadUnlockTime(); // must end in the future
+        if (start < block.timestamp) revert BadUnlockTime(); // vesting can't start in the past
+        if (end <= start) revert BadUnlockTime();            // real (positive-length) schedule
+        _takeFee();
+        _burnFee(msg.sender, uint256(end) - block.timestamp); // burn on the full term
+
+        IERC20 t = IERC20(token);
+        uint256 before = t.balanceOf(address(this));
+        t.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 received = t.balanceOf(address(this)) - before; // fee-on-transfer safe
+        if (received == 0) revert ZeroAmount();
+
+        id = nextLockId++;
+        _locks[id] = Lock(Kind.ERC20, token, received, msg.sender, end, false, start, 0);
+        _ownerLocks[msg.sender].push(id);
+        _assetLocks[token].push(id);
+        emit TokenLocked(id, msg.sender, token, received, end);
+        emit VestingLocked(id, start, end);
     }
 
     /// @notice Lock a Uniswap V3 LP position NFT (`tokenId`) until `unlockTime`.
@@ -174,12 +232,21 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         if (l.withdrawn) revert AlreadyWithdrawn();
         if (newUnlockTime <= l.unlockTime) revert BadUnlockTime();
         uint256 added = uint256(newUnlockTime) - l.unlockTime; // burn only for the extra term
+        // Keep a pure-cliff lock a cliff: cliff is marked by start == unlockTime, so move start
+        // in lock-step. Otherwise extending would silently turn it into a linear-vesting lock over
+        // [oldUnlock, newUnlock] and leak funds out before the advertised new unlock. Genuine
+        // vesting locks (start < unlockTime) keep their fixed start — the tail just lengthens.
+        if (l.start == l.unlockTime) l.start = newUnlockTime;
         l.unlockTime = newUnlockTime;                          // effects before the external burn
         _burnFee(msg.sender, added);
         emit LockExtended(id, newUnlockTime);
     }
 
     /// @notice Add more of the SAME token to an existing ERC-20 lock (no fee).
+    /// @dev NOTE for VESTING locks: the top-up joins the existing schedule, so the already-elapsed
+    ///      fraction of the added amount is immediately withdrawable (it's the owner's own funds,
+    ///      fully accounted — released can never exceed amountOrId). To lock fresh funds on a fresh
+    ///      schedule, create a new lock instead of topping up a mid-vest one.
     function topUp(uint256 id, uint256 amount) external nonReentrant {
         Lock storage l = _locks[id];
         if (l.owner != msg.sender) revert NotLockOwner();
@@ -219,19 +286,94 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         emit LockOwnerChanged(id, msg.sender, newOwner);
     }
 
-    /// @notice Withdraw a lock once `unlockTime` has passed. Owner only.
+    /// @notice Withdraw a lock. Owner only.
+    ///         - Vesting ERC-20 lock (start != unlockTime): releases ONLY the newly-vested
+    ///           portion (vestedAmount(now) - released). CEI: released/withdrawn updated
+    ///           BEFORE the transfer. Cumulative released can never exceed the deposit.
+    ///         - Pure-cliff ERC-20 (start == unlockTime) and V3 locks: unchanged
+    ///           all-or-nothing behaviour, only at/after unlockTime.
     function withdraw(uint256 id) external nonReentrant {
         Lock storage l = _locks[id];
         if (l.owner != msg.sender) revert NotLockOwner();
         if (l.withdrawn) revert AlreadyWithdrawn();
+
+        // Vesting ERC-20: partial, time-based release.
+        if (l.kind == Kind.ERC20 && l.start != l.unlockTime) {
+            uint256 vested = _vestedAmount(l, block.timestamp);
+            // Saturating: an extend can lower the vested rate below what was already
+            // released; treat that as "nothing new to withdraw" rather than underflowing.
+            uint256 amt = vested > l.released ? vested - l.released : 0;
+            if (amt == 0) revert NothingToWithdraw();
+            l.released += amt;                       // effects before interaction (CEI)
+            if (l.released == l.amountOrId) l.withdrawn = true;
+            IERC20(l.asset).safeTransfer(msg.sender, amt);
+            emit Withdrawn(id, msg.sender);
+            return;
+        }
+
+        // Pure-cliff ERC-20 or V3: all-or-nothing at unlockTime.
         if (block.timestamp < l.unlockTime) revert StillLocked();
         l.withdrawn = true;
         if (l.kind == Kind.ERC20) {
+            l.released = l.amountOrId; // keep the released accounting consistent
             IERC20(l.asset).safeTransfer(msg.sender, l.amountOrId);
         } else {
             IERC721(l.asset).safeTransferFrom(address(this), msg.sender, l.amountOrId);
         }
         emit Withdrawn(id, msg.sender);
+    }
+
+    /// @notice Sweep accrued Uniswap V3 swap fees for a locked position WITHOUT unlocking it.
+    ///         Owner-only. Fees are sent to the lock OWNER (never an arbitrary recipient).
+    ///         Routes exclusively through `collect`; there is no path here to
+    ///         decreaseLiquidity/burn/transfer the position, so the lock is never weakened.
+    function collectV3Fees(uint256 id) external nonReentrant {
+        Lock storage l = _locks[id];
+        if (l.owner != msg.sender) revert NotLockOwner();
+        if (l.kind != Kind.V3_LP) revert WrongKind();
+        if (l.withdrawn) revert AlreadyWithdrawn();
+        INonfungiblePositionManager(positionManager).collect(
+            INonfungiblePositionManager.CollectParams({
+                tokenId: l.amountOrId,
+                recipient: l.owner,                  // hard-wired to the owner
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
+        );
+        emit V3FeesCollected(id, l.owner);
+    }
+
+    /// @notice Attach display-only trust metadata (name + uri) to a lock for the verify UI.
+    ///         Owner-only. EVENT-ONLY: stores nothing and affects NO fund logic whatsoever.
+    function labelLock(uint256 id, string calldata name, string calldata uri) external {
+        Lock storage l = _locks[id];
+        if (l.owner != msg.sender) revert NotLockOwner();
+        emit LockLabeled(id, name, uri);
+    }
+
+    /// @dev Amount vested by timestamp `ts` for an ERC-20 lock (see contract docs):
+    ///      now < start            -> 0
+    ///      start == unlockTime    -> pure cliff: all at/after unlockTime, else 0
+    ///      else                   -> linear over [start, unlockTime]
+    ///      Always <= amountOrId and monotonic non-decreasing in `ts`.
+    function _vestedAmount(Lock storage l, uint256 ts) private view returns (uint256) {
+        if (ts < l.start) return 0;
+        if (l.start == l.unlockTime) {
+            return ts >= l.unlockTime ? l.amountOrId : 0;
+        }
+        uint256 endTs = ts < l.unlockTime ? ts : l.unlockTime; // min(now, end)
+        // mulDiv is overflow-proof (full 512-bit intermediate), so even an astronomically large
+        // amountOrId can never revert the vesting math. Result is still floor(amount * frac) <= amount.
+        return Math.mulDiv(l.amountOrId, endTs - l.start, uint256(l.unlockTime) - l.start);
+    }
+
+    /// @notice For an ERC-20 lock: the amount vested by now and how much is withdrawable
+    ///         (vested minus already-released). Returns (0,0) for V3 locks.
+    function vestedOf(uint256 id) external view returns (uint256 vested, uint256 withdrawable) {
+        Lock storage l = _locks[id];
+        if (l.kind != Kind.ERC20) return (0, 0);
+        vested = _vestedAmount(l, block.timestamp);
+        withdrawable = vested > l.released ? vested - l.released : 0;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -275,6 +417,27 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         Lock storage l = _locks[id];
         if (l.owner == address(0)) return false; // nonexistent lock
         return block.timestamp >= l.unlockTime;
+    }
+
+    /// @notice Sum of the still-locked ERC-20 amount (amountOrId - released, for non-withdrawn
+    ///         ERC-20 locks) of `token` over a paginated slice of its lock index. Powers a
+    ///         "% of supply locked" readout without unbounded gas — page with start/count and
+    ///         add the results. `count` is clamped to MAX_PAGE; out-of-range `start` returns 0.
+    function totalLockedOf(address token, uint256 start, uint256 count)
+        external view returns (uint256 total)
+    {
+        uint256[] storage arr = _assetLocks[token];
+        if (count > MAX_PAGE) count = MAX_PAGE;
+        uint256 len = arr.length;
+        if (start >= len) return 0;
+        uint256 end = start + count;
+        if (end > len) end = len;
+        for (uint256 i = start; i < end; i++) {
+            Lock storage l = _locks[arr[i]];
+            if (l.kind == Kind.ERC20 && !l.withdrawn) {
+                total += l.amountOrId - l.released; // released <= amountOrId invariant
+            }
+        }
     }
 
     /// @dev Return arr[start .. start+count), clamped to arr.length.
@@ -329,6 +492,13 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         emit BurnConfigChanged(perPeriod, period);
     }
 
+    /// @notice Cap the $STAG burned per lock/extend action. 0 = uncapped (default). Clamps the
+    ///         duration-scaled amount in burnFor so very long terms can't burn without bound.
+    function setBurnCap(uint256 _burnCap) external onlyOwner {
+        burnCap = _burnCap;
+        emit BurnCapChanged(_burnCap);
+    }
+
     /// @dev True if `who` holds >= the waiver threshold of the exempt token. The balanceOf is
     ///      isolated in a gas-capped try/catch and FAILS CLOSED (a hostile/paused/broken token
     ///      forfeits the waiver — everyone pays — and can NEVER brick lock creation).
@@ -352,7 +522,9 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///         prompts a $STAG approval for that amount.
     function burnFor(address who, uint256 durationSecs) public view returns (uint256) {
         if (burnPerPeriod == 0 || burnPeriod == 0 || _isExempt(who)) return 0;
-        return (burnPerPeriod * durationSecs) / burnPeriod;
+        uint256 amt = (burnPerPeriod * durationSecs) / burnPeriod;
+        if (burnCap > 0 && amt > burnCap) amt = burnCap; // clamp to the per-action cap
+        return amt;
     }
 
     /// @notice Send all accrued creation fees to the CURRENT feeRecipient. Callable by
@@ -406,7 +578,9 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
 
     function _recordV3(address owner, uint256 tokenId, uint64 unlockTime) private returns (uint256 id) {
         id = nextLockId++;
-        _locks[id] = Lock(Kind.V3_LP, positionManager, tokenId, owner, unlockTime, false);
+        // V3 locks are all-or-nothing; start == unlockTime so they never enter the
+        // vesting branch and no partial release is ever possible.
+        _locks[id] = Lock(Kind.V3_LP, positionManager, tokenId, owner, unlockTime, false, unlockTime, 0);
         _ownerLocks[owner].push(id);
         _assetLocks[positionManager].push(id);
         emit V3Locked(id, owner, tokenId, unlockTime);

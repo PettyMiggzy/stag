@@ -26,10 +26,11 @@ async function main() {
   try {
     await (await locker.setFeeExemption(STAG, FREE_MIN)).wait();     // hold >= 10M $STAG → free
     await (await locker.setBurnConfig(BURN_PER, BURN_PERIOD)).wait(); // else burn 2M $STAG / 30 days
-    console.log(`configured: free >= ${FREE_MIN} $STAG; else burn ${BURN_PER} per ${BURN_PERIOD}s of lock`);
+    await (await locker.setBurnCap(BURN_PER)).wait();                 // cap each lock's burn at 2M (any duration payable)
+    console.log(`configured: free >= ${FREE_MIN} $STAG; else burn ${BURN_PER} per ${BURN_PERIOD}s (capped at ${BURN_PER})`);
   } catch (e) {
     console.log(`\n⚠ could not configure (deployer != admin). From the ADMIN wallet, call:`);
-    console.log(`  setFeeExemption("${STAG}", "${FREE_MIN}")  then  setBurnConfig("${BURN_PER}", "${BURN_PERIOD}")\n`);
+    console.log(`  setFeeExemption("${STAG}", "${FREE_MIN}") ; setBurnConfig("${BURN_PER}", "${BURN_PERIOD}") ; setBurnCap("${BURN_PER}")\n`);
   }
   console.log("Verify: npx hardhat verify --network robinhood", addr, POSITION_MANAGER, FLAT_FEE_WEI, FEE_RECIPIENT, ADMIN);
 }

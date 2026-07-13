@@ -450,3 +450,257 @@ describe("StagLocker — V3 safeTransferFrom path ALSO burns (L-1 fix)", () => {
     expect(await STAG.balanceOf(DEAD)).to.equal(burned);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New "trusted lock" features
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("StagLocker — vesting (cliff + linear, partial withdrawals)", () => {
+  it("cliff lockTokens is still all-or-nothing (start == unlockTime)", async () => {
+    const { locker, tok, alice } = await deploy();
+    await tok.mint(alice.address, 1000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 1000n);
+    const unlock = (await now()) + DAY;
+    await locker.connect(alice).lockTokens(await tok.getAddress(), 1000n, unlock);
+    const lk = await locker.getLock(0);
+    expect(lk.start).to.equal(BigInt(unlock)); // pure cliff marker
+    // nothing withdrawable before unlock, then all
+    let [vested, wd] = await locker.vestedOf(0);
+    expect(vested).to.equal(0n); expect(wd).to.equal(0n);
+    await expect(locker.connect(alice).withdraw(0)).to.be.revertedWithCustomError(locker, "StillLocked");
+    await jump(DAY + 1);
+    [vested, wd] = await locker.vestedOf(0);
+    expect(vested).to.equal(1000n); expect(wd).to.equal(1000n);
+    await locker.connect(alice).withdraw(0);
+    expect(await tok.balanceOf(alice.address)).to.equal(1000n);
+  });
+
+  it("linear vesting releases correctly over time with partial withdraws twice then completes", async () => {
+    const { locker, tok, alice } = await deploy();
+    await tok.mint(alice.address, 1000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 1000n);
+    const start = (await now()) + 10; // starts shortly in the future
+    const end = start + 100 * DAY;    // 100-day linear schedule
+    await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 1000n, start, end))
+      .to.emit(locker, "VestingLocked").withArgs(0, start, end);
+    // before start: nothing vested
+    let [vested] = await locker.vestedOf(0);
+    expect(vested).to.equal(0n);
+    await expect(locker.connect(alice).withdraw(0)).to.be.revertedWithCustomError(locker, "NothingToWithdraw");
+
+    // jump to ~40% through
+    await jump(10 + 40 * DAY);
+    [vested] = await locker.vestedOf(0);
+    // ~400 vested (allow a couple seconds of mining drift)
+    expect(vested >= 400n && vested <= 402n).to.equal(true);
+    const b0 = await tok.balanceOf(alice.address);
+    await locker.connect(alice).withdraw(0);
+    const got1 = (await tok.balanceOf(alice.address)) - b0;
+    expect(got1 >= 400n && got1 <= 402n).to.equal(true);
+    expect((await locker.getLock(0)).released).to.equal(got1);
+    expect((await locker.getLock(0)).withdrawn).to.equal(false);
+
+    // jump to ~80% through -> release the newly vested portion only
+    await jump(40 * DAY);
+    const b1 = await tok.balanceOf(alice.address);
+    await locker.connect(alice).withdraw(0);
+    const got2 = (await tok.balanceOf(alice.address)) - b1;
+    expect(got2 >= 398n && got2 <= 402n).to.equal(true);
+    // cumulative released never exceeds the deposit
+    expect((await locker.getLock(0)).released).to.equal(got1 + got2);
+    expect(got1 + got2).to.be.lessThan(1000n);
+
+    // jump past end -> final withdraw completes and marks withdrawn
+    await jump(30 * DAY);
+    [vested] = await locker.vestedOf(0);
+    expect(vested).to.equal(1000n); // capped at the full deposit
+    const b2 = await tok.balanceOf(alice.address);
+    await locker.connect(alice).withdraw(0);
+    expect((await tok.balanceOf(alice.address)) - b2).to.equal(1000n - (got1 + got2));
+    expect(await tok.balanceOf(alice.address)).to.equal(1000n); // exactly the deposit, no more
+    expect((await locker.getLock(0)).withdrawn).to.equal(true);
+    expect((await locker.getLock(0)).released).to.equal(1000n);
+    await expect(locker.connect(alice).withdraw(0)).to.be.revertedWithCustomError(locker, "AlreadyWithdrawn");
+  });
+
+  it("vested can never exceed the deposit even long after end", async () => {
+    const { locker, tok, alice } = await deploy();
+    await tok.mint(alice.address, 777n);
+    await tok.connect(alice).approve(await locker.getAddress(), 777n);
+    const start = (await now()) + 5;
+    const end = start + 10 * DAY;
+    await locker.connect(alice).lockTokensVesting(await tok.getAddress(), 777n, start, end);
+    await jump(1000 * DAY);
+    const [vested, wd] = await locker.vestedOf(0);
+    expect(vested).to.equal(777n);
+    expect(wd).to.equal(777n);
+    await locker.connect(alice).withdraw(0);
+    expect(await tok.balanceOf(alice.address)).to.equal(777n);
+  });
+
+  it("lockTokensVesting rejects bad schedules", async () => {
+    const { locker, tok, alice } = await deploy();
+    await tok.mint(alice.address, 1000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 1000n);
+    const t = await now();
+    // end in the past
+    await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 100n, t + 100, t))
+      .to.be.revertedWithCustomError(locker, "BadUnlockTime");
+    // start in the past
+    await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 100n, t - 100, t + DAY))
+      .to.be.revertedWithCustomError(locker, "BadUnlockTime");
+    // end <= start
+    await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 100n, t + 200, t + 200))
+      .to.be.revertedWithCustomError(locker, "BadUnlockTime");
+    // zero amount / zero addr
+    await expect(locker.connect(alice).lockTokensVesting(await tok.getAddress(), 0n, t + 100, t + DAY))
+      .to.be.revertedWithCustomError(locker, "ZeroAmount");
+    await expect(locker.connect(alice).lockTokensVesting(ethers.ZeroAddress, 1n, t + 100, t + DAY))
+      .to.be.revertedWithCustomError(locker, "ZeroAddress");
+  });
+
+  it("extend lengthens the vesting tail without letting released underflow", async () => {
+    const { locker, tok, alice } = await deploy();
+    await tok.mint(alice.address, 1000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 1000n);
+    const start = (await now()) + 5;
+    const end = start + 100 * DAY;
+    await locker.connect(alice).lockTokensVesting(await tok.getAddress(), 1000n, start, end);
+    await jump(5 + 50 * DAY); // ~50% vested
+    await locker.connect(alice).withdraw(0); // releases ~500
+    const rel = (await locker.getLock(0)).released;
+    // extend the end far out -> vested rate drops; no new withdrawal available yet, must not underflow
+    await locker.connect(alice).extendLock(0, end + 400 * DAY);
+    const [, wd] = await locker.vestedOf(0);
+    expect(wd).to.equal(0n); // vested now below already-released
+    await expect(locker.connect(alice).withdraw(0)).to.be.revertedWithCustomError(locker, "NothingToWithdraw");
+    // released unchanged, still <= deposit
+    expect((await locker.getLock(0)).released).to.equal(rel);
+  });
+});
+
+describe("StagLocker — V3 collect fees while locked", () => {
+  async function setupV3() {
+    const { admin, treasury, alice, bob, locker, PM } = await deploy();
+    const t0 = await (await ethers.getContractFactory("MockERC20")).deploy();
+    const t1 = await (await ethers.getContractFactory("MockERC20")).deploy();
+    await PM.setFeeTokens(await t0.getAddress(), await t1.getAddress());
+    await PM.mint(alice.address); // id 0
+    await PM.connect(alice).approve(await locker.getAddress(), 0);
+    const u = (await now()) + 30 * DAY;
+    await locker.connect(alice).lockV3Position(0, u);
+    // preload accrued swap fees on the position
+    await PM.setFeesOwed(0, 1000n, 2000n);
+    return { admin, treasury, alice, bob, locker, PM, t0, t1 };
+  }
+
+  it("collectV3Fees sends accrued fees to the OWNER without unlocking the position", async () => {
+    const { alice, locker, PM, t0, t1 } = await setupV3();
+    await expect(locker.connect(alice).collectV3Fees(0))
+      .to.emit(locker, "V3FeesCollected").withArgs(0, alice.address);
+    expect(await t0.balanceOf(alice.address)).to.equal(1000n);
+    expect(await t1.balanceOf(alice.address)).to.equal(2000n);
+    // position still locked in the contract, not withdrawn
+    expect(await PM.ownerOf(0)).to.equal(await locker.getAddress());
+    expect((await locker.getLock(0)).withdrawn).to.equal(false);
+  });
+
+  it("reverts for non-owner and for non-V3 (ERC20) locks", async () => {
+    const { bob, locker, tok, alice } = await deploy();
+    // ERC20 lock at id 0
+    await tok.mint(alice.address, 100n);
+    await tok.connect(alice).approve(await locker.getAddress(), 100n);
+    await locker.connect(alice).lockTokens(await tok.getAddress(), 100n, (await now()) + DAY);
+    await expect(locker.connect(alice).collectV3Fees(0)).to.be.revertedWithCustomError(locker, "WrongKind");
+    // V3 lock: non-owner blocked
+    const ctx = await setupV3();
+    await expect(ctx.locker.connect(ctx.bob).collectV3Fees(0)).to.be.revertedWithCustomError(ctx.locker, "NotLockOwner");
+  });
+});
+
+describe("StagLocker — burn cap", () => {
+  const MIN = 10_000_000n * 10n ** 18n;
+  const PER = 2_000_000n * 10n ** 18n;
+  const PERIOD = BigInt(30 * DAY);
+  it("setBurnCap clamps the duration-scaled burn", async () => {
+    const [own, treasury, small] = await ethers.getSigners();
+    const PM = await (await ethers.getContractFactory("MockPositionManager")).deploy();
+    const L = await (await ethers.getContractFactory("StagLocker")).deploy(await PM.getAddress(), 0, treasury.address, own.address);
+    const STAG = await (await ethers.getContractFactory("MockERC20")).deploy();
+    await L.connect(own).setFeeExemption(await STAG.getAddress(), MIN);
+    await L.connect(own).setBurnConfig(PER, PERIOD);
+    // uncapped: 90 days -> ~6M
+    expect(await L.burnFor(small.address, 90 * DAY)).to.equal(PER * 3n);
+    // cap at 2.5M
+    const CAP = 2_500_000n * 10n ** 18n;
+    await expect(L.connect(own).setBurnCap(CAP)).to.emit(L, "BurnCapChanged").withArgs(CAP);
+    expect(await L.burnCap()).to.equal(CAP);
+    expect(await L.burnFor(small.address, 90 * DAY)).to.equal(CAP); // clamped
+    expect(await L.burnFor(small.address, DAY)).to.be.lessThan(CAP); // short lock under cap unaffected
+    // only owner
+    await expect(L.connect(small).setBurnCap(1n)).to.be.revertedWithCustomError(L, "OwnableUnauthorizedAccount");
+  });
+});
+
+describe("StagLocker — totalLockedOf + labelLock", () => {
+  it("totalLockedOf sums still-locked amounts across a page, net of released", async () => {
+    const { locker, tok, alice } = await deploy();
+    const asset = await tok.getAddress();
+    await tok.mint(alice.address, 10_000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 10_000n);
+    const u = (await now()) + DAY;
+    await locker.connect(alice).lockTokens(asset, 100n, u); // id 0
+    await locker.connect(alice).lockTokens(asset, 200n, u); // id 1
+    await locker.connect(alice).lockTokens(asset, 300n, u); // id 2
+    // vesting lock, partially released later: id 3
+    const start = (await now()) + 5;
+    await locker.connect(alice).lockTokensVesting(asset, 1000n, start, start + 100 * DAY);
+    expect(await locker.totalLockedOf(asset, 0, 1000)).to.equal(600n + 1000n);
+    // paginate
+    expect(await locker.totalLockedOf(asset, 0, 2)).to.equal(300n); // ids 0,1
+    expect(await locker.totalLockedOf(asset, 2, 2)).to.equal(300n + 1000n); // ids 2,3
+    expect(await locker.totalLockedOf(asset, 99, 10)).to.equal(0n); // out of range
+    // partially release the vesting lock -> total drops by the released amount
+    await jump(5 + 50 * DAY);
+    await locker.connect(alice).withdraw(3);
+    const rel = (await locker.getLock(3)).released;
+    expect(await locker.totalLockedOf(asset, 0, 1000)).to.equal(600n + (1000n - rel));
+    // fully withdraw a cliff lock -> excluded entirely
+    await locker.connect(alice).withdraw(0);
+    expect(await locker.totalLockedOf(asset, 0, 1000)).to.equal(500n + (1000n - rel));
+  });
+
+  it("labelLock is owner-only and emits (no state change)", async () => {
+    const { locker, tok, alice, bob } = await deploy();
+    await tok.mint(alice.address, 100n);
+    await tok.connect(alice).approve(await locker.getAddress(), 100n);
+    await locker.connect(alice).lockTokens(await tok.getAddress(), 100n, (await now()) + DAY);
+    await expect(locker.connect(bob).labelLock(0, "x", "y")).to.be.revertedWithCustomError(locker, "NotLockOwner");
+    await expect(locker.connect(alice).labelLock(0, "My Team Lock", "ipfs://cid"))
+      .to.emit(locker, "LockLabeled").withArgs(0, "My Team Lock", "ipfs://cid");
+  });
+});
+
+describe("StagLocker — extend keeps a cliff a cliff (HIGH fix)", () => {
+  it("an extended cliff lock stays all-or-nothing, no early linear release", async () => {
+    const { locker, tok, alice } = await deploy();
+    await tok.mint(alice.address, 1000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 1000n);
+    const u1 = (await now()) + 30 * DAY;
+    await locker.connect(alice).lockTokens(await tok.getAddress(), 1000n, u1); // pure cliff
+    const id = Number(await locker.nextLockId()) - 1;
+    const u2 = u1 + 90 * DAY;
+    await locker.connect(alice).extendLock(id, u2); // extend the cliff
+    const lk = await locker.getLock(id);
+    expect(lk.start).to.equal(lk.unlockTime); // still a cliff (start moved with unlockTime)
+    // jump PAST the old unlock but before the new one — nothing should be withdrawable
+    await jump(50 * DAY); // past u1, before u2
+    const [, withdrawable] = await locker.vestedOf(id);
+    expect(withdrawable).to.equal(0n);
+    await expect(locker.connect(alice).withdraw(id)).to.be.revertedWithCustomError(locker, "StillLocked");
+    // after the new unlock: full amount at once
+    await jump(80 * DAY); // past u2 (u2 = u1+90d = ~120d total)
+    await locker.connect(alice).withdraw(id);
+    expect((await tok.balanceOf(alice.address))).to.equal(1000n);
+  });
+});
