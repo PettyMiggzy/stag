@@ -19,8 +19,9 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract SaintsSplitter {
+contract SaintsSplitter is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address public immutable burnSink; // buy-and-burn wallet
@@ -40,8 +41,8 @@ contract SaintsSplitter {
     }
 
     // ETH (mint proceeds and/or marketplace royalties) splits on arrival.
-    receive() external payable { _splitETH(msg.value); }
-    function splitETH() external payable { _splitETH(address(this).balance); }
+    receive() external payable nonReentrant { _splitETH(msg.value); }
+    function splitETH() external payable nonReentrant { _splitETH(address(this).balance); }
 
     function _splitETH(uint256 amount) internal {
         if (amount == 0) return;
@@ -60,7 +61,7 @@ contract SaintsSplitter {
 
     // ERC-20 (e.g. royalties paid in a token): sends this contract's full token balance out by bps.
     // Anyone may call; funds only ever go to the three fixed addresses.
-    function distribute(address token) external {
+    function distribute(address token) external nonReentrant {
         uint256 bal = IERC20(token).balanceOf(address(this));
         if (bal == 0) return;
         uint256 b = (bal * burnBps) / 10000;
