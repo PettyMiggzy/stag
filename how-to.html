@@ -70,7 +70,7 @@
       <h1>How to Use STAGWIFHOOD</h1>
       <p>Brand-new to Web3 or just to $STAG? These beginner-friendly walkthroughs take you from an empty wallet to minting, staking, pacts, and reading the maps — one step at a time. For the deeper "why," see the Docs.</p>
       <div class="doc-meta">
-        <span class="tagpill">8 guides + troubleshooting</span>
+        <span class="tagpill">9 guides + troubleshooting</span>
         <span class="tagpill">Robinhood Chain · 4663</span>
       </div>
     </div>
@@ -98,6 +98,7 @@
         <li><a href="#nftstake">Stake your Hooded 20 NFTs</a></li>
         <li><a href="#sealpact">Seal a Sherwood Pact</a></li>
         <li><a href="#fuel">Fuel the reward pool</a></li>
+        <li><a href="#lock">Lock LP or team tokens</a></li>
         <li><a href="#explore">Explore the Stag Hood Maps</a></li>
         <li><a href="#trouble">Troubleshooting</a></li>
       </ol>
@@ -115,6 +116,7 @@
           <li><a href="#nftstake">Stake your NFTs</a></li>
           <li><a href="#sealpact">Seal a Sherwood Pact</a></li>
           <li><a href="#fuel">Fuel the reward pool</a></li>
+          <li><a href="#lock">Lock LP or team tokens</a></li>
           <li><a href="#explore">Explore the Maps</a></li>
           <li><a href="#trouble">Troubleshooting</a></li>
         </ol>
@@ -314,9 +316,53 @@
           </ol>
         </section>
 
-        <!-- 8. EXPLORE MAPS -->
-        <section class="doc-section" id="explore">
+        <!-- 8. LOCK -->
+        <section class="doc-section" id="lock">
           <span class="doc-kicker">Guide 08</span>
+          <h2>Lock LP or team tokens (Stag Locker)<a class="doc-anchor" href="#lock" aria-label="Link to this section">#</a></h2>
+          <p>Prove to your community you can't rug. The <strong>Stag Locker</strong> freezes your liquidity or team tokens on-chain until a date you choose — non-custodial, and no one can pull them early. This guide is for project teams and LPs.</p>
+          <ol class="doc-steps">
+            <li>
+              <b>Go to the locker &amp; connect</b>
+              <div class="s-body">Open <a class="inl" href="/locker">/locker</a> and hit <strong>Connect Wallet</strong> on Robinhood Chain (chainId 4663).</div>
+            </li>
+            <li>
+              <b>Pick what to lock</b>
+              <div class="s-body">Choose <strong>an ERC-20 token</strong> (paste its address and an amount) or a <strong>Uniswap V3 LP position</strong> (its liquidity NFT). Any Robinhood Chain token works.</div>
+            </li>
+            <li>
+              <b>Choose release type &amp; duration</b>
+              <div class="s-body">
+                <ul>
+                  <li><strong>Cliff</strong> — stays 100% locked until the unlock date, then fully unlocks.</li>
+                  <li><strong>Linear vesting</strong> — releases continuously; claim the vested portion any time.</li>
+                </ul>
+                Then pick a term: <span class="kbd">60</span>, <span class="kbd">90</span>, <span class="kbd">180 days</span>, <span class="kbd">1 year</span>, or <span class="kbd">3 years</span>.
+              </div>
+            </li>
+            <li>
+              <b>Cover the cost (burn or free)</b>
+              <div class="s-body">Locking burns <strong>2,000,000 $STAG per 30 days</strong> (previewed live for your duration) — <em>or</em> if you hold <strong>10,000,000+ $STAG</strong>, it shows <strong>FREE</strong> and burns nothing. Approve the $STAG spend if a burn applies.</div>
+            </li>
+            <li>
+              <b>Approve the asset &amp; Lock</b>
+              <div class="s-body">Approve the token/LP for the locker (one-time per asset), then hit <strong>Lock</strong> and confirm. You get an on-chain <strong>lock ID</strong>.</div>
+            </li>
+            <li>
+              <b>Share your proof</b>
+              <div class="s-body">Open the <strong>Verify</strong> tab, look up your lock ID, and share the proof link so anyone can confirm your LP/tokens are locked until the date shown.</div>
+            </li>
+            <li>
+              <b>Manage it (strengthen only)</b>
+              <div class="s-body">Any time you can <strong>extend</strong> the date, <strong>top up</strong> more tokens, <strong>transfer ownership</strong>, or <strong>collect V3 trading fees</strong> while liquidity stays locked. You can never shorten or early-exit a lock.</div>
+            </li>
+          </ol>
+          <div class="doc-warn"><span class="ic" aria-hidden="true">🔒</span><p><b>Locks are final until the unlock date.</b> Confirm the token, amount, release type, and duration before you sign — there's no early exit by design. See the <a class="inl" href="/docs#locker">Docs → Stag Locker</a> for the full mechanics.</p></div>
+        </section>
+
+        <!-- 9. EXPLORE MAPS -->
+        <section class="doc-section" id="explore">
+          <span class="doc-kicker">Guide 09</span>
           <h2>Explore the Stag Hood Maps<a class="doc-anchor" href="#explore" aria-label="Link to this section">#</a></h2>
           <p>Visualize who holds any Robinhood Chain token and how the wallets connect — free, no wallet needed.</p>
           <ol class="doc-steps">

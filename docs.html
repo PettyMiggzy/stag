@@ -98,6 +98,7 @@
         <li><a href="#nfts">The Hooded 20</a></li>
         <li><a href="#staking">Staking (real ETH yield)</a></li>
         <li><a href="#pact">Sherwood Pact</a></li>
+        <li><a href="#locker">Stag Locker (LP &amp; tokens)</a></li>
         <li><a href="#revenue">Revenue Flow (90/10)</a></li>
         <li><a href="#maps">Stag Hood Maps</a></li>
         <li><a href="#security">Security &amp; Audits</a></li>
@@ -116,6 +117,7 @@
           <li><a href="#nfts">The Hooded 20</a></li>
           <li><a href="#staking">Staking</a></li>
           <li><a href="#pact">Sherwood Pact</a></li>
+          <li><a href="#locker">Stag Locker</a></li>
           <li><a href="#revenue">Revenue Flow</a></li>
           <li><a href="#maps">Stag Hood Maps</a></li>
           <li><a href="#security">Security &amp; Audits</a></li>
@@ -199,6 +201,11 @@
                   <td><a class="inl" href="https://robinhoodchain.blockscout.com/address/0xc36662D2db9432702f018963ABdab19432AA488B" target="_blank" rel="noopener">View ↗</a></td>
                 </tr>
                 <tr>
+                  <td class="t-name">StagLocker<small>LP &amp; token lock · non-custodial</small></td>
+                  <td><span class="addr"><code>⏳ deploying — live address here soon</code></span></td>
+                  <td><a class="inl" href="/locker">Open /locker →</a></td>
+                </tr>
+                <tr>
                   <td class="t-name">$STAG Token<small>ERC-20 · 18 decimals</small></td>
                   <td><span class="addr"><code>0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49</code><button class="addr-copy" type="button" data-copy="0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49">Copy</button></span></td>
                   <td><a class="inl" href="https://robinhoodchain.blockscout.com/address/0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49" target="_blank" rel="noopener">View ↗</a></td>
@@ -277,9 +284,52 @@
           <div class="doc-note"><span class="ic" aria-hidden="true">🛟</span><p><b>Safety net — your funds are never trapped.</b> If the oracle never resolves your pact, you can <strong>reclaim your full entry</strong> after the window plus a grace period. One open pact per wallet.</p></div>
         </section>
 
-        <!-- 7. REVENUE FLOW -->
+        <!-- 7. STAG LOCKER -->
+        <section class="doc-section" id="locker">
+          <span class="doc-kicker">07 · Proof You Can't Rug</span>
+          <h2>Stag Locker (LP &amp; token lock)<a class="doc-anchor" href="#locker" aria-label="Link to this section">#</a></h2>
+          <p>The <strong>Stag Locker</strong> at <a class="inl" href="/locker">/locker</a> is a <strong>permissionless, non-custodial</strong> time-lock for liquidity and team tokens on Robinhood Chain. Any project can lock its LP or supply, get a public proof link, and show its community it <strong>can't rug</strong> — the tokens are frozen on-chain until the unlock date, and <em>no one</em> — not even the locker admin — can pull them out early.</p>
+
+          <h3>What you can lock</h3>
+          <ul class="doc-list">
+            <li><strong>Any Robinhood Chain ERC-20</strong> — your project token, team allocation, treasury, or a partner token.</li>
+            <li><strong>Uniswap V3 LP positions</strong> — lock the liquidity NFT itself so the pool can't be pulled.</li>
+          </ul>
+
+          <h3>Two release types</h3>
+          <div class="doc-grid">
+            <div class="doc-mini"><h4>Cliff</h4><p>Everything stays locked until the unlock date, then unlocks 100% at once. The classic "LP locked until [date]."</p></div>
+            <div class="doc-mini"><h4>Linear vesting</h4><p>Unlocks continuously from start to end. Claim the <strong>vested portion any time</strong> as it releases — great for team tokens that drip out over months.</p></div>
+          </div>
+          <p>Pick a preset term — <span class="kbd">60 days</span>, <span class="kbd">90 days</span>, <span class="kbd">180 days</span>, <span class="kbd">1 year</span>, or <span class="kbd">3 years</span> — or set a custom unlock time.</p>
+
+          <h3>Cost: burn $STAG, or hold $STAG and lock free</h3>
+          <ul class="doc-list">
+            <li><strong>Burn model:</strong> locking burns <strong>2,000,000 $STAG per 30 days</strong> of lock (scaled by duration, capped), sent to the dead address. Locking $STAG creates constant buy-and-burn pressure the longer people lock.</li>
+            <li><strong>Hold &amp; lock free:</strong> wallets holding <strong>10,000,000+ $STAG</strong> lock for <strong>FREE</strong> — no burn at all. Big holders get the utility for holding.</li>
+          </ul>
+          <div class="doc-note"><span class="ic" aria-hidden="true">🔥</span><p>The exact burn for your chosen duration is previewed live on <a class="inl" href="/locker">/locker</a> before you confirm. Hold 10M $STAG and it simply shows <strong>FREE</strong>.</p></div>
+
+          <h3>You can only strengthen a lock — never weaken it</h3>
+          <ul class="doc-list">
+            <li><strong>Extend</strong> the unlock date further out, or <strong>top&nbsp;up</strong> more tokens into an existing lock.</li>
+            <li><strong>Transfer ownership</strong> of a lock to a new wallet (e.g. hand LP control to a multisig).</li>
+            <li><strong>Collect V3 trading fees</strong> while your liquidity stays locked — fees go to the lock owner, principal never moves.</li>
+            <li>There is <strong>no early-unlock, no shorten, no admin override.</strong> Withdraw is only possible after the unlock date (or the vested portion, for vesting).</li>
+          </ul>
+
+          <h3>Why it's trustworthy</h3>
+          <ul class="doc-list">
+            <li><strong>Non-custodial &amp; admin-proof.</strong> The admin can <em>only</em> tune the fee/burn settings — the contract has <strong>no function that lets anyone move locked assets</strong>. Verified by audit.</li>
+            <li><strong>Publicly verifiable.</strong> Every lock has an on-chain ID; anyone can look it up on the <strong>Verify</strong> tab and share a proof link with the community.</li>
+            <li><strong>Audited &amp; simulated.</strong> Multiple independent security-audit passes to a clean final verdict, plus <strong>hundreds of randomized invariant simulations</strong> (solvency, custody, no-early-release) before launch.</li>
+          </ul>
+          <div class="doc-warn"><span class="ic" aria-hidden="true">🔒</span><p><b>Locking is irreversible until the unlock date.</b> Double-check the token, amount, release type, and duration before you confirm — there is no early exit by design. That's the whole point.</p></div>
+        </section>
+
+        <!-- 8. REVENUE FLOW -->
         <section class="doc-section" id="revenue">
-          <span class="doc-kicker">07 · Economics</span>
+          <span class="doc-kicker">08 · Economics</span>
           <h2>Revenue Flow (90 / 10)<a class="doc-anchor" href="#revenue" aria-label="Link to this section">#</a></h2>
           <p>Mint revenue and secondary royalties flow into the <strong>RevenueSplitter</strong>, which forwards <strong>90% to the staking reward pool</strong> (real ETH yield for stakers) and <strong>10% to the team</strong>. This is what makes staking real-yield rather than emissions.</p>
           <div class="flow" role="img" aria-label="Mint revenue and royalties flow into the RevenueSplitter, which sends 90 percent to the staking reward pool and 10 percent to the team.">
@@ -313,7 +363,7 @@
 
         <!-- 8. MAPS -->
         <section class="doc-section" id="maps">
-          <span class="doc-kicker">08 · Explorer</span>
+          <span class="doc-kicker">09 · Explorer</span>
           <h2>Stag Hood Maps (bubble-map explorer)<a class="doc-anchor" href="#maps" aria-label="Link to this section">#</a></h2>
           <p>The <strong>Stag Hood Maps</strong> at <a class="inl" href="https://maps.stagwifhood.fun" target="_blank" rel="noopener">maps.stagwifhood.fun</a> are a whole-chain holder-relationship explorer. Paste any Robinhood Chain token address and it draws the network of who holds it and how they're connected.</p>
           <h3>How to read the map</h3>
@@ -335,7 +385,7 @@
 
         <!-- 9. SECURITY -->
         <section class="doc-section" id="security">
-          <span class="doc-kicker">09 · Assurance</span>
+          <span class="doc-kicker">10 · Assurance</span>
           <h2>Security &amp; Audits<a class="doc-anchor" href="#security" aria-label="Link to this section">#</a></h2>
           <p>All four contracts — HoodedTwenty, StagStaking, RevenueSplitter, and SherwoodPact — underwent <strong>multiple independent security-audit passes</strong> plus <strong>hundreds of randomized invariant simulations</strong> before the mainnet deploy.</p>
           <p>After deployment, the on-chain wiring was verified to match the intended design:</p>
@@ -350,7 +400,7 @@
 
         <!-- 10. RISK -->
         <section class="doc-section" id="risk">
-          <span class="doc-kicker">10 · Fine Print</span>
+          <span class="doc-kicker">11 · Fine Print</span>
           <h2>Risk &amp; Disclaimer<a class="doc-anchor" href="#risk" aria-label="Link to this section">#</a></h2>
           <ul class="doc-list">
             <li>The <strong>Hooded 20 are collectibles</strong>. Their value is not guaranteed and can go to zero.</li>
