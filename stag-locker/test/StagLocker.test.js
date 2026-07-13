@@ -334,3 +334,23 @@ describe("StagLocker — $STAG fee waiver", () => {
     expect(await locker.feeFor(alice.address)).to.equal(FEE); // waiver disabled -> everyone pays
   });
 });
+
+describe("StagLocker — fee-waiver fail-closed (hostile exempt token)", () => {
+  const FEE = 6700000000000000n;
+  it("a reverting exempt token forfeits the waiver but does NOT brick lock creation", async () => {
+    const [own, treasury, a] = await ethers.getSigners();
+    const PM = await (await ethers.getContractFactory("MockPositionManager")).deploy();
+    const L = await (await ethers.getContractFactory("StagLocker")).deploy(await PM.getAddress(), FEE, treasury.address, own.address);
+    const T = await (await ethers.getContractFactory("MockERC20")).deploy();
+    const Bad = await (await ethers.getContractFactory("RevertingBalanceToken")).deploy();
+    await L.connect(own).setFeeExemption(await Bad.getAddress(), 1n);
+    // feeFor must NOT revert; it falls back to the flat fee
+    expect(await L.feeFor(a.address)).to.equal(FEE);
+    // and lock creation still works when the fee is paid
+    await T.mint(a.address, 1000n);
+    await T.connect(a).approve(await L.getAddress(), 1000n);
+    const unlock = (await now()) + DAY;
+    await expect(L.connect(a).lockTokens(await T.getAddress(), 1000n, unlock, { value: FEE }))
+      .to.emit(L, "TokenLocked");
+  });
+});

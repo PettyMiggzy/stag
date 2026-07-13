@@ -54,3 +54,8 @@ contract ReentrantReceiver {
         return this.onERC721Received.selector;
     }
 }
+
+// Reverts on balanceOf — simulates a hostile/paused fee-exempt token for the fail-closed test.
+contract RevertingBalanceToken {
+    function balanceOf(address) external pure returns (uint256) { revert("nope"); }
+}

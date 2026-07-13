@@ -94,6 +94,76 @@
   code{font-family:var(--mono);color:var(--teal);font-size:12px;word-break:break-all}
   .note{font-size:11.5px;color:var(--dim);margin-top:10px}
   .foot{max-width:860px;margin:0 auto;padding:0 18px 40px;color:var(--dim);font-size:11.5px}
+  .foot .powered{margin-top:12px;color:var(--mut);font:600 10.5px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:7px}
+  .foot .powered .dot{width:6px;height:6px;border-radius:999px;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+  .foot .powered b{color:var(--gold)}
+
+  /* ─── hero stats band ─────────────────────────────────────────────────────── */
+  .wrapstats{max-width:860px;margin:0 auto;padding:18px 18px 0}
+  .statsband{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:560px){.statsband{grid-template-columns:repeat(2,1fr)}}
+  .stat{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;padding:15px 12px;text-align:center;
+    background:linear-gradient(180deg,var(--panel),var(--panel2))}
+  .stat::before{content:"";position:absolute;inset:0;border-radius:14px;padding:1px;
+    background:linear-gradient(135deg,rgba(158,244,24,.4),rgba(245,179,1,.18),transparent 55%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+  .snum{font:800 26px/1 var(--sans);letter-spacing:-.02em;color:var(--acc);font-variant-numeric:tabular-nums;
+    text-shadow:0 0 22px rgba(158,244,24,.35)}
+  .stat:nth-child(2) .snum{color:var(--gold);text-shadow:0 0 22px rgba(245,179,1,.3)}
+  .stat:nth-child(3) .snum{color:var(--hot);text-shadow:0 0 22px rgba(255,93,59,.28)}
+  .stat:nth-child(4) .snum{color:var(--teal);text-shadow:0 0 22px rgba(55,214,196,.28)}
+  .slab{margin-top:8px;font:600 9.5px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+  .feebadge{margin:12px 0 0;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;
+    font:600 12.5px/1.45 var(--sans);color:var(--ink);
+    background:linear-gradient(90deg,rgba(245,179,1,.10),rgba(158,244,24,.10));
+    border:1px solid var(--acc-dim);border-radius:12px;padding:11px 14px;
+    box-shadow:0 0 26px rgba(158,244,24,.06) inset}
+  .feebadge b{color:var(--gold)}
+
+  /* ─── premium proof-of-lock cards ─────────────────────────────────────────── */
+  .lock{position:relative;overflow:hidden}
+  .lock.cert{background:linear-gradient(180deg,var(--panel2),#0e140e);border-color:#243024}
+  .lock.cert::after{content:"";position:absolute;right:-46px;top:-46px;width:170px;height:170px;pointer-events:none;
+    background:radial-gradient(circle,rgba(158,244,24,.13),transparent 70%)}
+  .pill{font:700 10px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;border-radius:999px;padding:6px 10px;
+    margin-left:auto;display:inline-flex;align-items:center;gap:5px}
+  .pill.locked{color:var(--hot);border:1px solid #55231a;background:rgba(255,93,59,.08)}
+  .pill.open{color:var(--acc);border:1px solid var(--acc-dim);background:rgba(158,244,24,.08)}
+  .pill.withdrawn{color:var(--dim);border:1px solid var(--line);background:none}
+  .amt{display:flex;align-items:baseline;gap:9px;margin:13px 0 3px;flex-wrap:wrap;position:relative;z-index:1}
+  .amt-num{font:800 22px/1.05 var(--sans);letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums;word-break:break-all}
+  .amt-sym{font:700 13px/1 var(--mono);color:var(--gold)}
+  .amt-name{flex-basis:100%;font:500 11px/1.3 var(--mono);color:var(--mut);margin-top:2px}
+  .cd{display:flex;gap:7px;margin:13px 0 11px;flex-wrap:wrap;position:relative;z-index:1}
+  .cd .seg{min-width:54px;flex:0 0 auto;text-align:center;background:#0c110c;border:1px solid var(--line);border-radius:10px;padding:8px 6px}
+  .cd .seg b{display:block;font:800 18px/1 var(--mono);color:var(--acc);font-variant-numeric:tabular-nums}
+  .cd .seg span{display:block;margin-top:5px;font:600 8.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .cd.done{display:block;font:700 13px/1.4 var(--mono);color:var(--acc);margin:13px 0 11px}
+  .bar{height:7px;border-radius:999px;background:#0c110c;border:1px solid var(--line);overflow:hidden;margin-bottom:12px;position:relative;z-index:1}
+  .bar .fill{height:100%;border-radius:999px;width:0%;transition:width .6s ease;
+    background:linear-gradient(90deg,var(--acc-dim),var(--acc));box-shadow:0 0 12px rgba(158,244,24,.5)}
+  .bar .fill.full{background:linear-gradient(90deg,var(--gold),var(--acc))}
+
+  /* ─── shareable proof summary ─────────────────────────────────────────────── */
+  .proof{position:relative;overflow:hidden;border:1px solid var(--acc-dim);border-radius:14px;padding:18px;margin-bottom:14px;
+    background:linear-gradient(180deg,rgba(158,244,24,.06),rgba(245,179,1,.03))}
+  .proof::after{content:"";position:absolute;right:-50px;top:-50px;width:180px;height:180px;pointer-events:none;
+    background:radial-gradient(circle,rgba(245,179,1,.12),transparent 70%)}
+  .proof h3{margin:0 0 12px;font:800 16px/1.2 var(--sans);color:var(--acc);display:flex;align-items:center;gap:8px;position:relative;z-index:1}
+  .proof .addrline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative;z-index:1}
+  .proof .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin:14px 0;position:relative;z-index:1}
+  @media(max-width:560px){.proof .pgrid{grid-template-columns:1fr}}
+  .proof .pk{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .proof .pv{font:700 15px/1.2 var(--mono);color:var(--ink);word-break:break-all}
+  .proof .actions{margin-top:4px;position:relative;z-index:1}
+  .copybtn{font:600 11px/1 var(--mono);padding:7px 11px;border-radius:8px}
+
+  /* ─── reveal animation ────────────────────────────────────────────────────── */
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .reveal{animation:rise .5s ease both}
+  @media (prefers-reduced-motion:reduce){.reveal{animation:none}.bar .fill{transition:none}}
 </style>
 </head>
 <body>
@@ -109,6 +179,16 @@
 <div class="hero">
   <video src="/brand/locker-hero.mp4" poster="/brand/hero-poster.jpg" autoplay muted loop playsinline preload="auto"></video>
   <div class="cap">Lock LP or team tokens. Prove you can't rug. <b>Anyone can verify.</b></div>
+</div>
+
+<div class="wrapstats">
+  <div class="statsband">
+    <div class="stat"><div class="snum" id="stTotal">—</div><div class="slab">Total Locks</div></div>
+    <div class="stat"><div class="snum" id="stAssets">—</div><div class="slab">Tokens Locked</div></div>
+    <div class="stat"><div class="snum" id="stActive">—</div><div class="slab">Still Locked</div></div>
+    <div class="stat"><div class="snum" id="stDone">—</div><div class="slab">Unlocked</div></div>
+  </div>
+  <div class="feebadge" id="feeBanner">🦌 Hold <b>5M+ $STAG</b> and lock for <b>FREE</b> · otherwise ~$20 in ETH</div>
 </div>
 
 <main>
@@ -181,6 +261,7 @@
       <input id="verifyAddr" placeholder="0x…" spellcheck="false">
       <div class="actions"><button id="verifyBtn" class="primary">Verify</button></div>
       <div id="verifyMsg" class="msg"></div>
+      <div id="verifySummary"></div>
       <div id="verifyList"></div>
     </div>
   </section>
@@ -189,6 +270,7 @@
 <div class="foot">
   Locker contract: <code id="lockerAddr">not set</code> · <span id="explorerLink"></span>
   Admin can set a small creation fee but can <b>never</b> touch locked assets.
+  <div class="powered"><span class="dot"></span>Powered by <b>$STAG Locker</b> · Robinhood Chain</div>
 </div>
 
 <script type="module">
@@ -227,6 +309,7 @@ const LOCKER_ABI = [
 const ERC20_ABI = [
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
+  "function name() view returns (string)",
   "function allowance(address,address) view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
 ];
@@ -247,6 +330,64 @@ function fmtAmt(x){ const n = Number(x); return n >= 1e9 ? (n/1e9).toFixed(2)+"B
 function fmtFull(s){ const [i, f] = String(s).split("."); const gi = i.replace(/\B(?=(\d{3})+(?!\d))/g, ","); return f ? gi + "." + f : gi; }
 // escape any on-chain string before it touches innerHTML (a malicious token symbol is stored XSS)
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ─── copy to clipboard (with legacy fallback) ───────────────────────────────
+async function copyText(text, btn){
+  try{ await navigator.clipboard.writeText(text); }
+  catch{ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.focus(); ta.select(); try{ document.execCommand("copy"); }catch{} ta.remove(); }
+  if(btn){ const old=btn.textContent; btn.textContent = btn.dataset.label==="share" ? "✓ Link copied!" : "✓ Copied";
+    setTimeout(()=>{ btn.textContent = old; }, 1500); }
+}
+
+// ─── count-up animation for the hero stat tiles ─────────────────────────────
+function animateNumber(el, target){
+  if(!el) return; target = Number(target)||0; const dur=900, t0=performance.now();
+  (function step(t){ const p=Math.min(1,(t-t0)/dur); const e=1-Math.pow(1-p,3);
+    el.textContent = Math.round(e*target).toLocaleString();
+    if(p<1) requestAnimationFrame(step); })(t0);
+}
+
+// ─── live countdown + progress ticker (updates all cards once per second) ────
+function tick(){
+  const now = Math.floor(Date.now()/1000);
+  document.querySelectorAll(".cd[data-unlock]").forEach(cd => {
+    let s = Number(cd.dataset.unlock) - now;
+    if(s <= 0){ cd.className="cd done"; cd.textContent="✅ Unlocked — withdrawable now."; cd.removeAttribute("data-unlock"); return; }
+    const d=Math.floor(s/86400); s-=d*86400; const h=Math.floor(s/3600); s-=h*3600; const m=Math.floor(s/60); const sec=s-m*60;
+    const set=(k,v)=>{ const el=cd.querySelector(`[data-u="${k}"]`); if(el) el.textContent=String(v).padStart(2,"0"); };
+    set("d",d); set("h",h); set("m",m); set("s",sec);
+  });
+  document.querySelectorAll(".bar .fill[data-term]").forEach(f => {
+    const term=Number(f.dataset.term); if(!term) return;
+    const pct=Math.max(0,Math.min(100,((now-Number(f.dataset.start))/term)*100));
+    f.style.width=pct+"%";
+  });
+}
+setInterval(tick, 1000);
+
+// ─── hero stats band: scan the contract for live totals ─────────────────────
+async function loadStats(){
+  const tiles = ["stTotal","stAssets","stActive","stDone"].map($);
+  if(!LOCKER){ tiles.forEach(e=>{ if(e) e.textContent="—"; }); return; }
+  try{
+    const next = Number(await readLocker().nextLockId());
+    if(!next){ tiles.forEach(e=>{ if(e) e.textContent="0"; }); return; }
+    const cap = Math.min(next, 600), now = Math.floor(Date.now()/1000), B = 25, locks = [];
+    for(let i=0;i<cap;i+=B){
+      const chunk=[]; for(let j=i;j<Math.min(i+B,cap);j++) chunk.push(readLocker().getLock(j).then(l=>l).catch(()=>null));
+      locks.push(...await Promise.all(chunk));
+    }
+    let total=0, active=0, done=0; const assets=new Set();
+    for(const l of locks){
+      if(!l || l.asset === ethers.ZeroAddress) continue;
+      total++; assets.add(l.asset.toLowerCase());
+      if(!l.withdrawn && Number(l.unlockTime) > now) active++; else done++;
+    }
+    animateNumber($("stTotal"), total); animateNumber($("stAssets"), assets.size);
+    animateNumber($("stActive"), active); animateNumber($("stDone"), done);
+  }catch{ tiles.forEach(e=>{ if(e) e.textContent="—"; }); }
+}
 
 // ─── lock duration presets ───────────────────────────────────────────────────
 let lockDays = 90; // default
@@ -303,6 +444,10 @@ async function loadFee(){
     const waiver = exToken && exToken !== ethers.ZeroAddress && exMin > 0n;
     // human-readable threshold (assume 18 decimals for $STAG)
     const minTok = waiver ? fmtAmt(ethers.formatUnits(exMin, 18)) : "";
+    // keep the prominent hero fee badge in sync with the real on-chain threshold
+    const fb = $("feeBanner");
+    if(fb && flat > 0n && waiver) fb.innerHTML = `🦌 Hold <b>${minTok}+ $STAG</b> and lock for <b>FREE</b> · otherwise <b>${ethers.formatEther(flat)} ETH</b> (~$20)`;
+    else if(fb && flat === 0n) fb.innerHTML = `🦌 <b>Locking is FREE</b> on $STAG Locker · no creation fee`;
     if(!account){
       $("feeNote").innerHTML = flat > 0n
         ? (waiver
@@ -393,38 +538,85 @@ $("lockBtn").onclick = async () => {
   }catch(e){ msg(el,"Lock failed: " + (e.shortMessage||e.message||e),"err"); }
 };
 
-// ─── render a lock ─────────────────────────────────────────────────────────
+// ─── lock-start estimation for the progress bar ─────────────────────────────
+// The on-chain lock tuple stores only unlockTime (no creation timestamp), so we
+// infer the original term from the offered presets: the smallest preset that is
+// still >= the remaining time is the most likely term the locker used. Accurate
+// for standard-term locks that haven't been extended past 3yr; falls back to the
+// remaining window otherwise. Gives a meaningful, ticking progress bar.
+const PRESET_TERMS = [60,90,180,365,1095].map(d => d*DAY);
+function estimateStart(unlockTime){
+  const now = Math.floor(Date.now()/1000);
+  const remaining = Number(unlockTime) - now;
+  if(remaining <= 0) return null;
+  const term = PRESET_TERMS.find(t => t >= remaining) || remaining;
+  return { start: Number(unlockTime) - term, term };
+}
+
+// ─── render a lock (premium proof-of-lock certificate) ──────────────────────
 async function lockCard(id, l, { showManage }){
   const now = Math.floor(Date.now()/1000);
-  const unlocked = Number(l.unlockTime) <= now && !l.withdrawn;
+  const unlockT = Number(l.unlockTime);
+  const withdrawn = l.withdrawn;
+  const isUnlocked = unlockT <= now;
   const isErc20 = Number(l.kind) === 0;
-  let amountLabel = "";
+
+  // amount + ESCAPED symbol/name (a hostile token string is otherwise stored XSS)
+  let amtNum = "", amtSym = "", amtName = "";
   if(isErc20){
     try{ const t = new ethers.Contract(l.asset, ERC20_ABI, read);
-      const [dec, sym] = await Promise.all([t.decimals(), t.symbol().catch(()=>"")]);
-      // full-precision amount + ESCAPED symbol (a hostile token symbol is otherwise stored XSS)
-      amountLabel = fmtFull(ethers.formatUnits(l.amountOrId, dec)) + " " + esc(sym);
-    }catch{ amountLabel = l.amountOrId.toString() + " (raw)"; }
-  } else amountLabel = "V3 position #" + l.amountOrId.toString();
+      const [dec, sym, nm] = await Promise.all([t.decimals(), t.symbol().catch(()=>""), t.name().catch(()=>"")]);
+      amtNum = fmtFull(ethers.formatUnits(l.amountOrId, dec));  // full precision
+      amtSym = esc(sym) || "TOKEN";
+      amtName = esc(nm);
+    }catch{ amtNum = l.amountOrId.toString(); amtSym = "(raw)"; }
+  } else { amtNum = "#" + l.amountOrId.toString(); amtSym = "V3 LP NFT"; }
 
-  const div = document.createElement("div"); div.className = "lock";
-  const state = l.withdrawn ? '<span class="badge open" style="color:var(--dim);border-color:var(--line);background:none">withdrawn</span>'
-    : unlocked ? '<span class="badge open">unlocked</span>' : '<span class="badge locked">locked</span>';
+  // progress bar geometry
+  const est = estimateStart(unlockT);
+  let startT = unlockT, termT = 0, pct = 100;
+  if(est){ startT = est.start; termT = est.term; pct = Math.max(0, Math.min(100, ((now-startT)/termT)*100)); }
+  const complete = withdrawn || isUnlocked;
+
+  const pill = withdrawn
+    ? '<span class="pill withdrawn">✔ Withdrawn</span>'
+    : isUnlocked ? '<span class="pill open">✅ Unlocked</span>'
+    : '<span class="pill locked">🔒 Locked</span>';
+
+  let cdHtml;
+  if(withdrawn) cdHtml = '<div class="cd done">Assets withdrawn — lock complete.</div>';
+  else if(isUnlocked) cdHtml = '<div class="cd done">✅ Unlocked — withdrawable now.</div>';
+  else cdHtml = `<div class="cd" data-unlock="${unlockT}">
+      <div class="seg"><b data-u="d">--</b><span>days</span></div>
+      <div class="seg"><b data-u="h">--</b><span>hrs</span></div>
+      <div class="seg"><b data-u="m">--</b><span>min</span></div>
+      <div class="seg"><b data-u="s">--</b><span>sec</span></div>
+    </div>`;
+  const barHtml = `<div class="bar"><div class="fill${complete?" full":""}" data-start="${startT}" data-term="${termT}" style="width:${complete?100:pct}%"></div></div>`;
+
+  const div = document.createElement("div"); div.className = "lock cert reveal";
   div.innerHTML = `
     <div class="top">
-      <span class="id">#${id}</span>
+      <span class="id">🔒 LOCK #${esc(String(id))}</span>
       <span class="kind">${isErc20 ? "ERC-20" : "V3 LP"}</span>
-      ${state}
+      ${pill}
     </div>
+    <div class="amt">
+      <span class="amt-num">${amtNum}</span>
+      <span class="amt-sym">${amtSym}</span>
+      ${amtName ? `<span class="amt-name">${amtName}</span>` : ""}
+    </div>
+    ${cdHtml}
+    ${barHtml}
     <div class="grid">
-      <div><div class="k">Amount</div><div class="v">${amountLabel}</div></div>
-      <div><div class="k">Unlocks</div><div class="v">${fmtDate(l.unlockTime)}</div></div>
+      <div><div class="k">Unlocks</div><div class="v">${esc(fmtDate(l.unlockTime))}</div></div>
+      <div><div class="k">Kind</div><div class="v">${isErc20 ? "ERC-20 token" : "Uniswap V3 LP"}</div></div>
       <div><div class="k">Asset</div><div class="v"><a href="${EXPLORER}/address/${l.asset}" target="_blank">${short(l.asset)}</a></div></div>
       <div><div class="k">Owner</div><div class="v"><a href="${EXPLORER}/address/${l.owner}" target="_blank">${short(l.owner)}</a></div></div>
     </div>`;
   if(showManage && account && l.owner.toLowerCase() === account.toLowerCase() && !l.withdrawn){
     const row = document.createElement("div"); row.className = "rowbtns";
-    if(unlocked){
+    if(isUnlocked){
       const w = document.createElement("button"); w.className="primary"; w.textContent="Withdraw";
       w.onclick = () => manage("withdraw", id); row.appendChild(w);
     } else {
@@ -474,32 +666,91 @@ async function loadMine(){
       box.appendChild(await lockCard(id.toString(), l, { showManage:true }));
     }
     if(!box.children.length) box.innerHTML = '<div class="empty">No active locks.</div>';
+    tick();
   }catch(e){ box.innerHTML = '<div class="empty">Error: ' + esc(e.shortMessage||e.message||e) + '</div>'; }
 }
 
-// ─── verify ────────────────────────────────────────────────────────────────
-$("verifyBtn").onclick = async () => {
-  const el = $("verifyMsg"), box = $("verifyList");
-  box.innerHTML = ""; hide(el);
-  const addr = $("verifyAddr").value.trim();
-  if(!LOCKER) return msg(el,"Locker not deployed yet.","err");
+// ─── verify (public) + shareable proof view ─────────────────────────────────
+$("verifyBtn").onclick = () => runVerify($("verifyAddr").value.trim());
+
+async function runVerify(addr){
+  const el = $("verifyMsg"), box = $("verifyList"), sum = $("verifySummary");
+  box.innerHTML = ""; sum.innerHTML = ""; hide(el);
   if(!ethers.isAddress(addr)) return msg(el,"Enter a valid address.","err");
+  $("verifyAddr").value = addr;
+  if(!LOCKER) return msg(el,"Locker not deployed yet.","err");
   msg(el,"Reading chain…","info");
   try{
     const ids = await readLocker().assetLockIds(addr);
     if(!ids.length){ msg(el,"No locks found for this address.","info"); return; }
     hide(el);
-    let lockedCount = 0;
-    for(const id of ids){
-      const l = await readLocker().getLock(id);
-      if(!l.withdrawn && Number(l.unlockTime) > Math.floor(Date.now()/1000)) lockedCount++;
-      box.appendChild(await lockCard(id.toString(), l, { showManage:false }));
+    const now = Math.floor(Date.now()/1000), locks = [];
+    for(const id of ids){ const l = await readLocker().getLock(id); locks.push({ id:id.toString(), l }); }
+    let lockedCount = 0, soonest = null;
+    for(const {l} of locks){
+      if(!l.withdrawn && Number(l.unlockTime) > now){ lockedCount++;
+        if(soonest === null || Number(l.unlockTime) < soonest) soonest = Number(l.unlockTime); }
     }
+    await renderProof(addr, locks, { total:locks.length, lockedCount, soonest });
+    for(const {id,l} of locks) box.appendChild(await lockCard(id, l, { showManage:false }));
+    tick();
     msg(el, ids.length + " lock(s) · " + lockedCount + " still locked.","ok");
-  }catch(e){ msg(el,"Error: " + (e.shortMessage||e.message||e),"err"); }
-};
+  }catch(e){ msg(el,"Error: " + esc(e.shortMessage||e.message||e),"err"); }
+}
 
+// clean, shareable "🔒 LOCKED — verify on-chain" certificate summary
+async function renderProof(addr, locks, agg){
+  const sum = $("verifySummary"); if(!locks.length){ sum.innerHTML=""; return; }
+  const now = Math.floor(Date.now()/1000);
+  // sum the still-locked ERC-20 amount (same asset across active locks)
+  let totalLine = `${agg.total} position(s)`;
+  const active20 = locks.filter(x => Number(x.l.kind)===0 && !x.l.withdrawn && Number(x.l.unlockTime) > now);
+  if(active20.length){
+    try{
+      const t = new ethers.Contract(addr, ERC20_ABI, read);
+      const [dec, sym] = await Promise.all([t.decimals(), t.symbol().catch(()=>"")]);
+      let s = 0n; for(const x of active20) s += x.l.amountOrId;
+      totalLine = `${fmtFull(ethers.formatUnits(s, dec))} ${esc(sym) || "TOKEN"}`;
+    }catch{}
+  }
+  const share = `https://stagwifhood.fun/locker?verify=${addr}`;
+  const soonest = agg.soonest ? esc(fmtDate(agg.soonest)) : "—";
+  const locked = agg.lockedCount > 0;
+  sum.innerHTML = `
+    <div class="proof reveal">
+      <h3>${locked ? "🔒 LOCKED — verify on-chain" : "✅ No active locks on this address"}</h3>
+      <div class="addrline">
+        <code>${esc(addr)}</code>
+        <button class="copybtn" data-copy="${esc(addr)}">Copy address</button>
+      </div>
+      <div class="pgrid">
+        <div><div class="pk">Total locked</div><div class="pv">${totalLine}</div></div>
+        <div><div class="pk">Soonest unlock</div><div class="pv">${soonest}</div></div>
+        <div><div class="pk">Total locks</div><div class="pv">${agg.total}</div></div>
+        <div><div class="pk">Still locked</div><div class="pv">${agg.lockedCount}</div></div>
+      </div>
+      <div class="actions">
+        <button class="primary copybtn" data-copy="${esc(share)}" data-label="share">🔗 Copy share link</button>
+        <a class="copybtn" href="${EXPLORER}/address/${esc(addr)}" target="_blank"
+           style="display:inline-flex;align-items:center;border:1px solid var(--line);text-decoration:none;color:var(--ink)">Blockscout ↗</a>
+      </div>
+    </div>`;
+  sum.querySelectorAll(".copybtn[data-copy]").forEach(b => b.onclick = () => copyText(b.dataset.copy, b));
+}
+
+// ─── init: hero stats, fee, and ?verify=0x… deep-link (share a proof link) ──
+loadStats();
 if(LOCKER) loadFee();
+(function initDeepLink(){
+  const v = new URLSearchParams(location.search).get("verify");
+  if(v && ethers.isAddress(v)){
+    currentTab = "verify";
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.tab === "verify"));
+    document.querySelectorAll("[data-panel]").forEach(p => p.style.display = p.dataset.panel === "verify" ? "" : "none");
+    $("verifyAddr").value = v;
+    if(LOCKER) runVerify(v);
+  }
+})();
 </script>
 </body>
 </html>

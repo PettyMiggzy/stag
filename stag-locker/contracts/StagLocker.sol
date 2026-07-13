@@ -173,6 +173,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         uint256 before = t.balanceOf(address(this));
         t.safeTransferFrom(msg.sender, address(this), amount);
         uint256 received = t.balanceOf(address(this)) - before;
+        if (received == 0) revert ZeroAmount(); // consistency with lockTokens (no 0-value top-up)
         l.amountOrId += received;
         emit LockToppedUp(id, received, l.amountOrId);
     }
@@ -260,9 +261,14 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     }
 
     /// @dev Return arr[start .. start+count), clamped to arr.length.
+    /// @dev Page size is capped at 1000 so a caller passing a huge `count` can never force an
+    ///      unbounded return that exceeds the eth_call gas limit (spam-index DoS hardening).
+    uint256 private constant MAX_PAGE = 1000;
+
     function _paged(uint256[] storage arr, uint256 start, uint256 count)
         private view returns (uint256[] memory out)
     {
+        if (count > MAX_PAGE) count = MAX_PAGE;
         uint256 len = arr.length;
         if (start >= len) return new uint256[](0);
         uint256 end = start + count;
@@ -284,7 +290,12 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         emit FeeChanged(_flatFeeWei, _feeRecipient);
     }
 
-    /// @notice Enable/disable the hold-to-lock-free waiver. token=address(0) disables it.
+    /// @notice Enable/disable the hold-to-lock-free waiver. Either token=address(0) OR
+    ///         minBalance=0 DISABLES it (everyone pays flatFeeWei) — minBalance=0 does NOT make
+    ///         all holders exempt. The waiver is a spot balance check (a flash-borrowed balance
+    ///         qualifies), which is fine for a ~$20 anti-spam fee. Note: V3-LP creation fees are
+    ///         effectively voluntary regardless (the onERC721Received safeTransferFrom path takes
+    ///         no ETH), so meaningful fee revenue comes from non-exempt ERC-20 lockers.
     function setFeeExemption(address token, uint256 minBalance) external onlyOwner {
         feeExemptToken = IERC20(token);
         feeExemptMinBalance = minBalance;
@@ -294,9 +305,17 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     /// @notice The creation fee `who` will actually pay: 0 if they hold enough of the exempt
     ///         token (e.g. >= 5M $STAG), otherwise `flatFeeWei`. The UI reads this to know
     ///         how much ETH to send.
+    /// @dev    The exempt-token `balanceOf` is isolated in a gas-capped try/catch and FAILS
+    ///         CLOSED to charging `flatFeeWei`. A hostile/paused/broken exempt token therefore
+    ///         only forfeits the waiver (everyone pays the normal fee) and can NEVER brick lock
+    ///         creation — preserving the pull-payment non-bricking guarantee.
     function feeFor(address who) public view returns (uint256) {
-        if (address(feeExemptToken) != address(0) && feeExemptMinBalance > 0
-            && feeExemptToken.balanceOf(who) >= feeExemptMinBalance) return 0;
+        IERC20 tk = feeExemptToken;
+        if (address(tk) != address(0) && feeExemptMinBalance > 0) {
+            try tk.balanceOf{gas: 100_000}(who) returns (uint256 bal) {
+                if (bal >= feeExemptMinBalance) return 0;
+            } catch {}
+        }
         return flatFeeWei;
     }
 
