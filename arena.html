@@ -65,7 +65,9 @@
   .touch-on .touch{display:flex}
   /* start / death overlay */
   #ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    text-align:center;padding:24px;background:radial-gradient(120% 90% at 50% 10%,rgba(20,60,30,.6),rgba(4,10,6,.95))}
+    text-align:center;padding:24px;
+    background:linear-gradient(180deg,rgba(4,10,6,.62) 0%,rgba(4,10,6,.42) 42%,rgba(4,10,6,.9) 100%),url('./assets/game/splash.png') center/cover no-repeat,#06110a}
+  #ov h1{text-shadow:0 4px 24px rgba(0,0,0,.7)} #ov p{text-shadow:0 2px 10px rgba(0,0,0,.8)}
   #ov h1{font:900 clamp(34px,9vw,72px)/.95 Arial;margin:0 0 6px;letter-spacing:1px;
     background:linear-gradient(180deg,#fff,#b6ff2e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   #ov .blood{color:#ff5a4a;-webkit-text-fill-color:#ff5a4a}
@@ -220,8 +222,22 @@ function grassTex(){ const c=document.createElement('canvas'); c.width=c.height=
     x.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*2,1+Math.random()*3); }
   for(let i=0;i<50;i++){ x.fillStyle='rgba(18,38,14,0.14)'; x.beginPath(); x.arc(Math.random()*256,Math.random()*256,8+Math.random()*34,0,7); x.fill(); }
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(30,30); t.anisotropy=4; return t; }
-const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ map:grassTex(), color:0xbfe6a8, roughness:1 }));
+const texLoader = new THREE.TextureLoader();
+function loadTex(url, rx, ry){ const t=texLoader.load(url); if(rx){ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx,ry||rx); } t.anisotropy=8; return t; }
+// real Venice-generated grass terrain (falls back to procedural if the file is missing)
+const groundMat = new THREE.MeshStandardMaterial({ map:null, color:0xffffff, roughness:1 });
+texLoader.load('./assets/game/ground.png',
+  t=>{ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(14,14); t.anisotropy=8; groundMat.map=t; groundMat.needsUpdate=true; },
+  undefined,
+  ()=>{ groundMat.map=grassTex(); groundMat.color.setHex(0xbfe6a8); groundMat.needsUpdate=true; });
+const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.receiveShadow = true; scene.add(ground);
+// dramatic storm-cloud horizon backdrop (real Venice sky), sits behind everything, ignores fog/lighting
+const backdrop = new THREE.Mesh(
+  new THREE.CylinderGeometry(WORLD*1.45, WORLD*1.45, 150, 48, 1, true),
+  new THREE.MeshBasicMaterial({ map:loadTex('./assets/game/sky.png',4,1), side:THREE.BackSide, fog:false, depthWrite:false, transparent:true, opacity:0.92 })
+);
+backdrop.position.y=35; scene.add(backdrop);
 const rim = new THREE.DirectionalLight(0xbfe0ff, 0.45); rim.position.set(-50,40,-60); scene.add(rim); // cool back-rim for silhouettes
 function groundH(x,z){ return Math.sin(x*0.03)*Math.cos(z*0.028)*2.2 + Math.sin(x*0.011+z*0.013)*3.0; }
 
