@@ -190,6 +190,19 @@
       <div class="adm-field"><label>Approve project</label><input id="sk-tok" class="adm-input" placeholder="token 0x…" /><input id="sk-tokw" class="adm-input" placeholder="× (1)" style="max-width:70px"/><button id="sk-approve" class="btn-mini">Approve</button></div>
     </div>
 
+    <!-- Sherwood Vault (future-proof NFT staking) -->
+    <div class="adm-card owner-only">
+      <h2>Sherwood Vault · NFT Staking</h2>
+      <p class="hint">Fuel the Saints/NFT reward pool and stream ETH to stakers. Add any future collection with one call. <span id="vt-bal" style="color:var(--muted)"></span></p>
+      <div class="adm-field"><label>Fuel pool (ETH)</label><input id="vt-fund-amt" class="adm-input" placeholder="0.5" /><button id="vt-fund" class="btn-mini">Send</button></div>
+      <div class="adm-field"><label>Stream rewards</label><input id="vt-notify-amt" class="adm-input" placeholder="ETH" style="min-width:80px" /><input id="vt-notify-days" class="adm-input" placeholder="days" style="max-width:70px" /><button id="vt-notify" class="btn-mini">Start</button></div>
+      <div style="border-top:1px solid rgba(230,184,63,.18);margin:.9rem 0 .6rem;padding-top:.6rem">
+        <p class="hint" style="margin:0 0 .5rem">Add a stakeable collection. <b>Custody</b> = holders deposit the NFT (any ERC-721, e.g. Saints). <b>Lock-in-place</b> = NFT stays in wallet (needs lock()/unlock()). Weight = reward share per staked NFT (10000 = 1 unit).</p>
+        <div class="adm-field"><label>NFT address</label><input id="vt-col-addr" class="adm-input" placeholder="0x…" /></div>
+        <div class="adm-field"><label>Weight · mode</label><input id="vt-col-w" class="adm-input" placeholder="10000" style="max-width:110px" /><label style="flex:0;white-space:nowrap;font-size:.72rem;gap:.3rem"><input type="checkbox" id="vt-col-lip" style="width:auto;margin-right:.3rem" />lock-in-place</label><button id="vt-col" class="btn-mini">Add</button></div>
+      </div>
+    </div>
+
     <!-- Sherwood Pact -->
     <div class="adm-card owner-only">
       <h2>Sherwood Pact</h2>

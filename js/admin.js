@@ -71,6 +71,14 @@
     'function setTokenWeight(address,uint256)',
     'function setEarlyPenaltyBps(uint256)',
   ];
+  const VAULT_ABI = [
+    'function owner() view returns (address)',
+    'function totalWeight() view returns (uint256)',
+    'function reserved() view returns (uint256)',
+    'function collectionsCount() view returns (uint256)',
+    'function notifyRewardAmount(uint256,uint256)',
+    'function addCollection(address,uint256,bool)',
+  ];
   const PACT_ABI = [
     'function owner() view returns (address)',
     'function entryFee() view returns (uint256)',
@@ -128,6 +136,10 @@
     const stk = ADDR.staking();
     if (stk) { try { $('kpi-pool').textContent = fmt(await p.getBalance(stk)) + ' ETH'; } catch { $('kpi-pool').textContent = '—'; } }
     else $('kpi-pool').textContent = 'awaiting deploy';
+
+    // Sherwood Vault pool balance (hint next to the vault card)
+    const vault = store.get('vault') || (window.HOODED && window.HOODED.vault) || '';
+    if ($('vt-bal') && ethers.isAddress(vault)) { try { $('vt-bal').textContent = '· pool: ' + fmt(await p.getBalance(vault)) + ' ETH'; } catch {} }
 
     // Total $STAG staked (reads staking contract's STAG balance as a proxy)
     if (stk) {
@@ -290,6 +302,21 @@
     });
     $('sk-notify') && ($('sk-notify').onclick = () => ownerSend(stk(), STAKING_ABI, 'notifyRewardAmount',
       [parseEth($('sk-notify-amt').value), BigInt(Math.round((+$('sk-notify-days').value || 0) * 86400))], 'Reward period started ✓'));
+
+    // ----- Sherwood Vault (NFT staking) -----
+    const vlt = () => store.get('vault') || (window.HOODED && window.HOODED.vault) || '';
+    $('vt-fund') && ($('vt-fund').onclick = async () => {
+      if (!signer) return toast('Connect wallet first.', 'err');
+      const addr = vlt();
+      if (!ethers.isAddress(addr)) return toast('Vault address not set.', 'err');
+      if ((await provider.getCode(addr)) === '0x') return toast('No contract at the vault address.', 'err');
+      try { const tx = await signer.sendTransaction({ to: addr, value: parseEth($('vt-fund-amt').value) }); await tx.wait(); toast('Vault pool funded ✓', 'ok'); await loadDashboard(); }
+      catch (e) { toast(pretty(e), 'err'); }
+    });
+    $('vt-notify') && ($('vt-notify').onclick = () => ownerSend(vlt(), VAULT_ABI, 'notifyRewardAmount',
+      [parseEth($('vt-notify-amt').value), BigInt(Math.round((+$('vt-notify-days').value || 0) * 86400))], 'Vault reward stream started ✓'));
+    $('vt-col') && ($('vt-col').onclick = () => ownerSend(vlt(), VAULT_ABI, 'addCollection',
+      [$('vt-col-addr').value.trim(), BigInt($('vt-col-w').value || '10000') * (10n ** 18n), !!$('vt-col-lip').checked], 'Collection added ✓'));
     for (let t = 0; t < 3; t++) $('sk-mult-' + t) && ($('sk-mult-' + t).onclick = () =>
       ownerSend(stk(), STAKING_ABI, 'setTierMultBps', [t, BigInt(Math.round((+$('sk-mult-in-' + t).value || 1) * 10000))], 'Lock multiplier set ✓'));
     $('sk-hold') && ($('sk-hold').onclick = () => ownerSend(stk(), STAKING_ABI, 'setHoldingTiers',
