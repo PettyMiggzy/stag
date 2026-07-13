@@ -75,6 +75,7 @@
 </div>
 <div id="stick" class="touch"><div class="nub"></div></div>
 <div id="btns" class="touch">
+  <div class="abtn" id="btnPov" style="width:52px;height:52px;font-size:16px">👁</div>
   <div class="abtn" id="btnAct">EAT<br>DRINK</div>
   <div class="abtn" id="btnAttack">⚔</div>
 </div>
@@ -86,7 +87,8 @@
   <div class="keys" id="ov-keys">
     <span>WASD / drag — move &amp; look</span><br>
     <span>SPACE / ⚔ — charge &amp; gore</span><br>
-    <span>E — eat grass / drink water</span> · <span>Z — sleep</span>
+    <span>E — eat grass / drink water</span> · <span>Z — sleep</span><br>
+    <span>V / 👁 — switch POV ↔ wide view</span>
   </div>
   <button id="startBtn">ENTER THE FOREST</button>
   <div class="sub">Part of <a href="/">$STAGWIFHOOD</a> · runs 100% in your browser</div>
@@ -163,38 +165,59 @@ for(let i=0;i<150;i++){ const x=rand(-WORLD,WORLD),z=rand(-WORLD,WORLD); if(Math
 for(let i=0;i<9;i++) addPond(rand(-WORLD+30,WORLD-30), rand(-WORLD+30,WORLD-30), rand(6,12));
 for(let i=0;i<70;i++) addGrass(rand(-WORLD,WORLD), rand(-WORLD,WORLD));
 
-// ---------- stag model ----------
+// ---------- stag model (muscular + branching antler rack) ----------
+function cyl(a,b,r1,r2,mat){
+  const dir=new THREE.Vector3().subVectors(b,a); const len=Math.max(dir.length(),0.001);
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r2,r1,len,6), mat);
+  m.position.copy(a).addScaledVector(dir,0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  m.castShadow=true; return m;
+}
+function makeAntler(mat, s){ // s = +1 / -1 (mirror)
+  const g=new THREE.Group(); const V=(x,y,z)=>new THREE.Vector3(x*s,y,z);
+  const beam=[[0,0,0],[0.15,0.7,0.05],[0.35,1.35,0.28],[0.5,1.95,0.62],[0.48,2.5,1.15]]; // sweeps up & back
+  for(let i=1;i<beam.length;i++) g.add(cyl(V(...beam[i-1]),V(...beam[i]),0.14-i*0.018,0.14-(i+1)*0.018,mat));
+  const tines=[[0.16,0.75,0.08, 0.72,1.15,0.55],[0.4,1.45,0.35, 1.05,1.85,0.95],[0.5,2.05,0.72, 1.05,2.5,1.25]]; // forward points
+  for(const t of tines) g.add(cyl(V(t[0],t[1],t[2]),V(t[3],t[4],t[5]),0.085,0.03,mat));
+  return g;
+}
 function makeStag(color, scale=1){
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(1.05,2.2,4,10), new THREE.MeshStandardMaterial({color,roughness:0.9}));
-  body.rotation.z=Math.PI/2; body.position.y=2.3; body.castShadow=true; g.add(body);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.75,2.1,8), new THREE.MeshStandardMaterial({color,roughness:0.9}));
-  neck.position.set(1.9,3.1,0); neck.rotation.z=-0.7; neck.castShadow=true; g.add(neck);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.85,0.9), new THREE.MeshStandardMaterial({color,roughness:0.9}));
-  head.position.set(2.9,3.75,0); head.castShadow=true; g.add(head);
-  // antlers
-  const am = new THREE.MeshStandardMaterial({color:0xd9c39a,roughness:0.7});
-  for(const s of [-1,1]){ const a=new THREE.Group();
-    const main=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.14,1.7,5),am); main.position.y=0.85; a.add(main);
-    for(const ty of [0.5,1.0,1.5]){ const tine=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.08,0.7,5),am);
-      tine.position.set(0.25,ty,0); tine.rotation.z=-0.7; a.add(tine); }
-    a.position.set(3.1,4.15,s*0.32); a.rotation.x=s*0.35; a.rotation.z=-0.15; g.add(a);
-  }
-  // legs
-  const lm=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(0.7),roughness:1});
+  const g=new THREE.Group();
+  const skin=new THREE.MeshStandardMaterial({color,roughness:0.85});
+  const dark=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(0.62),roughness:1});
+  // muscular torso: big chest, barrel belly, powerful rump + shoulder hump
+  const chest=new THREE.Mesh(new THREE.SphereGeometry(1.5,12,10),skin); chest.scale.set(1.15,1.3,1.55); chest.position.set(0.95,2.7,0); chest.castShadow=true; g.add(chest);
+  const belly=new THREE.Mesh(new THREE.CapsuleGeometry(1.02,2.3,6,12),skin); belly.rotation.z=Math.PI/2; belly.position.set(-0.25,2.45,0); belly.castShadow=true; g.add(belly);
+  const rump=new THREE.Mesh(new THREE.SphereGeometry(1.2,12,10),skin); rump.scale.set(1.05,1.2,1.35); rump.position.set(-1.75,2.55,0); rump.castShadow=true; g.add(rump);
+  const hump=new THREE.Mesh(new THREE.SphereGeometry(0.9,10,8),skin); hump.scale.set(1.25,1.0,1.35); hump.position.set(0.75,3.65,0); g.add(hump);
+  // thick neck + head
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.98,2.5,10),skin); neck.position.set(2.05,3.5,0); neck.rotation.z=-0.58; neck.castShadow=true; g.add(neck);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.98,0.98),skin); head.position.set(3.05,4.3,0); head.castShadow=true; g.add(head);
+  const snout=new THREE.Mesh(new THREE.BoxGeometry(0.95,0.56,0.62),skin); snout.position.set(3.75,4.02,0); snout.castShadow=true; g.add(snout);
+  const nose=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.42,0.58),dark); nose.position.set(4.2,3.98,0); g.add(nose);
+  const em=new THREE.MeshStandardMaterial({color:0x0d0906,roughness:0.25});
+  for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,8),em); eye.position.set(3.42,4.45,s*0.44); g.add(eye);
+    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.24,0.7,6),skin); ear.position.set(2.85,4.75,s*0.52); ear.rotation.z=-0.25; ear.rotation.x=s*0.5; ear.castShadow=true; g.add(ear); }
+  // antler rack
+  const am=new THREE.MeshStandardMaterial({color:0xcdb98f,roughness:0.5});
+  for(const s of [-1,1]){ const a=makeAntler(am,s); a.position.set(2.8,4.7,s*0.3); a.rotation.z=-0.15; g.add(a); }
+  // muscular legs (thigh + shin + hoof) pivoting from the hip
   const legs=[];
-  for(const [lx,lz] of [[1.4,0.7],[1.4,-0.7],[-1.4,0.7],[-1.4,-0.7]]){
-    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.16,2.3,6),lm); leg.position.set(lx,1.15,lz); leg.castShadow=true; g.add(leg); legs.push(leg);
+  for(const [lx,lz] of [[1.55,0.78],[1.55,-0.78],[-1.65,0.78],[-1.65,-0.78]]){
+    const leg=new THREE.Group(); leg.position.set(lx,2.25,lz);
+    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(0.36,0.85,4,8),skin); thigh.position.y=-0.55; leg.add(thigh);
+    const shin=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.22,1.35,6),dark); shin.position.y=-1.5; leg.add(shin);
+    const hoof=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.16,0.28,6),new THREE.MeshStandardMaterial({color:0x150f0a})); hoof.position.y=-2.2; leg.add(hoof);
+    leg.traverse(o=>{o.castShadow=true;}); g.add(leg); legs.push(leg);
   }
-  // tail
-  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.28,0.7,6),new THREE.MeshStandardMaterial({color:0xf4ead8})); tail.position.set(-2.0,2.7,0); tail.rotation.z=0.8; g.add(tail);
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.32,0.85,6),skin); tail.position.set(-2.75,2.75,0); tail.rotation.z=1.0; g.add(tail);
   g.scale.setScalar(scale); g.userData.legs=legs; return g;
 }
 
 // ---------- player ----------
 const player = makeStag(0x8a5a30, 1.0); scene.add(player);
 const P = { x:0, z:0, yaw:0, vx:0, vz:0, speed:0, hp:100, food:100, water:100, energy:100, kills:0, dead:false, atk:0, hurt:0, sleeping:0 };
-let camYaw = 0, camPitch = 0.35, camDist = 16;
+let camYaw = 0, camPitch = 0.35, camDist = 16, fpPitch = 0.02, camMode = 'pov'; // 'pov' (over-the-head) | 'tp' (wide)
 
 // ---------- enemy herd ----------
 const enemies = [];
@@ -227,12 +250,17 @@ addEventListener('keydown', e=>{ keys[e.code]=true;
   if(e.code==='Space'){ attack(); e.preventDefault(); }
   if(e.code==='KeyE') interact();
   if(e.code==='KeyZ') sleep();
+  if(e.code==='KeyV') togglePOV();
 });
 addEventListener('keyup', e=>{ keys[e.code]=false; });
 let dragging=false, lastX=0, lastY=0;
 renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
 addEventListener('pointerup', ()=> dragging=false);
-addEventListener('pointermove', e=>{ if(!dragging) return; camYaw -= (e.clientX-lastX)*0.005; camPitch = clamp(camPitch+(e.clientY-lastY)*0.004,0.05,1.2); lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointermove', e=>{ if(!dragging) return; camYaw -= (e.clientX-lastX)*0.005;
+  camPitch = clamp(camPitch+(e.clientY-lastY)*0.004,0.05,1.2);
+  fpPitch = clamp(fpPitch - (e.clientY-lastY)*0.004,-0.55,0.6);
+  lastX=e.clientX; lastY=e.clientY; });
+function togglePOV(){ camMode = camMode==='pov'?'tp':'pov'; msg(camMode==='pov'?'POV — over the antlers':'Wide view'); }
 addEventListener('wheel', e=>{ camDist = clamp(camDist + e.deltaY*0.02, 8, 34); });
 
 // mobile
@@ -249,6 +277,7 @@ if(isTouch){ document.body.classList.add('touch-on');
   st.addEventListener('touchend', end); st.addEventListener('touchcancel', end);
   $('btnAttack').addEventListener('touchstart', e=>{ e.preventDefault(); attack(); }, {passive:false});
   $('btnAct').addEventListener('touchstart', e=>{ e.preventDefault(); interact(); }, {passive:false});
+  $('btnPov').addEventListener('touchstart', e=>{ e.preventDefault(); togglePOV(); }, {passive:false});
 }
 
 // ---------- actions ----------
@@ -309,6 +338,7 @@ function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta()
         P.yaw=ang; P.speed=sp*Math.min(mag,1);
         P.energy=clamp(P.energy-(keys.ShiftLeft?5:2.2)*dt,0,100);
       } else { P.vx*=0.8; P.vz*=0.8; P.speed*=0.8; if(P.energy<100) P.energy=clamp(P.energy+3.5*dt,0,100); }
+      if(camMode==='pov') P.yaw = camYaw; // in POV the body always faces the view
       P.x=clamp(P.x+P.vx*dt,-WORLD,WORLD); P.z=clamp(P.z+P.vz*dt,-WORLD,WORLD);
     }
     // stat decay
@@ -344,12 +374,20 @@ function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta()
 
   updateBlood(dt);
 
-  // camera follow
-  const cx=P.x - Math.sin(camYaw)*Math.cos(camPitch)*camDist;
-  const cz=P.z - Math.cos(camYaw)*Math.cos(camPitch)*camDist;
-  const cy=py + 6 + Math.sin(camPitch)*camDist;
-  camera.position.lerp(new THREE.Vector3(cx,cy,cz), 0.12);
-  camera.lookAt(P.x, py+3.5, P.z);
+  // camera
+  if(camMode==='pov'){
+    // over-the-head: camera sits behind the antlers, you see your muscular stag powering forward
+    const fx=Math.sin(camYaw), fz=Math.cos(camYaw);
+    const cx=P.x - fx*6.0, cz=P.z - fz*6.0, cy=py + 9.2 + fpPitch*5;
+    camera.position.lerp(new THREE.Vector3(cx,cy,cz), 0.35);
+    camera.lookAt(P.x + fx*16, py + 5.6 + fpPitch*9, P.z + fz*16);
+  } else {
+    const cx=P.x - Math.sin(camYaw)*Math.cos(camPitch)*camDist;
+    const cz=P.z - Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+    const cy=py + 6 + Math.sin(camPitch)*camDist;
+    camera.position.lerp(new THREE.Vector3(cx,cy,cz), 0.12);
+    camera.lookAt(P.x, py+3.5, P.z);
+  }
   sun.target.position.set(P.x,0,P.z); sun.position.set(P.x+60,120,P.z+40);
 
   // HUD + hint
