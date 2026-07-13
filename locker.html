@@ -45,10 +45,10 @@
   button:disabled{opacity:.45;cursor:not-allowed}
   .wallet{font:600 12px/1 var(--mono);color:var(--mut)}
   .wallet b{color:var(--teal)}
-  .hero{position:relative;height:clamp(240px,44vw,520px);overflow:hidden;border-bottom:1px solid var(--line);background:#05080a}
-  .hero img{width:100%;height:100%;object-fit:cover;object-position:center 42%;display:block}
-  /* show the ENTIRE video (no crop) — contain letterboxes against the dark hero bg */
-  .hero video{width:100%;height:100%;object-fit:contain;display:block}
+  /* hero box is the SAME 16:9 as the video → whole frame shows, no crop, no black bars */
+  .hero{position:relative;width:100%;max-width:1000px;margin:0 auto;aspect-ratio:16/9;
+        overflow:hidden;border-bottom:1px solid var(--line);background:#05080a}
+  .hero img,.hero video{width:100%;height:100%;object-fit:cover;display:block}
   .hero .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 20px;
     background:linear-gradient(0deg,rgba(6,10,6,.92),transparent);
     font:600 13px/1.4 var(--mono);color:var(--ink)}
@@ -125,7 +125,7 @@
   .stat:nth-child(3) .snum{color:var(--hot);text-shadow:0 0 22px rgba(255,93,59,.28)}
   .stat:nth-child(4) .snum{color:var(--teal);text-shadow:0 0 22px rgba(55,214,196,.28)}
   .slab{margin-top:8px;font:600 9.5px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
-  .feebadge{margin:12px 0 0;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;
+  .feebadge{margin:12px 0 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;text-align:center;
     font:600 12.5px/1.45 var(--sans);color:var(--ink);
     background:linear-gradient(90deg,rgba(245,179,1,.10),rgba(158,244,24,.10));
     border:1px solid var(--acc-dim);border-radius:12px;padding:11px 14px;
