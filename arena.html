@@ -329,25 +329,23 @@ function makeStag(color, scale=1){
 // ---------- real stag billboard sprite (Venice art, chroma-keyed) ----------
 // The roaming rivals render as camera-facing billboards of a real photographed stag —
 // the green screen is keyed out to transparency in-browser, so they read as real deer.
-const SPRITE_MAT = new THREE.MeshBasicMaterial({ transparent:true, alphaTest:0.5, side:THREE.DoubleSide });
-let STAG_TEX=null;
-(function(){ const img=new Image();
+const SIDE_MAT  = new THREE.MeshBasicMaterial({ transparent:true, alphaTest:0.5, side:THREE.DoubleSide });
+const FRONT_MAT = new THREE.MeshBasicMaterial({ transparent:true, alphaTest:0.5, side:THREE.DoubleSide });
+function keyGreenTo(url, mat){ const img=new Image();       // chroma-key the green screen out, in-browser
   img.onload=()=>{ try{
     const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
     const x=c.getContext('2d'); x.drawImage(img,0,0);
     const id=x.getImageData(0,0,c.width,c.height), d=id.data;
-    for(let i=0;i<d.length;i+=4){ const r=d[i],g=d[i+1],b=d[i+2];
-      if(g>r*1.1+8 && g>b*1.02){ d[i+3]=0; }              // kill the green-screen pixels
-    }
+    for(let i=0;i<d.length;i+=4){ const r=d[i],g=d[i+1],b=d[i+2]; if(g>r*1.1+8 && g>b*1.02) d[i+3]=0; }
     x.putImageData(id,0,0);
-    STAG_TEX=new THREE.CanvasTexture(c); STAG_TEX.anisotropy=8;
-    SPRITE_MAT.map=STAG_TEX; SPRITE_MAT.needsUpdate=true;
+    const t=new THREE.CanvasTexture(c); t.anisotropy=8; mat.map=t; mat.needsUpdate=true;
   }catch(e){} };
-  img.src='./assets/game/stag_sprite.png';
-})();
+  img.src=url; }
+keyGreenTo('./assets/game/stag_sprite.png', SIDE_MAT);      // broadside view
+keyGreenTo('./assets/game/stag_front.png',  FRONT_MAT);     // charging-at-you view
 function makeStagSprite(scale=1){
   const g=new THREE.Group();
-  const pl=new THREE.Mesh(new THREE.PlaneGeometry(8,8), SPRITE_MAT); pl.position.y=3.9; g.add(pl);
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(8,8), SIDE_MAT); pl.position.y=3.9; g.add(pl);
   g.userData.sprite=pl; g.scale.setScalar(scale); return g;
 }
 
@@ -656,11 +654,15 @@ function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta()
       // billboard: plant feet on the ground, face the camera around Y (never tilt, never hop)
       e.mesh.position.set(e.x, ey, e.z);
       e.mesh.rotation.set(0, Math.atan2(camera.position.x-e.x, camera.position.z-e.z), 0);
-      // left/right facing with hysteresis so the sprite never mirror-pops frame to frame
-      const camRight=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
-      const side=dx*camRight.x+dz*camRight.z; if(e.face===undefined) e.face=1;
-      if(side>2.5) e.face=-1; else if(side<-2.5) e.face=1;
-      e.mesh.userData.sprite.scale.x = e.face;
+      const spr=e.mesh.userData.sprite;
+      // pick the sprite by how the camera sees this deer: charging toward you -> FRONT, else broadside -> SIDE
+      const vdx=camera.position.x-e.x, vdz=camera.position.z-e.z, vl=Math.hypot(vdx,vdz)||1;
+      const fdx=Math.sin(e.yaw), fdz=Math.cos(e.yaw);
+      const facing=(fdx*vdx+fdz*vdz)/vl;                  // >0 the deer faces the camera
+      if(facing>0.42){ if(spr.material!==FRONT_MAT) spr.material=FRONT_MAT; spr.scale.x=1; }
+      else { if(spr.material!==SIDE_MAT) spr.material=SIDE_MAT;
+        const cr=(vdx*fdz - vdz*fdx)/vl; if(e.face===undefined) e.face=1;   // which way the body points on screen
+        if(cr>0.3) e.face=1; else if(cr<-0.3) e.face=-1; spr.scale.x=e.face; }
       e.mesh.scale.setScalar((e.hurt>0?1.08:1)*bs);
     } else {
       e.mesh.position.set(e.x,ey,e.z); e.mesh.rotation.set(0,e.yaw-Math.PI/2,0);
