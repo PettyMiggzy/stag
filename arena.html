@@ -48,6 +48,10 @@
     width:180px;height:8px;border-radius:6px;background:rgba(7,22,13,.7);border:1px solid rgba(255,90,74,.4);overflow:hidden;opacity:0;transition:opacity .12s}
   #chargefill{height:100%;width:0;background:linear-gradient(90deg,#ff8a1e,#ff2a1e)}
   #killfeed{position:absolute;right:14px;top:96px;text-align:right;font:800 12px/1.5 ui-monospace;color:#ff8a7a;text-shadow:0 1px 4px #000}
+  #super{display:none;position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 44px);transform:translateX(-50%);
+    font:900 14px/1 Arial;letter-spacing:.06em;color:#0a1a0a;background:linear-gradient(90deg,#33ff66,#b6ff2e);
+    border-radius:10px;padding:8px 14px;box-shadow:0 0 24px rgba(60,255,90,.6);animation:superpulse .8s infinite}
+  @keyframes superpulse{0%,100%{box-shadow:0 0 20px rgba(60,255,90,.5)}50%{box-shadow:0 0 34px rgba(60,255,90,.9)}}
   /* mobile controls */
   .touch{position:absolute;pointer-events:auto;z-index:6;display:none}
   #stick{left:20px;bottom:calc(env(safe-area-inset-bottom) + 22px);width:128px;height:128px;border-radius:50%;
@@ -78,6 +82,7 @@
 <div id="hud">
   <div id="tod">DUSK</div>
   <div id="killfeed"></div>
+  <div id="super">⚡ SUPERSTRENGTH <span id="super-t">0</span>s</div>
   <div id="chargewrap"><div id="chargefill"></div></div>
   <div class="bars">
     <div class="lvlrow"><span id="lvl">Lv 1</span><div id="xpbar"><div id="xpfill"></div></div></div>
@@ -152,6 +157,24 @@ scene.add(sky);
 const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(14,16,16), new THREE.MeshBasicMaterial({color:0xfff3d0,fog:false})); scene.add(sunDisc);
 const moonDisc = new THREE.Mesh(new THREE.SphereGeometry(10,16,16), new THREE.MeshBasicMaterial({color:0xdfe8ff,fog:false})); scene.add(moonDisc);
 
+function glowSprite(r,g,b,size){ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  const gr=x.createRadialGradient(64,64,0,64,64,64); gr.addColorStop(0,'rgba('+r+','+g+','+b+',1)'); gr.addColorStop(0.35,'rgba('+r+','+g+','+b+',0.4)'); gr.addColorStop(1,'rgba('+r+','+g+','+b+',0)');
+  x.fillStyle=gr; x.fillRect(0,0,128,128);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,fog:false})); s.scale.setScalar(size); return s; }
+const sunGlow=glowSprite(255,240,200,150); scene.add(sunGlow);
+// stars (night)
+const starGeo=new THREE.BufferGeometry(), starPos=new Float32Array(700*3);
+for(let i=0;i<700;i++){ const th=Math.random()*6.283, ph=Math.acos(Math.random()); const r=560;
+  starPos[i*3]=r*Math.sin(ph)*Math.cos(th); starPos[i*3+1]=r*Math.cos(ph)+30; starPos[i*3+2]=r*Math.sin(ph)*Math.sin(th); }
+starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:2.4,transparent:true,opacity:0,depthWrite:false,fog:false})); scene.add(stars);
+// drifting dust / pollen motes
+const DUSTN=240, dustGeo=new THREE.BufferGeometry(), dustPos=new Float32Array(DUSTN*3);
+for(let i=0;i<DUSTN;i++){ dustPos[i*3]=rand(-70,70); dustPos[i*3+1]=rand(2,42); dustPos[i*3+2]=rand(-70,70); }
+dustGeo.setAttribute('position',new THREE.BufferAttribute(dustPos,3));
+const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0xfff0c4,size:0.35,transparent:true,opacity:0.45,depthWrite:false,blending:THREE.AdditiveBlending}));
+dust.frustumCulled=false; scene.add(dust);
+
 let dayT = 0.30; // 0..1 (start at golden dusk)
 const _c1=new THREE.Color(),_c2=new THREE.Color();
 const nightTop=new THREE.Color(0x070c18), nightBot=new THREE.Color(0x14203a);
@@ -174,6 +197,9 @@ function updateSky(dt){
   moonLight.position.set(cx-Math.cos(ang)*160, -sh*180, cz-70); moonLight.target.position.set(cx,0,cz);
   sunDisc.position.copy(sun.position); sunDisc.visible=sh>-0.15;
   moonDisc.position.copy(moonLight.position); moonDisc.visible=sh<0.15;
+  sunGlow.position.copy(sun.position); sunGlow.material.opacity=clamp(sh*1.6,0,1);
+  rim.intensity=0.2+dayAmt*0.35;
+  stars.material.opacity=(1-dayAmt)*0.9; stars.position.copy(camera.position);
   const tod = sh>0.35?'DAY': sh>0? (dayT<0.5?'DAWN':'DUSK') : 'NIGHT';
   $('tod').textContent=tod;
   // dark grade overlay at night for mood
@@ -188,8 +214,15 @@ for (let i=0;i<pos.count;i++){ const x=pos.getX(i), z=pos.getZ(i);
   const h = Math.sin(x*0.03)*Math.cos(z*0.028)*2.2 + Math.sin(x*0.011+z*0.013)*3.0;
   pos.setY(i, h); }
 groundGeo.computeVertexNormals();
-const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ color:0x3f7a34, roughness:1 }));
+function grassTex(){ const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d');
+  x.fillStyle='#38722f'; x.fillRect(0,0,256,256);
+  for(let i=0;i<11000;i++){ const g=Math.random(); x.fillStyle='rgba('+(38+g*46|0)+','+(84+g*80|0)+','+(28+g*44|0)+',0.55)';
+    x.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*2,1+Math.random()*3); }
+  for(let i=0;i<50;i++){ x.fillStyle='rgba(18,38,14,0.14)'; x.beginPath(); x.arc(Math.random()*256,Math.random()*256,8+Math.random()*34,0,7); x.fill(); }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(30,30); t.anisotropy=4; return t; }
+const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ map:grassTex(), color:0xbfe6a8, roughness:1 }));
 ground.receiveShadow = true; scene.add(ground);
+const rim = new THREE.DirectionalLight(0xbfe0ff, 0.45); rim.position.set(-50,40,-60); scene.add(rim); // cool back-rim for silhouettes
 function groundH(x,z){ return Math.sin(x*0.03)*Math.cos(z*0.028)*2.2 + Math.sin(x*0.011+z*0.013)*3.0; }
 
 // ---------- scatter: trees, grass, ponds ----------
@@ -277,7 +310,7 @@ function makeStag(color, scale=1){
 // ---------- player ----------
 const player = makeStag(0x8a5a30, 1.0); scene.add(player);
 const P = { x:0, z:0, yaw:0, vx:0, vz:0, speed:0, hp:100, maxHp:100, food:100, water:100, energy:100,
-  kills:0, dead:false, atk:0, hurt:0, sleeping:0, charge:0, charging:false, level:1, xp:0, str:1, scale:1 };
+  kills:0, dead:false, atk:0, hurt:0, sleeping:0, charge:0, charging:false, level:1, xp:0, str:1, scale:1, superT:0 };
 let camYaw = 0, camPitch = 0.35, camDist = 16, fpPitch = 0.02, camMode = 'pov'; // 'pov' (over-the-head) | 'tp' (wide)
 
 // ---------- enemy herd ----------
@@ -351,6 +384,33 @@ function dmgFlash(){ const f=$('flash'); f.style.background='radial-gradient(120
 function feed(t){ const k=$('killfeed'); const line=document.createElement('div'); line.textContent=t; k.prepend(line);
   setTimeout(()=>line.style.opacity=0,2200); setTimeout(()=>line.remove(),2700); }
 
+// ---------- Robin Hood's Hood → SUPERSTRENGTH ----------
+let hoodItem=null, hoodRespawnAt=0;
+function makeHoodMesh(){ const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color:0x1f7a2a,emissive:0x1a7a26,emissiveIntensity:0.9,roughness:0.5});
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(1.15,2.0,10,1,true),mat); cone.position.y=1.3; g.add(cone);
+  const brim=new THREE.Mesh(new THREE.TorusGeometry(1.05,0.2,8,18),mat); brim.rotation.x=Math.PI/2; brim.position.y=0.4; g.add(brim);
+  const pl=new THREE.PointLight(0x3bff66,2.2,30); pl.position.y=1.6; g.add(pl);
+  g.add(glowSprite(70,255,110,11));
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,60,10,1,true), new THREE.MeshBasicMaterial({color:0x3bff66,transparent:true,opacity:0.16,depthWrite:false,side:THREE.DoubleSide,fog:false})); beam.position.y=30; g.add(beam);
+  return g; }
+function makeWornHood(){ // green hood worn over the player's head (added to head group, local coords)
+  const mat=new THREE.MeshStandardMaterial({color:0x1f7a2a,emissive:0x1a6a24,emissiveIntensity:0.7,roughness:0.6});
+  const g=new THREE.Group(); const c=new THREE.Mesh(new THREE.ConeGeometry(0.85,1.3,10),mat); c.position.set(1.4,1.5,0); c.rotation.z=0.25; g.add(c);
+  return g; }
+function spawnHood(){ if(hoodItem) return; const m=makeHoodMesh();
+  const x=rand(-WORLD+30,WORLD-30), z=rand(-WORLD+30,WORLD-30); m.position.set(x,groundH(x,z)+0.3,z); scene.add(m);
+  hoodItem={mesh:m,x,z}; feed("🟢 Robin Hood's Hood appeared — find it!"); msg("🟢 A Hood glows in the forest — grab it for SUPERSTRENGTH",2600); }
+function pickupHood(){ scene.remove(hoodItem.mesh); hoodItem=null; hoodRespawnAt=performance.now()+32000;
+  P.superT=22; if(!P._baseStr) P._baseStr=P.str; P.str=P._baseStr*3.2;
+  msg("⚡ ROBIN HOOD'S HOOD — SUPERSTRENGTH!",2600); feed('⚡ SUPERSTRENGTH'); sfxGore(); addShake(0.7); tone&&tone('sine',400,900,0.3,0.25);
+  if(!player.userData.hood){ const h=makeWornHood(); player.userData.head.add(h); player.userData.hood=h; }
+  player.userData.hood.visible=true;
+  if(!player.userData.aura){ const a=glowSprite(70,255,110,14); a.position.y=4; player.add(a); player.userData.aura=a; }
+  player.userData.aura.visible=true;
+}
+function endSuper(){ P.str=P._baseStr||1; if(player.userData.hood) player.userData.hood.visible=false; if(player.userData.aura) player.userData.aura.visible=false; }
+
 // ---------- input ----------
 const keys = {};
 addEventListener('keydown', e=>{ if(e.repeat) return; keys[e.code]=true;
@@ -422,7 +482,7 @@ function interact(){ if(P.dead||P.sleeping) return;
 }
 function sleep(){ if(P.dead) return; if(P.sleeping){return;} if(P.speed>0.5){ msg('Stop moving to sleep'); return; }
   P.sleeping=3.0; msg('😴 Sleeping…',3000); }
-function die(){ if(P.dead) return; P.dead=true; sfxGore(); addShake(0.6); splatter(P.x,3,P.z,60); bloodPool(P.x,P.z,3);
+function die(){ if(P.dead) return; P.dead=true; endSuper(); $('super').style.display='none'; sfxGore(); addShake(0.6); splatter(P.x,3,P.z,60); bloodPool(P.x,P.z,3);
   const ov=$('ov'); ov.style.display='flex';
   ov.querySelector('h1').innerHTML='YOU <span class="blood">DIED</span>';
   ov.querySelector('p').textContent='The forest claims another. Reached Level '+P.level+' · '+P.kills+' rivals gored.';
@@ -435,7 +495,10 @@ $('startBtn').onclick=()=>{ $('ov').style.display='none'; initAudio(); if(!runni
   Object.assign(P,{x:0,z:0,yaw:0,vx:0,vz:0,speed:0,hp:100,maxHp:100,food:100,water:100,energy:100,
     kills:0,dead:false,atk:0,hurt:0,sleeping:0,charge:0,charging:false,level:1,xp:0,str:1,scale:1});
   player.scale.setScalar(1); $('v-kills').textContent=0; updateXP(); $('killfeed').innerHTML='';
+  P._baseStr=1; endSuper(); $('super').style.display='none';
   for(const e of enemies){ scene.remove(e.mesh); if(e.bar) scene.remove(e.bar.g); } enemies.length=0; reseed(8);
+  if(hoodItem){ scene.remove(hoodItem.mesh); hoodItem=null; } hoodRespawnAt=0;
+  setTimeout(()=>{ if(running&&!P.dead) spawnHood(); }, 4000);
 };
 
 // ---------- HUD ----------
@@ -535,6 +598,17 @@ function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta()
   if(shake>0){ camera.position.x+=(Math.random()-0.5)*shake*1.6; camera.position.y+=(Math.random()-0.5)*shake*1.3; camera.position.z+=(Math.random()-0.5)*shake*1.6; shake=Math.max(0,shake-dt*3.2); }
 
   updateSky(dt); updateDecals(dt);
+  dust.position.set(P.x,0,P.z); dust.rotation.y += dt*0.03;
+
+  // Robin Hood's Hood — float, spin, pickup, respawn
+  if(hoodItem){ hoodItem.mesh.rotation.y += dt*1.5; hoodItem.mesh.position.y = groundH(hoodItem.x,hoodItem.z)+0.3+Math.sin(performance.now()*0.003)*0.45;
+    if(!P.dead && Math.hypot(hoodItem.x-P.x,hoodItem.z-P.z)<4.5) pickupHood();
+  } else if(!P.dead && hoodRespawnAt>0 && performance.now()>hoodRespawnAt) spawnHood();
+  // superstrength countdown + aura
+  if(P.superT>0 && !P.dead){ P.superT-=dt; $('super').style.display='block'; $('super-t').textContent=Math.ceil(P.superT);
+    if(player.userData.aura) player.userData.aura.position.y=4+Math.sin(performance.now()*0.006)*0.5;
+    if(P.superT<=0){ endSuper(); $('super').style.display='none'; msg('The Hood fades…'); }
+  }
 
   // HUD
   $('b-hp').style.width=(P.hp/P.maxHp*100)+'%'; $('v-hp').textContent=Math.round(P.hp);
