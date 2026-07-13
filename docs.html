@@ -305,8 +305,8 @@
 
           <h3>Cost: burn $STAG, or hold $STAG and lock free</h3>
           <ul class="doc-list">
-            <li><strong>Burn model:</strong> locking burns <strong>2,000,000 $STAG per 30 days</strong> of lock (scaled by duration, capped), sent to the dead address. Locking $STAG creates constant buy-and-burn pressure the longer people lock.</li>
-            <li><strong>Hold &amp; lock free:</strong> wallets holding <strong>10,000,000+ $STAG</strong> lock for <strong>FREE</strong> — no burn at all. Big holders get the utility for holding.</li>
+            <li><strong>Burn model:</strong> locking burns <strong>2,000,000 $STAG per 30 days</strong> of lock — so a 90-day lock burns ~6M and a 1-year lock ~24M — <strong>capped at 24M</strong> (a multi-year lock never costs more than a year's worth). Burned to the dead address: the longer people lock, the more $STAG is permanently removed from supply.</li>
+            <li><strong>Hold &amp; lock free:</strong> wallets holding <strong>10,000,000+ $STAG</strong> lock for <strong>FREE</strong> — no burn at all. So the cost is really "hold $STAG or burn $STAG" — either way it drives $STAG demand.</li>
           </ul>
           <div class="doc-note"><span class="ic" aria-hidden="true">🔥</span><p>The exact burn for your chosen duration is previewed live on <a class="inl" href="/locker">/locker</a> before you confirm. Hold 10M $STAG and it simply shows <strong>FREE</strong>.</p></div>
 
@@ -325,6 +325,11 @@
             <li><strong>Audited &amp; simulated.</strong> Multiple independent security-audit passes to a clean final verdict, plus <strong>hundreds of randomized invariant simulations</strong> (solvency, custody, no-early-release) before launch.</li>
           </ul>
           <div class="doc-warn"><span class="ic" aria-hidden="true">🔒</span><p><b>Locking is irreversible until the unlock date.</b> Double-check the token, amount, release type, and duration before you confirm — there is no early exit by design. That's the whole point.</p></div>
+          <h3>Two honest caveats (read before trusting a lock)</h3>
+          <ul class="doc-list">
+            <li><strong>Vesting locks release continuously.</strong> A <em>linear-vesting</em> lock is not "fully locked until the end" — the vested portion becomes claimable as it unlocks, so its truly-locked amount decreases over time by design. For an "all locked until date X" guarantee, use a <strong>Cliff</strong> lock. The verify page labels which one a lock is.</li>
+            <li><strong>An LP-NFT lock ≠ proof of locked value.</strong> A locked Uniswap V3 position can hold <em>any</em> (or zero) liquidity. Confirming a tokenId is locked here proves the NFT can't move — always check the position's <strong>actual</strong> liquidity on-chain before trusting a "liquidity locked" claim.</li>
+          </ul>
         </section>
 
         <!-- 8. REVENUE FLOW -->
@@ -387,7 +392,8 @@
         <section class="doc-section" id="security">
           <span class="doc-kicker">10 · Assurance</span>
           <h2>Security &amp; Audits<a class="doc-anchor" href="#security" aria-label="Link to this section">#</a></h2>
-          <p>All four contracts — HoodedTwenty, StagStaking, RevenueSplitter, and SherwoodPact — underwent <strong>multiple independent security-audit passes</strong> plus <strong>hundreds of randomized invariant simulations</strong> before the mainnet deploy.</p>
+          <p>All four launch contracts — HoodedTwenty, StagStaking, RevenueSplitter, and SherwoodPact — underwent <strong>multiple independent security-audit passes</strong> plus <strong>hundreds of randomized invariant simulations</strong> before the mainnet deploy.</p>
+          <p>The <a class="inl" href="#locker">Stag Locker</a> was audited separately and even harder, because it holds third-party funds: <strong>four independent adversarial audit passes</strong> (custody/rug-vectors, vesting &amp; arithmetic, reentrancy &amp; hostile tokens, and contract-vs-UI consistency), a <strong>49-test suite</strong> including dedicated attack tests, and <strong>900+ randomized invariant simulations</strong> asserting solvency, custody, and no-early-release every step. Confirmed: the admin can never move locked assets, vesting can never over-release, and no reentrancy or solvency path exists.</p>
           <p>After deployment, the on-chain wiring was verified to match the intended design:</p>
           <ul class="doc-list">
             <li>Splitter → pool routing confirmed at <strong>90 / 10</strong>.</li>

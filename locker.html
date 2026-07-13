@@ -173,6 +173,9 @@
   .proof .pk{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
   .proof .pv{font:700 15px/1.2 var(--mono);color:var(--ink);word-break:break-all}
   .proof .actions{margin-top:4px;position:relative;z-index:1}
+  .proofnote{position:relative;z-index:1;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);
+    font:500 11.5px/1.5 var(--sans);color:var(--dim)}
+  .proofnote b{color:var(--mut)}
   .copybtn{font:600 11px/1 var(--mono);padding:7px 11px;border-radius:8px}
   .supplylock{position:relative;z-index:1;margin:0 0 12px;font:700 14px/1.3 var(--sans);color:var(--acc);
     display:inline-flex;align-items:center;gap:7px;
@@ -486,7 +489,10 @@ function localDatetimeValue(unix){
   const d = new Date(unix * 1000); const p = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-function defaultVestStart(){ const el = $("vestStart"); if(el && !el.value) el.value = localDatetimeValue(Math.floor(Date.now()/1000)); }
+// default the vesting start ~3 min into the future: the tx mines a little after "now", and a
+// datetime-local input floors to the minute, so a literal "now" could land in the past. (The
+// contract also clamps a past start up to block time, so this is just for a clean preview.)
+function defaultVestStart(){ const el = $("vestStart"); if(el && !el.value) el.value = localDatetimeValue(Math.floor(Date.now()/1000) + 180); }
 function vestStartUnix(){
   const el = $("vestStart"); const u = el ? toUnix(el.value) : 0;
   return (u && !Number.isNaN(u)) ? u : Math.floor(Date.now()/1000);
@@ -887,8 +893,8 @@ async function manage(kind, id, l){
       if(!v) return; const u = toUnix(v);
       if(!u || Number.isNaN(u)) return alert("Couldn't read that date — try YYYY-MM-DD HH:MM.");
       if(u <= Number(l.unlockTime)) return alert("Must be later than current unlock.");
-      // extending also burns $STAG (scaled by duration) unless exempt — approve first
-      const burn = await readLocker().burnFor(account, u - Math.floor(Date.now()/1000)).catch(()=>0n);
+      // extending burns $STAG for the ADDED term only (mirrors the contract: newUnlock - oldUnlock)
+      const burn = await readLocker().burnFor(account, u - Number(l.unlockTime)).catch(()=>0n);
       if(burn > 0n){
         const stagRead = new ethers.Contract(burnTokenAddr, ERC20_ABI, read);
         const bal = await stagRead.balanceOf(account);
@@ -898,6 +904,12 @@ async function manage(kind, id, l){
       }
       await (await c.extendLock(id, u)).wait();
     } else if(kind === "topup"){
+      // Warn on a mid-vest lock: the already-elapsed fraction of the added amount is immediately
+      // withdrawable (it joins the existing schedule). Lock fresh funds via a NEW lock instead.
+      const nowS = Math.floor(Date.now()/1000);
+      if(l && Number(l.start) > 0 && Number(l.start) < Number(l.unlockTime) && nowS > Number(l.start)){
+        if(!confirm("Heads up: this is a VESTING lock that's already releasing. The part of your top-up matching the elapsed time becomes immediately withdrawable — it won't all stay locked. To lock fresh funds fully, create a NEW lock instead. Continue anyway?")) return;
+      }
       const v = prompt("Amount to add to lock #" + id); if(!v) return;
       const t = new ethers.Contract(l.asset, ERC20_ABI, signer); const dec = await t.decimals();
       const amount = ethers.parseUnits(v, dec);
@@ -1011,6 +1023,7 @@ async function renderProof(addr, locks, agg){
         <a class="copybtn" href="${EXPLORER}/address/${esc(addr)}" target="_blank"
            style="display:inline-flex;align-items:center;border:1px solid var(--line);text-decoration:none;color:var(--ink)">Blockscout ↗</a>
       </div>
+      ${locked ? `<div class="proofnote">Reading this proof: <b>Cliff</b> locks hold everything until their unlock date. <b>Vesting</b> locks release continuously, so their locked amount drops over time by design. For <b>LP-NFT</b> locks, a position can hold any (or zero) liquidity — confirm the real amount on Blockscout, not just that the NFT is locked.</div>` : ""}
     </div>`;
   sum.querySelectorAll(".copybtn[data-copy]").forEach(b => b.onclick = () => copyText(b.dataset.copy, b));
 }
