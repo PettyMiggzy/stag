@@ -9,6 +9,9 @@ window.HOODED = {
   pact: '0xc36662D2db9432702f018963ABdab19432AA488B',     // SherwoodPact
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
+  // WalletConnect (Reown) project id — enables mobile "connect any wallet" (Trust, Rainbow,
+  // Coinbase, MetaMask…) when there's no injected wallet. Get one free at cloud.reown.com.
+  walletConnectProjectId: 'a00014837c68f5d7133c3cc329dcfe6d',
   // Stakeable tokens (each must be whitelisted on-chain via admin setTokenWeight). $STAG is
   // whitelisted by default in the contract. Add more here (or from /admin) and the stake tab
   // shows a token picker; the withdraw-split applies to whichever token you unstake.

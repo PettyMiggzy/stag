@@ -80,32 +80,58 @@
   }
 
   // ---------------- wallet ----------------
-  async function connect(silent) {
-    if (!window.ethereum) {
-      if (silent) return;
-      // Mobile browsers (Safari/Chrome) have no injected wallet — open the dApp inside the
-      // wallet app's own browser via deep link, where window.ethereum exists.
-      if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
-        const dapp = location.host + location.pathname + location.search;
-        flashConnect('Opening in your wallet app…');
-        window.location.href = 'https://metamask.app.link/dapp/' + dapp;
-        return;
-      }
-      flashConnect('No EVM wallet found — install MetaMask.');
-      return;
+  let wcProvider = null; // active WalletConnect (Reown) session, if any
+
+  // Resolve an EIP-1193 provider: prefer an injected wallet (extension / wallet in-app browser);
+  // otherwise fall back to WalletConnect so ANY mobile wallet can connect (Trust, Rainbow, …).
+  async function getEip1193(silent) {
+    if (window.ethereum) return window.ethereum;
+    if (silent) return null; // never pop a modal on a silent reconnect
+    const pid = H.walletConnectProjectId;
+    if (pid) {
+      try {
+        const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
+        const cid = parseInt(H.chain.chainId, 16);
+        wcProvider = await EthereumProvider.init({
+          projectId: pid,
+          chains: [cid], optionalChains: [cid],
+          rpcMap: { [cid]: H.chain.rpcUrls[0] },
+          showQrModal: true,
+          metadata: {
+            name: 'STAGWIFHOOD', description: 'The Hooded 20 — mint, stake & pact on Robinhood Chain',
+            url: 'https://stagwifhood.fun', icons: ['https://stagwifhood.fun/assets/img/mark.png'],
+          },
+        });
+        wcProvider.on('disconnect', () => { try { localStorage.removeItem('h20_wc'); } catch {} location.reload(); });
+        await wcProvider.enable(); // opens the WalletConnect modal / deep-links the wallet
+        return wcProvider;
+      } catch (e) { flashConnect(pretty(e)); return null; }
     }
+    // no WalletConnect configured — last-resort MetaMask deep link on mobile
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+      flashConnect('Opening in your wallet app…');
+      window.location.href = 'https://metamask.app.link/dapp/' + location.host + location.pathname + location.search;
+      return null;
+    }
+    flashConnect('No EVM wallet found — install MetaMask or use a WalletConnect wallet.');
+    return null;
+  }
+
+  async function connect(silent) {
+    const eth = await getEip1193(silent);
+    if (!eth) return;
     try {
       // silent = reuse an existing authorization (no popup); bail if not already authorized
-      const accs = await window.ethereum.request({ method: silent ? 'eth_accounts' : 'eth_requestAccounts' });
+      const accs = await eth.request({ method: silent ? 'eth_accounts' : 'eth_requestAccounts' });
       if (silent && (!accs || !accs.length)) return;
-      try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }); }
-      catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [H.chain] }); }
-      provider = new ethers.BrowserProvider(window.ethereum);
+      try { await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }); }
+      catch (e) { if (e.code === 4902) try { await eth.request({ method: 'wallet_addEthereumChain', params: [H.chain] }); } catch {} }
+      provider = new ethers.BrowserProvider(eth);
       if (!(await chainOk())) { signer = null; me = null; setNet('bad', 'Wrong network — switch to Robinhood Chain'); return; }
       signer = await provider.getSigner(); me = await signer.getAddress();
-      if (window.ethereum.removeAllListeners) window.ethereum.removeAllListeners('chainChanged');
-      window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; me = null; setNet('off', 'Reconnect on Robinhood Chain'); $('w-connect').textContent = 'Connect Wallet'; });
-      window.ethereum.on && window.ethereum.on('accountsChanged', () => location.reload());
+      if (eth.removeAllListeners) eth.removeAllListeners('chainChanged');
+      eth.on && eth.on('chainChanged', () => { signer = null; provider = null; me = null; setNet('off', 'Reconnect on Robinhood Chain'); $('w-connect').textContent = 'Connect Wallet'; });
+      eth.on && eth.on('accountsChanged', () => location.reload());
       $('w-connect').textContent = short(me);
       const dc = $('w-disconnect'); if (dc) dc.hidden = false;
       try { localStorage.setItem('h20_wc', '1'); } catch {} // remember across visits
@@ -116,6 +142,7 @@
   }
   function disconnect() {
     signer = null; me = null; provider = null;
+    if (wcProvider) { try { wcProvider.disconnect(); } catch {} wcProvider = null; }
     try { localStorage.removeItem('h20_wc'); } catch {}
     $('w-connect').textContent = 'Connect Wallet';
     const dc = $('w-disconnect'); if (dc) dc.hidden = true;
