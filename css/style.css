@@ -110,6 +110,14 @@ em{color:var(--gold-lite);font-style:italic}
 .nav-links a:hover{color:var(--gold-lite)}
 .nav-links a::after{content:"";position:absolute;left:0;bottom:-6px;height:2px;width:0;background:var(--grad-gold);transition:width .25s var(--ease)}
 .nav-links a:hover::after{width:100%}
+/* mobile hamburger (injected by main.js); hidden on desktop */
+.nav-toggle{display:none;background:none;border:0;cursor:pointer;padding:9px;margin-left:.35rem;order:9}
+.nav-toggle b{display:block;width:22px;height:2px;background:var(--gold-lite);border-radius:2px;position:relative;transition:.25s}
+.nav-toggle b::before,.nav-toggle b::after{content:"";position:absolute;left:0;width:22px;height:2px;background:var(--gold-lite);border-radius:2px;transition:.25s}
+.nav-toggle b::before{top:-7px}.nav-toggle b::after{top:7px}
+.nav-toggle.open b{background:transparent}
+.nav-toggle.open b::before{top:0;transform:rotate(45deg)}
+.nav-toggle.open b::after{top:0;transform:rotate(-45deg)}
 .nav-social{display:flex;align-items:center;gap:.7rem}
 .nav-social .ic{
   width:36px;height:36px;display:grid;place-items:center;border-radius:50%;
@@ -319,7 +327,20 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
   .prize-grid,.nft-grid{grid-template-columns:repeat(2,1fr)}
   .ladder-rail{display:none}
   .timeline{grid-template-columns:1fr}
-  .nav-links{display:none}
+  /* nav links collapse into a hamburger dropdown */
+  .nav-toggle{display:inline-block}
+  .nav-links{
+    display:flex;flex-direction:column;align-items:stretch;gap:0;margin:0;font-size:1rem;
+    position:absolute;top:100%;left:0;right:0;
+    background:linear-gradient(180deg,#0b2114,#081710);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:.35rem .95rem;max-height:78vh;overflow:auto;
+    transform:translateY(-10px);opacity:0;pointer-events:none;transition:.22s var(--ease);
+    box-shadow:0 22px 44px -18px rgba(0,0,0,.75);z-index:55}
+  .nav-links.open{transform:translateY(0);opacity:1;pointer-events:auto}
+  .nav-links a{padding:.9rem .3rem;border-bottom:1px solid rgba(255,255,255,.06)}
+  .nav-links a:last-child{border-bottom:0}
+  .nav-links a::after{display:none}
 }
 @media (max-width:520px){
   .nav-social .btn{display:none}

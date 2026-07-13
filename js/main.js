@@ -10,6 +10,27 @@
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 
+  /* ---- mobile hamburger (injected so every page gets it from one place) ---- */
+  (function () {
+    const links = nav && nav.querySelector('.nav-links');
+    if (!nav || !links || nav.querySelector('.nav-toggle')) return;
+    const btn = document.createElement('button');
+    btn.className = 'nav-toggle';
+    btn.setAttribute('aria-label', 'Menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<b></b>';
+    nav.appendChild(btn); // order:9 in CSS keeps it last on the row
+    const setOpen = (o) => {
+      links.classList.toggle('open', o);
+      btn.classList.toggle('open', o);
+      btn.setAttribute('aria-expanded', o ? 'true' : 'false');
+    };
+    btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!links.classList.contains('open')); });
+    links.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+    document.addEventListener('click', (e) => { if (!nav.contains(e.target)) setOpen(false); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 960) setOpen(false); });
+  })();
+
   /* ---- reveal on scroll ---- */
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
