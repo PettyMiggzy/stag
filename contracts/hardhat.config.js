@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-ethers");
 require("@nomicfoundation/hardhat-chai-matchers");
+require("@nomicfoundation/hardhat-verify");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -20,4 +21,19 @@ module.exports = {
       accounts: process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : [],
     },
   },
+  // Blockscout uses an Etherscan-compatible API and needs no real key.
+  etherscan: {
+    apiKey: { rhmainnet: "blockscout" },
+    customChains: [
+      {
+        network: "rhmainnet",
+        chainId: 4663,
+        urls: {
+          apiURL: "https://robinhoodchain.blockscout.com/api",
+          browserURL: "https://robinhoodchain.blockscout.com",
+        },
+      },
+    ],
+  },
+  sourcify: { enabled: false },
 };
