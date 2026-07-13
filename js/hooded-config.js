@@ -7,6 +7,8 @@ window.HOODED = {
   staking: '0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF',  // StagStaking
   splitter: '0x1F6D791108635ac4522b1cfaD86FD7B435aDFe2a', // RevenueSplitter (90/10)
   pact: '0xc36662D2db9432702f018963ABdab19432AA488B',     // SherwoodPact
+  saints: '0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327',        // SherwoodSaints (5x 1/1)
+  saintsSplitter: '0x101a344172f15ABe969027ea06624305F4a63082',// SaintsSplitter (60/30/10)
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
   // WalletConnect (Reown) project id — enables mobile "connect any wallet" (Trust, Rainbow,

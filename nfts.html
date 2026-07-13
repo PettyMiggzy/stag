@@ -151,6 +151,13 @@
     .saint-chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.6rem}
     .saint-chips span{font:600 .66rem/1 'Space Grotesk',monospace;background:rgba(255,255,255,.05);
       border:1px solid rgba(255,255,255,.1);color:#a7b6ab;border-radius:6px;padding:.32rem .45rem}
+    .saint-mint{margin-top:.7rem;width:100%;padding:.6rem;border-radius:9px;cursor:pointer;
+      font:700 .8rem/1 'Space Grotesk',monospace;border:1px solid rgba(158,244,24,.3);
+      background:rgba(158,244,24,.08);color:#cfe6b6;transition:.15s}
+    .saint-mint:disabled{opacity:.5;cursor:not-allowed}
+    .saint-mint.live{background:linear-gradient(90deg,#9ef418,#37d6c4);color:#0a0f06;border-color:#9ef418}
+    .saint-mint.live:hover{filter:brightness(1.08)}
+    .saint-mint.done{background:rgba(255,255,255,.04);color:#7a8a7e;border-color:rgba(255,255,255,.08)}
   </style>
   <section class="saints" id="saints">
     <div class="saints-head">
@@ -219,5 +226,63 @@
   <script src="js/main.js"></script>
   <script src="js/hooded-config.js"></script>
   <script src="js/app.js"></script>
+  <script>
+  /* Sherwood Saints mint — self-contained. Reads the live contract, shows "Opens at reveal" while
+     mint is inactive, flips to a live Mint button the moment setMintActive(true) is called. */
+  (function(){
+    const CFG = window.HOODED || {};
+    const SAINTS = CFG.saints;
+    if (!SAINTS) return;
+    const RPC = 'https://rpc.mainnet.chain.robinhood.com', CHAIN_HEX = '0x1237';
+    const ABI = [
+      'function mintPrice() view returns (uint256)',
+      'function mintActive() view returns (bool)',
+      'function availableIds() view returns (uint256[])',
+      'function mintPick(uint256) payable'
+    ];
+    // inject buttons unconditionally (default state works even before/without ethers)
+    const cards = [...document.querySelectorAll('.saint')].map((el) => {
+      const v = el.querySelector('video'); const m = v && v.getAttribute('src').match(/anim\/(\d+)\.mp4/);
+      const id = m ? Number(m[1]) : null;
+      if (!id) return null;
+      const btn = document.createElement('button');
+      btn.className = 'saint-mint'; btn.textContent = 'Opens at reveal'; btn.disabled = true;
+      el.querySelector('.saint-b').appendChild(btn);
+      return { id, btn };
+    }).filter(Boolean);
+    if (!window.ethers) return; // buttons still show "Opens at reveal"; live read needs ethers
+    const c = new ethers.Contract(SAINTS, ABI, new ethers.JsonRpcProvider(RPC));
+
+    async function mint(id, price) {
+      if (!window.ethereum) { alert('No wallet found — open in your wallet browser (or install MetaMask).'); return; }
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const net = await new ethers.BrowserProvider(window.ethereum).getNetwork();
+        if (net.chainId !== 4663n) {
+          try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }); }
+          catch (e) { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CFG.chain] }); }
+        }
+        const signer = await new ethers.BrowserProvider(window.ethereum).getSigner();
+        const tx = await new ethers.Contract(SAINTS, ABI, signer).mintPick(id, { value: price });
+        await tx.wait();
+        alert('Minted Sherwood Saint #' + id + ' 🔥');
+        refresh();
+      } catch (e) { alert(e.shortMessage || e.message || e); }
+    }
+    async function refresh() {
+      let price = 0n, active = false, avail = [];
+      try { [price, active, avail] = await Promise.all([c.mintPrice(), c.mintActive(), c.availableIds()]); } catch (e) { return; }
+      const availSet = new Set(avail.map(Number));
+      const eth = Number(ethers.formatEther(price)).toString();
+      cards.forEach(({ id, btn }) => {
+        btn.classList.remove('live', 'done');
+        if (!availSet.has(id)) { btn.textContent = 'Minted'; btn.disabled = true; btn.classList.add('done'); btn.onclick = null; }
+        else if (!active) { btn.textContent = 'Opens at reveal'; btn.disabled = true; btn.onclick = null; }
+        else { btn.textContent = 'Mint ' + eth + ' Ξ'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => mint(id, price); }
+      });
+    }
+    refresh();
+  })();
+  </script>
 </body>
 </html>
