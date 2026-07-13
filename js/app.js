@@ -92,9 +92,12 @@
       try {
         const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
         const cid = parseInt(H.chain.chainId, 16);
+        // Robinhood Chain (4663) is a CUSTOM chain almost no wallet pre-knows. It MUST be optional —
+        // if it's a *required* chain, WalletConnect rejects the whole session ("unsupported chains")
+        // and the connect fails. So: connect on whatever the wallet has, then add/switch to 4663 after.
         wcProvider = await EthereumProvider.init({
           projectId: pid,
-          chains: [cid], optionalChains: [cid],
+          optionalChains: [cid],
           rpcMap: { [cid]: H.chain.rpcUrls[0] },
           showQrModal: true,
           metadata: {
@@ -124,8 +127,15 @@
       // silent = reuse an existing authorization (no popup); bail if not already authorized
       const accs = await eth.request({ method: silent ? 'eth_accounts' : 'eth_requestAccounts' });
       if (silent && (!accs || !accs.length)) return;
+      // Add + switch to Robinhood Chain. Wallets vary: some return 4902 for an unknown chain,
+      // others a generic error — so on ANY switch failure, add the chain then switch again.
       try { await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }); }
-      catch (e) { if (e.code === 4902) try { await eth.request({ method: 'wallet_addEthereumChain', params: [H.chain] }); } catch {} }
+      catch (e) {
+        try {
+          await eth.request({ method: 'wallet_addEthereumChain', params: [H.chain] });
+          await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] });
+        } catch {}
+      }
       provider = new ethers.BrowserProvider(eth);
       if (!(await chainOk())) { signer = null; me = null; setNet('bad', 'Wrong network — switch to Robinhood Chain'); return; }
       signer = await provider.getSigner(); me = await signer.getAddress();

@@ -581,18 +581,39 @@ $("explorerLink").innerHTML = LOCKER ? `<a href="${EXPLORER}/address/${LOCKER}" 
 
 // ─── wallet ────────────────────────────────────────────────────────────────
 $("connect").onclick = connect;
-async function connect(){
-  if(!window.ethereum){ alert("No wallet found. Install MetaMask or a compatible wallet."); return; }
+let walletEth = null; // active WalletConnect session on mobile, if any
+// Resolve an EVM provider: injected wallet (extension / wallet in-app browser) first,
+// else WalletConnect so ANY mobile EVM wallet (MetaMask, Trust, Rainbow…) can connect.
+async function resolveWallet(){
+  if(window.ethereum) return window.ethereum;
   try{
-    const bp = new ethers.BrowserProvider(window.ethereum);
+    const { EthereumProvider } = await import("https://esm.sh/@walletconnect/ethereum-provider@2.17.2");
+    // 4663 is a custom chain — keep it OPTIONAL or WalletConnect rejects the session, then add it after.
+    walletEth = await EthereumProvider.init({
+      projectId: "a00014837c68f5d7133c3cc329dcfe6d",
+      optionalChains: [CHAIN_ID], rpcMap: { [CHAIN_ID]: RPC }, showQrModal: true,
+      metadata: { name:"Stag Locker", description:"Lock & vest $STAG on Robinhood Chain",
+        url:"https://stagwifhood.fun", icons:["https://stagwifhood.fun/assets/img/mark.png"] },
+    });
+    await walletEth.enable(); // opens the WalletConnect modal / deep-links the wallet
+    return walletEth;
+  }catch(e){ alert("Wallet connect failed: " + (e.message||e)); return null; }
+}
+async function connect(){
+  const eth = await resolveWallet();
+  if(!eth){ alert("Use an EVM wallet (MetaMask, Trust, Rainbow) — Solana wallets like Phantom/Jupiter can't connect to Robinhood Chain."); return; }
+  try{
+    const bp = new ethers.BrowserProvider(eth);
     await bp.send("eth_requestAccounts", []);
     let net = await bp.getNetwork();
     if(Number(net.chainId) !== CHAIN_ID){
-      try { await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:CHAIN_HEX}] }); }
-      catch(e){ if(e.code === 4902) await window.ethereum.request({ method:"wallet_addEthereumChain", params:[CHAIN_PARAMS] }); }
+      // add + switch; on ANY switch failure add the chain then switch again (wallets vary)
+      try { await eth.request({ method:"wallet_switchEthereumChain", params:[{chainId:CHAIN_HEX}] }); }
+      catch(e){ try{ await eth.request({ method:"wallet_addEthereumChain", params:[CHAIN_PARAMS] });
+                     await eth.request({ method:"wallet_switchEthereumChain", params:[{chainId:CHAIN_HEX}] }); }catch{} }
     }
     // re-verify the wallet actually landed on Robinhood Chain — never sign on the wrong network
-    const bp2 = new ethers.BrowserProvider(window.ethereum);
+    const bp2 = new ethers.BrowserProvider(eth);
     net = await bp2.getNetwork();
     if(Number(net.chainId) !== CHAIN_ID){
       signer = null; account = null;
@@ -605,12 +626,13 @@ async function connect(){
     account = await signer.getAddress();
     $("wallet").innerHTML = "connected <b>" + short(account) + "</b>";
     $("connect").textContent = "Connected";
+    eth.on?.("accountsChanged", ()=>location.reload());
+    eth.on?.("chainChanged", ()=>location.reload());
     loadFee();
     updateBurnPreview();   // show the caller's exact $STAG burn cost for the selected duration
     if(currentTab === "mine") loadMine();
   }catch(e){ alert("Connect failed: " + (e.message||e)); }
 }
-if(window.ethereum){ window.ethereum.on?.("accountsChanged", ()=>location.reload()); window.ethereum.on?.("chainChanged", ()=>location.reload()); }
 
 async function loadFee(){
   try{
