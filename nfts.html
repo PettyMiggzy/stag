@@ -238,14 +238,22 @@
      mint is inactive, flips to a live Mint button the moment setMintActive(true) is called. */
   (function(){
     const CFG = window.HOODED || {};
-    const SAINTS = CFG.saints;
+    const SAINTS = CFG.saints, VAULT = CFG.vault;
     if (!SAINTS) return;
     const RPC = 'https://rpc.mainnet.chain.robinhood.com', CHAIN_HEX = '0x1237';
     const ABI = [
       'function mintPrice() view returns (uint256)',
       'function mintActive() view returns (bool)',
       'function availableIds() view returns (uint256[])',
-      'function mintPick(uint256) payable'
+      'function mintPick(uint256) payable',
+      'function ownerOf(uint256) view returns (address)',
+      'function isApprovedForAll(address,address) view returns (bool)',
+      'function setApprovalForAll(address,bool)'
+    ];
+    const VABI = [
+      'function stake(address,uint256)',
+      'function unstake(address,uint256)',
+      'function stakeOf(address,uint256) view returns (address staker, uint256 weight, uint64 since, bool lockInPlace)'
     ];
     // inject buttons unconditionally (default state works even before/without ethers)
     const cards = [...document.querySelectorAll('.saint')].map((el) => {
@@ -270,36 +278,67 @@
     });
     function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
     if (!window.ethers) return; // buttons still show "Opens at reveal"; live read needs ethers
-    const c = new ethers.Contract(SAINTS, ABI, new ethers.JsonRpcProvider(RPC));
+    const read = new ethers.JsonRpcProvider(RPC);
+    const c = new ethers.Contract(SAINTS, ABI, read);
+    const vaultRead = VAULT ? new ethers.Contract(VAULT, VABI, read) : null;
 
+    async function connect() {
+      if (!window.ethereum) { alert('No wallet found — open in your wallet browser (or install MetaMask).'); return null; }
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const net = await new ethers.BrowserProvider(window.ethereum).getNetwork();
+      if (net.chainId !== 4663n) {
+        try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }); }
+        catch (e) { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CFG.chain] }); }
+      }
+      return await new ethers.BrowserProvider(window.ethereum).getSigner();
+    }
     async function mint(id, price) {
-      if (!window.ethereum) { alert('No wallet found — open in your wallet browser (or install MetaMask).'); return; }
-      try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const net = await new ethers.BrowserProvider(window.ethereum).getNetwork();
-        if (net.chainId !== 4663n) {
-          try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }); }
-          catch (e) { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CFG.chain] }); }
-        }
-        const signer = await new ethers.BrowserProvider(window.ethereum).getSigner();
-        const tx = await new ethers.Contract(SAINTS, ABI, signer).mintPick(id, { value: price });
-        await tx.wait();
-        alert('Minted Sherwood Saint #' + id + ' 🔥');
-        refresh();
+      try { const s = await connect(); if (!s) return;
+        const tx = await new ethers.Contract(SAINTS, ABI, s).mintPick(id, { value: price });
+        await tx.wait(); alert('Minted Sherwood Saint #' + id + ' 🔥'); refresh();
       } catch (e) { alert(e.shortMessage || e.message || e); }
+    }
+    async function stake(id) {
+      try { const s = await connect(); if (!s) return; const me = await s.getAddress();
+        const nft = new ethers.Contract(SAINTS, ABI, s);
+        if (!(await nft.isApprovedForAll(me, VAULT))) { const a = await nft.setApprovalForAll(VAULT, true); await a.wait(); }
+        const tx = await new ethers.Contract(VAULT, VABI, s).stake(SAINTS, id); await tx.wait();
+        alert('Staked Saint #' + id + ' — now earning ETH 🟢'); refresh();
+      } catch (e) { alert(e.shortMessage || e.message || e); }
+    }
+    async function unstake(id) {
+      try { const s = await connect(); if (!s) return;
+        const tx = await new ethers.Contract(VAULT, VABI, s).unstake(SAINTS, id); await tx.wait();
+        alert('Unstaked Saint #' + id); refresh();
+      } catch (e) { alert(e.shortMessage || e.message || e); }
+    }
+    async function currentAccount() {
+      try { const a = await window.ethereum?.request({ method: 'eth_accounts' }); return a && a[0] ? a[0].toLowerCase() : null; } catch (e) { return null; }
     }
     async function refresh() {
       let price = 0n, active = false, avail = [];
       try { [price, active, avail] = await Promise.all([c.mintPrice(), c.mintActive(), c.availableIds()]); } catch (e) { return; }
       const availSet = new Set(avail.map(Number));
       const eth = Number(ethers.formatEther(price)).toString();
-      cards.forEach(({ id, btn }) => {
-        btn.classList.remove('live', 'done');
-        if (!availSet.has(id)) { btn.textContent = 'Minted'; btn.disabled = true; btn.classList.add('done'); btn.onclick = null; }
-        else if (!active) { btn.textContent = 'Opens at reveal'; btn.disabled = true; btn.onclick = null; }
-        else { btn.textContent = 'Mint ' + eth + ' Ξ'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => mint(id, price); }
-      });
+      const me = await currentAccount();
+      for (const { id, btn } of cards) {
+        btn.classList.remove('live', 'done'); btn.onclick = null; btn.disabled = true;
+        if (availSet.has(id)) {           // not minted yet
+          if (!active) { btn.textContent = 'Opens at reveal'; }
+          else { btn.textContent = 'Mint ' + eth + ' Ξ'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => mint(id, price); }
+          continue;
+        }
+        // minted — figure out owner / staked state
+        let owner = null; try { owner = (await c.ownerOf(id)).toLowerCase(); } catch (e) {}
+        let staker = null;
+        if (vaultRead && owner === VAULT.toLowerCase()) { try { staker = (await vaultRead.stakeOf(SAINTS, id)).staker.toLowerCase(); } catch (e) {} }
+        if (me && staker === me) { btn.textContent = 'Unstake'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => unstake(id); }
+        else if (staker && staker !== '0x0000000000000000000000000000000000000000') { btn.textContent = '🟢 Staked'; btn.classList.add('done'); }
+        else if (me && owner === me && VAULT) { btn.textContent = 'Stake — earn ETH'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => stake(id); }
+        else { btn.textContent = 'Minted'; btn.classList.add('done'); }
+      }
     }
+    if (window.ethereum && window.ethereum.on) window.ethereum.on('accountsChanged', refresh);
     refresh();
   })();
   </script>

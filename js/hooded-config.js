@@ -9,6 +9,7 @@ window.HOODED = {
   pact: '0xc36662D2db9432702f018963ABdab19432AA488B',     // SherwoodPact
   saints: '0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327',        // SherwoodSaints (5x 1/1)
   saintsSplitter: '0x101a344172f15ABe969027ea06624305F4a63082',// SaintsSplitter (60/30/10)
+  vault: '0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c',         // SherwoodVault (future-proof NFT staking)
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
   // WalletConnect (Reown) project id — enables mobile "connect any wallet" (Trust, Rainbow,
