@@ -7,7 +7,7 @@ const { ethers } = require("hardhat");
 
 const N = parseInt(process.env.SIM_RUNS || "300", 10);
 const DAY = 86400;
-let _s = 0x9e3779b9 ^ 0x1234;
+let _s = (0x9e3779b9 ^ (parseInt(process.env.SIM_SEED || "4660"))) >>> 0;
 const rnd = () => { _s = (_s * 1664525 + 1013904223) >>> 0; return _s / 0x100000000; };
 const pick = (a) => a[Math.floor(rnd() * a.length)];
 const bn = (n) => BigInt(Math.floor(n));
