@@ -10,7 +10,9 @@ const { ethers } = require("hardhat");
 const BASE_URI  = process.env.SAINTS_BASE_URI || "https://stagwifhood.fun/assets/nft/saints/metadata/";
 const POOL      = process.env.SAINTS_POOL    || "0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF"; // StagStaking reward pool
 const TEAM      = process.env.SAINTS_TEAM    || "0xb6A5059356332A0B222e9D21b1f72f3617d12516"; // team / admin
-const BURN_SINK = process.env.SAINTS_BURN_SINK;                                                // buy-and-burn wallet (REQUIRED)
+// Buy-and-burn wallet: the 60% burn share ACCUMULATES here so the admin can fire big, high-impact
+// $STAG buybacks + burns on their own schedule (beats tiny MEV-exposed per-mint swaps).
+const BURN_SINK = process.env.SAINTS_BURN_SINK || "0xb6A5059356332A0B222e9D21b1f72f3617d12516";
 const ROYALTY_BPS = process.env.SAINTS_ROYALTY_BPS || "500"; // 5% secondary royalty
 const BURN_BPS = "6000", POOL_BPS = "3000"; // 60 / 30 / (team = remainder 10)
 
