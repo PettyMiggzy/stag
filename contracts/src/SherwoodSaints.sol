@@ -20,8 +20,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract SherwoodSaints is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
+    using Strings for uint256;
     uint256 public constant MAX_SUPPLY = 5; // token ids 1..5, all 1/1
 
     // ---- pricing / policy (owner-tunable) ----
@@ -102,6 +104,13 @@ contract SherwoodSaints is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
 
     function _baseURI() internal view override returns (string memory) { return _base; }
 
+    /// @notice tokenURI appends ".json" so it resolves the hosted files at
+    ///         .../saints/metadata/<id>.json (marketplaces need the exact file path).
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
+        return string(abi.encodePacked(_base, tokenId.toString(), ".json"));
+    }
+
     /* ---------------- admin (no access to nothing but policy) ---------------- */
 
     function setMintActive(bool active) external onlyOwner { mintActive = active; emit MintStateChanged(active); }
@@ -110,6 +119,17 @@ contract SherwoodSaints is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     function setBaseURI(string calldata baseURI) external onlyOwner { _base = baseURI; }
     function setSplitter(address payable s) external onlyOwner { require(s != address(0), "zero"); splitter = s; emit SplitterChanged(s); }
     function setRoyalty(address receiver, uint96 bps) external onlyOwner { _setDefaultRoyalty(receiver, bps); }
+
+    /// @notice Rescue valve: send stuck ETH to `to`. Same recovery power the owner already has via
+    ///         setSplitter+forwardProceeds, made explicit so proceeds can never be frozen if a
+    ///         splitter recipient can't receive ETH. Does not touch minted tokens.
+    function withdrawETH(address to) external onlyOwner nonReentrant {
+        require(to != address(0), "zero");
+        uint256 bal = address(this).balance;
+        require(bal > 0, "nothing");
+        (bool ok, ) = payable(to).call{value: bal}("");
+        require(ok, "send failed");
+    }
 
     /// @notice Grant free mints (reserves / gifting the real Saints their own piece). Bypasses the
     ///         per-wallet cap and price. Cannot exceed remaining supply's worth in practice.

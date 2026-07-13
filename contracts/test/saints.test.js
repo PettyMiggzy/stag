@@ -21,7 +21,7 @@ describe("SherwoodSaints — 5-piece 1/1 mint", () => {
     expect(await saints.mintPrice()).to.equal(E("0.03"));
     await saints.connect(alice).mintPick(3, { value: E("0.03") });
     expect(await saints.ownerOf(3)).to.equal(alice.address);
-    expect(await saints.tokenURI(3)).to.equal(BASE + "3");
+    expect(await saints.tokenURI(3)).to.equal(BASE + "3.json");
     expect(await saints.isAvailable(3)).to.equal(false);
     expect(await saints.totalSupply()).to.equal(1n);
   });
@@ -64,6 +64,16 @@ describe("SherwoodSaints — 5-piece 1/1 mint", () => {
     await saints.connect(alice).mintPick(1, { value: E("0.03") });
     const ids = (await saints.availableIds()).map(Number);
     expect(ids).to.deep.equal([2, 3, 4, 5]);
+  });
+
+  it("withdrawETH rescues stuck proceeds (owner-only)", async () => {
+    const { saints, owner, alice, bob } = await deploy();
+    await saints.connect(alice).mintPick(1, { value: E("0.03") });
+    await expect(saints.connect(alice).withdrawETH(alice.address)).to.be.reverted; // not owner
+    const before = await ethers.provider.getBalance(bob.address);
+    await saints.connect(owner).withdrawETH(bob.address);
+    expect((await ethers.provider.getBalance(bob.address)) - before).to.equal(E("0.03"));
+    expect(await ethers.provider.getBalance(await saints.getAddress())).to.equal(0n);
   });
 
   it("only owner can change policy; reports ERC-2981 royalty", async () => {
