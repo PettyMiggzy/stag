@@ -283,3 +283,54 @@ describe("StagLocker", () => {
     });
   });
 });
+
+describe("StagLocker — $STAG fee waiver", () => {
+  const FEE = 6700000000000000n;           // ~0.0067 ETH (~$20)
+  const MIN = 5_000_000n * 10n ** 18n;      // 5M $STAG
+
+  async function setup() {
+    const { admin, treasury, alice, bob, locker, tok } = await deploy(FEE);
+    await locker.connect(admin).setFeeExemption(await tok.getAddress(), MIN);
+    return { admin, treasury, alice, bob, locker, tok };
+  }
+
+  it("non-holders pay the flat fee; feeFor reports it", async () => {
+    const { alice, locker, tok } = await setup();
+    expect(await locker.feeFor(alice.address)).to.equal(FEE);
+    // lock reverts if underpaid, succeeds when the fee is sent
+    await tok.mint(alice.address, 1000n);
+    await tok.connect(alice).approve(await locker.getAddress(), 1000n);
+    const unlock = (await now()) + DAY;
+    await expect(locker.connect(alice).lockTokens(await tok.getAddress(), 1000n, unlock, { value: 0 }))
+      .to.be.revertedWithCustomError(locker, "FeeTooLow");
+    await expect(locker.connect(alice).lockTokens(await tok.getAddress(), 1000n, unlock, { value: FEE }))
+      .to.emit(locker, "TokenLocked");
+    expect(await locker.accruedFees()).to.equal(FEE);
+  });
+
+  it("holders of >= 5M $STAG lock for FREE (feeFor == 0, value 0 works)", async () => {
+    const { bob, locker, tok } = await setup();
+    await tok.mint(bob.address, MIN);        // exactly the threshold
+    expect(await locker.feeFor(bob.address)).to.equal(0n);
+    await tok.connect(bob).approve(await locker.getAddress(), 1000n);
+    const unlock = (await now()) + DAY;
+    await expect(locker.connect(bob).lockTokens(await tok.getAddress(), 1000n, unlock, { value: 0 }))
+      .to.emit(locker, "TokenLocked");
+    expect(await locker.accruedFees()).to.equal(0n); // nothing charged
+  });
+
+  it("just under the threshold still pays", async () => {
+    const { bob, locker, tok } = await setup();
+    await tok.mint(bob.address, MIN - 1n);
+    expect(await locker.feeFor(bob.address)).to.equal(FEE);
+  });
+
+  it("only owner can set the exemption; address(0) disables it", async () => {
+    const { admin, alice, locker, tok } = await setup();
+    await expect(locker.connect(alice).setFeeExemption(await tok.getAddress(), MIN))
+      .to.be.revertedWithCustomError(locker, "OwnableUnauthorizedAccount");
+    await locker.connect(admin).setFeeExemption(ethers.ZeroAddress, 0);
+    await tok.mint(alice.address, MIN);
+    expect(await locker.feeFor(alice.address)).to.equal(FEE); // waiver disabled -> everyone pays
+  });
+});

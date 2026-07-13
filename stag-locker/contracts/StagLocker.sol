@@ -67,6 +67,12 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///         NEVER brick lock creation; fees stay safely claimable later.
     uint256 public accruedFees;
 
+    /// @notice Optional fee waiver: wallets holding >= `feeExemptMinBalance` of `feeExemptToken`
+    ///         create locks for FREE. Everyone else pays `flatFeeWei`. Set both to enable
+    ///         (e.g. token = $STAG, min = 5,000,000e18). token = address(0) disables the waiver.
+    IERC20 public feeExemptToken;
+    uint256 public feeExemptMinBalance;
+
     uint256 public nextLockId;
     mapping(uint256 => Lock) private _locks;
     mapping(address => uint256[]) private _ownerLocks; // owner => lockIds
@@ -80,6 +86,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     event LockOwnerChanged(uint256 indexed id, address indexed from, address indexed to);
     event FeeChanged(uint256 flatFeeWei, address feeRecipient);
     event FeesWithdrawn(address indexed to, uint256 amount);
+    event FeeExemptionChanged(address token, uint256 minBalance);
 
     error BadUnlockTime();
     error NotLockOwner();
@@ -277,6 +284,22 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
         emit FeeChanged(_flatFeeWei, _feeRecipient);
     }
 
+    /// @notice Enable/disable the hold-to-lock-free waiver. token=address(0) disables it.
+    function setFeeExemption(address token, uint256 minBalance) external onlyOwner {
+        feeExemptToken = IERC20(token);
+        feeExemptMinBalance = minBalance;
+        emit FeeExemptionChanged(token, minBalance);
+    }
+
+    /// @notice The creation fee `who` will actually pay: 0 if they hold enough of the exempt
+    ///         token (e.g. >= 5M $STAG), otherwise `flatFeeWei`. The UI reads this to know
+    ///         how much ETH to send.
+    function feeFor(address who) public view returns (uint256) {
+        if (address(feeExemptToken) != address(0) && feeExemptMinBalance > 0
+            && feeExemptToken.balanceOf(who) >= feeExemptMinBalance) return 0;
+        return flatFeeWei;
+    }
+
     /// @notice Send all accrued creation fees to the CURRENT feeRecipient. Callable by
     ///         anyone: funds go only to feeRecipient regardless of who calls, so this is
     ///         a harmless, non-bricking way to sweep fees. Follows checks-effects-
@@ -303,7 +326,7 @@ contract StagLocker is Ownable, ReentrancyGuard, IERC721Receiver {
     ///      is still refunded to msg.sender; a failing refund only self-griefs the
     ///      caller, so it is left as a require.
     function _takeFee() private {
-        uint256 fee = flatFeeWei;
+        uint256 fee = feeFor(msg.sender); // 0 for exempt (e.g. >= 5M $STAG) holders
         if (msg.value < fee) revert FeeTooLow();
         if (fee > 0) {
             accruedFees += fee;

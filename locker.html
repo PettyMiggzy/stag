@@ -210,6 +210,9 @@ const CHAIN_PARAMS = {
 
 const LOCKER_ABI = [
   "function flatFeeWei() view returns (uint256)",
+  "function feeFor(address) view returns (uint256)",
+  "function feeExemptToken() view returns (address)",
+  "function feeExemptMinBalance() view returns (uint256)",
   "function positionManager() view returns (address)",
   "function nextLockId() view returns (uint256)",
   "function getLock(uint256) view returns (tuple(uint8 kind,address asset,uint256 amountOrId,address owner,uint64 unlockTime,bool withdrawn))",
@@ -294,8 +297,29 @@ async function connect(){
 if(window.ethereum){ window.ethereum.on?.("accountsChanged", ()=>location.reload()); window.ethereum.on?.("chainChanged", ()=>location.reload()); }
 
 async function loadFee(){
-  try{ const fee = await readLocker().flatFeeWei();
-    $("feeNote").textContent = fee > 0n ? ("Creation fee: " + ethers.formatEther(fee) + " ETH (overpayment refunded).") : "No creation fee.";
+  try{
+    const lk = readLocker();
+    const [flat, exToken, exMin] = await Promise.all([lk.flatFeeWei(), lk.feeExemptToken().catch(()=>ethers.ZeroAddress), lk.feeExemptMinBalance().catch(()=>0n)]);
+    const waiver = exToken && exToken !== ethers.ZeroAddress && exMin > 0n;
+    // human-readable threshold (assume 18 decimals for $STAG)
+    const minTok = waiver ? fmtAmt(ethers.formatUnits(exMin, 18)) : "";
+    if(!account){
+      $("feeNote").innerHTML = flat > 0n
+        ? (waiver
+            ? `🦌 Hold <b>${minTok}+ $STAG</b> and lock for <b>FREE</b>. Otherwise creation fee is <b>${ethers.formatEther(flat)} ETH</b> (~$20). Connect to see your rate.`
+            : `Creation fee: <b>${ethers.formatEther(flat)} ETH</b> (overpayment refunded).`)
+        : "No creation fee.";
+      return;
+    }
+    // connected: show the caller's ACTUAL fee (0 if they hold enough $STAG)
+    const mine = await lk.feeFor(account);
+    if(mine === 0n){
+      $("feeNote").innerHTML = waiver
+        ? `✓ You hold ${minTok}+ $STAG — <b>locking is FREE</b> for you.`
+        : "No creation fee.";
+    } else {
+      $("feeNote").innerHTML = `Your creation fee: <b>${ethers.formatEther(mine)} ETH</b> (~$20). Hold ${minTok}+ $STAG to lock free.`;
+    }
   }catch{}
 }
 
@@ -347,7 +371,8 @@ $("lockBtn").onclick = async () => {
   const el = $("lockMsg"); if(!requireReady(el)) return;
   try{
     const c = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
-    const fee = await readLocker().flatFeeWei();
+    // the caller's actual fee: 0 if they hold enough $STAG, else the flat fee
+    const fee = await readLocker().feeFor(account);
     if($("kind").value === "erc20"){
       const token = $("token").value.trim();
       const unlock = unlockFromDuration();
