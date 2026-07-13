@@ -148,8 +148,15 @@
     .saint-b h3{font:800 1rem/1.1 'Cinzel',serif;color:#fff;margin:0 0 .15rem}
     .saint-x{font:600 .78rem/1 'Space Grotesk',monospace;color:#37d6c4;text-decoration:none}
     .saint-x:hover{text-decoration:underline}
-    .saint-chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.6rem}
-    .saint-chips span{font:600 .66rem/1 'Space Grotesk',monospace;background:rgba(255,255,255,.05);
+    .saint-chips{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;margin-top:.6rem}
+    .saint-chips .attr{background:rgba(158,244,24,.05);border:1px solid rgba(158,244,24,.14);
+      border-radius:7px;padding:.34rem .5rem;min-width:0}
+    .saint-chips .attr .k{font:700 .56rem/1.2 'Space Grotesk',monospace;letter-spacing:.06em;
+      text-transform:uppercase;color:#6f8a5e;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .saint-chips .attr .v{font:700 .72rem/1.2 'Inter',sans-serif;color:#e6f2d8;display:block;
+      margin-top:.1rem;word-break:break-word}
+    /* legacy single-value chip fallback (before metadata loads) */
+    .saint-chips > span{grid-column:span 1;font:600 .66rem/1 'Space Grotesk',monospace;background:rgba(255,255,255,.05);
       border:1px solid rgba(255,255,255,.1);color:#a7b6ab;border-radius:6px;padding:.32rem .45rem}
     .saint-mint{margin-top:.7rem;width:100%;padding:.6rem;border-radius:9px;cursor:pointer;
       font:700 .8rem/1 'Space Grotesk',monospace;border:1px solid rgba(158,244,24,.3);
@@ -248,8 +255,20 @@
       const btn = document.createElement('button');
       btn.className = 'saint-mint'; btn.textContent = 'Opens at reveal'; btn.disabled = true;
       el.querySelector('.saint-b').appendChild(btn);
-      return { id, btn };
+      return { id, btn, el };
     }).filter(Boolean);
+
+    // render the FULL trait set from each Saint's on-site metadata (marketplace-style tiles)
+    cards.forEach(({ id, el }) => {
+      fetch('assets/nft/saints/metadata/' + id + '.json').then((r) => r.json()).then((meta) => {
+        const box = el.querySelector('.saint-chips'); if (!box || !Array.isArray(meta.attributes)) return;
+        const skip = new Set(['Collection', 'Chain']); // redundant on every card
+        box.innerHTML = meta.attributes.filter((a) => !skip.has(a.trait_type)).map((a) =>
+          '<div class="attr"><span class="k">' + esc(a.trait_type) + '</span><span class="v">' + esc(String(a.value)) + '</span></div>'
+        ).join('');
+      }).catch(() => {});
+    });
+    function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
     if (!window.ethers) return; // buttons still show "Opens at reveal"; live read needs ethers
     const c = new ethers.Contract(SAINTS, ABI, new ethers.JsonRpcProvider(RPC));
 
