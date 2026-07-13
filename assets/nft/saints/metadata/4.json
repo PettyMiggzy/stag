@@ -1,0 +1,66 @@
+{
+  "name": "Sherwood Saints #4 - CULO",
+  "symbol": "SAINT",
+  "description": "The blue collab saint. Shades on, leather down, calm as a closed candle. When CULO and $STAG break bread, both herds eat. One of the Sherwood Saints - 5 top-tier 1/1 legends of $STAGWIFHOOD, minted to mark the day $STAG bonded. The 5 who called it. Founders eat first.",
+  "image": "https://stagwifhood.fun/assets/nft/saints/img/4.png",
+  "animation_url": "https://stagwifhood.fun/assets/nft/saints/anim/4.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Saint"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Collab"
+    },
+    {
+      "trait_type": "Skin",
+      "value": "Blue"
+    },
+    {
+      "trait_type": "Eyewear",
+      "value": "Black Shades"
+    },
+    {
+      "trait_type": "Wardrobe",
+      "value": "Leather Jacket"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Hidden"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Saint Halo"
+    },
+    {
+      "trait_type": "Collab",
+      "value": "$CULO"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Electric Blue"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Sherwood Saints"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 4
+    }
+  ],
+  "properties": {
+    "category": "video",
+    "x_handle": ""
+  }
+}

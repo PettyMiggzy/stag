@@ -1,0 +1,66 @@
+{
+  "name": "Sherwood Saints #5 - Crissy",
+  "symbol": "SAINT",
+  "description": "The doe who runs the message. Pink roses, pink halo, dark hair and a queen's composure - marketing royalty of Sherwood. One of the Sherwood Saints - 5 top-tier 1/1 legends of $STAGWIFHOOD, minted to mark the day $STAG bonded. The 5 who called it. Founders eat first.",
+  "image": "https://stagwifhood.fun/assets/nft/saints/img/5.png",
+  "animation_url": "https://stagwifhood.fun/assets/nft/saints/anim/5.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Saint"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Marketing"
+    },
+    {
+      "trait_type": "Form",
+      "value": "Doe"
+    },
+    {
+      "trait_type": "Hair",
+      "value": "Long Dark"
+    },
+    {
+      "trait_type": "Theme",
+      "value": "Pink"
+    },
+    {
+      "trait_type": "Accessory",
+      "value": "Roses + Pink Gems"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Emerald Glow"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Pink Halo"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Pink Bull Moon"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Sherwood Saints"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 5
+    }
+  ],
+  "properties": {
+    "category": "video",
+    "x_handle": ""
+  }
+}

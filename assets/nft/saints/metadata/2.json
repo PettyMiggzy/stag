@@ -1,0 +1,66 @@
+{
+  "name": "Sherwood Saints #2 - The Dev",
+  "symbol": "SAINT",
+  "description": "The bloodline that doesn't surrender. Inked head to hoof, chained, crossed and unbreakable - the hands that built the herd. One of the Sherwood Saints - 5 top-tier 1/1 legends of $STAGWIFHOOD, minted to mark the day $STAG bonded. The 5 who called it. Founders eat first.",
+  "image": "https://stagwifhood.fun/assets/nft/saints/img/2.png",
+  "animation_url": "https://stagwifhood.fun/assets/nft/saints/anim/2.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Saint"
+    },
+    {
+      "trait_type": "Role",
+      "value": "The Builder"
+    },
+    {
+      "trait_type": "Hood",
+      "value": "Dark"
+    },
+    {
+      "trait_type": "Ink",
+      "value": "Full Tattoos"
+    },
+    {
+      "trait_type": "Beard",
+      "value": "Full"
+    },
+    {
+      "trait_type": "Accessory",
+      "value": "Cross + Chains"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Emerald Glow"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Blood Halo"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Crimson Inferno"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Sherwood Saints"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 2
+    }
+  ],
+  "properties": {
+    "category": "video",
+    "x_handle": ""
+  }
+}

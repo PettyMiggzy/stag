@@ -21,6 +21,7 @@ node_modules/
 
 # animated NFT collection (intentional)
 !assets/nft/stagwifhood/anim/*.mp4
+!assets/nft/saints/anim/*.mp4
 
 # splash intro video (intentional)
 !assets/media/*.mp4

@@ -1,0 +1,66 @@
+{
+  "name": "Sherwood Saints #1 - Crypto Messiah",
+  "symbol": "SAINT",
+  "description": "The caller. The one who saw $STAG before the rest. Hooded in green with the locs of a prophet, a teal glyph beneath his eye and a halo of gain behind his antlers. One of the Sherwood Saints - 5 top-tier 1/1 legends of $STAGWIFHOOD, minted to mark the day $STAG bonded. The 5 who called it. Founders eat first.",
+  "image": "https://stagwifhood.fun/assets/nft/saints/img/1.png",
+  "animation_url": "https://stagwifhood.fun/assets/nft/saints/anim/1.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Saint"
+    },
+    {
+      "trait_type": "Role",
+      "value": "The Caller"
+    },
+    {
+      "trait_type": "Hood",
+      "value": "Green Ranger"
+    },
+    {
+      "trait_type": "Hair",
+      "value": "Dreadlock Locs"
+    },
+    {
+      "trait_type": "Mark",
+      "value": "Teal Glyph"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Emerald Glow"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Saint Halo"
+    },
+    {
+      "trait_type": "Wardrobe",
+      "value": "Tank + Cloak"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Green Bull Moon"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Sherwood Saints"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 1
+    }
+  ],
+  "properties": {
+    "category": "video",
+    "x_handle": "@lowkeyfrincase"
+  }
+}

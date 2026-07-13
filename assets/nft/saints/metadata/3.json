@@ -1,0 +1,62 @@
+{
+  "name": "Sherwood Saints #3 - MoonDaddy",
+  "symbol": "SAINT",
+  "description": "The street king of the herd. Red bandana, red eyes, green smoke and a chain of gold - reaching for the moon with every candle. One of the Sherwood Saints - 5 top-tier 1/1 legends of $STAGWIFHOOD, minted to mark the day $STAG bonded. The 5 who called it. Founders eat first.",
+  "image": "https://stagwifhood.fun/assets/nft/saints/img/3.png",
+  "animation_url": "https://stagwifhood.fun/assets/nft/saints/anim/3.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Saint"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Team"
+    },
+    {
+      "trait_type": "Headwear",
+      "value": "Red Bandana"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Red Glow"
+    },
+    {
+      "trait_type": "Accessory",
+      "value": "Gold Cuban + Cannabis"
+    },
+    {
+      "trait_type": "Vice",
+      "value": "Green Smoke"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Neon Tokyo"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Saint Halo"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Sherwood Saints"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 3
+    }
+  ],
+  "properties": {
+    "category": "video",
+    "x_handle": ""
+  }
+}
