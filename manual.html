@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>The Sherwood Field Manual — $STAGWIFHOOD Team Playbook</title>
+<style>
+  :root{
+    --ground:#0a1710; --panel:#0f2117; --panel-2:#132b1d; --ink:#e9f5ea; --ink-dim:#a6c0ac; --ink-faint:#6f8a78;
+    --lime:#a8f23c; --gold:#e6b34a; --gold-soft:#f4d488; --hair:rgba(230,179,74,.18); --hair-2:rgba(168,242,60,.16);
+    --good:#66d97a; --warn:#e69a3a; --seal:#8a2b2f;
+  }
+  @media(prefers-color-scheme:light){
+    :root{--ground:#f1e9d5;--panel:#f7f0de;--panel-2:#efe6cd;--ink:#182f1f;--ink-dim:#4b5e4b;--ink-faint:#7b8a75;
+      --lime:#3d7a15;--gold:#9a6a17;--gold-soft:#7c520f;--hair:rgba(122,80,20,.22);--hair-2:rgba(63,125,23,.2);--good:#2f8f45;--warn:#a4661a;}
+  }
+  :root[data-theme="dark"]{--ground:#0a1710;--panel:#0f2117;--panel-2:#132b1d;--ink:#e9f5ea;--ink-dim:#a6c0ac;--ink-faint:#6f8a78;
+    --lime:#a8f23c;--gold:#e6b34a;--gold-soft:#f4d488;--hair:rgba(230,179,74,.18);--hair-2:rgba(168,242,60,.16);--good:#66d97a;--warn:#e69a3a;}
+  :root[data-theme="light"]{--ground:#f1e9d5;--panel:#f7f0de;--panel-2:#efe6cd;--ink:#182f1f;--ink-dim:#4b5e4b;--ink-faint:#7b8a75;
+    --lime:#3d7a15;--gold:#9a6a17;--gold-soft:#7c520f;--hair:rgba(122,80,20,.22);--hair-2:rgba(63,125,23,.2);--good:#2f8f45;--warn:#a4661a;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+    font:400 16.5px/1.7 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  a{color:var(--lime)}
+  code{font-family:ui-monospace,monospace;font-size:.86em;background:var(--panel-2);border:1px solid var(--hair);
+    border-radius:6px;padding:2px 6px;color:var(--gold-soft);word-break:break-all}
+
+  .shell{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;max-width:1180px;margin:0 auto}
+  /* sidebar */
+  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:26px 18px 40px;
+    border-right:1px solid var(--hair);background:color-mix(in srgb,var(--ground) 90%,transparent)}
+  aside .mark{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.02em;margin-bottom:4px}
+  aside .mark .d{width:10px;height:10px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 3px color-mix(in srgb,var(--lime) 25%,transparent)}
+  aside .sub{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:20px}
+  aside nav{display:flex;flex-direction:column;gap:1px}
+  aside nav a{color:var(--ink-dim);text-decoration:none;font-size:13.5px;padding:6px 10px;border-radius:7px;border-left:2px solid transparent}
+  aside nav a:hover{color:var(--ink);background:var(--panel)}
+  aside nav a.grp{margin-top:14px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);pointer-events:none}
+  aside nav a.active{color:var(--lime);border-left-color:var(--lime);background:var(--panel)}
+
+  main{padding:40px 40px 90px;min-width:0}
+  .doc-head{border-bottom:1px solid var(--hair);padding-bottom:26px;margin-bottom:12px}
+  .eyebrow{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+  h1{font-size:clamp(30px,5vw,46px);line-height:1.05;margin:14px 0 0;font-weight:800;text-wrap:balance}
+  .doc-head p{color:var(--ink-dim);max-width:70ch;margin:14px 0 0}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .pill{font-size:11.5px;letter-spacing:.05em;padding:5px 11px;border-radius:20px;border:1px solid var(--hair);color:var(--ink-dim)}
+  .pill.g{color:var(--lime);border-color:color-mix(in srgb,var(--lime) 45%,transparent)}
+
+  h2{font-size:26px;margin:56px 0 0;padding-top:14px;font-weight:800;letter-spacing:-.01em;scroll-margin-top:20px;text-wrap:balance}
+  h2 .n{font:italic 600 18px/1 "Iowan Old Style",Georgia,serif;color:var(--gold);margin-right:10px}
+  h3{font-size:19px;margin:30px 0 0;font-weight:700}
+  p{margin:12px 0 0}
+  .lead{color:var(--ink-dim)}
+  ul,ol{margin:12px 0 0;padding-left:22px}
+  li{margin:6px 0}
+  strong,b{color:var(--ink)}
+  .divider{height:1px;background:var(--hair);margin:46px 0 0}
+
+  /* callouts */
+  .box{border:1px solid var(--hair);border-radius:13px;background:var(--panel);padding:16px 18px;margin-top:18px}
+  .box.reward{border-color:color-mix(in srgb,var(--lime) 30%,transparent);background:color-mix(in srgb,var(--lime) 7%,transparent)}
+  .box.how{border-color:color-mix(in srgb,var(--gold) 30%,transparent);background:color-mix(in srgb,var(--gold) 6%,transparent)}
+  .box.talk{border-left:3px solid var(--lime)}
+  .box .bt{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  .box.reward .bt{color:var(--lime)} .box.how .bt{color:var(--gold)} .box.talk .bt{color:var(--lime)}
+  .box p:first-of-type{margin-top:0}
+  .box.talk em{color:var(--ink);font-style:italic}
+
+  .facts{display:grid;grid-template-columns:auto 1fr;gap:0;border:1px solid var(--hair);border-radius:12px;overflow:hidden;margin-top:18px}
+  .facts dt{padding:9px 14px;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);
+    background:var(--panel-2);border-bottom:1px solid var(--hair);font-weight:600}
+  .facts dd{padding:9px 14px;margin:0;border-bottom:1px solid var(--hair);font-size:14.5px}
+  .facts dt:last-of-type,.facts dd:last-child{border-bottom:none}
+  .chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:14px;border:1px solid}
+  .chip.live{color:var(--lime);border-color:color-mix(in srgb,var(--lime) 45%,transparent);background:color-mix(in srgb,var(--lime) 10%,transparent)}
+  .chip.open{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 45%,transparent);background:color-mix(in srgb,var(--gold) 10%,transparent)}
+  .chip.armed{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+
+  .scroll{overflow-x:auto;margin-top:18px;border:1px solid var(--hair);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--hair);font-size:14px}
+  th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);background:var(--panel-2)}
+  tr:last-child td{border-bottom:none}
+  td.n{font-weight:700}
+
+  .topbar{display:none}
+  @media(max-width:860px){
+    .shell{grid-template-columns:1fr}
+    aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--hair)}
+    aside nav{display:none}
+    main{padding:28px 20px 70px}
+  }
+
+  body.locked{overflow:hidden}
+  body.locked .shell{display:none}
+  #gate{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(120% 90% at 50% 15%,color-mix(in srgb,var(--lime) 10%,transparent),var(--ground) 65%),var(--ground);padding:22px}
+  body.locked #gate{display:flex}
+  .gate-card{width:100%;max-width:400px;text-align:center;border:1px solid var(--hair);border-radius:18px;
+    background:var(--panel);padding:38px 30px;box-shadow:0 30px 70px -30px rgba(0,0,0,.8)}
+  .gate-card .lock{font-size:34px}
+  .gate-card h1{font-size:24px;margin:14px 0 0}
+  .gate-card p{color:var(--ink-dim);font-size:14.5px;margin:8px 0 0}
+  .gate-card form{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+  .gate-card input{font:600 16px/1 ui-monospace,monospace;letter-spacing:.05em;text-align:center;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--hair);border-radius:11px;padding:14px}
+  .gate-card input:focus{outline:none;border-color:var(--lime)}
+  .gate-card button{font:800 15px/1 system-ui;cursor:pointer;color:#06140a;background:var(--lime);border:none;border-radius:11px;padding:14px}
+  .gate-card button:hover{filter:brightness(1.06)}
+  .gate-err{color:#ff7a6a;font-size:13px;min-height:18px;margin-top:2px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="lock">🔒</div>
+    <h1 class="serif">Sherwood Field Manual</h1>
+    <p>Internal team reference. Enter the access code to continue.</p>
+    <form id="gate-form" autocomplete="off">
+      <input id="gate-input" type="password" placeholder="Access code" aria-label="Access code" autofocus />
+      <div class="gate-err" id="gate-err"></div>
+      <button type="submit">Enter &#8594;</button>
+    </form>
+  </div>
+</div>
+
+
+
+<div class="shell">
+  <aside>
+    <div class="mark"><span class="d"></span>$STAGWIFHOOD</div>
+    <div class="sub">Field Manual · v1</div>
+    <nav id="toc">
+      <a class="grp">Start here</a>
+      <a href="#what">What this is</a>
+      <a href="#chain">Chain &amp; token</a>
+      <a href="#map">The contract map</a>
+      <a class="grp">Collectibles</a>
+      <a href="#hooded">The Hooded 20</a>
+      <a href="#saints">Sherwood Saints</a>
+      <a class="grp">Earning</a>
+      <a href="#staking">Stag Staking</a>
+      <a href="#pact">Sherwood Pact</a>
+      <a href="#vault">Sherwood Vault</a>
+      <a class="grp">Treasury</a>
+      <a href="#locker">Stag Locker</a>
+      <a href="#splitters">The Splitters</a>
+      <a href="#flow">How ETH moves</a>
+      <a class="grp">More</a>
+      <a href="#heist">The Prize Heist</a>
+      <a href="#games">Games &amp; tools</a>
+      <a href="#pages">Every page</a>
+      <a href="#talk">Talk track / FAQ</a>
+      <a href="#status">Live status</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="doc-head">
+      <span class="eyebrow">Internal Team Playbook · Read Me First</span>
+      <h1 class="serif">The Sherwood Field Manual</h1>
+      <p>Everything $STAGWIFHOOD does, explained from zero. If you're new to the team, start at the top — you'll finish knowing every utility, what it pays, how it works, and how to answer any holder who asks. Nothing here assumes you already know the project.</p>
+      <div class="meta">
+        <span class="pill g">Robinhood Chain · 4663</span>
+        <span class="pill">9 contracts live</span>
+        <span class="pill">All verified on Blockscout</span>
+      </div>
+    </div>
+
+    <!-- WHAT -->
+    <h2 id="what"><span class="n">00</span>What $STAGWIFHOOD actually is</h2>
+    <p class="lead">The story: Robin Hood left Sherwood for Wall Street — but forgot his hood. A rogue stag put it on and never gave it back. That stag is <b>$STAG</b>, the face of Robinhood Chain.</p>
+    <p>Strip the lore and here's the real thing: <b>$STAGWIFHOOD is a full Web3 product suite</b> built on Robinhood Chain. It's not just a token you buy and hope. It's a token wired into a whole machine — NFTs you can mint, staking that pays you real ETH, a treasury that locks itself, games you can play, and a prize system that pays holders as the market cap grows.</p>
+    <p>The one-line pitch: <b>"The stag steals from the chart and gives to the holders."</b> Every utility below is a way that promise is kept — and every one is already deployed and verifiable on-chain. We say "live," we mean live.</p>
+
+    <!-- CHAIN -->
+    <h2 id="chain"><span class="n">01</span>The chain &amp; the token (the basics)</h2>
+    <p>Before any utility makes sense, know the ground you're standing on.</p>
+    <div class="facts">
+      <dt>Chain</dt><dd><b>Robinhood Chain</b> — an EVM Layer-2 (works like Ethereum). Chain ID <b>4663</b>.</dd>
+      <dt>Gas token</dt><dd><b>ETH</b>. That's the key detail — because gas is ETH, our rewards, mints and burns all settle in <b>real ETH</b>, not points.</dd>
+      <dt>The token</dt><dd><b>$STAG</b> — the ERC-20 you hold, stake, lock and burn. <code>0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49</code></dd>
+      <dt>Explorer</dt><dd>robinhoodchain.blockscout.com — where anyone can verify every contract and balance.</dd>
+      <dt>Buy $STAG</dt><dd>On the <b>Noxa</b> launchpad. To get funds on-chain, users bridge from Arbitrum One → Robinhood Chain, keep a little ETH for gas.</dd>
+      <dt>Wallets</dt><dd><b>EVM only</b> — MetaMask, Trust, Rainbow, Rabby. <b>Solana wallets (Phantom, Jupiter) do NOT work</b> — this is a common support question.</dd>
+    </div>
+    <div class="box how"><div class="bt">Why "real yield" matters</div><p>Most projects "reward" you by printing more of their own token — your number goes up, your bag's value goes down. We pay in <b>ETH</b>, funded by actual revenue. That's the difference between a treadmill and a paycheck. Lead with this.</p></div>
+
+    <!-- MAP -->
+    <h2 id="map"><span class="n">02</span>The contract map (the whole machine)</h2>
+    <p>Nine pieces. Here's the 10-second version of each — details follow in their own sections.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Contract</th><th>In one line</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="n">$STAG</td><td>The token everything revolves around</td><td><span class="chip live">Live</span></td></tr>
+        <tr><td class="n">HoodedTwenty</td><td>The Hooded 20 — 20 tiered 1/1 NFTs you mint</td><td><span class="chip live">5/20</span></td></tr>
+        <tr><td class="n">SherwoodSaints</td><td>5 animated 1/1 NFTs, 0.03 ETH each</td><td><span class="chip open">Mint open</span></td></tr>
+        <tr><td class="n">StagStaking</td><td>Stake tokens/NFTs → earn real ETH</td><td><span class="chip live">Streaming</span></td></tr>
+        <tr><td class="n">SherwoodVault</td><td>Future-proof NFT staking (any collection)</td><td><span class="chip armed">Funding next</span></td></tr>
+        <tr><td class="n">SherwoodPact</td><td>Earn while holding in your OWN wallet</td><td><span class="chip live">Live</span></td></tr>
+        <tr><td class="n">StagLocker</td><td>Lock &amp; vest liquidity/tokens + burn</td><td><span class="chip live">Live</span></td></tr>
+        <tr><td class="n">RevenueSplitter</td><td>Routes mint money 90/10, automatically</td><td><span class="chip live">Live</span></td></tr>
+        <tr><td class="n">SaintsSplitter</td><td>Routes Saints money 60/30/10, automatically</td><td><span class="chip live">Live</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="divider"></div>
+
+    <!-- HOODED -->
+    <h2 id="hooded"><span class="n">03</span>The Hooded 20</h2>
+    <p class="lead">The founding NFT collection: twenty unique stags, each a genuine 1/1, ranked across five rarity tiers (Common → Rare → Epic → Legendary → Mythic).</p>
+    <h3>Two ways to mint</h3>
+    <ul>
+      <li><b>Pick</b> — you choose the <em>exact</em> stag you want. Price scales with its rarity tier: the rarer the stag, the more it costs.</li>
+      <li><b>Gamble</b> — pay a lower price for a <em>weighted-random</em> pull from whatever hasn't been minted yet. Cheaper, but you don't choose.</li>
+    </ul>
+    <p>Every ID has real multi-trait metadata — actual attributes, not generative filler. There are only 20, ever.</p>
+    <div class="box reward"><div class="bt">🎁 What holding one gets you</div><p>A Hooded 20 isn't just art — it's a <b>yield multiplier</b>. Holding one boosts your staking rewards, and each NFT can be <b>staked in place</b> (see Stag Staking) to earn ETH <em>without leaving your wallet</em>. Holders also get <b>whitelist priority</b> in every Prize Heist.</p></div>
+    <div class="facts"><dt>Contract</dt><dd><code>0x4384cB362D908d36266bDF3C31F18DB95EB127dc</code></dd><dt>Mint at</dt><dd>stagwifhood.fun/nfts</dd></div>
+
+    <!-- SAINTS -->
+    <h2 id="saints"><span class="n">04</span>Sherwood Saints</h2>
+    <p class="lead">Five top-tier <b>animated</b> 1/1 NFTs — the elite tier. Each Saint is tied to a real community member and carries their X handle in the metadata.</p>
+    <div class="facts">
+      <dt>Supply</dt><dd>5 · hard cap, never more</dd>
+      <dt>Price</dt><dd><b>0.03 ETH</b> each</dd>
+      <dt>Art</dt><dd>Full animated video + complete trait sheets</dd>
+      <dt>Royalties</dt><dd>On-chain (ERC-2981) — follow every resale</dd>
+      <dt>Status</dt><dd><span class="chip open">Mint is OPEN now</span></dd>
+    </div>
+    <div class="box reward"><div class="bt">🎁 Double win on every Saints mint</div><p>Saints are <b>stakeable in the Sherwood Vault</b> for ETH. And every mint runs through the Saints Splitter: <b>60% of the money is burned</b> — so buying a Saint literally tightens $STAG supply — while 30% tops up the reward pool.</p></div>
+    <div class="facts"><dt>Contract</dt><dd><code>0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327</code></dd><dt>Mint at</dt><dd>stagwifhood.fun/nfts</dd></div>
+
+    <div class="divider"></div>
+
+    <!-- STAKING -->
+    <h2 id="staking"><span class="n">05</span>Stag Staking — the core earner</h2>
+    <p class="lead">This is the big one. Stake and earn <b>real ETH</b>, streamed to everyone who's staked, split by how much "weight" they have. Claim anytime.</p>
+    <h3>What you can stake</h3>
+    <ul>
+      <li><b>$STAG tokens</b> — the classic way.</li>
+      <li><b>Hooded 20 NFTs</b> — and here's the magic: it's <b>lock-in-place</b>. Your NFT <em>never leaves your wallet</em>. The contract just marks it locked. You keep custody the whole time.</li>
+      <li><b>Both at once</b> — for the biggest weight.</li>
+    </ul>
+    <h3>How your rewards are sized ("weight")</h3>
+    <p>Your slice of the ETH stream is your weight ÷ everyone's weight. Weight is:</p>
+    <p style="text-align:center"><code style="font-size:15px">tokens × lock-tier × holding-time × NFT multiplier</code></p>
+    <ul>
+      <li><b>Lock tier</b> — you pick a lock length; longer locks give a bigger multiplier.</li>
+      <li><b>Holding time</b> — the longer you've held, the more you're boosted.</li>
+      <li><b>NFT multiplier</b> — holding Hooded 20 NFTs multiplies your token stake on top.</li>
+    </ul>
+    <div class="box how"><div class="bt">Where the ETH comes from (say this confidently)</div><p><b>90% of every Hooded 20 mint</b> flows straight into the staking reward pool via an on-chain splitter — no human deciding when to pay. The stream <b>refills itself</b> as people mint. It's real revenue, not printed tokens.</p></div>
+    <h3>The catch — early unstake</h3>
+    <ul>
+      <li>Unstake <b>tokens</b> before your lock ends → <b>15% penalty + you forfeit pending rewards</b>.</li>
+      <li>Unstake an <b>NFT</b> early → you just <b>forfeit pending rewards</b> (no penalty, you keep the NFT).</li>
+    </ul>
+    <div class="box reward"><div class="bt">🎁 The payout</div><p>Real <b>ETH</b>, streaming right now — claim whenever you want. This is the headline utility; make sure every holder knows it exists.</p></div>
+    <div class="facts"><dt>Contract</dt><dd><code>0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF</code></dd><dt>Stake at</dt><dd>stagwifhood.fun/stake</dd></div>
+
+    <!-- PACT -->
+    <h2 id="pact"><span class="n">06</span>Sherwood Pact — "non-wallet staking"</h2>
+    <p class="lead">The Pact solves the one objection every staker has: <em>"I don't want to hand my tokens to a contract."</em> With the Pact, you never do.</p>
+    <p><b>The Pact is proof-of-hold.</b> You keep your $STAG in your own wallet the entire time. Nothing is deposited, nothing is locked, no contract holds your bag. You commit to holding through a window; an <b>indexer verifies</b> that you actually did; and the <b>payout settles on-chain</b>. That's it.</p>
+    <div class="box how"><div class="bt">How to explain the difference</div><p><b>Staking</b> = your tokens go into the contract to earn. <b>The Pact</b> = your tokens stay in <em>your</em> wallet, the chain just <em>confirms you held</em>, and you get paid for it. Same reward-for-conviction idea, zero custody, no lockup, exit anytime.</p></div>
+    <div class="box reward"><div class="bt">🎁 The payout</div><p>A diamond-hands reward for holding — <b>without ever giving up control of your bag</b>. Perfect for holders who refuse to deposit into anything.</p></div>
+    <div class="facts"><dt>Contract</dt><dd><code>0xc36662D2db9432702f018963ABdab19432AA488B</code></dd><dt>Open at</dt><dd>stagwifhood.fun/pact</dd></div>
+
+    <!-- VAULT -->
+    <h2 id="vault"><span class="n">07</span>Sherwood Vault — future-proof NFT staking</h2>
+    <p class="lead">Stag Staking is wired specifically to the Hooded 20. The Vault is the <b>collection-agnostic</b> version: <em>any</em> approved NFT collection can be plugged in to stake for ETH — so future drops don't need a new contract.</p>
+    <ul>
+      <li><b>Sherwood Saints are already registered</b> and enabled to stake here.</li>
+      <li>Each collection gets its own weight and staking mode (custody or lock-in-place).</li>
+      <li>Uses the same ETH reward-streaming engine as staking.</li>
+    </ul>
+    <div class="box how"><div class="bt">Honest status — important for the team</div><p>The Vault is <b>deployed and works</b>, but it is currently <b>empty and switched off</b> — no ETH in it, no reward stream running. So a holder <em>can</em> stake a Saint, but earns 0 until we <b>fund the vault and start a stream</b>. Don't promise Vault rewards are flowing yet — they're not until it's funded.</p></div>
+    <div class="facts"><dt>Contract</dt><dd><code>0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c</code></dd><dt>Status</dt><dd><span class="chip armed">Deployed · needs funding</span></dd></div>
+
+    <div class="divider"></div>
+
+    <!-- LOCKER -->
+    <h2 id="locker"><span class="n">08</span>Stag Locker — the anti-rug proof</h2>
+    <p class="lead">A public, on-chain vault for locking liquidity and tokens on a timer — and vesting them out gradually. This is how we <b>prove we can't rug</b>.</p>
+    <ul>
+      <li><b>Time-locks &amp; vesting</b> anyone can verify on the explorer.</li>
+      <li><b>Burn-to-extend</b> — spend $STAG to push a lock longer. Deflation with a purpose.</li>
+      <li>Per-lock labels + ownership transfer; hardened to a CLEAN audit.</li>
+    </ul>
+    <div class="box reward"><div class="bt">🔥 Why it matters</div><p>It's trust you can <em>verify</em> instead of trust you're asked to give. And every extend <b>burns $STAG</b>, tightening supply.</p></div>
+    <div class="facts"><dt>Contract</dt><dd><code>0x6F69fEbE30ba7348901a523bcc9a6fAA5b493160</code></dd><dt>Open at</dt><dd>stagwifhood.fun/locker</dd></div>
+
+    <!-- SPLITTERS -->
+    <h2 id="splitters"><span class="n">09</span>The Splitters — automatic money routing</h2>
+    <p class="lead">These two are invisible plumbing, but they're why the rewards refill themselves. Money hits them and instantly forks — no treasury, no human hands.</p>
+    <h3>Revenue Splitter · 90 / 10</h3>
+    <p>Every <b>Hooded 20</b> mint splits: <b>90% → the staking reward pool</b> (this is what keeps ETH yield flowing), <b>10% → team</b>. <code>0x1F6D791108635ac4522b1cfaD86FD7B435aDFe2a</code></p>
+    <h3>Saints Splitter · 60 / 30 / 10</h3>
+    <p>Every <b>Saints</b> mint splits: <b>60% → burn</b> (King can trigger big manual burns from here), <b>30% → reward pool</b>, <b>10% → team</b>. Immutable, reentrancy-guarded, CLEAN audit. <code>0x101a344172f15ABe969027ea06624305F4a63082</code></p>
+
+    <!-- FLOW -->
+    <h2 id="flow"><span class="n">10</span>How the ETH actually moves</h2>
+    <p>Commit this to memory — it's the whole economic story in four beats:</p>
+    <ol>
+      <li>Someone <b>mints</b> a Hooded 20 or a Saint (pays ETH).</li>
+      <li>The <b>splitter</b> instantly forks that ETH (90/10 or 60/30/10).</li>
+      <li>The biggest slice lands in the <b>reward pool</b> (plus burns + a little team).</li>
+      <li>The pool <b>streams ETH to stakers</b>, who claim anytime. More mints → more rewards. It's a loop.</li>
+    </ol>
+
+    <div class="divider"></div>
+
+    <!-- HEIST -->
+    <h2 id="heist"><span class="n">11</span>The Prize Heist — hold-to-win</h2>
+    <p class="lead">Separate from staking: as the market cap grows, holders win <b>real physical prizes</b>. At every milestone, <b>0.20% of the market cap</b> is spent on prizes and winners are drawn <b>live</b> from the on-chain holders list, shipped to their door.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Market cap</th><th>Prize</th><th>Winners</th><th>Pool</th></tr></thead>
+      <tbody>
+        <tr><td class="n">$500K</td><td>Apple Watch</td><td>2</td><td>$1,000</td></tr>
+        <tr><td class="n">$1M</td><td>iPad</td><td>4</td><td>$2,000</td></tr>
+        <tr><td class="n">$2.5M</td><td>iPhone 17</td><td>6</td><td>$5,000</td></tr>
+        <tr><td class="n">$5M</td><td>iPhone 17 Pro Max</td><td>6</td><td>$10,000</td></tr>
+        <tr><td class="n">$10M</td><td>Alienware 18 · Area-51</td><td>6</td><td>$20,000</td></tr>
+        <tr><td class="n">$1B</td><td>Tesla Model S</td><td>20</td><td>$2,000,000</td></tr>
+      </tbody>
+    </table></div>
+    <p>To enter: just <b>hold $STAG at the snapshot block</b>. No forms. Draws are provably fair and verifiable on-chain. Hooded 20 holders get priority.</p>
+
+    <!-- GAMES -->
+    <h2 id="games"><span class="n">12</span>Games &amp; tools</h2>
+    <h3>STAG WARS — 3D arena <span class="chip live">Playable</span></h3>
+    <p>A bloody 3D open-world survival-fighter: you're a muscular stag battling rival bucks. POV antler combat, graze/drink/sleep survival, a day/night cycle, and a <b>Robin Hood's Hood</b> superstrength power-up. Real AI-generated art. Play at <b>stagwifhood.fun/arena</b>.</p>
+    <h3>Hooded Maps — holder bubble map <span class="chip live">Live</span></h3>
+    <p>See the whole holder base as a bubble map — spot whales, concentration and distribution at a glance. At <b>maps.stagwifhood.fun</b>.</p>
+    <h3>Trench Terminal — wallet console <span class="chip live">Live</span></h3>
+    <p>A lightweight in-browser console to connect and read your positions across the whole suite. Mobile WalletConnect built in. At <b>stagwifhood.fun/terminal</b>.</p>
+
+    <!-- PAGES -->
+    <h2 id="pages"><span class="n">13</span>Every page on the site</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Page</th><th>URL</th><th>What it's for</th></tr></thead>
+      <tbody>
+        <tr><td class="n">Home</td><td><code>/</code></td><td>Legend, chart, Prize Heist, how-to-buy</td></tr>
+        <tr><td class="n">Utilities</td><td><code>/utilities</code></td><td>Public utility &amp; rewards overview</td></tr>
+        <tr><td class="n">Mint</td><td><code>/nfts</code></td><td>Hooded 20 + Sherwood Saints</td></tr>
+        <tr><td class="n">Stake</td><td><code>/stake</code></td><td>Stake tokens/NFTs, claim ETH</td></tr>
+        <tr><td class="n">Pact</td><td><code>/pact</code></td><td>Proof-of-hold payouts</td></tr>
+        <tr><td class="n">Locker</td><td><code>/locker</code></td><td>Lock/vest/burn</td></tr>
+        <tr><td class="n">Terminal</td><td><code>/terminal</code></td><td>Wallet console</td></tr>
+        <tr><td class="n">Docs</td><td><code>/docs</code></td><td>Deep technical reference</td></tr>
+        <tr><td class="n">How-To</td><td><code>/how-to</code></td><td>Step-by-step guides</td></tr>
+        <tr><td class="n">Hooded Maps</td><td><code>maps.stagwifhood.fun</code></td><td>Holder bubble map</td></tr>
+        <tr><td class="n">Play / Arena</td><td><code>/play</code> · <code>/arena</code></td><td>Arcade + STAG WARS</td></tr>
+        <tr><td class="n">Admin</td><td><code>/admin</code></td><td>Owner controls (private)</td></tr>
+      </tbody>
+    </table></div>
+
+    <!-- TALK -->
+    <h2 id="talk"><span class="n">14</span>Talk track / FAQ — answer any holder</h2>
+    <div class="box talk"><div class="bt">"What do I get for holding?"</div><p><em>Three things: stake for real ETH, win physical prizes at every market-cap milestone, and your NFTs multiply your rewards. It's not hold-and-hope — it pays.</em></p></div>
+    <div class="box talk"><div class="bt">"Is the staking yield just more of your token?"</div><p><em>No — it's real ETH, funded by 90% of every mint. No inflation, no printing. You can watch the pool on-chain.</em></p></div>
+    <div class="box talk"><div class="bt">"I don't want to lock my tokens in a contract."</div><p><em>Then use the Sherwood Pact — you keep your $STAG in your own wallet the whole time and still get paid for holding. Nothing is deposited.</em></p></div>
+    <div class="box talk"><div class="bt">"If I stake my NFT, do you take it?"</div><p><em>No. NFT staking is lock-in-place — it never leaves your wallet. The contract just marks it locked while it earns.</em></p></div>
+    <div class="box talk"><div class="bt">"Can I stake my Saints for ETH right now?"</div><p><em>The Vault is live and Saints are registered, but it isn't funded yet, so rewards aren't flowing there yet. Token + Hooded 20 staking IS paying ETH right now.</em> (Don't overpromise the Vault.)</p></div>
+    <div class="box talk"><div class="bt">"My wallet won't connect on mobile."</div><p><em>Use an EVM wallet — MetaMask, Trust, Rainbow. Phantom and Jupiter are Solana wallets and can't connect. On mobile, tap Connect → pick MetaMask in the WalletConnect popup, or open the site inside MetaMask's own browser.</em></p></div>
+    <div class="box talk"><div class="bt">"How do I know you won't rug?"</div><p><em>Liquidity and tokens are locked in the Stag Locker with public on-chain proof, every contract is verified on Blockscout, and the money routing is automated — no treasury middleman. Verify it yourself.</em></p></div>
+
+    <!-- STATUS -->
+    <h2 id="status"><span class="n">15</span>Live status — what's on vs off</h2>
+    <div class="facts">
+      <dt>Hooded 20</dt><dd>Minting · 5 of 20 gone</dd>
+      <dt>Sherwood Saints</dt><dd><span class="chip open">Mint OPEN</span> · 0 of 5 · 0.03 ETH</dd>
+      <dt>Stag Staking</dt><dd><span class="chip live">ETH streaming now</span> · Hooded 20 NFTs already staked</dd>
+      <dt>Sherwood Pact</dt><dd><span class="chip live">Live</span></dd>
+      <dt>Sherwood Vault</dt><dd><span class="chip armed">Deployed, not yet funded</span> — rewards start once funded</dd>
+      <dt>Stag Locker</dt><dd><span class="chip live">Live</span></dd>
+      <dt>STAG WARS</dt><dd><span class="chip live">Playable</span></dd>
+    </div>
+    <p style="margin-top:26px;color:var(--ink-faint);font-size:13.5px">All figures are an on-chain snapshot and change block to block — always verify on the explorer. Rewards depend on pools being funded and are not guaranteed. This is an internal reference, not financial advice. Interact only with the addresses listed here.</p>
+  </main>
+</div>
+
+<script>
+  (function(){
+    var links=[].slice.call(document.querySelectorAll('#toc a[href^="#"]'));
+    var map={}; links.forEach(function(a){ map[a.getAttribute('href').slice(1)]=a; });
+    var secs=[].slice.call(document.querySelectorAll('h2[id]'));
+    if(!('IntersectionObserver' in window)) return;
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(l){l.classList.remove('active');});
+        var a=map[e.target.id]; if(a)a.classList.add('active'); } });
+    },{rootMargin:'-10% 0px -80% 0px',threshold:0});
+    secs.forEach(function(s){ io.observe(s); });
+  })();
+</script>
+
+
+<script>
+(function(){
+  var CODE="Stag4Life", KEY="sfh_manual_ok";
+  var b=document.body;
+  function unlock(){ b.classList.remove("locked"); b.classList.add("unlocked"); }
+  try{ if(sessionStorage.getItem(KEY)==="1"){ unlock(); return; } }catch(e){}
+  b.classList.add("locked");
+  var f=document.getElementById("gate-form"), i=document.getElementById("gate-input"), er=document.getElementById("gate-err");
+  f.addEventListener("submit",function(e){ e.preventDefault();
+    if(i.value===CODE){ try{ sessionStorage.setItem(KEY,"1"); }catch(_){ } unlock(); }
+    else { er.textContent="Wrong code - ask the team lead."; i.value=""; i.focus(); }
+  });
+})();
+</script>
+
+</body>
+</html>
