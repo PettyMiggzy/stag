@@ -28,6 +28,7 @@
     'function claim()', 'function donate() payable', 'function setWithdrawSplit(address[],uint256[])',
     'function stakeNFT(uint256)', 'function unstakeNFT(uint256)',
     'function stakedOf(address,address) view returns (uint256)', 'function earned(address) view returns (uint256)',
+    'function nftStaker(uint256) view returns (address)',
     'function tierInfo() view returns (uint256[3],uint256[3])',
     'function userInfo(address) view returns (uint256 baseWeight,uint256 lockMultBps,uint256 holdMult,uint256 weight,uint256 stakedAt,uint8 lockTier,uint256 unlockAt,uint256 pendingEth,uint256[] nfts,bool locked)',
   ];
@@ -340,6 +341,15 @@
         // global stats (per selected token)
         try { $('s-pool').textContent = eth(await p.getBalance(H.staking)) + ' Ξ'; } catch {}
         try { $('s-total').textContent = numTok(await new ethers.Contract(curTok.address, ERC20, p).balanceOf(H.staking), curTok) + ' ' + curTok.symbol; } catch {}
+        // total Hooded 20 NFTs currently staked — scan the 20 token ids (nftStaker != 0 => staked)
+        try {
+          const el = $('s-nftstaked');
+          if (el) {
+            const owners = await Promise.all(Array.from({ length: 20 }, (_, i) => c.nftStaker(i + 1).catch(() => ethers.ZeroAddress)));
+            const n = owners.filter((a) => a && a !== ethers.ZeroAddress).length;
+            el.textContent = n + ' / 20';
+          }
+        } catch {}
         if (withUser && me) await this.loadUser(c, p);
       } catch (e) { setStatus('s-status', 'Could not reach the staking contract yet.', ''); }
     },
