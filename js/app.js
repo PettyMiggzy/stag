@@ -123,7 +123,7 @@
       window.location.href = 'https://metamask.app.link/dapp/' + location.host + location.pathname + location.search;
       return null;
     }
-    flashConnect('No EVM wallet found — install MetaMask or use a WalletConnect wallet.');
+    flashConnect('Tap Connect again and pick your wallet (SafePal, MetaMask, Trust) in the popup — or open this page inside your wallet’s browser.');
     return null;
   }
 
