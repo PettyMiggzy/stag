@@ -168,6 +168,20 @@
     loadTab(active, false); // drop back to read-only view
   }
   function flashConnect(msg) { setStatus(active === 'mint' ? 'm-status' : active === 'stake' ? 's-status' : 'pc-status', msg, 'err'); }
+  // One-tap "Add Robinhood Chain" — the #1 mobile snag: the network must be added before anything works.
+  async function addChainToWallet() {
+    const eth = window.ethereum || wcProvider;
+    if (!eth || !eth.request) {
+      flashConnect('Add it manually → Network name: Robinhood Chain · New RPC URL: ' + H.chain.rpcUrls[0]
+        + ' · Chain ID: ' + parseInt(H.chain.chainId, 16) + ' · Symbol: ETH · Explorer: ' + H.chain.blockExplorerUrls[0]);
+      return;
+    }
+    try {
+      await eth.request({ method: 'wallet_addEthereumChain', params: [H.chain] });
+      await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: H.chain.chainId }] }).catch(() => {});
+      flashConnect('Robinhood Chain added ✓ — now tap Connect Wallet.');
+    } catch (e) { flashConnect('Add cancelled. Approve the “Add network” popup, or add it manually (RPC ' + H.chain.rpcUrls[0] + ', Chain ID 4663).'); }
+  }
   function setNet(state, txt) {
     const n = $('w-net'); if (n) n.className = 'wbar-net ' + state;
     const t = $('w-net-txt'); if (t) t.textContent = txt;
@@ -582,6 +596,12 @@
 
     $('w-connect').onclick = () => connect(false);
     { const d = $('w-disconnect'); if (d) d.onclick = disconnect; }
+    // "Add Robinhood Chain" helper button — the network must exist in the wallet before minting/staking works
+    { const wc = $('w-connect'); const bar = wc && wc.parentElement;
+      if (bar && !$('w-addchain')) { const a = document.createElement('button');
+        a.id = 'w-addchain'; a.className = 'btn btn-ghost btn-sm'; a.textContent = '＋ Add RH Chain';
+        a.title = 'Add the Robinhood Chain network to your wallet'; a.onclick = addChainToWallet;
+        bar.insertBefore(a, wc); } }
     // iPhone/Android reality: MetaMask can't be detected in Safari — wallets only inject inside their
     // OWN in-app browser (that's why SafePal works there). Give MetaMask users a one-tap way in.
     setTimeout(() => {
