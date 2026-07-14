@@ -319,7 +319,9 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
 /* ---------- responsive ---------- */
 @media (max-width:960px){
   .hero-inner{grid-template-columns:1fr;text-align:center;gap:1.5rem;min-height:auto}
-  .hero-copy{order:2}.hero-art{order:1}
+  /* min-width:0 lets the single grid column shrink to the viewport instead of expanding to the
+     widest child (the two CTA buttons), which was pushing the whole hero off-center to the right */
+  .hero-copy{order:2;min-width:0}.hero-art{order:1;min-width:0}
   .hero-sub{margin-left:auto;margin-right:auto}
   .hero-cta,.hero-tags{justify-content:center}
   .ca-bar{margin:0 auto}
