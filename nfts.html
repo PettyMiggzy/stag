@@ -247,6 +247,7 @@
       'function mintActive() view returns (bool)',
       'function availableIds() view returns (uint256[])',
       'function mintPick(uint256) payable',
+      'function freeMints(address) view returns (uint256)',
       'function ownerOf(uint256) view returns (address)',
       'function isApprovedForAll(address,address) view returns (bool)',
       'function setApprovalForAll(address,bool)'
@@ -311,11 +312,44 @@
       }
       return await new ethers.BrowserProvider(eth).getSigner();
     }
-    async function mint(id, price) {
-      try { const s = await connect(); if (!s) return;
-        const tx = await new ethers.Contract(SAINTS, ABI, s).mintPick(id, { value: price });
-        await tx.wait(); alert('Minted Sherwood Saint #' + id + ' 🔥'); refresh();
-      } catch (e) { alert(e.shortMessage || e.message || e); }
+    function saintErr(e) {
+      const m = (e && (e.shortMessage || e.reason || (e.info && e.info.error && e.info.error.message) || e.message)) || 'Mint failed';
+      if (/wrong price/i.test(m)) return 'Price mismatch — refresh the page and try again.';
+      if (/wallet limit/i.test(m)) return 'You’ve hit the per-wallet mint limit for Saints.';
+      if (/unavailable/i.test(m)) return 'That Saint is already minted.';
+      if (/no contracts/i.test(m)) return 'This looks like a smart-contract wallet. Saints need a standard (EOA) wallet — use MetaMask or SafePal’s regular account.';
+      if (/mint not active/i.test(m)) return 'Saints minting is paused right now.';
+      if (/insufficient funds/i.test(m)) return 'Not enough ETH for the 0.03 mint + gas.';
+      if (/user rejected|denied|4001/i.test(m)) return 'Cancelled in wallet.';
+      if (/missing revert data|could not coalesce|CALL_EXCEPTION|insufficient/i.test(m)) return 'Not enough ETH on Robinhood Chain. You need 0.03 ETH + a little gas in this wallet on chain 4663 — bridge ETH to Robinhood Chain first, then retry. (Also make sure you’re on network 4663.)';
+      return m.slice(0, 160);
+    }
+    async function mint(id) {
+      try {
+        const s = await connect(); if (!s) return;
+        const me = await s.getAddress();
+        // MUST be on Robinhood Chain — on any other network the Saints contract doesn't exist and the
+        // call dies instantly as "missing revert data" without ever opening the wallet.
+        let net; try { net = await s.provider.getNetwork(); } catch (e) {}
+        if (net && net.chainId !== 4663n) {
+          alert('Your wallet is on the wrong network. Switch it to Robinhood Chain (4663): tap “＋ Add RH Chain”, approve, switch to it, then mint. (You’re currently on chain ' + net.chainId + '.)');
+          return;
+        }
+        const c = new ethers.Contract(SAINTS, ABI, s);
+        // free-mint wallets must send EXACTLY 0; everyone else pays the live mintPrice
+        const [free, price] = await Promise.all([c.freeMints(me), c.mintPrice()]);
+        const value = free > 0n ? 0n : price;
+        // pre-check funds: on Robinhood Chain a shortfall reverts as the unhelpful "missing revert data"
+        const bal = await read.getBalance(me).catch(() => null);
+        if (bal !== null && bal < value + 400000000000000n) {   // value + ~0.0004 ETH gas headroom
+          alert('Not enough ETH on Robinhood Chain. This wallet needs ' + ethers.formatEther(value) + ' ETH + a little gas on chain 4663. Bridge ETH to Robinhood Chain, then try again.');
+          return;
+        }
+        try { await c.mintPick.estimateGas(id, { value }); }      // guard: surface the real reason, not "missing data"
+        catch (e) { alert(saintErr(e)); return; }
+        const tx = await c.mintPick(id, { value });
+        await tx.wait(); alert('Minted Sherwood Saint #' + id + (free > 0n ? ' (free) 🔥' : ' 🔥')); refresh();
+      } catch (e) { alert(saintErr(e)); }
     }
     async function stake(id) {
       try { const s = await connect(); if (!s) return; const me = await s.getAddress();
@@ -344,7 +378,7 @@
         btn.classList.remove('live', 'done'); btn.onclick = null; btn.disabled = true;
         if (availSet.has(id)) {           // not minted yet
           if (!active) { btn.textContent = 'Opens at reveal'; }
-          else { btn.textContent = 'Mint ' + eth + ' Ξ'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => mint(id, price); }
+          else { btn.textContent = 'Mint ' + eth + ' Ξ'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => mint(id); }
           continue;
         }
         // minted — figure out owner / staked state
