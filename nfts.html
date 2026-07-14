@@ -298,7 +298,7 @@
         });
         await wcEth.enable();
         return wcEth;
-      } catch (e) { alert('Wallet connect failed: ' + (e.message || e)); return null; }
+      } catch (e) { alert('Couldn’t open WalletConnect. Easiest fix on mobile: open stagwifhood.fun inside your wallet’s browser — SafePal → Browser (or MetaMask/Trust) — then mint works directly.'); return null; }
     }
     async function connect() {
       const eth = await getProvider(); if (!eth) return null;

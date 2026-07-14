@@ -92,6 +92,7 @@
     const pid = H.walletConnectProjectId;
     if (pid) {
       try {
+        flashConnect('Opening wallet… pick SafePal (or your wallet) in the popup.'); // never fail silently on mobile
         const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
         const cid = parseInt(H.chain.chainId, 16);
         // Robinhood Chain (4663) is a CUSTOM chain almost no wallet pre-knows. It MUST be optional —
@@ -110,7 +111,11 @@
         wcProvider.on('disconnect', () => { try { localStorage.removeItem('h20_wc'); } catch {} location.reload(); });
         await wcProvider.enable(); // opens the WalletConnect modal / deep-links the wallet
         return wcProvider;
-      } catch (e) { flashConnect(pretty(e)); return null; }
+      } catch (e) {
+        // WC couldn't open — give a path that always works: the wallet's own in-app browser.
+        flashConnect('Couldn’t open WalletConnect. Easiest fix: open stagwifhood.fun inside your wallet’s browser — SafePal → Browser (or MetaMask/Trust) — then Connect & mint work directly.');
+        return null;
+      }
     }
     // no WalletConnect configured — last-resort MetaMask deep link on mobile
     if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
