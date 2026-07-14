@@ -582,6 +582,21 @@
 
     $('w-connect').onclick = () => connect(false);
     { const d = $('w-disconnect'); if (d) d.onclick = disconnect; }
+    // iPhone/Android reality: MetaMask can't be detected in Safari — wallets only inject inside their
+    // OWN in-app browser (that's why SafePal works there). Give MetaMask users a one-tap way in.
+    setTimeout(() => {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (!isMobile || window.ethereum) return;              // desktop, or a wallet already injected
+      const wc = $('w-connect'); const bar = wc && wc.parentElement; if (!bar || $('w-mm-help')) return;
+      const dapp = location.host + location.pathname + location.search;
+      const el = document.createElement('div');
+      el.id = 'w-mm-help';
+      el.style.cssText = 'flex-basis:100%;order:99;margin-top:.5rem;font:600 .76rem/1.45 system-ui;color:#a9c2b0;text-align:center';
+      el.innerHTML = 'On iPhone? Open in your wallet’s browser: '
+        + '<a href="https://metamask.app.link/dapp/' + dapp + '" style="color:#e6b83f;font-weight:800">MetaMask →</a>'
+        + ' · or tap <b>Connect</b> for SafePal / WalletConnect.';
+      bar.appendChild(el);
+    }, 900);
     // "Go to Pact" — switch tabs on the hub, navigate to the standalone page otherwise.
     { const p = $('s-to-pact'); if (p) p.onclick = () => { if (isHub) showTab('pact'); else location.href = '/pact'; }; }
     // show the reward-pool address + copy button (direct-send donations)
