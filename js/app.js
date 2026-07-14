@@ -29,6 +29,7 @@
     'function stakeNFT(uint256)', 'function unstakeNFT(uint256)',
     'function stakedOf(address,address) view returns (uint256)', 'function earned(address) view returns (uint256)',
     'function nftStaker(uint256) view returns (address)',
+    'function withdrawSplitOf(address) view returns (address[],uint256[])',
     'function tierInfo() view returns (uint256[3],uint256[3])',
     'function userInfo(address) view returns (uint256 baseWeight,uint256 lockMultBps,uint256 holdMult,uint256 weight,uint256 stakedAt,uint8 lockTier,uint256 unlockAt,uint256 pendingEth,uint256[] nfts,bool locked)',
   ];
@@ -401,6 +402,15 @@
             if (claimBtn) claimBtn.disabled = false;
           }
         } else { $('s-lock').textContent = ''; $('p-lock').textContent = ''; if (claimBtn) claimBtn.disabled = false; }
+        // pre-fill the "Withdraw Wallets" fields with the split this wallet already has saved
+        try {
+          const [ws, bp] = await c.withdrawSplitOf(me);
+          for (let i = 1; i <= 3; i++) {
+            const a = $('col-a' + i), b = $('col-b' + i); if (!a || !b) continue;
+            if (ws[i - 1]) { a.value = ws[i - 1]; b.value = (Number(bp[i - 1]) / 100).toString(); }
+            else { a.value = ''; b.value = ''; }
+          }
+        } catch (e) {}
         this.renderStakedNfts(info.nfts);
         this.loadMyNfts();
       } catch (e) {}
@@ -475,7 +485,7 @@
       if (!wallets.every((w) => ethers.isAddress(w))) return setStatus('s-status', 'One of the withdraw addresses is invalid.', 'err');
       if (bps.reduce((s, x) => s + x, 0) > 10000) return setStatus('s-status', 'Withdraw shares add up to more than 100%.', 'err');
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.setWithdrawSplit(wallets, bps), 'Withdraw wallets saved ✓', 's-status');
+      await tx(() => c.setWithdrawSplit(wallets, bps), 'Withdraw wallets saved ✓', 's-status', () => this.load(true));
     },
     async stakeNFT(id) {
       // lock-in-place: the NFT stays in your wallet (just locked), no transfer/approval needed
