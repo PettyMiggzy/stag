@@ -212,7 +212,7 @@
       </div>
     </div>
     <p style="text-align:center;margin:1.4rem 0 0;color:#8aa;font:500 .85rem/1.5 'Inter',sans-serif">
-      Mint goes live at reveal · <a href="/docs#nfts" style="color:#9ef418">Docs</a>
+      Mint is LIVE — 0.03 ETH each on Robinhood Chain · <a href="/docs#nfts" style="color:#9ef418">Docs</a>
     </p>
   </section>
   </main>
@@ -262,7 +262,7 @@
       const id = m ? Number(m[1]) : null;
       if (!id) return null;
       const btn = document.createElement('button');
-      btn.className = 'saint-mint'; btn.textContent = 'Opens at reveal'; btn.disabled = true;
+      btn.className = 'saint-mint'; btn.textContent = 'Mint 0.03 Ξ'; btn.disabled = true;
       el.querySelector('.saint-b').appendChild(btn);
       return { id, btn, el };
     }).filter(Boolean);
@@ -283,15 +283,33 @@
     const c = new ethers.Contract(SAINTS, ABI, read);
     const vaultRead = VAULT ? new ethers.Contract(VAULT, VABI, read) : null;
 
+    let wcEth = null; // active WalletConnect session on mobile, if any
+    async function getProvider() {
+      if (window.ethereum) return window.ethereum;             // injected (extension / wallet in-app browser)
+      const pid = CFG.walletConnectProjectId;
+      if (!pid) { alert('Use an EVM wallet (MetaMask, Trust, Rainbow) — Solana wallets like Phantom/Jupiter can’t mint here.'); return null; }
+      try {
+        const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
+        // 4663 is a custom chain — keep it OPTIONAL or WalletConnect rejects the session, then add it after.
+        wcEth = await EthereumProvider.init({
+          projectId: pid, optionalChains: [4663], rpcMap: { 4663: RPC }, showQrModal: true,
+          metadata: { name: 'Sherwood Saints', description: 'Mint & stake on Robinhood Chain',
+            url: 'https://stagwifhood.fun', icons: ['https://stagwifhood.fun/assets/img/mark.png'] },
+        });
+        await wcEth.enable();
+        return wcEth;
+      } catch (e) { alert('Wallet connect failed: ' + (e.message || e)); return null; }
+    }
     async function connect() {
-      if (!window.ethereum) { alert('No wallet found — open in your wallet browser (or install MetaMask).'); return null; }
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const net = await new ethers.BrowserProvider(window.ethereum).getNetwork();
+      const eth = await getProvider(); if (!eth) return null;
+      try { await eth.request({ method: 'eth_requestAccounts' }); } catch (e) { return null; }
+      const net = await new ethers.BrowserProvider(eth).getNetwork();
       if (net.chainId !== 4663n) {
-        try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }); }
-        catch (e) { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CFG.chain] }); }
+        try { await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }); }
+        catch (e) { try { await eth.request({ method: 'wallet_addEthereumChain', params: [CFG.chain] });
+                         await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }); } catch (_) {} }
       }
-      return await new ethers.BrowserProvider(window.ethereum).getSigner();
+      return await new ethers.BrowserProvider(eth).getSigner();
     }
     async function mint(id, price) {
       try { const s = await connect(); if (!s) return;

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Utilities &amp; Rewards · STAGWIFHOOD ($STAG)</title>
+  <meta name="description" content="Every $STAGWIFHOOD utility in plain language — the Hooded 20 & Sherwood Saints NFTs, real-ETH staking, the Sherwood Vault, the Stag Locker, the Sherwood Pact, STAG WARS, Hooded Maps and more — and exactly what each one earns you on Robinhood Chain." />
+  <meta property="og:title" content="Utilities & Rewards · STAGWIFHOOD ($STAG)" />
+  <meta property="og:description" content="What every $STAG utility does and what it pays — NFTs, real-ETH staking, vault, locker, pact, games. All live on Robinhood Chain." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stagwifhood.fun/utilities" />
+  <meta property="og:image" content="https://stagwifhood.fun/assets/img/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://stagwifhood.fun/assets/img/og.png" />
+  <link rel="icon" type="image/png" href="assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ---- Utilities page (scoped) ---- */
+    .u-wrap{max-width:1080px;margin:0 auto;padding:120px 22px 40px}
+    .u-hero{text-align:center;margin-bottom:14px}
+    .u-hero .eyebrow{font:700 12.5px/1 'Space Grotesk',system-ui;letter-spacing:.28em;text-transform:uppercase;color:#e6b83f}
+    .u-hero h1{font:900 clamp(34px,7vw,62px)/1.02 'Cinzel',serif;margin:16px 0 0;color:#f3fff0;letter-spacing:.01em}
+    .u-hero p{max-width:64ch;margin:16px auto 0;color:#b7ccb9;font-size:17px;line-height:1.65}
+    .u-sum{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:26px 0 6px}
+    .u-sum span{font:600 13px/1 'Space Grotesk',system-ui;letter-spacing:.03em;color:#dfeede;
+      border:1px solid rgba(230,184,63,.28);background:rgba(12,26,16,.6);border-radius:999px;padding:9px 15px}
+    .u-sum span b{color:#b6ff2e}
+
+    /* live realm strip */
+    .u-realm{margin:30px auto 0;border:1px solid rgba(230,184,63,.22);border-radius:16px;
+      background:rgba(11,23,14,.72);overflow:hidden;backdrop-filter:blur(6px)}
+    .u-realm .rh{display:flex;align-items:center;gap:9px;padding:11px 18px;border-bottom:1px solid rgba(230,184,63,.16);
+      font:700 11.5px/1 'Space Grotesk';letter-spacing:.16em;text-transform:uppercase;color:#8fae93}
+    .u-realm .rh .d{width:8px;height:8px;border-radius:50%;background:#b6ff2e;box-shadow:0 0 0 3px rgba(182,255,46,.25);animation:up 2.4s infinite}
+    @keyframes up{50%{opacity:.4}}
+    .u-realm .rs{display:grid;grid-template-columns:repeat(5,1fr)}
+    .u-realm .rs > div{padding:16px 18px;border-right:1px solid rgba(230,184,63,.14)}
+    .u-realm .rs > div:last-child{border-right:none}
+    .u-realm .rv{font:800 26px/1 'Space Grotesk';color:#f3fff0;font-variant-numeric:tabular-nums}
+    .u-realm .rv small{font-size:13px;color:#7f9a84;font-weight:600}
+    .u-realm .rl{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:#9db6a1;margin-top:6px}
+    @media(max-width:720px){.u-realm .rs{grid-template-columns:repeat(2,1fr)}
+      .u-realm .rs > div{border-bottom:1px solid rgba(230,184,63,.14)}
+      .u-realm .rs > div:nth-child(odd){border-right:1px solid rgba(230,184,63,.14)}
+      .u-realm .rs > div:nth-child(even){border-right:none}
+      .u-realm .rs > div:last-child{grid-column:1/-1}}
+
+    /* act header */
+    .u-act{margin:56px 0 0}
+    .u-act .ae{display:flex;align-items:center;gap:14px;font:700 12.5px/1 'Space Grotesk';letter-spacing:.22em;
+      text-transform:uppercase;color:#e6b83f}
+    .u-act .ae .r{flex:1;height:1px;background:linear-gradient(90deg,rgba(230,184,63,.4),transparent)}
+    .u-act h2{font:900 clamp(24px,4vw,36px)/1.05 'Cinzel',serif;margin:12px 0 0;color:#f3fff0}
+    .u-act .as{color:#a6bfab;margin:8px 0 0;max-width:66ch;font-size:15.5px}
+
+    .u-grid{display:grid;gap:18px;margin-top:24px}
+    .u-grid.two{grid-template-columns:1fr 1fr}
+    @media(max-width:840px){.u-grid.two{grid-template-columns:1fr}}
+
+    .card{position:relative;border:1px solid rgba(230,184,63,.2);border-radius:16px;
+      background:linear-gradient(180deg,rgba(15,33,22,.9),rgba(10,22,14,.9));padding:24px 24px 22px;
+      box-shadow:0 22px 50px -34px rgba(0,0,0,.9);transition:transform .22s,border-color .22s}
+    .card:hover{transform:translateY(-4px);border-color:rgba(182,255,46,.5)}
+    .card::before{content:"";position:absolute;left:0;top:22px;bottom:22px;width:3px;border-radius:3px;
+      background:linear-gradient(#b6ff2e,#e6b83f)}
+    .ct{display:flex;align-items:flex-start;gap:12px;padding-left:14px}
+    .ct h3{font:800 21px/1.1 'Space Grotesk',system-ui;color:#f3fff0;margin:0}
+    .ct .k{font:600 11.5px/1 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#7f9a84;margin-top:6px}
+    .st{margin-left:auto;flex:none;font:700 11px/1 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;
+      padding:6px 11px;border-radius:20px;border:1px solid;white-space:nowrap}
+    .st.live{color:#b6ff2e;border-color:rgba(182,255,46,.5);background:rgba(182,255,46,.1)}
+    .st.open{color:#f4d488;border-color:rgba(230,184,63,.5);background:rgba(230,184,63,.1)}
+    .st.soon{color:#e69a3a;border-color:rgba(230,154,58,.5);background:rgba(230,154,58,.09)}
+    .st.ref{color:#a6bfab;border-color:rgba(230,184,63,.22)}
+    .cd{padding-left:14px;color:#bcd0bd;margin:12px 0 0;font-size:15.5px;line-height:1.6}
+    .card ul{list-style:none;padding-left:14px;margin:14px 0 0}
+    .card li{position:relative;padding:7px 0 7px 24px;font-size:14.5px;color:#cadccb;border-top:1px dashed rgba(230,184,63,.16)}
+    .card li:first-child{border-top:none}
+    .card li::before{content:"➜";position:absolute;left:0;top:7px;color:#b6ff2e;font-size:12px}
+    .card li b{color:#f3fff0}
+    .reward{margin:16px 0 0 14px;display:flex;gap:10px;align-items:flex-start;
+      border:1px solid rgba(182,255,46,.28);background:rgba(182,255,46,.07);border-radius:12px;padding:11px 14px}
+    .reward .ri{font-size:16px;line-height:1.3}
+    .reward .rt{font-size:14px;color:#e9ffe4;line-height:1.5}
+    .reward .rt b{color:#b6ff2e}
+    .addr{padding-left:14px;margin-top:15px;font-size:12.5px;color:#7f9a84;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .addr code{background:rgba(6,16,10,.8);border:1px solid rgba(230,184,63,.2);border-radius:7px;padding:4px 8px;
+      font:12px/1 ui-monospace,monospace;color:#f4d488;word-break:break-all;cursor:pointer}
+    .addr code.ok{color:#b6ff2e;border-color:rgba(182,255,46,.5)}
+
+    /* ledger */
+    .ledger{margin-top:24px;border:1px solid rgba(230,184,63,.2);border-radius:16px;overflow:hidden}
+    .ledger .sc{overflow-x:auto}
+    .ledger table{border-collapse:collapse;width:100%;min-width:660px;background:rgba(11,23,14,.9)}
+    .ledger th,.ledger td{text-align:left;padding:13px 18px;border-bottom:1px solid rgba(230,184,63,.14);font-size:14px;color:#cadccb}
+    .ledger th{font:700 11.5px/1 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8fae93;background:rgba(6,16,10,.7)}
+    .ledger td.n{font-weight:700;color:#f3fff0}
+    .ledger td code{font:12px/1 ui-monospace,monospace;color:#f4d488;word-break:break-all;cursor:pointer}
+    .ledger tr:last-child td{border-bottom:none}
+    .u-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:44px 0 0}
+  </style>
+</head>
+<body data-page="utilities">
+  <div class="bg-layer bg-forest" aria-hidden="true"></div>
+  <div class="bg-layer bg-glow" aria-hidden="true"></div>
+  <div class="bg-layer bg-fog" aria-hidden="true"></div>
+  <div class="bg-rays" aria-hidden="true"></div>
+
+  <!-- STICKY TOP BAR -->
+  <div class="topbar">
+    <a class="topbar-msg" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">🦌 $STAG is LIVE on Robinhood Chain — <strong>Buy Now</strong> →</a>
+    <div class="topbar-links">
+      <a href="https://x.com/StagWifHood" target="_blank" rel="noopener" data-social="x">𝕏</a>
+      <a href="https://t.me/StagWifHood" target="_blank" rel="noopener" data-social="tg">TG</a>
+      <a class="btn btn-gold btn-xs" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <header class="nav scrolled" id="nav">
+    <a class="nav-brand" href="/" aria-label="STAGWIFHOOD home">
+      <img src="assets/img/mark.png" alt="" class="nav-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/#legend">The Legend</a>
+      <a href="/utilities">Utilities</a>
+      <a href="/nfts">Mint</a>
+      <a href="/stake">Stake</a>
+      <a href="/pact">Pact</a>
+      <a href="/terminal">Terminal</a>
+      <a href="/docs">Docs</a>
+      <a href="/locker">Locker</a>
+      <a href="https://maps.stagwifhood.fun">Hooded Maps</a>
+      <a href="/play">Play</a>
+      <a href="/arena">⚔ Arena</a>
+      <a href="/#buy">How to Buy</a>
+    </nav>
+    <div class="nav-social">
+      <a class="ic" href="#" aria-label="X / Twitter" data-social="x">𝕏</a>
+      <a class="ic" href="#" aria-label="Telegram" data-social="tg"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg></a>
+      <a class="btn btn-gold btn-sm" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </header>
+
+  <main class="u-wrap">
+    <div class="u-hero">
+      <span class="eyebrow">Utilities &amp; Rewards · Robinhood Chain 4663</span>
+      <h1>What $STAG Actually Does</h1>
+      <p>Not a meme with a promise — a full suite of live, on-chain utilities. Here's every one in plain language, and exactly what it earns you. Everything below is deployed and verified; the numbers read straight off the chain.</p>
+      <div class="u-sum">
+        <span><b>Own</b> tiered 1/1 NFTs</span>
+        <span><b>Earn</b> real ETH by staking</span>
+        <span><b>Lock</b> &amp; vest with proof</span>
+        <span><b>Burn</b> to tighten supply</span>
+        <span><b>Play</b> the 3D arena</span>
+      </div>
+
+      <div class="u-realm">
+        <div class="rh"><span class="d"></span> State of the Realm · live snapshot</div>
+        <div class="rs">
+          <div><div class="rv">8</div><div class="rl">Contracts live</div></div>
+          <div><div class="rv">5<small> / 20</small></div><div class="rl">Hooded 20 minted</div></div>
+          <div><div class="rv" style="color:#f4d488">OPEN</div><div class="rl">Saints · 0.03Ξ</div></div>
+          <div><div class="rv">4<small> / 20</small></div><div class="rl">NFTs staked</div></div>
+          <div><div class="rv" style="color:#b6ff2e">ETH ⟲</div><div class="rl">Yield streaming</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OWN -->
+    <section class="u-act">
+      <div class="ae">Own · The Collectibles <span class="r"></span></div>
+      <h2>NFTs that aren't just pictures — they're keys.</h2>
+      <p class="as">Two hand-tiered 1/1 collections. Both boost your staking rewards and both feed the treasury.</p>
+      <div class="u-grid two">
+        <article class="card">
+          <div class="ct"><div><h3>The Hooded 20</h3><div class="k">HoodedTwenty · ERC-721</div></div><span class="st live">5/20 minted</span></div>
+          <p class="cd">Twenty unique stags across five rarity tiers — the founding collection.</p>
+          <ul>
+            <li><b>Pick</b> — choose the exact stag you want; price scales with its tier (Common → Mythic).</li>
+            <li><b>Gamble</b> — pay less for a weighted-random pull from what's left.</li>
+            <li>Multi-trait rarity metadata on every ID — real attributes, no filler.</li>
+          </ul>
+          <div class="reward"><span class="ri">🎁</span><span class="rt"><b>Reward:</b> holding a Hooded 20 <b>multiplies your staking yield</b>, and each one can be staked in place to earn ETH — without leaving your wallet.</span></div>
+          <div class="addr">Mint at <code data-copy="/nfts">stagwifhood.fun/nfts</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Sherwood Saints</h3><div class="k">SherwoodSaints · ERC-721 + royalties</div></div><span class="st open">Mint open</span></div>
+          <p class="cd">Five top-tier <b>animated</b> 1/1s — the ATH crew, each tied to a real community name.</p>
+          <ul>
+            <li>Fixed <b>0.03 ETH</b> each · hard cap of 5 · full animated art + complete trait sheets.</li>
+            <li>Each Saint carries its holder's <b>X handle</b> in metadata — provenance baked in.</li>
+            <li>On-chain <b>royalties</b> (ERC-2981) follow every resale.</li>
+          </ul>
+          <div class="reward"><span class="ri">🎁</span><span class="rt"><b>Reward:</b> stakeable in the Sherwood Vault for ETH, and <b>60% of every mint is burned</b> — tightening $STAG supply the moment you buy.</span></div>
+          <div class="addr">Mint at <code data-copy="/nfts">stagwifhood.fun/nfts</code></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- EARN -->
+    <section class="u-act">
+      <div class="ae">Earn · Real ETH Yield <span class="r"></span></div>
+      <h2>Get paid in ETH for holding the line.</h2>
+      <p class="as">A pool of ETH streams to everyone staked, split by weight — claim anytime. No inflationary token emissions; the yield is real settlement funded by the project's own revenue.</p>
+      <div class="u-grid two">
+        <article class="card">
+          <div class="ct"><div><h3>Stag Staking</h3><div class="k">StagStaking v4</div></div><span class="st live">Streaming now</span></div>
+          <p class="cd">Stake <b>$STAG tokens</b> and/or <b>Hooded 20 NFTs</b> and earn real ETH. Funded automatically by 90% of mint sales.</p>
+          <ul>
+            <li><b>Lock-in-place NFT staking</b> — your NFT never leaves your wallet.</li>
+            <li>Weight = <b>tokens × lock-tier × holding × NFT</b> multipliers — stack them all.</li>
+            <li>Longer locks and holding NFTs boost your share of the stream.</li>
+            <li>Early unstake: tokens take a 15% penalty + forfeit pending; NFTs just forfeit pending.</li>
+          </ul>
+          <div class="reward"><span class="ri">💰</span><span class="rt"><b>Reward:</b> real <b>ETH</b>, streaming right now — claim whenever you like. The pool refills itself as people mint.</span></div>
+          <div class="addr">Stake at <code data-copy="/stake">stagwifhood.fun/stake</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Sherwood Vault</h3><div class="k">SherwoodVault · any collection</div></div><span class="st soon">Live · funding next</span></div>
+          <p class="cd">The future-proof staking house — <b>any</b> approved NFT collection can stake here for ETH, so new drops plug straight in.</p>
+          <ul>
+            <li><b>Sherwood Saints already registered</b> and enabled to stake.</li>
+            <li>Per-collection weights + custody or lock-in-place modes.</li>
+            <li>Built so every <b>future</b> mint can earn without redeploying anything.</li>
+          </ul>
+          <div class="reward"><span class="ri">💰</span><span class="rt"><b>Reward:</b> ETH for staking your Saints (and future NFTs). Rewards begin the moment the vault is funded and a stream is started.</span></div>
+          <div class="addr">Vault <code data-copy="0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c">0x9eeE…a344c</code></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PROTECT -->
+    <section class="u-act">
+      <div class="ae">Protect · Treasury &amp; Trust <span class="r"></span></div>
+      <h2>The plumbing that proves we can't rug.</h2>
+      <p class="as">Revenue routes itself, liquidity is locked, and diamond hands are paid — all verifiable on-chain.</p>
+      <div class="u-grid two">
+        <article class="card">
+          <div class="ct"><div><h3>Stag Locker</h3><div class="k">StagLocker · LP &amp; token lock</div></div><span class="st live">Live</span></div>
+          <p class="cd">Lock liquidity and tokens on a timer with public proof — and vest them out gradually.</p>
+          <ul>
+            <li><b>Time-locks &amp; vesting schedules</b> anyone can verify on the explorer.</li>
+            <li><b>Burn-to-extend</b>: spend $STAG to push a lock longer.</li>
+            <li>Ownership transfer + labels per lock; audited to CLEAN.</li>
+          </ul>
+          <div class="reward"><span class="ri">🔥</span><span class="rt"><b>Reward:</b> trust you can verify — plus every extend <b>burns $STAG</b>, so supply tightens as locks deepen.</span></div>
+          <div class="addr">Open <code data-copy="/locker">stagwifhood.fun/locker</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Sherwood Pact</h3><div class="k">SherwoodPact · proof-of-hold</div></div><span class="st live">Live</span></div>
+          <p class="cd">A wallet-free commitment: prove you held through a window, get paid — no custody, no lockup.</p>
+          <ul>
+            <li>You keep your tokens the whole time — the pact just <b>verifies the hold</b>.</li>
+            <li>An indexer confirms eligibility; payout settles on-chain.</li>
+          </ul>
+          <div class="reward"><span class="ri">💎</span><span class="rt"><b>Reward:</b> a diamond-hands <b>payout</b> for holding — without ever handing over your bag.</span></div>
+          <div class="addr">Open <code data-copy="/pact">stagwifhood.fun/pact</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Revenue Splitter</h3><div class="k">RevenueSplitter · 90 / 10</div></div><span class="st live">Auto</span></div>
+          <p class="cd">Every Hooded 20 mint splits itself the instant it lands.</p>
+          <ul>
+            <li><b>90%</b> → the staking reward pool (this is what keeps your ETH yield flowing).</li>
+            <li><b>10%</b> → the team, to keep building.</li>
+          </ul>
+          <div class="reward"><span class="ri">💰</span><span class="rt"><b>Reward:</b> most of every mint becomes <b>your ETH rewards</b> — automatically, no treasury middleman.</span></div>
+          <div class="addr">Splitter <code data-copy="0x1F6D791108635ac4522b1cfaD86FD7B435aDFe2a">0x1F6D…Fe2a</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Saints Splitter</h3><div class="k">SaintsSplitter · 60 / 30 / 10</div></div><span class="st live">Auto</span></div>
+          <p class="cd">Sherwood Saints proceeds fork three ways, immutably, at the source.</p>
+          <ul>
+            <li><b>60%</b> → burn wallet · <b>30%</b> → reward pool · <b>10%</b> → team.</li>
+            <li>Immutable splits + reentrancy-guarded — hardened to a CLEAN audit.</li>
+          </ul>
+          <div class="reward"><span class="ri">🔥</span><span class="rt"><b>Reward:</b> Saints mints <b>burn supply</b> and <b>top up the reward pool</b> at the same time.</span></div>
+          <div class="addr">Splitter <code data-copy="0x101a344172f15ABe969027ea06624305F4a63082">0x101a…3082</code></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PLAY -->
+    <section class="u-act">
+      <div class="ae">Play &amp; Explore <span class="r"></span></div>
+      <h2>Reasons to show up that aren't a chart.</h2>
+      <p class="as">Games and holder tooling that make the hood a place, not a ticker.</p>
+      <div class="u-grid two">
+        <article class="card">
+          <div class="ct"><div><h3>STAG WARS</h3><div class="k">3D open-world arena</div></div><span class="st live">Playable</span></div>
+          <p class="cd">A bloody 3D survival-fighter — you're a muscular stag battling rival bucks in a living Sherwood.</p>
+          <ul>
+            <li>POV antler combat: charge, gore and knock rivals down.</li>
+            <li>Survive the wild — graze, drink, sleep through a day/night cycle.</li>
+            <li>Grab <b>Robin Hood's Hood</b> for a superstrength power-up; level up your rack.</li>
+          </ul>
+          <div class="addr">Play <code data-copy="/arena">stagwifhood.fun/arena</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Hooded Maps</h3><div class="k">Bubble-map explorer</div></div><span class="st live">Live</span></div>
+          <p class="cd">See the whole holder base as a bubble map — who holds what, at a glance.</p>
+          <ul>
+            <li>Whole-chain token enumeration + a live holder bubble map.</li>
+            <li>Spot concentration, whales and distribution instantly.</li>
+          </ul>
+          <div class="addr">Explore <code data-copy="https://maps.stagwifhood.fun">maps.stagwifhood.fun</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Trench Terminal</h3><div class="k">On-chain wallet console</div></div><span class="st live">Live</span></div>
+          <p class="cd">A lightweight in-browser console for reading the realm and moving on Robinhood Chain.</p>
+          <ul>
+            <li>Connect and read your positions across the suite in one place.</li>
+            <li>Live on-chain reads — balances, stakes and pool state.</li>
+            <li>Mobile WalletConnect built in — no extension needed.</li>
+          </ul>
+          <div class="addr">Open <code data-copy="/terminal">stagwifhood.fun/terminal</code></div>
+        </article>
+
+        <article class="card">
+          <div class="ct"><div><h3>Docs &amp; How-To</h3><div class="k">Self-serve knowledge</div></div><span class="st ref">Reference</span></div>
+          <p class="cd">Every contract, flow and guide written down — nothing hidden.</p>
+          <ul>
+            <li>Full contract reference with live addresses + explorer links.</li>
+            <li>Step-by-step guides: mint, stake, lock, connect on mobile.</li>
+            <li>Honest caveats and risk disclosures.</li>
+          </ul>
+          <div class="addr">Read <code data-copy="/docs">/docs</code> · <code data-copy="/how-to">/how-to</code></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- WIN — PRIZE HEIST -->
+    <section class="u-act">
+      <div class="ae">Win · The Prize Heist <span class="r"></span></div>
+      <h2>Every milestone, a holder gets robbed rich.</h2>
+      <p class="as">The stag steals from the chart and gives to the holders. At every market-cap milestone, <b>0.20% of the market cap</b> is spent on real prizes and holders are drawn <b>live</b> from the on-chain holders list — shipped to their door. Just hold to enter; no forms, no sign-up.</p>
+      <div class="ledger">
+        <div class="sc">
+          <table>
+            <thead><tr><th>Market cap</th><th>Prize</th><th>Winners</th><th>Pool</th></tr></thead>
+            <tbody>
+              <tr><td class="n">$500K</td><td>Apple Watch</td><td>2</td><td>$1,000</td></tr>
+              <tr><td class="n">$1M</td><td>iPad</td><td>4</td><td>$2,000</td></tr>
+              <tr><td class="n">$2.5M</td><td>iPhone 17</td><td>6</td><td>$5,000</td></tr>
+              <tr><td class="n">$5M</td><td>iPhone 17 Pro Max</td><td>6</td><td>$10,000</td></tr>
+              <tr><td class="n">$10M</td><td>Alienware 18 · Area-51</td><td>6</td><td>$20,000</td></tr>
+              <tr><td class="n">… scaling up</td><td>bigger heists at every milestone</td><td>more</td><td>0.20% of MC</td></tr>
+              <tr><td class="n">$1B</td><td>Tesla Model S</td><td>20</td><td>$2,000,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="reward" style="margin-left:0"><span class="ri">🎟️</span><span class="rt"><b>Reward:</b> hold $STAG at the snapshot block and you're <b>automatically entered</b> — winners drawn provably-fair on stream, prizes shipped worldwide. Hooded 20 holders get whitelist priority.</span></div>
+    </section>
+
+    <!-- SITE MAP -->
+    <section class="u-act">
+      <div class="ae">The Site · every page <span class="r"></span></div>
+      <h2>Everywhere you can go.</h2>
+      <p class="as">The full map of stagwifhood.fun — so the team knows exactly what lives where.</p>
+      <div class="ledger">
+        <div class="sc">
+          <table>
+            <thead><tr><th>Page</th><th>URL</th><th>What it's for</th></tr></thead>
+            <tbody>
+              <tr><td class="n">Home</td><td><code data-copy="https://stagwifhood.fun/">/</code></td><td>The legend, live chart, Prize Heist, how-to-buy</td></tr>
+              <tr><td class="n">Utilities</td><td><code data-copy="https://stagwifhood.fun/utilities">/utilities</code></td><td>This page — every utility &amp; reward</td></tr>
+              <tr><td class="n">Mint</td><td><code data-copy="https://stagwifhood.fun/nfts">/nfts</code></td><td>Mint the Hooded 20 + Sherwood Saints</td></tr>
+              <tr><td class="n">Stake</td><td><code data-copy="https://stagwifhood.fun/stake">/stake</code></td><td>Stake tokens/NFTs, claim ETH rewards</td></tr>
+              <tr><td class="n">Pact</td><td><code data-copy="https://stagwifhood.fun/pact">/pact</code></td><td>Proof-of-hold diamond-hands payouts</td></tr>
+              <tr><td class="n">Locker</td><td><code data-copy="https://stagwifhood.fun/locker">/locker</code></td><td>Lock &amp; vest liquidity/tokens, burn-to-extend</td></tr>
+              <tr><td class="n">Terminal</td><td><code data-copy="https://stagwifhood.fun/terminal">/terminal</code></td><td>On-chain wallet console</td></tr>
+              <tr><td class="n">Docs</td><td><code data-copy="https://stagwifhood.fun/docs">/docs</code></td><td>Full technical reference + addresses</td></tr>
+              <tr><td class="n">How-To</td><td><code data-copy="https://stagwifhood.fun/how-to">/how-to</code></td><td>Step-by-step walkthroughs</td></tr>
+              <tr><td class="n">Hooded Maps</td><td><code data-copy="https://maps.stagwifhood.fun">maps.stagwifhood.fun</code></td><td>Whole-chain holder bubble map</td></tr>
+              <tr><td class="n">Play</td><td><code data-copy="https://stagwifhood.fun/play">/play</code></td><td>Arcade hub</td></tr>
+              <tr><td class="n">Arena</td><td><code data-copy="https://stagwifhood.fun/arena">/arena</code></td><td>STAG WARS — 3D open-world fighter</td></tr>
+              <tr><td class="n">Buy $STAG</td><td><code data-copy="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49">Noxa launchpad</code></td><td>Buy the token on Robinhood Chain</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEDGER -->
+    <section class="u-act">
+      <div class="ae">The Ledger · every address in the open <span class="r"></span></div>
+      <h2>Verify everything.</h2>
+      <p class="as">All deployed on Robinhood Chain (4663) and verified on Blockscout. Tap any address to copy it — then check it yourself.</p>
+      <div class="ledger">
+        <div class="sc">
+          <table>
+            <thead><tr><th>Contract</th><th>What it is</th><th>Address</th></tr></thead>
+            <tbody>
+              <tr><td class="n">$STAG</td><td>The token — hold, stake, lock, burn</td><td><code data-copy="0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49">0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49</code></td></tr>
+              <tr><td class="n">HoodedTwenty</td><td>The Hooded 20 · Pick + Gamble mint</td><td><code data-copy="0x4384cB362D908d36266bDF3C31F18DB95EB127dc">0x4384cB362D908d36266bDF3C31F18DB95EB127dc</code></td></tr>
+              <tr><td class="n">SherwoodSaints</td><td>5× animated 1/1 · 0.03Ξ</td><td><code data-copy="0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327">0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327</code></td></tr>
+              <tr><td class="n">StagStaking</td><td>Token + NFT staking · ETH yield</td><td><code data-copy="0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF">0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF</code></td></tr>
+              <tr><td class="n">SherwoodVault</td><td>Collection-agnostic NFT staking</td><td><code data-copy="0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c">0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c</code></td></tr>
+              <tr><td class="n">StagLocker</td><td>LP &amp; token lock + vesting + burn</td><td><code data-copy="0x6F69fEbE30ba7348901a523bcc9a6fAA5b493160">0x6F69fEbE30ba7348901a523bcc9a6fAA5b493160</code></td></tr>
+              <tr><td class="n">SherwoodPact</td><td>Proof-of-hold, no custody</td><td><code data-copy="0xc36662D2db9432702f018963ABdab19432AA488B">0xc36662D2db9432702f018963ABdab19432AA488B</code></td></tr>
+              <tr><td class="n">RevenueSplitter</td><td>Mint revenue · 90 / 10</td><td><code data-copy="0x1F6D791108635ac4522b1cfaD86FD7B435aDFe2a">0x1F6D791108635ac4522b1cfaD86FD7B435aDFe2a</code></td></tr>
+              <tr><td class="n">SaintsSplitter</td><td>Saints proceeds · 60 / 30 / 10</td><td><code data-copy="0x101a344172f15ABe969027ea06624305F4a63082">0x101a344172f15ABe969027ea06624305F4a63082</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="u-cta">
+        <a class="btn btn-gold" href="/nfts">Mint the Saints →</a>
+        <a class="btn btn-ghost" href="/stake">Stake for ETH</a>
+        <a class="btn btn-ghost" href="/arena">Play STAG WARS</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p class="footer-tag">The stag who stole Robin Hood's hood. $STAG.</p>
+    <div class="footer-social">
+      <a href="/">Home</a><a href="/utilities">Utilities</a><a href="/docs">Docs</a><a href="/how-to">How-To</a><a href="#" data-social="x">X / Twitter</a><a href="#" data-social="tg">Telegram</a>
+    </div>
+    <p class="footer-fine">All figures are an on-chain snapshot and change block to block — verify addresses and balances on the explorer before transacting. Rewards depend on the pool being funded and are not guaranteed. Nothing here is financial advice. DYOR.</p>
+    <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
+  </footer>
+
+  <script>
+  /* tap-to-copy any [data-copy] address */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-copy]'); if(!b) return;
+    var txt = b.getAttribute('data-copy');
+    var done = function(){ var o=b.textContent; b.textContent='Copied ✓'; b.classList.add('ok');
+      setTimeout(function(){ b.textContent=o; b.classList.remove('ok'); }, 1200); };
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(done); }
+    else { var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }catch(_){ } document.body.removeChild(ta); done(); }
+  });
+  </script>
+  <script src="js/main.js"></script>
+</body>
+</html>
