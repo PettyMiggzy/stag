@@ -69,7 +69,7 @@
     <div class="app-head">
       <span class="eyebrow">The Hooded 20 · Robinhood Chain</span>
       <h1>Pact</h1>
-      <p>Seal a Sherwood Pact — wallet-free, proof-of-hold staking. Pledge to hold your $STAG for a set window without moving it; hold the whole time and claim your refund + reward.</p>
+      <p>Seal a Sherwood Pact — wallet-free, proof-of-hold staking. Pledge to hold your $STAG for a set window without moving it; hold the whole time and claim a partial refund of your entry <b>plus a reward</b>. Your tokens never leave your wallet.</p>
     </div>
 
     <!-- WALLET BAR -->
@@ -88,7 +88,7 @@
     <section class="app-panel" id="panel-pact" role="tabpanel">
       <div class="stat-row s3">
         <div class="stat"><div class="v" id="pc-entry">—</div><div class="l">Entry Fee</div></div>
-        <div class="stat"><div class="v" id="pc-refund">—</div><div class="l">Refund If Held</div></div>
+        <div class="stat"><div class="v" id="pc-refund">—</div><div class="l">Partial Refund If Held</div></div>
         <div class="stat"><div class="v" id="pc-grace">—</div><div class="l">Reclaim Grace</div></div>
       </div>
 
@@ -96,7 +96,12 @@
         <!-- create -->
         <div class="card">
           <h3>Seal a Sherwood Pact</h3>
-          <p class="hint">Proof-of-hold, no custody. Pledge to <b>hold ≥ X $STAG</b> for a set window without moving it. Pay the entry now; if you held the whole time you get your refund + reward, if not you forfeit. Your tokens never leave your wallet.</p>
+          <p class="hint">Proof-of-hold, no custody. Pledge to <b>hold ≥ X $STAG</b> for a set window without moving it. Pay a small entry now — your tokens <b>never leave your wallet</b>. Here's exactly how it settles:</p>
+          <ul class="pact-deal" style="list-style:none;padding:0;margin:.2rem 0 1.1rem;display:flex;flex-direction:column;gap:.55rem">
+            <li style="display:flex;gap:.6rem;align-items:flex-start;font-size:.9rem;line-height:1.45"><span style="color:#7ee87e;font-weight:800">✓</span><span><b style="color:var(--cream)">Held the whole window</b> → you get a <b>partial refund of your entry + a reward on top</b>. <span style="color:var(--muted)">(Entry minus refund covers backend/indexer costs — it's not a full refund.)</span></span></li>
+            <li style="display:flex;gap:.6rem;align-items:flex-start;font-size:.9rem;line-height:1.45"><span style="color:#ff7a6a;font-weight:800">✕</span><span><b style="color:var(--cream)">Moved or sold early</b> → you <b>forfeit the entry</b>. No penalty on your tokens — you just lose the entry fee.</span></li>
+            <li style="display:flex;gap:.6rem;align-items:flex-start;font-size:.9rem;line-height:1.45"><span style="color:#f4d488;font-weight:800">⏳</span><span><b style="color:var(--cream)">Never resolved</b> → <b>reclaim your full entry</b> after the window + grace period. Always fully funded.</span></li>
+          </ul>
           <div class="fld"><input id="pc-hold" type="text" inputmode="decimal" placeholder="1000000" /><span class="tok">$STAG to hold</span></div>
           <div class="fld"><input id="pc-days" type="text" inputmode="numeric" placeholder="30" /><span class="tok">days</span></div>
           <div class="hint" id="pc-range">Duration 7–365 days.</div>
