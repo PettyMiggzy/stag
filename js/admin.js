@@ -27,10 +27,11 @@
     get: (k) => localStorage.getItem('h20_' + k) || '',
     set: (k, v) => localStorage.setItem('h20_' + k, v),
   };
+  const H = () => window.HOODED || {};
   const ADDR = {
-    mint: () => store.get('mint'),
-    staking: () => store.get('staking'),
-    splitter: () => store.get('splitter'),
+    mint: () => store.get('mint') || H().mint || '',
+    staking: () => store.get('staking') || H().staking || '',
+    splitter: () => store.get('splitter') || H().splitter || '',
   };
 
   const HOODED_ABI = [
@@ -198,18 +199,36 @@
   }
 
   /* ---------- wallet ---------- */
-  async function connect() {
-    if (!window.ethereum) { toast('No EVM wallet found — install MetaMask.', 'err'); return; }
+  let wcProvider = null;
+  // Resolve a provider: injected first (extension / wallet in-app browser), else WalletConnect for mobile.
+  async function resolveProvider() {
+    if (window.ethereum) return window.ethereum;
+    const pid = (window.HOODED && window.HOODED.walletConnectProjectId) || '';
+    if (!pid) { toast('Open /admin inside your wallet’s browser (SafePal → Browser, or MetaMask → Browser) to connect.', 'err'); return null; }
     try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN.chainId }] }); }
-      catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CHAIN] }); }
-      provider = new ethers.BrowserProvider(window.ethereum);
+      const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
+      const cid = Number(CHAIN_ID);
+      wcProvider = await EthereumProvider.init({
+        projectId: pid, optionalChains: [cid], rpcMap: { [cid]: CHAIN.rpcUrls[0] }, showQrModal: true,
+        metadata: { name: 'STAGWIFHOOD Admin', description: 'Owner controls', url: 'https://stagwifhood.fun', icons: ['https://stagwifhood.fun/assets/img/mark.png'] },
+      });
+      await wcProvider.enable();
+      return wcProvider;
+    } catch (e) { toast('Couldn’t open WalletConnect. Easiest: open /admin inside your wallet’s own browser.', 'err'); return null; }
+  }
+  async function connect() {
+    const eth = await resolveProvider(); if (!eth) return;
+    try {
+      await eth.request({ method: 'eth_requestAccounts' });
+      try { await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN.chainId }] }); }
+      catch (e) { try { await eth.request({ method: 'wallet_addEthereumChain', params: [CHAIN] });
+                       await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN.chainId }] }); } catch (_) {} }
+      provider = new ethers.BrowserProvider(eth);
       if ((await provider.getNetwork()).chainId !== CHAIN_ID) { signer = null; toast('Wrong network — switch to Robinhood Chain (4663) and reconnect.', 'err'); return; }
       signer = await provider.getSigner();
       me = (await signer.getAddress());
-      if (window.ethereum.removeAllListeners) window.ethereum.removeAllListeners('chainChanged');
-      window.ethereum.on && window.ethereum.on('chainChanged', () => { signer = null; provider = null; isOwner = false; $('btn-connect').textContent = 'Connect Wallet'; toast('Network changed — reconnect on Robinhood Chain.', 'err'); });
+      if (eth.removeAllListeners) eth.removeAllListeners('chainChanged');
+      eth.on && eth.on('chainChanged', () => { signer = null; provider = null; isOwner = false; $('btn-connect').textContent = 'Connect Wallet'; toast('Network changed — reconnect on Robinhood Chain.', 'err'); });
       $('btn-connect').textContent = short(me);
       // owner check against the mint contract
       const mint = ADDR.mint();
