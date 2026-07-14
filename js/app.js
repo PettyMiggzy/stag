@@ -213,28 +213,26 @@
         try { const r = await fetch(`${BASE}/manifest.json`); items = (await r.json()).items || []; }
         catch { items = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, rarity: '', character: '', rank: 0 })); }
       }
-      if (!H.mint) { this.comingSoon(); return; }
-      try {
-        const c = new ethers.Contract(H.mint, NFT_ABI, ro());
-        const [active_, mintedN] = await Promise.all([c.mintActive(), c.minted()]);
-        this.randomPrice = await c.randomPrice();
-        for (let t = 0; t < 5; t++) this.prices[t] = await c.tierPrice(t);
-        const avail = {};
-        await Promise.all(items.map(async (it) => { avail[it.id] = await c.isAvailable(it.id); }));
-        this.renderGrid(avail); this.renderModes(c);
-        this.supply(Number(mintedN));
-        if (!active_) setStatus('m-status', 'Mint opens shortly — grid + odds are live. Connect to be ready.', '');
-        else if (!me) setStatus('m-status', 'Connect your wallet to mint.', '');
-        else setStatus('m-status', '', '');
-        if (withUser && me) this.loadOwned(c);
-      } catch (e) { this.comingSoon(); }
+      if (!H.mint) { this.comingSoon(); return; }   // only "coming soon" if the contract truly isn't set
+      // The contract IS deployed — so minting must stay available even if a read hiccups on a flaky
+      // mobile connection. Every read below is best-effort; the real price is fetched again at mint time.
+      const c = new ethers.Contract(H.mint, NFT_ABI, ro());
+      let mintedN = 0, avail = {};
+      try { mintedN = Number(await c.minted()); } catch (e) {}
+      try { this.randomPrice = await c.randomPrice(); } catch (e) {}
+      try { this.prices = await Promise.all([0, 1, 2, 3, 4].map((t) => c.tierPrice(t))); } catch (e) {}
+      try { await Promise.all(items.map(async (it) => { avail[it.id] = await c.isAvailable(it.id); })); } catch (e) { avail = {}; }
+      this.renderGrid(avail); this.renderModes(c);
+      this.supply(mintedN);
+      setStatus('m-status', me ? '' : 'Connect your wallet to mint.', '');
+      if (withUser && me) this.loadOwned(c);
     },
     supply(m) { const f = $('m-fill'); if (f) f.style.width = (m / 20 * 100) + '%'; const c = $('m-count'); if (c) c.textContent = `${m} / 20 minted`; },
     priceFor(it) { return this.prices[tierIdx(it.rarity)] || 0n; },
     renderModes(c) {
       const cheapest = this.prices.length ? this.prices.reduce((a, b) => (a < b ? a : b)) : 0n;
-      $('m-pick-price').textContent = 'from ' + eth(cheapest) + ' Ξ';
-      $('m-gamble-price').textContent = eth(this.randomPrice) + ' Ξ';
+      $('m-pick-price').textContent = cheapest > 0n ? 'from ' + eth(cheapest) + ' Ξ' : 'live';
+      $('m-gamble-price').textContent = this.randomPrice > 0n ? eth(this.randomPrice) + ' Ξ' : 'live';
       const gb = $('m-gamble'); if (gb) { gb.disabled = false; gb.onclick = () => this.mintGamble(); }
       const counts = [0, 0, 0, 0, 0]; items.forEach((it) => counts[tierIdx(it.rarity)]++);
       Promise.all([0, 1, 2, 3, 4].map((t) => c.tierWeight(t))).then((ws) => {
@@ -269,7 +267,7 @@
         const sold = avail && avail[it.id] === false;
         g.appendChild(this.card(it, {
           sold, badge: sold ? { cls: 'minted', txt: 'MINTED' } : null,
-          btn: { txt: sold ? 'Gone' : 'Pick · ' + eth(this.priceFor(it)) + ' Ξ', dis: sold, on: () => this.mintPick(it) },
+          btn: { txt: sold ? 'Gone' : (this.priceFor(it) > 0n ? 'Pick · ' + eth(this.priceFor(it)) + ' Ξ' : 'Pick'), dis: sold, on: () => this.mintPick(it) },
         }));
       }
     },
