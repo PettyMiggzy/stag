@@ -137,7 +137,7 @@ em{color:var(--gold-lite);font-style:italic}
 .pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--green-lite);box-shadow:0 0 0 0 var(--green-lite);animation:pulse 2s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(90,168,105,.6)}70%{box-shadow:0 0 0 10px rgba(90,168,105,0)}100%{box-shadow:0 0 0 0 rgba(90,168,105,0)}}
 .hero-title{font-family:'Cinzel',serif;font-weight:900;line-height:.98;letter-spacing:.01em;
-  font-size:clamp(2.4rem,6vw,4.4rem);margin-bottom:1.2rem}
+  font-size:clamp(2rem,6vw,4.4rem);margin-bottom:1.2rem;overflow-wrap:break-word;max-width:100%}
 .hero-title .line{display:block}
 .gold-grad{background:var(--grad-gold);-webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 4px 22px rgba(230,184,63,.35))}
@@ -348,6 +348,10 @@ section{max-width:var(--maxw);margin:0 auto;padding:6.5rem clamp(1rem,4vw,2.5rem
   .nft-grid{grid-template-columns:repeat(2,1fr)}
   .hero{padding-top:7rem}
   .legend-final,.parchment-inner p.drop{font-size:1.25rem}
+  /* small phones: shrink the wordmark so long lines ("ROBIN HOOD'S") fit and don't get clipped off-center */
+  .hero-title{font-size:clamp(1.6rem,7.6vw,2.4rem)}
+  .hero-copy{align-items:center}
+  .ca-bar{max-width:100%;width:100%}   /* address bar must fit the screen, not overflow past the right edge */
 }
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
