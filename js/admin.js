@@ -332,6 +332,36 @@
       } catch (e) { toast(pretty(e), 'err'); }
     });
     loadBurnStats();
+
+    // ---- Fund all pools evenly (Stag Staking + Sherwood Vault) ----
+    const POOLS = () => [ADDR.staking(), (store.get('vault') || (window.HOODED && window.HOODED.vault) || '')].filter(Boolean);
+    $('btn-poolfund') && ($('btn-poolfund').onclick = async () => {
+      if (!signer) return toast('Connect your wallet first.', 'err');
+      const amtStr = ($('in-poolfund-amt').value || '').trim();
+      if (!amtStr || +amtStr <= 0) return toast('Enter a total ETH amount.', 'err');
+      const pools = POOLS();
+      if (!pools.length) return toast('No pool addresses configured.', 'err');
+      const daysStr = ($('in-poolfund-days').value || '').trim();
+      const total = parseEth(amtStr), each = total / BigInt(pools.length);
+      const dur = daysStr && +daysStr > 0 ? BigInt(Math.round(+daysStr * 86400)) : 0n;
+      const DON = ['function donate() payable'], NOT = ['function notifyRewardAmount(uint256,uint256)'];
+      try {
+        for (const pool of pools) {
+          toast('Funding ' + pool.slice(0, 6) + '… confirm in wallet');
+          await (await new ethers.Contract(pool, DON, signer).donate({ value: each })).wait();
+          if (dur > 0n) { toast('Starting stream on ' + pool.slice(0, 6) + '…');
+            await (await new ethers.Contract(pool, NOT, signer).notifyRewardAmount(each, dur)).wait(); }
+        }
+        toast('✓ Split ' + amtStr + ' Ξ evenly across ' + pools.length + ' pools' + (dur > 0n ? ' — now streaming' : ''), 'ok');
+        loadDashboard();
+      } catch (e) { toast(pretty(e), 'err'); }
+    });
+    // live pool balances hint
+    (async () => { try { const el = $('pf-bal'); if (!el) return;
+      const p = new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], CHAIN_ID, { staticNetwork: true });
+      const bals = await Promise.all(POOLS().map((a) => p.getBalance(a).catch(() => 0n)));
+      el.textContent = '· pools hold ' + bals.reduce((s, b) => s + Number(ethers.formatEther(b)), 0).toFixed(4) + ' ETH'; } catch (e) {} })();
+
     // show unswept Saints sales sitting in the contract
     (async () => { try { const s = SAINTS(); const el = $('saint-bal'); if (!s || !el) return;
       const b = await new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], CHAIN_ID, { staticNetwork: true }).getBalance(s);
