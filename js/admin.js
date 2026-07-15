@@ -292,11 +292,16 @@
 
     // ---- Sherwood Saints mint controls ----
     const SAINTS = () => store.get('saints') || (window.HOODED && window.HOODED.saints) || '';
-    const SAINTS_ABI = ['function grantFreeMints(address,uint256)', 'function setMintPrice(uint256)', 'function setMintActive(bool)'];
+    const SAINTS_ABI = ['function grantFreeMints(address,uint256)', 'function setMintPrice(uint256)', 'function setMintActive(bool)', 'function forwardProceeds()'];
     $('btn-saint-free') && ($('btn-saint-free').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'grantFreeMints', [$('in-saint-free-addr').value.trim(), BigInt($('in-saint-free-n').value || '1')], 'Free Saint granted ✓'));
     $('btn-saint-price') && ($('btn-saint-price').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'setMintPrice', [parseEth($('in-saint-price').value)], 'Saints price set ✓'));
     $('btn-saint-on') && ($('btn-saint-on').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'setMintActive', [true], 'Saints mint opened ✓'));
     $('btn-saint-off') && ($('btn-saint-off').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'setMintActive', [false], 'Saints mint paused ✓'));
+    $('btn-saint-forward') && ($('btn-saint-forward').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'forwardProceeds', [], 'Saints sales forwarded → burn / pool / team ✓'));
+    // show unswept Saints sales sitting in the contract
+    (async () => { try { const s = SAINTS(); const el = $('saint-bal'); if (!s || !el) return;
+      const b = await new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], CHAIN_ID, { staticNetwork: true }).getBalance(s);
+      el.textContent = '· ' + (+ethers.formatEther(b)).toFixed(4) + ' ETH unswept'; } catch (e) {} })();
 
     for (let t = 0; t < 5; t++) {
       $('btn-price-' + t).onclick = () => send('setTierPrice', [t, parseEth($('price-' + t).value)], TIERS[t] + ' price set ✓');
