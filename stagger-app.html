@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Stagger — App Prototype</title>
+<style>
+  :root{
+    --green:#1c7a41; --green-deep:#14532d; --green-soft:#e7f4ec; --gold:#b8892f; --gold-soft:#f4e9d1;
+    --ink:#16261c; --ink-dim:#5a6f61; --ink-faint:#8aa093; --line:#e2ece5; --bg:#eef3ee; --card:#fff;
+    --amber:#c9871f; --shadow:0 10px 30px -14px rgba(20,60,40,.25);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:radial-gradient(120% 80% at 50% 0%,#dcefe1,#e9f1ea);color:var(--ink);
+    font:400 15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .stage{max-width:1000px;margin:0 auto;padding:26px 18px 60px;text-align:center}
+  .stage h1{font-size:22px;margin:0;font-weight:800;letter-spacing:-.01em}
+  .stage h1 b{color:var(--green)}
+  .stage .cap{color:var(--ink-dim);font-size:13.5px;margin:6px 0 22px}
+  .stage .cap b{color:var(--gold)}
+
+  /* phone */
+  .phone{width:390px;max-width:100%;height:800px;margin:0 auto;background:#0e1712;border-radius:44px;padding:11px;
+    box-shadow:0 40px 90px -30px rgba(10,30,20,.6),0 0 0 2px rgba(0,0,0,.05);position:relative}
+  .screen{width:100%;height:100%;background:var(--bg);border-radius:34px;overflow:hidden;position:relative;display:flex;flex-direction:column;text-align:left}
+  .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#0e1712;border-radius:0 0 16px 16px;z-index:60}
+
+  /* app chrome */
+  .appbar{background:var(--green);color:#fff;padding:38px 18px 14px;display:flex;align-items:center;gap:10px;flex:none}
+  .appbar .back{cursor:pointer;font-size:20px;width:26px}
+  .appbar h2{font-size:18px;font-weight:800;margin:0}
+  .appbar .sub{font-size:12px;opacity:.85;font-weight:600}
+  .appbar .spacer{margin-left:auto}
+  .appbar .avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-weight:800;font-size:14px}
+
+  .view{flex:1;overflow-y:auto;padding:16px 16px 90px}
+  .view::-webkit-scrollbar{width:0}
+  .hidden{display:none!important}
+
+  .eyebrow{font:700 11px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:6px 2px 10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:12px}
+  .row{display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer}
+  .row:active{background:var(--green-soft)}
+  .row .ava{width:40px;height:40px;border-radius:12px;background:var(--green-soft);color:var(--green);display:grid;place-items:center;font-weight:800;flex:none}
+  .row .main{flex:1;min-width:0}
+  .row .t{font-weight:700;font-size:15px}
+  .row .d{color:var(--ink-dim);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .amt{font-weight:800;color:var(--green-deep)}
+  .chip{font:700 10.5px/1 system-ui;letter-spacing:.03em;text-transform:uppercase;padding:5px 9px;border-radius:20px;white-space:nowrap}
+  .chip.sched{background:var(--gold-soft);color:#8a6414}
+  .chip.prog{background:#e2eefb;color:#245da8}
+  .chip.done{background:var(--green-soft);color:var(--green)}
+  .chip.paid{background:var(--green);color:#fff}
+  .chip.est{background:#f0eafb;color:#6b46b8}
+
+  .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+  .stat .n{font-size:20px;font-weight:900;color:var(--green-deep)}
+  .stat .l{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;font-weight:700}
+
+  .btn{display:block;width:100%;text-align:center;font-weight:800;font-size:15px;border-radius:14px;padding:15px;border:none;cursor:pointer;background:var(--green);color:#fff}
+  .btn:active{transform:scale(.99)}
+  .btn.gold{background:linear-gradient(180deg,#e9c46a,var(--gold));color:#2a1e04}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .btn.sm{padding:11px;font-size:14px;border-radius:11px}
+  .btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
+
+  .fab{position:absolute;right:18px;bottom:88px;background:var(--green);color:#fff;border:none;width:56px;height:56px;border-radius:18px;font-size:26px;box-shadow:0 12px 24px -8px rgba(20,80,45,.6);cursor:pointer;z-index:40}
+
+  /* line items */
+  .li{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .li:last-child{border:none}
+  .li .t{flex:1;font-weight:600;font-size:14px}
+  .li .p{font-weight:800;color:var(--green-deep)}
+  .li .x{color:#c04;cursor:pointer;font-weight:800;padding:0 4px}
+  .preset{display:inline-flex;align-items:center;gap:6px;background:var(--green-soft);color:var(--green);border:1px solid var(--line);
+    border-radius:20px;padding:9px 13px;font-weight:700;font-size:13px;cursor:pointer;margin:0 8px 8px 0}
+  .preset:active{background:var(--green)}
+  .total{display:flex;justify-content:space-between;align-items:center;padding:14px;font-weight:900;font-size:18px}
+  .total .g{color:var(--green-deep)}
+
+  /* status stepper */
+  .stepper{display:flex;gap:6px;margin:4px 0 16px}
+  .stepper .s{flex:1;text-align:center;font-size:10px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em}
+  .stepper .s .dot{height:6px;border-radius:4px;background:var(--line);margin-bottom:6px}
+  .stepper .s.on .dot{background:var(--green)} .stepper .s.on{color:var(--green)}
+
+  /* schedule */
+  .daypick{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}
+  .daypick .d{flex:none;width:54px;text-align:center;padding:10px 0;border-radius:14px;background:var(--card);border:1px solid var(--line);cursor:pointer;font-weight:700}
+  .daypick .d.on{background:var(--green);color:#fff;border-color:var(--green)}
+  .daypick .d .dow{font-size:11px;opacity:.7}.daypick .d .num{font-size:18px;font-weight:900}
+  .slot{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .slot .time{width:58px;font-weight:800;color:var(--ink-dim);font-size:13px;flex:none;padding-top:2px}
+  .slot .jb{flex:1;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:12px;padding:11px 13px}
+  .slot .jb .t{font-weight:700}.slot .jb .d{color:var(--ink-dim);font-size:12.5px}
+
+  /* tab bar */
+  .tabs{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:8px 6px 20px;z-index:50}
+  .tab{flex:1;text-align:center;color:var(--ink-faint);font-size:10.5px;font-weight:700;cursor:pointer}
+  .tab .ic{font-size:20px;display:block;margin-bottom:2px;filter:grayscale(1);opacity:.6}
+  .tab.on{color:var(--green)}.tab.on .ic{filter:none;opacity:1}
+
+  /* customer + toast + success */
+  .cust{background:linear-gradient(180deg,var(--green-deep),#0e3b23);color:#eafff1;min-height:100%;padding:36px 20px}
+  .cust .biz{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}
+  .cust .doc{background:#fff;color:var(--ink);border-radius:18px;padding:18px;margin-top:20px}
+  .cust .doc h3{margin:0 0 4px;font-size:19px} .cust .doc .who{color:var(--ink-dim);font-size:13px}
+  .toast{position:absolute;left:16px;right:16px;bottom:96px;background:#0e2a1a;color:#eafff1;padding:14px 16px;border-radius:14px;
+    font-weight:700;font-size:14px;text-align:center;z-index:80;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;transform:none}
+  .success{position:absolute;inset:0;background:var(--green-deep);color:#eafff1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:90;padding:30px;text-align:center}
+  .success.show{display:flex}
+  .success .big{width:88px;height:88px;border-radius:50%;background:#fff;color:var(--green);display:grid;place-items:center;font-size:46px}
+  .success h2{font-size:24px;margin:0}.success p{opacity:.85;margin:0}.success .mono{font-family:ui-monospace,monospace;font-size:12px;opacity:.7;word-break:break-all}
+  .success .btn{max-width:240px;margin-top:8px}
+  .field{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .field .l{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .field .v{font-weight:700;margin-top:2px}
+  .hint{color:var(--ink-faint);font-size:12.5px;text-align:center;margin-top:10px}
+  @media(max-width:440px){.phone{height:88vh;border-radius:0;padding:0}.screen{border-radius:0}.notch{display:none}.stage{padding:10px 0 30px}.stage h1,.stage .cap{padding:0 14px}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>Stag<b>ger</b> — app prototype</h1>
+  <p class="cap">Clickable mock with sample data · <b>tap around it</b> like the real thing</p>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+
+      <!-- APP HEADER -->
+      <div class="appbar" id="appbar">
+        <span class="back hidden" id="backBtn" onclick="back()">‹</span>
+        <div><h2 id="scr-title">Today</h2><div class="sub" id="scr-sub">Tue · 3 jobs</div></div>
+        <span class="spacer"></span>
+        <span class="avatar">JR</span>
+      </div>
+
+      <!-- TODAY -->
+      <div class="view" data-screen="today">
+        <div class="stat-row">
+          <div class="stat"><div class="n">3</div><div class="l">Jobs</div></div>
+          <div class="stat"><div class="n">$940</div><div class="l">Booked</div></div>
+          <div class="stat"><div class="n">$400</div><div class="l">To collect</div></div>
+        </div>
+        <div class="eyebrow">Today's jobs</div>
+        <div class="card" id="today-jobs"></div>
+      </div>
+
+      <!-- CLIENTS -->
+      <div class="view hidden" data-screen="clients">
+        <div class="eyebrow">Clients</div>
+        <div class="card" id="client-list"></div>
+      </div>
+
+      <!-- CLIENT DETAIL -->
+      <div class="view hidden" data-screen="client">
+        <div class="card" style="padding:16px"><div id="client-hd"></div></div>
+        <div class="eyebrow">Job history</div>
+        <div class="card" id="client-jobs"></div>
+        <button class="btn" onclick="startEstimate()">+ New estimate</button>
+      </div>
+
+      <!-- NEW ESTIMATE -->
+      <div class="view hidden" data-screen="estimate">
+        <div class="field"><div class="l">Client</div><div class="v" id="est-client">—</div></div>
+        <div class="eyebrow">Tap to add — your presets</div>
+        <div style="margin-bottom:6px" id="presets"></div>
+        <div class="card" id="est-items"></div>
+        <div class="card"><div class="total"><span>Total</span><span class="g" id="est-total">$0</span></div></div>
+        <button class="btn" id="est-send" onclick="sendEstimate()">Send estimate →</button>
+        <div class="hint">Texts the customer a link to approve — no app needed.</div>
+      </div>
+
+      <!-- JOB DETAIL -->
+      <div class="view hidden" data-screen="job">
+        <div class="stepper" id="job-steps"></div>
+        <div class="card" style="padding:16px"><div id="job-hd"></div></div>
+        <div class="eyebrow">Line items</div>
+        <div class="card" id="job-items"></div>
+        <div class="card"><div class="total"><span>Total</span><span class="g" id="job-total">$0</span></div></div>
+        <div id="job-actions"></div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="view hidden" data-screen="schedule">
+        <div class="daypick" id="daypick"></div>
+        <div id="sched-list"></div>
+      </div>
+
+      <!-- MORE -->
+      <div class="view hidden" data-screen="more">
+        <div class="eyebrow">Business</div>
+        <div class="card">
+          <div class="row"><span class="ava">🦌</span><div class="main"><div class="t">JunkRabbit Hauling</div><div class="d">North Houston · 243 ★ reviews</div></div></div>
+          <div class="row"><span class="ava" style="color:var(--gold);background:var(--gold-soft)">$</span><div class="main"><div class="t">Payout wallet</div><div class="d mono" style="font-family:ui-monospace">0xb6A5…12516 · Robinhood Chain</div></div></div>
+        </div>
+        <div class="eyebrow">$STAG perks</div>
+        <div class="card">
+          <div class="row"><span class="ava" style="color:var(--gold);background:var(--gold-soft)">★</span><div class="main"><div class="t">Plan: Pro (paid in $STAG)</div><div class="d">Holding 250k $STAG · fees waived</div></div><span class="chip paid">Active</span></div>
+        </div>
+        <div class="eyebrow">Presets &amp; pricing</div>
+        <div class="card"><div class="row"><span class="ava">≡</span><div class="main"><div class="t">Junk removal price tiers</div><div class="d">Min charge, ¼ / ½ / full load, labor/hr</div></div><span style="color:var(--ink-faint)">›</span></div></div>
+      </div>
+
+      <!-- CUSTOMER: ESTIMATE -->
+      <div class="view hidden" data-screen="cust-est" style="padding:0">
+        <div class="cust">
+          <div class="biz">🦌 JunkRabbit Hauling</div>
+          <div style="opacity:.8;font-size:13px;margin-top:4px">sent you an estimate</div>
+          <div class="doc">
+            <h3 id="ce-title">Job Estimate</h3>
+            <div class="who" id="ce-who">—</div>
+            <div id="ce-items" style="margin-top:14px"></div>
+            <div class="total" style="padding:14px 0 4px"><span>Total</span><span class="g" id="ce-total">$0</span></div>
+          </div>
+          <div class="btnrow" style="margin-top:18px">
+            <button class="btn ghost" onclick="toast('Declined')">Decline</button>
+            <button class="btn" onclick="approveEstimate()">Approve ✓</button>
+          </div>
+          <div class="hint" style="color:#bfe6cd">No account needed · you just tap Approve.</div>
+        </div>
+      </div>
+
+      <!-- CUSTOMER: PAY -->
+      <div class="view hidden" data-screen="cust-pay" style="padding:0">
+        <div class="cust">
+          <div class="biz">🦌 JunkRabbit Hauling</div>
+          <div style="opacity:.8;font-size:13px;margin-top:4px">Invoice · due now</div>
+          <div class="doc">
+            <h3>Amount due</h3>
+            <div class="g" style="font-size:34px;font-weight:900;color:var(--green-deep)" id="pay-amt">$400</div>
+            <div class="who" id="pay-who">—</div>
+          </div>
+          <button class="btn gold" style="margin-top:18px" onclick="payDone('card')">Pay by card</button>
+          <button class="btn" style="margin-top:10px;background:#0e2a1a" onclick="payDone('stag')">Pay with $STAG / ETH →</button>
+          <div class="hint" style="color:#bfe6cd">Crypto settles instantly · 0% processor fee.</div>
+        </div>
+      </div>
+
+      <!-- TAB BAR -->
+      <div class="tabs" id="tabs">
+        <div class="tab on" data-tab="today" onclick="go('today')"><span class="ic">🏠</span>Today</div>
+        <div class="tab" data-tab="clients" onclick="go('clients')"><span class="ic">👥</span>Clients</div>
+        <div class="tab" data-tab="schedule" onclick="go('schedule')"><span class="ic">🗓️</span>Schedule</div>
+        <div class="tab" data-tab="more" onclick="go('more')"><span class="ic">⋯</span>More</div>
+      </div>
+
+      <button class="fab hidden" id="fab" onclick="fabAction()">+</button>
+      <div class="toast" id="toast"></div>
+      <div class="success" id="success">
+        <div class="big">✓</div>
+        <h2 id="suc-title">Done</h2>
+        <p id="suc-msg"></p>
+        <div class="mono" id="suc-mono"></div>
+        <button class="btn" onclick="closeSuccess()">Back to app</button>
+      </div>
+
+    </div>
+  </div>
+  <p class="cap" style="margin-top:18px">Try it: <b>Clients → a client → New estimate → tap presets → Send</b>, then open the customer view to Approve &amp; Pay.</p>
+</div>
+
+<script>
+  var $=function(s){return document.querySelector(s)};
+  var money=function(n){return '$'+n.toLocaleString()};
+  var clients=[
+    {id:1,name:'Marcus Bell',addr:'Spring, TX',ph:'(281) 555-0142',jobs:[{t:'Garage cleanout',amt:520,st:'paid'}]},
+    {id:2,name:'Priya Nair',addr:'The Woodlands',ph:'(832) 555-0199',jobs:[]},
+    {id:3,name:'Dale Cooper',addr:'Tomball, TX',ph:'(281) 555-0177',jobs:[{t:'Move-out haul',amt:340,st:'sched'}]},
+    {id:4,name:'Ana Ruiz',addr:'Conroe, TX',ph:'(936) 555-0121',jobs:[]}
+  ];
+  var todayJobs=[
+    {t:'Marcus Bell',d:'Garage cleanout · 9:00a',amt:520,st:'done',stl:'Done'},
+    {t:'Dale Cooper',d:'Move-out haul · 12:30p',amt:340,st:'prog',stl:'On the way'},
+    {t:'Ana Ruiz',d:'Half load · 3:00p',amt:80,st:'sched',stl:'Scheduled'}
+  ];
+  var presets=[['Minimum charge',80],['1/4 load',180],['1/2 load',280],['Full load',480],['Labor / hr',65],['Heavy item',60],['Mattress',35],['Appliance',45]];
+  var sched={ 'Tue':[['9:00a','Marcus Bell','Garage cleanout'],['12:30p','Dale Cooper','Move-out haul'],['3:00p','Ana Ruiz','Half load']], 'Wed':[['10:00a','New lead','Estimate — full house'],['2:00p','Priya Nair','Furniture removal']], 'Thu':[], 'Fri':[['8:30a','Repeat client','Weekly office haul']] };
+
+  var stack=['today']; var estimate={client:null,items:[]}; var currentJob=null;
+
+  // ---- render lists ----
+  function chipFor(st,label){ var m={sched:'sched',prog:'prog',done:'done',paid:'paid',est:'est'}; return '<span class="chip '+(m[st]||'sched')+'">'+label+'</span>'; }
+  function renderToday(){ $('#today-jobs').innerHTML = todayJobs.map(function(j){ return '<div class="row" onclick="openJob(\''+j.t+'\')"><span class="ava">'+j.t[0]+'</span><div class="main"><div class="t">'+j.t+'</div><div class="d">'+j.d+'</div></div>'+chipFor(j.st,j.stl)+'</div>'; }).join(''); }
+  function renderClients(){ $('#client-list').innerHTML = clients.map(function(c){ return '<div class="row" onclick="openClient('+c.id+')"><span class="ava">'+c.name[0]+'</span><div class="main"><div class="t">'+c.name+'</div><div class="d">'+c.addr+' · '+c.ph+'</div></div><span style="color:var(--ink-faint)">›</span></div>'; }).join(''); }
+  var activeClient=null;
+  function openClient(id){ activeClient=clients.find(function(c){return c.id===id});
+    $('#client-hd').innerHTML='<div style="font-weight:800;font-size:18px">'+activeClient.name+'</div><div style="color:var(--ink-dim);font-size:13px;margin-top:2px">'+activeClient.addr+' · '+activeClient.ph+'</div>';
+    $('#client-jobs').innerHTML = activeClient.jobs.length ? activeClient.jobs.map(function(j){return '<div class="row"><span class="ava">🧾</span><div class="main"><div class="t">'+j.t+'</div><div class="d">'+money(j.amt)+'</div></div>'+chipFor(j.st,j.st==='paid'?'Paid':'Scheduled')+'</div>';}).join('') : '<div class="row"><div class="main"><div class="d">No jobs yet — send them an estimate.</div></div></div>';
+    push('client','Client',activeClient.name); }
+
+  // ---- estimate ----
+  function startEstimate(){ estimate={client:activeClient||clients[0],items:[]};
+    $('#est-client').textContent=estimate.client.name+' · '+estimate.client.addr;
+    $('#presets').innerHTML=presets.map(function(p,i){return '<span class="preset" onclick="addItem('+i+')">+ '+p[0]+' <b style="color:inherit">$'+p[1]+'</b></span>';}).join('');
+    renderEst(); push('estimate','New estimate',estimate.client.name); }
+  function addItem(i){ estimate.items.push({t:presets[i][0],p:presets[i][1]}); renderEst(); toast('Added '+presets[i][0]); }
+  function rmItem(i){ estimate.items.splice(i,1); renderEst(); }
+  function estTotal(){ return estimate.items.reduce(function(s,x){return s+x.p},0); }
+  function renderEst(){ $('#est-items').innerHTML = estimate.items.length ? estimate.items.map(function(x,i){return '<div class="li"><span class="t">'+x.t+'</span><span class="p">$'+x.p+'</span><span class="x" onclick="rmItem('+i+')">✕</span></div>';}).join('') : '<div class="li"><span class="t" style="color:var(--ink-faint)">Tap a preset above to add line items…</span></div>';
+    $('#est-total').textContent=money(estTotal()); $('#est-send').style.opacity=estimate.items.length?1:.5; }
+  function sendEstimate(){ if(!estimate.items.length) return toast('Add at least one item'); currentJob={client:estimate.client,items:estimate.items.slice(),total:estTotal(),status:1};
+    toast('📤 Estimate texted to '+estimate.client.name); setTimeout(function(){ openJobObj(); },700); }
+
+  // ---- job detail ----
+  var STEPS=['Estimate','Approved','Scheduled','Done','Invoiced','Paid'];
+  function openJob(name){ var c=clients.find(function(c){return c.name===name})||clients[0];
+    currentJob=currentJob&&currentJob.client.name===name?currentJob:{client:c,items:[{t:'Full load',p:480}],total:480,status:name==='Marcus Bell'?5:(name==='Dale Cooper'?2:2)}; openJobObj(); }
+  function openJobObj(){ var j=currentJob;
+    $('#job-steps').innerHTML=STEPS.map(function(s,i){return '<div class="s'+(i<=j.status?' on':'')+'"><div class="dot"></div>'+s+'</div>';}).join('');
+    $('#job-hd').innerHTML='<div style="font-weight:800;font-size:17px">'+j.client.name+'</div><div style="color:var(--ink-dim);font-size:13px;margin-top:2px">'+j.client.addr+'</div>';
+    $('#job-items').innerHTML=j.items.map(function(x){return '<div class="li"><span class="t">'+x.t+'</span><span class="p">$'+x.p+'</span></div>';}).join('');
+    $('#job-total').textContent=money(j.total);
+    var a='';
+    if(j.status<2) a='<button class="btn ghost" onclick="go2(\'cust-est\')">Preview customer view</button>';
+    else if(j.status<4) a='<div class="btnrow"><button class="btn ghost sm" onclick="setStep(3)">Mark done</button><button class="btn sm" onclick="setStep(4)">Send invoice</button></div>';
+    else if(j.status===4) a='<button class="btn" onclick="go2(\'cust-pay\')">Send pay link → preview</button>';
+    else a='<div class="card" style="margin:0"><div class="row" style="cursor:default"><span class="ava" style="background:var(--green);color:#fff">✓</span><div class="main"><div class="t">Paid in full</div><div class="d">Settled on Robinhood Chain</div></div><span class="chip paid">Paid</span></div></div>';
+    $('#job-actions').innerHTML=a;
+    push('job','Job',j.client.name); }
+  function setStep(n){ currentJob.status=n; openJobObj(); toast(n===4?'Invoice sent':'Marked done'); }
+
+  // ---- customer views ----
+  function go2(scr){ if(scr==='cust-est'){ $('#ce-title').textContent='Job Estimate'; $('#ce-who').textContent=currentJob.client.name+' · '+currentJob.client.addr;
+      $('#ce-items').innerHTML=currentJob.items.map(function(x){return '<div class="li"><span class="t">'+x.t+'</span><span class="p">$'+x.p+'</span></div>';}).join(''); $('#ce-total').textContent=money(currentJob.total); }
+    if(scr==='cust-pay'){ $('#pay-amt').textContent=money(currentJob.total); $('#pay-who').textContent=currentJob.client.name+' · Invoice'; }
+    push(scr, scr==='cust-est'?'Customer view':'Pay invoice','what your customer sees'); $('#tabs').style.display='none'; }
+  function approveEstimate(){ currentJob.status=3; showSuccess('Approved!','Job auto-scheduled for you.',''); }
+  function payDone(m){ var hash=m==='stag'?'0x7a1f…c4e2 · paid in $STAG':'Visa •••• 4242'; currentJob.status=5;
+    showSuccess('Paid — '+money(currentJob.total),m==='stag'?'Settled instantly on Robinhood Chain.':'Card charged.', m==='stag'?hash:''); }
+
+  // ---- nav ----
+  function setHeader(t,s){ $('#scr-title').textContent=t; $('#scr-sub').textContent=s||''; }
+  function show(scr){ document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('hidden',v.getAttribute('data-screen')!==scr);}); }
+  function push(scr,title,sub){ stack.push(scr); show(scr); setHeader(title,sub); chrome(scr); }
+  function back(){ if(stack.length>1){ stack.pop(); var scr=stack[stack.length-1]; show(scr); reHeader(scr); chrome(scr); if(scr.indexOf('cust')<0) $('#tabs').style.display='flex'; } }
+  function reHeader(scr){ var m={today:['Today','Tue · 3 jobs'],clients:['Clients',clients.length+' total'],schedule:['Schedule','This week'],more:['More','Settings'],client:['Client',activeClient?activeClient.name:''],estimate:['New estimate',''],job:['Job',currentJob?currentJob.client.name:'']}; setHeader((m[scr]||['',''])[0],(m[scr]||['',''])[1]); }
+  function chrome(scr){ var tabScr=['today','clients','schedule','more'].indexOf(scr)>=0; $('#backBtn').classList.toggle('hidden',tabScr); document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('on',t.getAttribute('data-tab')===scr);}); $('#fab').classList.toggle('hidden',!(scr==='clients'||scr==='today')); }
+  function go(scr){ stack=['today']; if(scr!=='today') stack.push(scr); show(scr); reHeader(scr); chrome(scr); $('#tabs').style.display='flex'; if(scr==='clients')renderClients(); if(scr==='schedule')renderSched(); }
+  function fabAction(){ go('clients'); toast('Pick a client to start an estimate'); }
+
+  // schedule
+  var days=[['Tue','15'],['Wed','16'],['Thu','17'],['Fri','18'],['Sat','19']]; var activeDay='Tue';
+  function renderSched(){ $('#daypick').innerHTML=days.map(function(d){return '<div class="d'+(d[0]===activeDay?' on':'')+'" onclick="pickDay(\''+d[0]+'\')"><div class="dow">'+d[0]+'</div><div class="num">'+d[1]+'</div></div>';}).join('');
+    var list=sched[activeDay]||[]; $('#sched-list').innerHTML = list.length ? list.map(function(s){return '<div class="slot"><div class="time">'+s[0]+'</div><div class="jb"><div class="t">'+s[1]+'</div><div class="d">'+s[2]+'</div></div></div>';}).join('') : '<div class="hint" style="margin-top:30px">No jobs this day — a clear route.</div>'; }
+  function pickDay(d){ activeDay=d; renderSched(); }
+
+  // toast + success
+  var tt; function toast(m){ var el=$('#toast'); el.textContent=m; el.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){el.classList.remove('show');},1600); }
+  function showSuccess(t,m,mono){ $('#suc-title').textContent=t; $('#suc-msg').textContent=m; $('#suc-mono').textContent=mono||''; $('#success').classList.add('show'); }
+  function closeSuccess(){ $('#success').classList.remove('show'); $('#tabs').style.display='flex'; stack=['today']; go('today'); if(currentJob&&currentJob.status>=5){/*keep*/} openJobRefresh(); }
+  function openJobRefresh(){ /* no-op: returning home */ }
+
+  // init
+  renderToday(); chrome('today');
+</script>
+</body>
+</html>
