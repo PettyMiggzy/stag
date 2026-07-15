@@ -298,6 +298,40 @@
     $('btn-saint-on') && ($('btn-saint-on').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'setMintActive', [true], 'Saints mint opened ✓'));
     $('btn-saint-off') && ($('btn-saint-off').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'setMintActive', [false], 'Saints mint paused ✓'));
     $('btn-saint-forward') && ($('btn-saint-forward').onclick = () => ownerSend(SAINTS(), SAINTS_ABI, 'forwardProceeds', [], 'Saints sales forwarded → burn / pool / team ✓'));
+
+    // ---- Burn $STAG (send to the dead address) ----
+    const DEAD = '0x000000000000000000000000000000000000dEaD';
+    const STAGADDR = () => (window.HOODED && window.HOODED.stag) || '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+    const STAG_ABI = ['function transfer(address,uint256) returns (bool)', 'function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
+    async function loadBurnStats() {
+      try {
+        const c = new ethers.Contract(STAGADDR(), STAG_ABI, new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], CHAIN_ID, { staticNetwork: true }));
+        const dec = await c.decimals().catch(() => 18);
+        const tot = await c.balanceOf(DEAD);
+        const te = $('burn-total'); if (te) te.textContent = '· ' + Number(ethers.formatUnits(tot, dec)).toLocaleString() + ' burned so far';
+        if (me) { const mb = await c.balanceOf(me); const be = $('burn-bal'); if (be) be.textContent = Number(ethers.formatUnits(mb, dec)).toLocaleString() + ' $STAG'; }
+      } catch (e) {}
+    }
+    $('btn-burn') && ($('btn-burn').onclick = async () => {
+      if (!signer) return toast('Connect your wallet first.', 'err');
+      const amtStr = ($('in-burn-amt').value || '').trim();
+      if (!amtStr || +amtStr <= 0) return toast('Enter an amount of $STAG to burn.', 'err');
+      try {
+        const c = new ethers.Contract(STAGADDR(), STAG_ABI, signer);
+        const dec = await c.decimals().catch(() => 18);
+        const amt = ethers.parseUnits(amtStr, dec);
+        if ((await c.balanceOf(me)) < amt) return toast('Not enough $STAG in your wallet to burn that much.', 'err');
+        if (!confirm('Burn ' + (+amtStr).toLocaleString() + ' $STAG? This is PERMANENT and cannot be undone.')) return;
+        toast('Confirm the burn in your wallet…');
+        const tx = await c.transfer(DEAD, amt);
+        toast('Submitted — waiting for confirmation…');
+        await tx.wait();
+        toast('🔥 Burned ' + (+amtStr).toLocaleString() + ' $STAG — gone forever.', 'ok');
+        $('in-burn-amt').value = '';
+        loadBurnStats();
+      } catch (e) { toast(pretty(e), 'err'); }
+    });
+    loadBurnStats();
     // show unswept Saints sales sitting in the contract
     (async () => { try { const s = SAINTS(); const el = $('saint-bal'); if (!s || !el) return;
       const b = await new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], CHAIN_ID, { staticNetwork: true }).getBalance(s);
