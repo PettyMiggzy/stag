@@ -334,32 +334,57 @@
     loadBurnStats();
 
     // ---- Fund all pools evenly (Stag Staking + Sherwood Vault) ----
-    const POOLS = () => [ADDR.staking(), (store.get('vault') || (window.HOODED && window.HOODED.vault) || '')].filter(Boolean);
+    // Canonical reward pools, deduped so we never fund the same address twice.
+    // Each entry is {name, addr}; a stale/duplicate override can't collapse two pools onto one.
+    const POOLS = () => {
+      const vaultAddr = store.get('vault') || (window.HOODED && window.HOODED.vault) || '';
+      const raw = [{ name: 'Stag Staking', addr: ADDR.staking() }, { name: 'Sherwood Vault', addr: vaultAddr }];
+      const seen = new Set(), out = [];
+      for (const p of raw) {
+        if (!ethers.isAddress(p.addr)) continue;
+        const k = p.addr.toLowerCase();
+        if (seen.has(k)) continue;           // drop duplicates — the bug that sent both halves to Staking
+        seen.add(k); out.push(p);
+      }
+      return out;
+    };
     $('btn-poolfund') && ($('btn-poolfund').onclick = async () => {
       if (!signer) return toast('Connect your wallet first.', 'err');
       const amtStr = ($('in-poolfund-amt').value || '').trim();
       if (!amtStr || +amtStr <= 0) return toast('Enter a total ETH amount.', 'err');
       const pools = POOLS();
       if (!pools.length) return toast('No pool addresses configured.', 'err');
+      // Verify each pool is a real, distinct contract before touching funds.
+      for (const pl of pools) {
+        try { if ((await provider.getCode(pl.addr)) === '0x') return toast('No contract at ' + pl.name + ' (' + pl.addr.slice(0, 8) + '…) — check Config.', 'err'); }
+        catch (e) { return toast('Could not verify ' + pl.name + ' on-chain. Try again.', 'err'); }
+      }
       const daysStr = ($('in-poolfund-days').value || '').trim();
       const total = parseEth(amtStr), each = total / BigInt(pools.length);
       const dur = daysStr && +daysStr > 0 ? BigInt(Math.round(+daysStr * 86400)) : 0n;
+      const eachEth = ethers.formatEther(each);
+      // Show EXACTLY what's about to happen — distinct pools, amounts, and whether it pays out.
+      const plan = pools.map((pl) => '  • ' + pl.name + ' (' + pl.addr.slice(0, 6) + '…' + pl.addr.slice(-4) + ') — ' + eachEth + ' Ξ').join('\n');
+      const payLine = dur > 0n
+        ? '\nStream: ' + daysStr + ' days → stakers start earning immediately.'
+        : '\n⚠ No days entered — this only PARKS the ETH. Nobody gets paid until you set a days value. Continue anyway?';
+      if (!confirm('Fund ' + pools.length + ' pool(s) with ' + amtStr + ' Ξ total:\n\n' + plan + '\n' + payLine)) return;
       const DON = ['function donate() payable'], NOT = ['function notifyRewardAmount(uint256,uint256)'];
       try {
-        for (const pool of pools) {
-          toast('Funding ' + pool.slice(0, 6) + '… confirm in wallet');
-          await (await new ethers.Contract(pool, DON, signer).donate({ value: each })).wait();
-          if (dur > 0n) { toast('Starting stream on ' + pool.slice(0, 6) + '…');
-            await (await new ethers.Contract(pool, NOT, signer).notifyRewardAmount(each, dur)).wait(); }
+        for (const pl of pools) {
+          toast('Funding ' + pl.name + '… confirm in wallet');
+          await (await new ethers.Contract(pl.addr, DON, signer).donate({ value: each })).wait();
+          if (dur > 0n) { toast('Starting stream on ' + pl.name + '…');
+            await (await new ethers.Contract(pl.addr, NOT, signer).notifyRewardAmount(each, dur)).wait(); }
         }
-        toast('✓ Split ' + amtStr + ' Ξ evenly across ' + pools.length + ' pools' + (dur > 0n ? ' — now streaming' : ''), 'ok');
+        toast('✓ Split ' + amtStr + ' Ξ across ' + pools.map((p) => p.name).join(' + ') + (dur > 0n ? ' — now streaming' : ' — parked (set days to pay out)'), 'ok');
         loadDashboard();
       } catch (e) { toast(pretty(e), 'err'); }
     });
     // live pool balances hint
     (async () => { try { const el = $('pf-bal'); if (!el) return;
       const p = new ethers.JsonRpcProvider(CHAIN.rpcUrls[0], CHAIN_ID, { staticNetwork: true });
-      const bals = await Promise.all(POOLS().map((a) => p.getBalance(a).catch(() => 0n)));
+      const bals = await Promise.all(POOLS().map((pl) => p.getBalance(pl.addr).catch(() => 0n)));
       el.textContent = '· pools hold ' + bals.reduce((s, b) => s + Number(ethers.formatEther(b)), 0).toFixed(4) + ' ETH'; } catch (e) {} })();
 
     // show unswept Saints sales sitting in the contract
