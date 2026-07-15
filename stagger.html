@@ -81,6 +81,11 @@
   .card .body{padding:20px}
   .card h3{font-size:20px;font-weight:800}
   .card p{color:var(--ink-dim);margin:8px 0 0;font-size:15px}
+  .caps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+  @media(max-width:860px){.caps{grid-template-columns:1fr}}
+  .cap-i{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;border-left:3px solid var(--green)}
+  .cap-i h3{font-size:17px;font-weight:800}
+  .cap-i p{color:var(--ink-dim);margin:7px 0 0;font-size:14.5px}
 
   /* why on-chain */
   .why{background:var(--green-deep);color:#eafff1;border-radius:24px;padding:44px;margin-top:8px}
@@ -152,9 +157,9 @@
 <section class="hero">
   <div class="wrap grid">
     <div>
-      <span class="pill"><span class="dot"></span> Field-service software with crypto payments built in</span>
-      <h1>Run your service business <span class="u">on-chain.</span></h1>
-      <p class="sub">Quote, schedule, invoice, and <b>get paid in $STAG or ETH</b> — instant settlement, <b>no 3% processor fees</b>, no chargebacks. All in one app, built on Robinhood Chain.</p>
+      <span class="pill"><span class="dot"></span> The CRM built for junk removal &amp; moving</span>
+      <h1>Run your junk removal &amp; moving business <span class="u">from one app.</span></h1>
+      <p class="sub">Estimates, scheduling, route optimization, invoicing, follow-ups, team management, and <b>payments</b> — everything a hauling or moving crew needs to run the day. Built by operators, powered by <b>$STAG</b>.</p>
       <div class="cta">
         <a class="btn primary" href="#waitlist">Join the waitlist →</a>
         <a class="btn ghost" href="#how">See how it works</a>
@@ -170,8 +175,8 @@
 
 <div class="verticals">
   <div class="wrap">
-    <p>Built for the crews that get paid for showing up</p>
-    <div class="row"><span>Landscaping</span><span>Cleaning</span><span>HVAC</span><span>Plumbing</span><span>Contracting</span><span>Detailing</span><span>Pressure washing</span></div>
+    <p>Built for junk removal &amp; moving crews — by people who run one</p>
+    <div class="row"><span>Junk Removal</span><span>Moving</span><span>Hauling</span><span>Demolition</span><span>Dumpster Rental</span><span>Labor Crews</span></div>
   </div>
 </div>
 
@@ -185,17 +190,32 @@
     </div>
     <div class="features">
       <article class="card">
-        <div class="art"><img src="assets/stagger/quote.png" alt="Digital quote" /></div>
-        <div class="body"><h3>Quote &amp; win jobs</h3><p>Build branded estimates in minutes, send by text or email, and let clients approve online with one tap.</p></div>
+        <div class="art"><img src="assets/stagger/quote.png" alt="On-site estimate" /></div>
+        <div class="body"><h3>Estimate on the spot</h3><p>Send a branded quote from the driveway in minutes; the customer approves with one tap. Win the job before you leave.</p></div>
       </article>
       <article class="card">
-        <div class="art"><img src="assets/stagger/schedule.png" alt="Scheduling" /></div>
-        <div class="body"><h3>Schedule &amp; dispatch</h3><p>Drag-and-drop calendar, assign crews, and share on-my-way updates so nobody's left guessing.</p></div>
+        <div class="art"><img src="assets/stagger/schedule.png" alt="Schedule and route" /></div>
+        <div class="body"><h3>Schedule &amp; optimize routes</h3><p>Drag-and-drop calendar, assign crews, and auto-optimize the day's route — burn less gas, fit in more hauls.</p></div>
       </article>
       <article class="card">
-        <div class="art"><img src="assets/stagger/getpaid.png" alt="Get paid in crypto" /></div>
-        <div class="body"><h3>Get paid on-chain</h3><p>Turn any quote into an invoice, send a pay link, and the client pays in <b>$STAG or ETH</b> — money hits your wallet in seconds.</p></div>
+        <div class="art"><img src="assets/stagger/getpaid.png" alt="Get paid your way" /></div>
+        <div class="body"><h3>Get paid — your way</h3><p>Card, ACH, or crypto. Take payment on-site or send a pay link. Owners can settle and hold in <b>$STAG</b> for lower fees.</p></div>
       </article>
+    </div>
+  </div>
+</section>
+
+<!-- CAPABILITIES -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Everything else the job needs</span><h2>The whole operation, not just the parts.</h2></div>
+    <div class="caps">
+      <div class="cap-i"><h3>Route optimization</h3><p>Sequence the day's stops automatically — less windshield time, more jobs.</p></div>
+      <div class="cap-i"><h3>Estimates &amp; invoicing</h3><p>Quote → invoice in one tap, sent by text with a pay link attached.</p></div>
+      <div class="cap-i"><h3>Customer follow-ups</h3><p>Automatic reminders, on-my-way texts, and “rate us” asks that print reviews.</p></div>
+      <div class="cap-i"><h3>Team management</h3><p>Assign crews, track hours, and see who's where in real time.</p></div>
+      <div class="cap-i"><h3>Reviews &amp; referrals</h3><p>Turn happy hauls into 5-star reviews and repeat bookings on autopilot.</p></div>
+      <div class="cap-i"><h3>Online booking</h3><p>Let customers book straight from your site, IG, or a link in your bio.</p></div>
     </div>
   </div>
 </section>
