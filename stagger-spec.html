@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Stagger — v1 Build Spec</title>
+</head>
+<body>
+
+<style>
+  :root{
+    --bg:#f5f9f5; --panel:#ffffff; --panel-2:#eef4ef; --ink:#14261b; --ink-dim:#4c6053; --ink-faint:#7c9186;
+    --green:#1c7a41; --green-deep:#14532d; --green-soft:#e6f4ea; --gold:#b8892f; --line:#d9e8dd;
+    --code-bg:#eef4ef; --shadow:0 18px 44px -28px rgba(20,60,40,.35);
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#0b1610;--panel:#122018;--panel-2:#16281d;--ink:#eaf6ec;--ink-dim:#a7c1b0;--ink-faint:#6f8a79;
+    --green:#3ecb6e;--green-deep:#8ff0ad;--green-soft:#14301f;--gold:#e8bb5c;--line:#22382a;--code-bg:#16281d;--shadow:0 24px 60px -30px rgba(0,0,0,.7);}}
+  :root[data-theme="light"]{--bg:#f5f9f5;--panel:#fff;--panel-2:#eef4ef;--ink:#14261b;--ink-dim:#4c6053;--ink-faint:#7c9186;--green:#1c7a41;--green-deep:#14532d;--green-soft:#e6f4ea;--gold:#b8892f;--line:#d9e8dd;--code-bg:#eef4ef;--shadow:0 18px 44px -28px rgba(20,60,40,.35);}
+  :root[data-theme="dark"]{--bg:#0b1610;--panel:#122018;--panel-2:#16281d;--ink:#eaf6ec;--ink-dim:#a7c1b0;--ink-faint:#6f8a79;--green:#3ecb6e;--green-deep:#8ff0ad;--green-soft:#14301f;--gold:#e8bb5c;--line:#22382a;--code-bg:#16281d;--shadow:0 24px 60px -30px rgba(0,0,0,.7);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:400 16.5px/1.68 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .shell{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:1140px;margin:0 auto}
+  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:26px 16px;border-right:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent)}
+  aside .mk{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px}
+  aside .mk b{color:var(--green)} aside .sub{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:4px 0 18px}
+  aside nav{display:flex;flex-direction:column;gap:1px}
+  aside nav a{color:var(--ink-dim);text-decoration:none;font-size:13.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent}
+  aside nav a:hover{background:var(--panel);color:var(--ink)} aside nav a.active{color:var(--green);border-left-color:var(--green);background:var(--panel)}
+  main{padding:40px 44px 90px;min-width:0}
+  @media(max-width:820px){.shell{grid-template-columns:1fr}aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}aside nav{display:none}main{padding:28px 20px 60px}}
+
+  .head{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:8px}
+  .eyebrow{font:700 12px/1 system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  h1{font-size:clamp(30px,5vw,44px);margin:12px 0 0;letter-spacing:-.02em;font-weight:800;text-wrap:balance}
+  .head p{color:var(--ink-dim);margin:12px 0 0;max-width:66ch}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .tag{font-size:11.5px;padding:5px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-dim)}
+  .tag.g{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent);background:var(--green-soft)}
+
+  h2{font-size:25px;margin:52px 0 0;padding-top:12px;font-weight:800;letter-spacing:-.01em;scroll-margin-top:16px;text-wrap:balance}
+  h2 .n{color:var(--gold);font-size:16px;font-style:italic;margin-right:8px}
+  h3{font-size:18px;margin:26px 0 0;font-weight:700}
+  p{margin:12px 0 0} ul,ol{margin:12px 0 0;padding-left:22px} li{margin:6px 0}
+  strong{color:var(--ink)}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.86em;background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:var(--gold)}
+  a{color:var(--green)}
+  .box{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:15px 18px;margin-top:18px;box-shadow:var(--shadow)}
+  .box.key{border-left:3px solid var(--green);background:var(--green-soft)}
+  .box .bt{font:700 11.5px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:6px}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px;font-weight:700;font-size:14px}
+  .flow span{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 13px}
+  .flow .a{color:var(--gold)}
+  .scroll{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+  th{font:700 11px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);background:var(--panel-2)}
+  tr:last-child td{border-bottom:none} td.k{font-weight:700;white-space:nowrap}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .pills .p{font-size:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 11px}
+  .phase{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:18px;margin-top:14px}
+  .phase .pn{font:700 11px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+  .phase h3{margin-top:4px}
+  .divider{height:1px;background:var(--line);margin:40px 0 0}
+</style>
+
+<div class="shell">
+  <aside>
+    <div class="mk">Stag<b>ger</b></div>
+    <div class="sub">v1 Build Spec</div>
+    <nav id="toc">
+      <a href="#tldr">TL;DR</a>
+      <a href="#principles">Guiding principles</a>
+      <a href="#scope">v1 scope</a>
+      <a href="#roles">Roles</a>
+      <a href="#journey">The core loop</a>
+      <a href="#data">Data model</a>
+      <a href="#screens">Screens</a>
+      <a href="#pay">Payments &amp; $STAG</a>
+      <a href="#stack">Tech stack</a>
+      <a href="#phases">Build phases</a>
+      <a href="#later">Out of scope</a>
+      <a href="#decisions">Open decisions</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="head">
+      <span class="eyebrow">Product Spec · Internal</span>
+      <h1>Stagger — v1 Build Spec</h1>
+      <p>The CRM for junk removal &amp; moving crews, with $STAG on the rails. This spec defines the smallest version that runs a real job end-to-end — so we can ship it, dogfood it on a real North Houston operation, and film it. Everything not required for that loop is explicitly deferred.</p>
+      <div class="meta">
+        <span class="tag g">v1 · MVP</span>
+        <span class="tag">Niche: junk removal &amp; moving</span>
+        <span class="tag">Customer #1: our own company</span>
+      </div>
+    </div>
+
+    <h2 id="tldr"><span class="n">01</span>TL;DR</h2>
+    <p>Build the smallest thing that takes a customer from <strong>lead → estimate → scheduled job → invoice → paid</strong>, with a clean mobile-first UI a crew can run from a truck. Payments work normally (card) <strong>and</strong> can settle in <strong>$STAG/ETH</strong>. $STAG lives on the <em>owner</em> side (subscription + perks), so customers never need a wallet. We are customer #1; the content engine is the growth channel.</p>
+    <div class="box key"><div class="bt">The one job of v1</div><p>Run a real paid job through Stagger, on video, without falling back to paper or another app. If v1 can't do that, nothing else matters yet.</p></div>
+
+    <h2 id="principles"><span class="n">02</span>Guiding principles</h2>
+    <ul>
+      <li><strong>Vertical, not horizontal.</strong> Every label, default, and flow assumes junk removal / moving — not "field service in general."</li>
+      <li><strong>Dogfood first.</strong> Our own company is the only user that matters for v1. Build what that operation actually needs each day.</li>
+      <li><strong>$STAG on the owner side.</strong> The business pays for Stagger and earns perks in $STAG; end customers pay however they want. Zero wallet friction for the couch-haul customer.</li>
+      <li><strong>Mobile-first.</strong> The crew lives on a phone in a driveway. Desktop is for the back office.</li>
+      <li><strong>Low backend, boring stack.</strong> Reuse the existing Neon Postgres. No microservices, no premature scale.</li>
+      <li><strong>Ship the loop, defer the polish.</strong> Route optimization, reviews automation, payroll — all v2.</li>
+    </ul>
+
+    <h2 id="scope"><span class="n">03</span>v1 scope</h2>
+    <h3>In</h3>
+    <div class="pills">
+      <span class="p">Client list (CRM)</span><span class="p">Create estimate</span><span class="p">Send estimate (SMS/email link)</span><span class="p">Customer approves online</span>
+      <span class="p">Schedule job on a calendar</span><span class="p">Assign a crew</span><span class="p">Convert to invoice</span><span class="p">Send pay link</span>
+      <span class="p">Card payment</span><span class="p">$STAG / ETH payment option</span><span class="p">Mark paid (auto)</span><span class="p">Basic job status</span><span class="p">Owner login + one business</span>
+    </div>
+    <h3>Out (v2+)</h3>
+    <div class="pills">
+      <span class="p">Route optimization</span><span class="p">Automated review requests</span><span class="p">Online public booking</span><span class="p">Multi-business / franchises</span>
+      <span class="p">Payroll / timesheets</span><span class="p">Inventory / dump fees</span><span class="p">Marketing automation</span><span class="p">AI receptionist</span><span class="p">Recurring jobs</span>
+    </div>
+
+    <h2 id="roles"><span class="n">04</span>Roles</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Role</th><th>Who</th><th>Can do</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Owner / Admin</td><td>You</td><td>Everything: clients, estimates, schedule, invoices, settings, payouts, $STAG.</td></tr>
+        <tr><td class="k">Crew</td><td>Your workers</td><td>See assigned jobs, update status, capture photos, collect payment on-site. (v1 can start with owner-only and add crew accounts fast.)</td></tr>
+        <tr><td class="k">Customer</td><td>The homeowner/business</td><td>No account. Opens a link to approve an estimate and pay an invoice. That's it.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box"><div class="bt">Note</div><p>v1 can launch <strong>owner-only</strong> and add crew logins in the first update — don't let multi-user auth block the first filmed job.</p></div>
+
+    <h2 id="journey"><span class="n">05</span>The core loop</h2>
+    <div class="flow">
+      <span>Lead / client</span><span class="a">→</span><span>Estimate</span><span class="a">→</span><span>Customer approves</span><span class="a">→</span><span>Scheduled job</span><span class="a">→</span><span>Work done</span><span class="a">→</span><span>Invoice</span><span class="a">→</span><span>Paid</span>
+    </div>
+    <ol>
+      <li><strong>Add a client</strong> (name, phone, address) — or it's created inline while making an estimate.</li>
+      <li><strong>Build an estimate</strong> — line items (e.g., "single item," "half load," "full load," "labor / hr"), a total, optional photos. One tap to send by SMS/email.</li>
+      <li><strong>Customer opens the link</strong> (no login) → sees a clean branded estimate → taps <strong>Approve</strong>. Owner gets notified.</li>
+      <li><strong>Schedule it</strong> — drop the approved job on a day/time, assign a crew.</li>
+      <li><strong>Do the job</strong> — crew marks <em>On the way → Started → Done</em>, snaps before/after photos.</li>
+      <li><strong>Invoice</strong> — one tap turns the estimate into an invoice (adjust if the load grew), sends a <strong>pay link</strong>.</li>
+      <li><strong>Get paid</strong> — customer pays by <strong>card</strong> or <strong>$STAG/ETH</strong>; job auto-marks <em>Paid</em>. Done.</li>
+    </ol>
+
+    <h2 id="data"><span class="n">06</span>Data model</h2>
+    <p>Postgres (Neon). Keep it flat and obvious. Core tables:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Table</th><th>Key fields</th></tr></thead>
+      <tbody>
+        <tr><td class="k">business</td><td><code>id, name, logo_url, brand_color, payout_wallet, stag_perks_tier, created_at</code></td></tr>
+        <tr><td class="k">user</td><td><code>id, business_id, name, email, role (owner|crew), phone</code></td></tr>
+        <tr><td class="k">client</td><td><code>id, business_id, name, phone, email, address, notes, created_at</code></td></tr>
+        <tr><td class="k">job</td><td><code>id, business_id, client_id, status (lead|estimated|approved|scheduled|in_progress|done|invoiced|paid), scheduled_at, assigned_user_id, address, photos[]</code></td></tr>
+        <tr><td class="k">estimate</td><td><code>id, job_id, public_token, status (draft|sent|approved|declined), subtotal, tax, total, approved_at</code></td></tr>
+        <tr><td class="k">line_item</td><td><code>id, estimate_id|invoice_id, label, qty, unit_price, amount</code></td></tr>
+        <tr><td class="k">invoice</td><td><code>id, job_id, public_token, status (sent|paid|void), total, paid_at, payment_method (card|stag|eth)</code></td></tr>
+        <tr><td class="k">payment</td><td><code>id, invoice_id, method, amount, tx_hash (if crypto), processor_id (if card), status, created_at</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="box"><div class="bt">Public tokens</div><p>Estimates &amp; invoices carry an unguessable <code>public_token</code> so the customer link (<code>/e/&lt;token&gt;</code>, <code>/pay/&lt;token&gt;</code>) works with no login. That's the whole "client hub" for v1.</p></div>
+
+    <h2 id="screens"><span class="n">07</span>Screens</h2>
+    <h3>Owner / crew app (auth'd, mobile-first)</h3>
+    <ul>
+      <li><strong>Today</strong> — today's jobs, statuses, quick actions.</li>
+      <li><strong>Clients</strong> — list + search, client detail with job history.</li>
+      <li><strong>New estimate</strong> — pick/create client → add line items → send.</li>
+      <li><strong>Schedule</strong> — simple day/week calendar, drag a job onto a slot, assign crew.</li>
+      <li><strong>Job detail</strong> — status stepper, photos, estimate/invoice, "Send invoice," "Collect payment."</li>
+      <li><strong>Settings</strong> — business name, logo, brand color, payout wallet, default line-item presets, $STAG perks.</li>
+    </ul>
+    <h3>Customer (public, no login)</h3>
+    <ul>
+      <li><strong>Estimate view</strong> <code>/e/&lt;token&gt;</code> — branded estimate + <strong>Approve</strong> / Decline.</li>
+      <li><strong>Pay view</strong> <code>/pay/&lt;token&gt;</code> — invoice + <strong>Pay by card</strong> or <strong>Pay with crypto ($STAG/ETH)</strong>.</li>
+      <li><strong>Receipt</strong> — confirmation + on-chain link if paid in crypto.</li>
+    </ul>
+
+    <h2 id="pay"><span class="n">08</span>Payments &amp; $STAG</h2>
+    <h3>Two rails, one invoice</h3>
+    <ul>
+      <li><strong>Card / ACH</strong> — via a processor (Stripe or similar). This is the default so <em>any</em> customer can pay. <em>(Requires a merchant account; see decisions.)</em></li>
+      <li><strong>Crypto ($STAG / ETH on Robinhood Chain)</strong> — the pay page shows a wallet-connect + exact amount; on confirmation we record <code>tx_hash</code> and auto-mark paid. Instant settlement, no processor fee.</li>
+    </ul>
+    <h3>Where $STAG actually creates demand</h3>
+    <div class="box key">
+      <div class="bt">$STAG is on the owner side</div>
+      <ul style="margin-top:2px">
+        <li><strong>Subscription in $STAG</strong> — businesses pay their Stagger plan in $STAG (or get a discount for doing so). Recurring buy pressure from real revenue.</li>
+        <li><strong>Perk tiers</strong> — hold/stake $STAG → lower platform fee, higher limits, premium features (<code>stag_perks_tier</code>).</li>
+        <li><strong>Optional crypto settlement</strong> — owners who want it can take customer payments straight to their wallet, or auto-convert card revenue toward $STAG.</li>
+      </ul>
+    </div>
+    <p>The end customer is <strong>never forced</strong> into crypto — that's what keeps adoption frictionless while still driving real, recurring $STAG volume from businesses.</p>
+
+    <h2 id="stack"><span class="n">09</span>Tech stack</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Frontend</td><td>Next.js on Vercel (already the site's stack)</td><td>One deploy target, mobile-first, fast.</td></tr>
+        <tr><td class="k">DB</td><td>Neon Postgres (already wired)</td><td>Reuse existing infra — near-zero new backend cost.</td></tr>
+        <tr><td class="k">Auth</td><td>Email magic-link (owner/crew only)</td><td>No passwords; customers need none at all.</td></tr>
+        <tr><td class="k">Card payments</td><td>Stripe (or Robinhood-Chain-friendly processor)</td><td>Proven, handles compliance surface.</td></tr>
+        <tr><td class="k">Crypto payments</td><td>WalletConnect + Robinhood Chain (same rails as the mint/stake site)</td><td>We already have this working end-to-end.</td></tr>
+        <tr><td class="k">SMS/email</td><td>A transactional provider (e.g. Twilio / Resend)</td><td>Estimate + invoice links.</td></tr>
+        <tr><td class="k">Hosting</td><td>Subdomain, e.g. <code>app.stagger.*</code> or <code>stagger.stagwifhood.fun</code></td><td>Keeps the product separate from the token site.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="phases"><span class="n">10</span>Build phases</h2>
+    <div class="phase"><div class="pn">Phase 1 · Loop skeleton</div><h3>Clients → estimate → approve → invoice → mark paid (manual)</h3><p>No real payments yet — just the data model, the auth'd app, and the two public link pages. Prove the flow end-to-end. <strong>Milestone: run a fake job start to finish.</strong></p></div>
+    <div class="phase"><div class="pn">Phase 2 · Get paid for real</div><h3>Card + crypto on the pay page</h3><p>Wire Stripe and WalletConnect/$STAG payment, auto-mark paid, receipt with on-chain link. <strong>Milestone: take a real $ payment on a real job (film it).</strong></p></div>
+    <div class="phase"><div class="pn">Phase 3 · Crew + schedule</div><h3>Calendar, crew accounts, job statuses, photos</h3><p>Make it a daily driver for the crew, not just the owner. <strong>Milestone: the crew runs a full day out of Stagger.</strong></p></div>
+    <div class="phase"><div class="pn">Phase 4 · $STAG owner layer</div><h3>Subscription in $STAG + perk tiers</h3><p>Turn on the business-side $STAG economics. <strong>Milestone: first business pays its plan in $STAG.</strong></p></div>
+
+    <h2 id="later"><span class="n">11</span>Out of scope (deliberately)</h2>
+    <p>Named so nobody sneaks them into v1: route optimization, automated review/referral engine, public online booking, recurring jobs, payroll/timesheets, dump-fee &amp; inventory tracking, multi-business/franchise, AI receptionist, marketing automation, QuickBooks sync. All real, all v2+.</p>
+
+    <h2 id="decisions"><span class="n">12</span>Open decisions (need answers to start)</h2>
+    <ol>
+      <li><strong>Card processor &amp; entity.</strong> Taking customer money means a merchant account and likely an LLC + money-handling terms. Who's the merchant of record — your junk-removal LLC, or a new Stagger entity? This gates Phase 2.</li>
+      <li><strong>Crypto settlement default.</strong> Do crypto payments go straight to the owner's wallet, or through a Stagger contract that takes a small fee in $STAG? (The latter is where platform revenue + burn can live.)</li>
+      <li><strong>Domain.</strong> <code>stagger.app</code> / its own domain, or <code>stagger.stagwifhood.fun</code> for v1?</li>
+      <li><strong>Line-item presets.</strong> Give me your real junk-removal pricing tiers (min charge, 1/4 / 1/2 / full load, labor rate, moving hourly) so the estimate builder ships with <em>your</em> defaults.</li>
+      <li><strong>Who builds it.</strong> Is the dev taking this, am I speccing for them, or do you want me to start Phase 1 scaffolding?</li>
+    </ol>
+
+    <div class="divider"></div>
+    <p style="margin-top:22px;color:var(--ink-faint);font-size:13px">Stagger v1 spec · a $STAGWIFHOOD product · draft for review. Scope is intentionally minimal — the goal is a filmed, real, paid job running through the app, then iterate from there.</p>
+  </main>
+</div>
+
+<script>
+  (function(){var ls=[].slice.call(document.querySelectorAll('#toc a')),m={};ls.forEach(function(a){m[a.getAttribute('href').slice(1)]=a;});
+  if(!('IntersectionObserver'in window))return;var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){ls.forEach(function(l){l.classList.remove('active')});var a=m[e.target.id];if(a)a.classList.add('active');}})},{rootMargin:'-12% 0px -80% 0px'});
+  document.querySelectorAll('h2[id]').forEach(function(s){io.observe(s)});})();
+</script>
+
+</body>
+</html>
