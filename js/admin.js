@@ -412,7 +412,7 @@
     };
 
     // ----- staking admin -----
-    const stk = () => store.get('staking');
+    const stk = () => ADDR.staking(); // falls back to window.HOODED.staking when Config was never saved to this browser
     $('sk-fund') && ($('sk-fund').onclick = async () => {
       if (!signer) return toast('Connect wallet first.', 'err');
       const addr = stk();
