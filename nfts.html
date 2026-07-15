@@ -369,8 +369,12 @@
       try { const a = await window.ethereum?.request({ method: 'eth_accounts' }); return a && a[0] ? a[0].toLowerCase() : null; } catch (e) { return null; }
     }
     async function refresh() {
-      let price = 0n, active = false, avail = [];
-      try { [price, active, avail] = await Promise.all([c.mintPrice(), c.mintActive(), c.availableIds()]); } catch (e) { return; }
+      // best-effort reads with sensible defaults — a flaky mobile RPC must NEVER leave the mint buttons
+      // dead/unwired. The mint() call re-checks price, free-mint, network + balance at tap time anyway.
+      let price = 30000000000000000n, active = true, avail = [1, 2, 3, 4, 5];
+      try { price = await c.mintPrice(); } catch (e) {}
+      try { active = await c.mintActive(); } catch (e) {}
+      try { avail = (await c.availableIds()).map(Number); } catch (e) {}
       const availSet = new Set(avail.map(Number));
       const eth = Number(ethers.formatEther(price)).toString();
       const me = await currentAccount();
