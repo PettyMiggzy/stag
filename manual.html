@@ -96,41 +96,9 @@
     main{padding:28px 20px 70px}
   }
 
-  body.locked{overflow:hidden}
-  body.locked .shell{display:none}
-  #gate{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;
-    background:radial-gradient(120% 90% at 50% 15%,color-mix(in srgb,var(--lime) 10%,transparent),var(--ground) 65%),var(--ground);padding:22px}
-  body.locked #gate{display:flex}
-  .gate-card{width:100%;max-width:400px;text-align:center;border:1px solid var(--hair);border-radius:18px;
-    background:var(--panel);padding:38px 30px;box-shadow:0 30px 70px -30px rgba(0,0,0,.8)}
-  .gate-card .lock{font-size:34px}
-  .gate-card h1{font-size:24px;margin:14px 0 0}
-  .gate-card p{color:var(--ink-dim);font-size:14.5px;margin:8px 0 0}
-  .gate-card form{display:flex;flex-direction:column;gap:10px;margin-top:22px}
-  .gate-card input{font:600 16px/1 ui-monospace,monospace;letter-spacing:.05em;text-align:center;color:var(--ink);
-    background:var(--panel-2);border:1px solid var(--hair);border-radius:11px;padding:14px}
-  .gate-card input:focus{outline:none;border-color:var(--lime)}
-  .gate-card button{font:800 15px/1 system-ui;cursor:pointer;color:#06140a;background:var(--lime);border:none;border-radius:11px;padding:14px}
-  .gate-card button:hover{filter:brightness(1.06)}
-  .gate-err{color:#ff7a6a;font-size:13px;min-height:18px;margin-top:2px}
 </style>
 </head>
 <body>
-
-<div id="gate">
-  <div class="gate-card">
-    <div class="lock">🔒</div>
-    <h1 class="serif">Sherwood Field Manual</h1>
-    <p>Internal team reference. Enter the access code to continue.</p>
-    <form id="gate-form" autocomplete="off">
-      <input id="gate-input" type="password" placeholder="Access code" aria-label="Access code" autofocus />
-      <div class="gate-err" id="gate-err"></div>
-      <button type="submit">Enter &#8594;</button>
-    </form>
-  </div>
-</div>
-
-
 
 <div class="shell">
   <aside>
@@ -400,22 +368,5 @@
     secs.forEach(function(s){ io.observe(s); });
   })();
 </script>
-
-
-<script>
-(function(){
-  var CODE="Stag4Life", KEY="sfh_manual_ok";
-  var b=document.body;
-  function unlock(){ b.classList.remove("locked"); b.classList.add("unlocked"); }
-  try{ if(sessionStorage.getItem(KEY)==="1"){ unlock(); return; } }catch(e){}
-  b.classList.add("locked");
-  var f=document.getElementById("gate-form"), i=document.getElementById("gate-input"), er=document.getElementById("gate-err");
-  f.addEventListener("submit",function(e){ e.preventDefault();
-    if(i.value===CODE){ try{ sessionStorage.setItem(KEY,"1"); }catch(_){ } unlock(); }
-    else { er.textContent="Wrong code - ask the team lead."; i.value=""; i.focus(); }
-  });
-})();
-</script>
-
 </body>
 </html>
