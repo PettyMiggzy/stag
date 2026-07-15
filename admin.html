@@ -192,11 +192,16 @@
     <!-- Staking -->
     <div class="adm-card owner-only">
       <h2>Staking Pool</h2>
-      <p class="hint">Fund the ETH reward pool, start a reward period, tune lock &amp; holding multipliers, approve projects.</p>
-      <div class="adm-field"><label>Fund pool (ETH)</label><input id="sk-fund-amt" class="adm-input" placeholder="0.5" /><button id="sk-fund" class="btn-mini">Send</button></div>
-      <div class="adm-field"><label>Rewards (ETH)</label><input id="sk-notify-amt" class="adm-input" placeholder="0.5" style="min-width:90px" /><input id="sk-notify-days" class="adm-input" placeholder="days" style="max-width:80px" /><button id="sk-notify" class="btn-mini">Start</button></div>
+
+      <!-- ▶ THE ONE THAT PAYS STAKERS -->
+      <div style="background:rgba(40,163,90,.12);border:1px solid rgba(40,163,90,.4);border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem">
+        <p class="hint" style="margin:0 0 .5rem;color:#7fe0a0"><b>▶ Pay stakers (start payouts).</b> This is the ONLY thing that makes stakers earn. Amount = ETH to hand out · days = spread it over that many days. No contract address needed.</p>
+        <div class="adm-field"><label>Amount + days</label><input id="sk-notify-amt" class="adm-input" placeholder="0.05" style="min-width:90px" /><input id="sk-notify-days" class="adm-input" placeholder="30" style="max-width:80px" /><button id="sk-notify" class="btn-mini">Start payouts</button></div>
+      </div>
+      <div class="adm-field"><label>Add ETH to pool (no payout)</label><input id="sk-fund-amt" class="adm-input" placeholder="0.5" /><button id="sk-fund" class="btn-mini">Send</button></div>
+
       <div style="border-top:1px solid rgba(230,184,63,.18);margin:.9rem 0 .6rem;padding-top:.6rem">
-        <p class="hint" style="margin:0 0 .5rem">Whitelist another stakeable token: sets its weight on-chain (2× = 20000 bps) AND adds it to the stake picker on the site. $STAG is already whitelisted.</p>
+        <p class="hint" style="margin:0 0 .5rem"><b>Advanced — you do NOT need this to pay stakers.</b> Only to whitelist a brand-new stakeable token (needs its contract address). $STAG is already whitelisted.</p>
         <div class="adm-field"><label>Token address</label><input id="wl-tok-addr" class="adm-input" placeholder="0x…" /></div>
         <div class="adm-field"><label>Symbol · decimals</label><input id="wl-tok-sym" class="adm-input" placeholder="TICKER" style="max-width:120px" /><input id="wl-tok-dec" class="adm-input" placeholder="18" style="max-width:70px" /></div>
         <div class="adm-field"><label>Weight (bps, 20000 = 2×)</label><input id="wl-tok-w" class="adm-input" placeholder="20000" style="max-width:120px" /><button id="wl-tok" class="btn-mini">Whitelist</button></div>
@@ -206,7 +211,7 @@
         <input id="sk-mult-in-1" class="adm-input" placeholder="1.5" style="max-width:64px" /><button id="sk-mult-1" class="btn-mini">↑</button>
         <input id="sk-mult-in-2" class="adm-input" placeholder="2" style="max-width:64px" /><button id="sk-mult-2" class="btn-mini">↑</button></div>
       <div class="adm-field"><label>Holding 1M→ / 10M→ (×)</label><input id="sk-h1" class="adm-input" value="1000000" style="max-width:96px"/><input id="sk-hm1" class="adm-input" placeholder="2" style="max-width:56px"/><input id="sk-h2" class="adm-input" value="10000000" style="max-width:96px"/><input id="sk-hm2" class="adm-input" placeholder="3" style="max-width:56px"/><button id="sk-hold" class="btn-mini">Set</button></div>
-      <div class="adm-field"><label>Approve project</label><input id="sk-tok" class="adm-input" placeholder="token 0x…" /><input id="sk-tokw" class="adm-input" placeholder="× (1)" style="max-width:70px"/><button id="sk-approve" class="btn-mini">Approve</button></div>
+      <div class="adm-field"><label>Advanced: approve a token (CA)</label><input id="sk-tok" class="adm-input" placeholder="token 0x… — not needed for payouts" /><input id="sk-tokw" class="adm-input" placeholder="× (1)" style="max-width:70px"/><button id="sk-approve" class="btn-mini">Approve</button></div>
     </div>
 
     <!-- Sherwood Vault (future-proof NFT staking) -->
