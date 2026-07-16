@@ -1,30 +1,30 @@
 {
-  "name": "WANTED #09 — SHADOWHOOF",
+  "name": "WANTED #21 — THE PICKPOCKET",
   "symbol": "WANTED",
-  "description": "SHADOWHOOF. Wanted DEAD OR ALIVE murder most foul. A 1/1 animated WANTED poster of Sherwood with a bounty of 5,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
-  "image": "https://stagwifhood.fun/assets/nft/wanted/img/9.jpg",
-  "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/9.mp4",
+  "description": "THE PICKPOCKET. Wanted DEAD OR ALIVE cutting purses. A 1/1 animated WANTED poster of Sherwood with a bounty of 2,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "image": "https://stagwifhood.fun/assets/nft/wanted/img/21.jpg",
+  "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/21.mp4",
   "external_url": "https://stagwifhood.fun",
   "attributes": [
     {
       "trait_type": "Reward",
-      "value": "5,000 $STAG"
+      "value": "2,000 $STAG"
     },
     {
       "trait_type": "Rarity",
-      "value": "LEGENDARY"
+      "value": "RARE"
     },
     {
       "trait_type": "Crime",
-      "value": "Murder Most Foul"
+      "value": "Cutting Purses"
     },
     {
       "trait_type": "Weapon",
-      "value": "Twin Daggers"
+      "value": "Longbow"
     },
     {
       "trait_type": "Outlaw",
-      "value": "SHADOWHOOF"
+      "value": "THE PICKPOCKET"
     },
     {
       "trait_type": "Class",
@@ -48,12 +48,12 @@
     },
     {
       "trait_type": "Edition",
-      "value": 9
+      "value": 21
     }
   ],
   "properties": {
     "category": "video",
-    "bounty_stag": 5000,
-    "rarity": "LEGENDARY"
+    "bounty_stag": 2000,
+    "rarity": "RARE"
   }
 }

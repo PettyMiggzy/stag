@@ -1,34 +1,34 @@
 {
-  "name": "WANTED #07 — THE EMERALD BANDIT",
+  "name": "WANTED #07 — MR T",
   "symbol": "WANTED",
-  "description": "THE EMERALD BANDIT. Wanted DEAD OR ALIVE for robbing the rich. A hooded stag outlaw of Sherwood with a bounty of 5,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 20 animated 1/1 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "description": "MR T. Wanted DEAD OR ALIVE shocking the market. A 1/1 animated WANTED poster of Sherwood with a bounty of 6,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
   "image": "https://stagwifhood.fun/assets/nft/wanted/img/7.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/7.mp4",
   "external_url": "https://stagwifhood.fun",
   "attributes": [
     {
       "trait_type": "Reward",
-      "value": "5,000 $STAG"
+      "value": "6,000 $STAG"
     },
     {
       "trait_type": "Rarity",
-      "value": "LEGENDARY"
+      "value": "MYTHIC"
     },
     {
       "trait_type": "Crime",
-      "value": "ROBBING THE RICH"
+      "value": "Shocking The Market"
     },
     {
       "trait_type": "Weapon",
-      "value": "Green Arrow"
+      "value": "Lightning"
     },
     {
       "trait_type": "Outlaw",
-      "value": "THE EMERALD BANDIT"
+      "value": "MR T"
     },
     {
       "trait_type": "Class",
-      "value": "Original Outlaw"
+      "value": "Whale (Mythic 1/1)"
     },
     {
       "trait_type": "Animated",
@@ -52,9 +52,8 @@
     }
   ],
   "properties": {
-    "category": "image",
-    "bounty_stag": 5000,
-    "rarity": "LEGENDARY",
-    "animation_pending": true
+    "category": "video",
+    "bounty_stag": 6000,
+    "rarity": "MYTHIC"
   }
 }

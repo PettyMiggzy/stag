@@ -1,7 +1,7 @@
 {
-  "name": "WANTED #08 — SHADOWHOOF",
+  "name": "WANTED #08 — THE EMERALD BANDIT",
   "symbol": "WANTED",
-  "description": "SHADOWHOOF. Wanted DEAD OR ALIVE for murder most foul. A hooded stag outlaw of Sherwood with a bounty of 5,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 20 animated 1/1 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "description": "THE EMERALD BANDIT. Wanted DEAD OR ALIVE robbing the rich. A 1/1 animated WANTED poster of Sherwood with a bounty of 5,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
   "image": "https://stagwifhood.fun/assets/nft/wanted/img/8.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/8.mp4",
   "external_url": "https://stagwifhood.fun",
@@ -16,15 +16,15 @@
     },
     {
       "trait_type": "Crime",
-      "value": "MURDER MOST FOUL"
+      "value": "Robbing The Rich"
     },
     {
       "trait_type": "Weapon",
-      "value": "Twin Daggers"
+      "value": "Longbow"
     },
     {
       "trait_type": "Outlaw",
-      "value": "SHADOWHOOF"
+      "value": "THE EMERALD BANDIT"
     },
     {
       "trait_type": "Class",
@@ -52,9 +52,8 @@
     }
   ],
   "properties": {
-    "category": "image",
+    "category": "video",
     "bounty_stag": 5000,
-    "rarity": "LEGENDARY",
-    "animation_pending": true
+    "rarity": "LEGENDARY"
   }
 }

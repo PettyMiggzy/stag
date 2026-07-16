@@ -1,7 +1,7 @@
 {
-  "name": "WANTED #13 — THE POACHER",
+  "name": "WANTED #13 — EMBER FLETCHER",
   "symbol": "WANTED",
-  "description": "THE POACHER. Wanted DEAD OR ALIVE for poaching the kings deer. A hooded stag outlaw of Sherwood with a bounty of 3,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 20 animated 1/1 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "description": "EMBER FLETCHER. Wanted DEAD OR ALIVE arson at the abbey. A 1/1 animated WANTED poster of Sherwood with a bounty of 3,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
   "image": "https://stagwifhood.fun/assets/nft/wanted/img/13.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/13.mp4",
   "external_url": "https://stagwifhood.fun",
@@ -16,15 +16,15 @@
     },
     {
       "trait_type": "Crime",
-      "value": "POACHING THE KINGS DEER"
+      "value": "Arson At The Abbey"
     },
     {
       "trait_type": "Weapon",
-      "value": "Green Arrow"
+      "value": "Flaming Bow"
     },
     {
       "trait_type": "Outlaw",
-      "value": "THE POACHER"
+      "value": "EMBER FLETCHER"
     },
     {
       "trait_type": "Class",
@@ -52,9 +52,8 @@
     }
   ],
   "properties": {
-    "category": "image",
+    "category": "video",
     "bounty_stag": 3000,
-    "rarity": "EPIC",
-    "animation_pending": true
+    "rarity": "EPIC"
   }
 }

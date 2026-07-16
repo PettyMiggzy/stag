@@ -1,7 +1,7 @@
 {
-  "name": "WANTED #15 — FROSTPOINT",
+  "name": "WANTED #15 — COINREAVER",
   "symbol": "WANTED",
-  "description": "FROSTPOINT. Wanted DEAD OR ALIVE for raiding the caravan. A hooded stag outlaw of Sherwood with a bounty of 3,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 20 animated 1/1 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "description": "COINREAVER. Wanted DEAD OR ALIVE highway robbery. A 1/1 animated WANTED poster of Sherwood with a bounty of 3,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
   "image": "https://stagwifhood.fun/assets/nft/wanted/img/15.jpg",
   "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/15.mp4",
   "external_url": "https://stagwifhood.fun",
@@ -16,15 +16,15 @@
     },
     {
       "trait_type": "Crime",
-      "value": "RAIDING THE CARAVAN"
+      "value": "Highway Robbery"
     },
     {
       "trait_type": "Weapon",
-      "value": "Ice Arrow"
+      "value": "Sack of Gold"
     },
     {
       "trait_type": "Outlaw",
-      "value": "FROSTPOINT"
+      "value": "COINREAVER"
     },
     {
       "trait_type": "Class",
@@ -52,9 +52,8 @@
     }
   ],
   "properties": {
-    "category": "image",
+    "category": "video",
     "bounty_stag": 3000,
-    "rarity": "EPIC",
-    "animation_pending": true
+    "rarity": "EPIC"
   }
 }

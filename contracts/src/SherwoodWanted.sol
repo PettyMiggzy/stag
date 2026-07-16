@@ -5,8 +5,8 @@ pragma solidity 0.8.24;
  *  Every piece is a WANTED poster: a hooded stag outlaw with a real $STAG bounty the holder claims
  *  on-chain (via the separate WantedBounty contract). Sits alongside the Sherwood Saints.
  *
- *  • Supply: 20 (token ids 1..20, every one a 1/1). Ids 1-6 Mythic whales, 7-10 Legendary,
- *    11-15 Epic, 16-20 Rare (see the hosted metadata / roster).
+ *  • Supply: 21 (token ids 1..21, every one a 1/1). Ids 1-7 Mythic whales, 8-11 Legendary,
+ *    12-16 Epic, 17-21 Rare (see the hosted metadata / roster).
  *  • Mint: PICK a specific available outlaw and pay its price. Price is flat by default
  *    (mintPrice) OR per-token via tokenPrice[id] (lets you charge more for the Mythics) —
  *    priceOf(id) returns the override if set, else the flat price. No rebuild to switch models.
@@ -31,7 +31,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract SherwoodWanted is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     using Strings for uint256;
-    uint256 public constant MAX_SUPPLY = 20; // token ids 1..20, all 1/1
+    uint256 public constant MAX_SUPPLY = 21; // token ids 1..21, all 1/1
 
     // ---- pricing / policy (owner-tunable) ----
     uint256 public mintPrice = 0.02 ether;      // flat fallback price per outlaw
