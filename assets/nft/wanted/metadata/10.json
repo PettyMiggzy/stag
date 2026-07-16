@@ -1,0 +1,60 @@
+{
+  "name": "WANTED #10 — IRONANTLER",
+  "symbol": "WANTED",
+  "description": "IRONANTLER. Wanted DEAD OR ALIVE for treason vs the crown. A hooded stag outlaw of Sherwood with a bounty of 5,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 20 animated 1/1 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "image": "https://stagwifhood.fun/assets/nft/wanted/img/10.jpg",
+  "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/10.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Reward",
+      "value": "5,000 $STAG"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "LEGENDARY"
+    },
+    {
+      "trait_type": "Crime",
+      "value": "TREASON VS THE CROWN"
+    },
+    {
+      "trait_type": "Weapon",
+      "value": "Green Arrow"
+    },
+    {
+      "trait_type": "Outlaw",
+      "value": "IRONANTLER"
+    },
+    {
+      "trait_type": "Class",
+      "value": "Original Outlaw"
+    },
+    {
+      "trait_type": "Animated",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "WANTED"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 10
+    }
+  ],
+  "properties": {
+    "category": "image",
+    "bounty_stag": 5000,
+    "rarity": "LEGENDARY",
+    "animation_pending": true
+  }
+}

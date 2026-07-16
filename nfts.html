@@ -215,6 +215,201 @@
       Mint is LIVE — 0.03 ETH each on Robinhood Chain · <a href="/docs#nfts" style="color:#9ef418">Docs</a>
     </p>
   </section>
+  <style>
+    .wanted-sec{max-width:1180px;margin:2.4rem auto 0;padding:2rem 1.1rem 0;border-top:1px solid rgba(245,179,1,.18)}
+    .wanted-head{text-align:center;margin-bottom:1.6rem}
+    .wanted-eyebrow{font:700 .72rem/1 'Space Grotesk',monospace;letter-spacing:.16em;text-transform:uppercase;color:#f5b301}
+    .wanted-head h2{font:800 clamp(1.9rem,4.4vw,3rem)/1.02 'Cinzel',serif;margin:.15rem 0;color:#fff;letter-spacing:.04em}
+    .wanted-tag{color:#c8b489;font:500 .95rem/1.5 'Inter',sans-serif;margin:.3rem auto .1rem;max-width:640px}
+    .wanted-econ{display:inline-flex;flex-wrap:wrap;gap:.4rem .7rem;justify-content:center;margin-top:.9rem}
+    .wanted-econ span{background:rgba(245,179,1,.08);border:1px solid rgba(245,179,1,.24);border-radius:999px;padding:.35rem .8rem;font:600 .78rem/1 'Space Grotesk',monospace;color:#e6d8b0}
+    .wanted-econ b{color:#f5b301}
+    .wanted-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem}
+    @media(max-width:1000px){.wanted-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:680px){.wanted-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:420px){.wanted-grid{grid-template-columns:1fr}}
+    .wanted{position:relative;border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden;background:#0a0d08;transition:transform .16s,border-color .16s;min-width:0}
+    .wanted:hover{transform:translateY(-4px)}
+    .wanted video,.wanted img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#05080a}
+    .wanted-num{position:absolute;top:.6rem;left:.6rem;z-index:2;font:800 .7rem/1 'Space Grotesk',monospace;color:#fff;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:.3rem .55rem}
+    .wanted-bounty{position:absolute;top:.6rem;right:.6rem;z-index:2;font:800 .68rem/1 'Space Grotesk',monospace;color:#0a0f06;background:linear-gradient(90deg,#f5b301,#ffd75e);border-radius:999px;padding:.3rem .55rem;box-shadow:0 2px 10px rgba(245,179,1,.35)}
+    .wanted-b{padding:.8rem .85rem 1rem}
+    .wanted-b h3{font:800 1rem/1.1 'Cinzel',serif;color:#fff;margin:0 0 .2rem;letter-spacing:.02em}
+    .wanted-rar{display:inline-block;font:800 .6rem/1 'Space Grotesk',monospace;letter-spacing:.1em;padding:.28rem .5rem;border-radius:6px}
+    .rc-mythic{border-color:rgba(245,179,1,.45)} .rc-mythic:hover{border-color:#f5b301} .rc-mythic .wanted-rar{background:rgba(245,179,1,.16);color:#f5b301;border:1px solid rgba(245,179,1,.4)}
+    .rc-legendary{border-color:rgba(158,244,24,.4)} .rc-legendary:hover{border-color:#9ef418} .rc-legendary .wanted-rar{background:rgba(158,244,24,.14);color:#9ef418;border:1px solid rgba(158,244,24,.36)}
+    .rc-epic{border-color:rgba(178,120,255,.4)} .rc-epic:hover{border-color:#b278ff} .rc-epic .wanted-rar{background:rgba(178,120,255,.14);color:#c9a6ff;border:1px solid rgba(178,120,255,.36)}
+    .rc-rare{border-color:rgba(55,214,196,.34)} .rc-rare:hover{border-color:#37d6c4} .rc-rare .wanted-rar{background:rgba(55,214,196,.12);color:#37d6c4;border:1px solid rgba(55,214,196,.32)}
+    .wanted-chips{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;margin-top:.6rem}
+    .wanted-chips .attr{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:.34rem .45rem;min-width:0}
+    .wanted-chips .attr .k{font:700 .54rem/1.2 'Space Grotesk',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8a8a72;display:block}
+    .wanted-chips .attr .v{font:700 .7rem/1.2 'Inter',sans-serif;color:#ece2c8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .wanted-mint,.wanted-claim{margin-top:.55rem;width:100%;padding:.6rem;border-radius:9px;cursor:pointer;font:800 .8rem/1 'Space Grotesk',monospace;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#cfe0c4}
+    .wanted-mint:disabled,.wanted-claim:disabled{opacity:.5;cursor:not-allowed}
+    .wanted-mint.live{background:linear-gradient(90deg,#f5b301,#ffd75e);color:#0a0f06;border-color:#f5b301}
+    .wanted-mint.live:hover{filter:brightness(1.07)}
+    .wanted-mint.done{background:rgba(255,255,255,.04);color:#7a8a7e}
+    .wanted-claim.live{background:linear-gradient(90deg,#9ef418,#37d6c4);color:#0a0f06;border-color:#9ef418}
+    .wanted-claim.live:hover{filter:brightness(1.07)}
+  </style>
+  <section class="wanted-sec" id="wanted">
+    <div class="wanted-head">
+      <span class="wanted-eyebrow">DEAD OR ALIVE · By order of the Sheriff of Nottingham</span>
+      <h2>WANTED</h2>
+      <p class="wanted-tag">20 animated 1/1 hooded stag outlaws of Sherwood. Every poster carries a real <b style="color:#f5b301">$STAG bounty</b> the holder claims on-chain — then stake it in the Sherwood Vault to earn ETH.</p>
+      <div class="wanted-econ">
+        <span>⚑ <b>81,000 $STAG</b> in bounties</span>
+        <span><b>$20–50</b> mint by rarity</span>
+        <span>🔥 <b>60%</b> burns $STAG</span>
+        <span>🟢 <b>30%</b> pool</span>
+        <span>👑 <b>10%</b> team</span>
+      </div>
+    </div>
+    <div class="wanted-grid">
+      <div class="wanted rc-mythic" data-id="1">
+        <span class="wanted-num">#01 · 1/1</span>
+        <span class="wanted-bounty">⚑ 6,000 $STAG</span>
+        <video src="assets/nft/wanted/anim/1.mp4" poster="assets/nft/wanted/img/1.jpg" autoplay muted loop playsinline preload="metadata"></video>
+        <div class="wanted-b"><h3>SPEX</h3><span class="wanted-rar">MYTHIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-mythic" data-id="2">
+        <span class="wanted-num">#02 · 1/1</span>
+        <span class="wanted-bounty">⚑ 6,000 $STAG</span>
+        <video src="assets/nft/wanted/anim/2.mp4" poster="assets/nft/wanted/img/2.jpg" autoplay muted loop playsinline preload="metadata"></video>
+        <div class="wanted-b"><h3>OLE MAN</h3><span class="wanted-rar">MYTHIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-mythic" data-id="3">
+        <span class="wanted-num">#03 · 1/1</span>
+        <span class="wanted-bounty">⚑ 6,000 $STAG</span>
+        <img src="assets/nft/wanted/img/3.jpg" alt="THE DUDE" loading="lazy" />
+        <div class="wanted-b"><h3>THE DUDE</h3><span class="wanted-rar">MYTHIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-mythic" data-id="4">
+        <span class="wanted-num">#04 · 1/1</span>
+        <span class="wanted-bounty">⚑ 6,000 $STAG</span>
+        <img src="assets/nft/wanted/img/4.jpg" alt="NACHO" loading="lazy" />
+        <div class="wanted-b"><h3>NACHO</h3><span class="wanted-rar">MYTHIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-mythic" data-id="5">
+        <span class="wanted-num">#05 · 1/1</span>
+        <span class="wanted-bounty">⚑ 6,000 $STAG</span>
+        <video src="assets/nft/wanted/anim/5.mp4" poster="assets/nft/wanted/img/5.jpg" autoplay muted loop playsinline preload="metadata"></video>
+        <div class="wanted-b"><h3>CRAIG MACK</h3><span class="wanted-rar">MYTHIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-mythic" data-id="6">
+        <span class="wanted-num">#06 · 1/1</span>
+        <span class="wanted-bounty">⚑ 6,000 $STAG</span>
+        <video src="assets/nft/wanted/anim/6.mp4" poster="assets/nft/wanted/img/6.jpg" autoplay muted loop playsinline preload="metadata"></video>
+        <div class="wanted-b"><h3>BLACK PUTIN</h3><span class="wanted-rar">MYTHIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-legendary" data-id="7">
+        <span class="wanted-num">#07 · 1/1</span>
+        <span class="wanted-bounty">⚑ 5,000 $STAG</span>
+        <img src="assets/nft/wanted/img/7.jpg" alt="THE EMERALD BANDIT" loading="lazy" />
+        <div class="wanted-b"><h3>THE EMERALD BANDIT</h3><span class="wanted-rar">LEGENDARY</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-legendary" data-id="8">
+        <span class="wanted-num">#08 · 1/1</span>
+        <span class="wanted-bounty">⚑ 5,000 $STAG</span>
+        <img src="assets/nft/wanted/img/8.jpg" alt="SHADOWHOOF" loading="lazy" />
+        <div class="wanted-b"><h3>SHADOWHOOF</h3><span class="wanted-rar">LEGENDARY</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-legendary" data-id="9">
+        <span class="wanted-num">#09 · 1/1</span>
+        <span class="wanted-bounty">⚑ 5,000 $STAG</span>
+        <img src="assets/nft/wanted/img/9.jpg" alt="THE GREEN GHOST" loading="lazy" />
+        <div class="wanted-b"><h3>THE GREEN GHOST</h3><span class="wanted-rar">LEGENDARY</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-legendary" data-id="10">
+        <span class="wanted-num">#10 · 1/1</span>
+        <span class="wanted-bounty">⚑ 5,000 $STAG</span>
+        <img src="assets/nft/wanted/img/10.jpg" alt="IRONANTLER" loading="lazy" />
+        <div class="wanted-b"><h3>IRONANTLER</h3><span class="wanted-rar">LEGENDARY</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-epic" data-id="11">
+        <span class="wanted-num">#11 · 1/1</span>
+        <span class="wanted-bounty">⚑ 3,000 $STAG</span>
+        <img src="assets/nft/wanted/img/11.jpg" alt="NIGHTSHADE" loading="lazy" />
+        <div class="wanted-b"><h3>NIGHTSHADE</h3><span class="wanted-rar">EPIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-epic" data-id="12">
+        <span class="wanted-num">#12 · 1/1</span>
+        <span class="wanted-bounty">⚑ 3,000 $STAG</span>
+        <img src="assets/nft/wanted/img/12.jpg" alt="EMBER FLETCHER" loading="lazy" />
+        <div class="wanted-b"><h3>EMBER FLETCHER</h3><span class="wanted-rar">EPIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-epic" data-id="13">
+        <span class="wanted-num">#13 · 1/1</span>
+        <span class="wanted-bounty">⚑ 3,000 $STAG</span>
+        <img src="assets/nft/wanted/img/13.jpg" alt="THE POACHER" loading="lazy" />
+        <div class="wanted-b"><h3>THE POACHER</h3><span class="wanted-rar">EPIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-epic" data-id="14">
+        <span class="wanted-num">#14 · 1/1</span>
+        <span class="wanted-bounty">⚑ 3,000 $STAG</span>
+        <img src="assets/nft/wanted/img/14.jpg" alt="COINREAVER" loading="lazy" />
+        <div class="wanted-b"><h3>COINREAVER</h3><span class="wanted-rar">EPIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-epic" data-id="15">
+        <span class="wanted-num">#15 · 1/1</span>
+        <span class="wanted-bounty">⚑ 3,000 $STAG</span>
+        <img src="assets/nft/wanted/img/15.jpg" alt="FROSTPOINT" loading="lazy" />
+        <div class="wanted-b"><h3>FROSTPOINT</h3><span class="wanted-rar">EPIC</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-rare" data-id="16">
+        <span class="wanted-num">#16 · 1/1</span>
+        <span class="wanted-bounty">⚑ 2,000 $STAG</span>
+        <img src="assets/nft/wanted/img/16.jpg" alt="HEDGE RUNNER" loading="lazy" />
+        <div class="wanted-b"><h3>HEDGE RUNNER</h3><span class="wanted-rar">RARE</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-rare" data-id="17">
+        <span class="wanted-num">#17 · 1/1</span>
+        <span class="wanted-bounty">⚑ 2,000 $STAG</span>
+        <img src="assets/nft/wanted/img/17.jpg" alt="TWO-BIT ROGUE" loading="lazy" />
+        <div class="wanted-b"><h3>TWO-BIT ROGUE</h3><span class="wanted-rar">RARE</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-rare" data-id="18">
+        <span class="wanted-num">#18 · 1/1</span>
+        <span class="wanted-bounty">⚑ 2,000 $STAG</span>
+        <img src="assets/nft/wanted/img/18.jpg" alt="BRAMBLE SCOUT" loading="lazy" />
+        <div class="wanted-b"><h3>BRAMBLE SCOUT</h3><span class="wanted-rar">RARE</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-rare" data-id="19">
+        <span class="wanted-num">#19 · 1/1</span>
+        <span class="wanted-bounty">⚑ 2,000 $STAG</span>
+        <img src="assets/nft/wanted/img/19.jpg" alt="COPPER ARROW" loading="lazy" />
+        <div class="wanted-b"><h3>COPPER ARROW</h3><span class="wanted-rar">RARE</span>
+          <div class="wanted-chips"></div></div>
+      </div>
+      <div class="wanted rc-rare" data-id="20">
+        <span class="wanted-num">#20 · 1/1</span>
+        <span class="wanted-bounty">⚑ 2,000 $STAG</span>
+        <img src="assets/nft/wanted/img/20.jpg" alt="THE PICKPOCKET" loading="lazy" />
+        <div class="wanted-b"><h3>THE PICKPOCKET</h3><span class="wanted-rar">RARE</span>
+          <div class="wanted-chips"></div></div>
+      </div>    </div>
+    <p style="text-align:center;margin:1.4rem 0 0;color:#a99;font:500 .85rem/1.5 'Inter',sans-serif">
+      Each holder claims their poster's <b style="color:#f5b301">$STAG bounty</b> on-chain · stakeable in the Sherwood Vault · <a href="/docs#nfts" style="color:#9ef418">Docs</a>
+    </p>
+  </section>
   </main>
 
   <footer class="footer">
@@ -395,6 +590,163 @@
         else { btn.textContent = 'Minted'; btn.classList.add('done'); }
       }
     }
+    if (window.ethereum && window.ethereum.on) window.ethereum.on('accountsChanged', refresh);
+    refresh();
+  })();
+  </script>
+  <script>
+  /* WANTED — mint (tiered price via priceOf), stake into Vault, and CLAIM the $STAG bounty.
+     Renders the gallery + traits always; wires live actions once window.HOODED.wanted is set. */
+  (function(){
+    const CFG = window.HOODED || {};
+    const WANTED = CFG.wanted, BOUNTY = CFG.wantedBounty, VAULT = CFG.vault;
+    const RPC = 'https://rpc.mainnet.chain.robinhood.com', CHAIN_HEX = '0x1237';
+    const ABI = [
+      'function priceOf(uint256) view returns (uint256)',
+      'function mintActive() view returns (bool)',
+      'function availableIds() view returns (uint256[])',
+      'function mintPick(uint256) payable',
+      'function freeMints(address) view returns (uint256)',
+      'function ownerOf(uint256) view returns (address)',
+      'function isApprovedForAll(address,address) view returns (bool)',
+      'function setApprovalForAll(address,bool)'
+    ];
+    const VABI = [
+      'function stake(address,uint256)','function unstake(address,uint256)',
+      'function stakeOf(address,uint256) view returns (address staker, uint256 weight, uint64 since, bool lockInPlace)'
+    ];
+    const BABI = [
+      'function bounty(uint256) view returns (uint256)',
+      'function claimed(uint256) view returns (bool)',
+      'function locked() view returns (bool)',
+      'function claim(uint256)'
+    ];
+    // Inject buttons + fill traits on every card (works even before ethers / before deploy).
+    const cards = [...document.querySelectorAll('.wanted')].map((el) => {
+      const id = Number(el.getAttribute('data-id')); if (!id) return null;
+      const mint = document.createElement('button'); mint.className='wanted-mint'; mint.textContent='Mint'; mint.disabled=true;
+      const claim = document.createElement('button'); claim.className='wanted-claim'; claim.textContent='Claim bounty'; claim.disabled=true; claim.style.display='none';
+      el.querySelector('.wanted-b').append(mint, claim);
+      return { id, el, mint, claim };
+    }).filter(Boolean);
+    function esc(s){return s.replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+    cards.forEach(({id, el}) => {
+      fetch('assets/nft/wanted/metadata/'+id+'.json').then(r=>r.json()).then(meta=>{
+        const box = el.querySelector('.wanted-chips'); if(!box||!Array.isArray(meta.attributes)) return;
+        const show = new Set(['Crime','Weapon','Outlaw','Class']);
+        box.innerHTML = meta.attributes.filter(a=>show.has(a.trait_type)).map(a=>
+          '<div class="attr"><span class="k">'+esc(a.trait_type)+'</span><span class="v">'+esc(String(a.value))+'</span></div>').join('');
+      }).catch(()=>{});
+    });
+
+    // No contract deployed yet → show the pre-launch state and stop (gallery still renders).
+    if (!WANTED || !window.ethers) {
+      cards.forEach(({mint}) => { mint.textContent = 'Mint opens Fri'; });
+      return;
+    }
+    const read = new ethers.JsonRpcProvider(RPC);
+    const c = new ethers.Contract(WANTED, ABI, read);
+    const vaultRead = VAULT ? new ethers.Contract(VAULT, VABI, read) : null;
+    const bountyRead = BOUNTY ? new ethers.Contract(BOUNTY, BABI, read) : null;
+
+    let wcEth = null;
+    async function getProvider(){
+      if (window.ethereum) return window.ethereum;
+      const pid = CFG.walletConnectProjectId;
+      if (!pid){ alert('Use an EVM wallet (MetaMask, Trust, SafePal). Phantom/Solana wallets can’t mint here.'); return null; }
+      try {
+        const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
+        wcEth = await EthereumProvider.init({ projectId: pid, optionalChains:[4663], rpcMap:{4663:RPC}, showQrModal:true,
+          metadata:{ name:'WANTED', description:'Mint, stake & claim on Robinhood Chain', url:'https://stagwifhood.fun', icons:['https://stagwifhood.fun/assets/img/mark.png'] } });
+        await wcEth.enable(); return wcEth;
+      } catch(e){ alert('Couldn’t open WalletConnect. On mobile, open stagwifhood.fun inside your wallet’s browser (SafePal/MetaMask/Trust → Browser), then it works directly.'); return null; }
+    }
+    async function connect(){
+      const eth = await getProvider(); if(!eth) return null;
+      try { await eth.request({method:'eth_requestAccounts'}); } catch(e){ return null; }
+      const net = await new ethers.BrowserProvider(eth).getNetwork();
+      if (net.chainId !== 4663n){
+        try { await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN_HEX}]}); }
+        catch(e){ try { await eth.request({method:'wallet_addEthereumChain',params:[CFG.chain]}); await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN_HEX}]}); } catch(_){} }
+      }
+      return await new ethers.BrowserProvider(eth).getSigner();
+    }
+    function err(e){
+      const m=(e&&(e.shortMessage||e.reason||(e.info&&e.info.error&&e.info.error.message)||e.message))||'Failed';
+      if(/wrong price/i.test(m)) return 'Price mismatch — refresh and retry.';
+      if(/wallet limit/i.test(m)) return 'You’ve hit the per-wallet mint limit.';
+      if(/unavailable/i.test(m)) return 'That outlaw is already minted.';
+      if(/no contracts/i.test(m)) return 'Use a standard (EOA) wallet — MetaMask or SafePal’s regular account.';
+      if(/mint not active/i.test(m)) return 'WANTED minting isn’t open yet.';
+      if(/not holder/i.test(m)) return 'Only the current holder can claim this bounty.';
+      if(/already claimed/i.test(m)) return 'This bounty was already claimed.';
+      if(/not live/i.test(m)) return 'Bounties aren’t live yet (owner must fund + lock).';
+      if(/user rejected|denied|4001/i.test(m)) return 'Cancelled in wallet.';
+      if(/missing revert data|CALL_EXCEPTION|insufficient/i.test(m)) return 'Not enough ETH on Robinhood Chain (chain 4663) for the mint + gas. Bridge ETH to RH Chain, then retry.';
+      return m.slice(0,160);
+    }
+    async function onRH(s){ let n; try{n=await s.provider.getNetwork();}catch(e){} if(n&&n.chainId!==4663n){ alert('Switch your wallet to Robinhood Chain (4663). You’re on '+n.chainId+'.'); return false; } return true; }
+    async function mint(id){
+      try { const s=await connect(); if(!s) return; if(!(await onRH(s))) return; const me=await s.getAddress();
+        const cc=new ethers.Contract(WANTED,ABI,s);
+        const [free,price]=await Promise.all([cc.freeMints(me),cc.priceOf(id)]);
+        const value=free>0n?0n:price;
+        const bal=await read.getBalance(me).catch(()=>null);
+        if(bal!==null && bal < value+400000000000000n){ alert('Not enough ETH on RH Chain. Need '+ethers.formatEther(value)+' ETH + gas on chain 4663.'); return; }
+        try{ await cc.mintPick.estimateGas(id,{value}); } catch(e){ alert(err(e)); return; }
+        const tx=await cc.mintPick(id,{value}); await tx.wait();
+        alert('Minted WANTED #'+id+(free>0n?' (free) ⚑':' ⚑')+' — you can now claim its $STAG bounty + stake it.'); refresh();
+      } catch(e){ alert(err(e)); }
+    }
+    async function stake(id){
+      try{ const s=await connect(); if(!s) return; const me=await s.getAddress();
+        const nft=new ethers.Contract(WANTED,ABI,s);
+        if(!(await nft.isApprovedForAll(me,VAULT))){ const a=await nft.setApprovalForAll(VAULT,true); await a.wait(); }
+        const tx=await new ethers.Contract(VAULT,VABI,s).stake(WANTED,id); await tx.wait();
+        alert('Staked WANTED #'+id+' — earning ETH 🟢'); refresh();
+      } catch(e){ alert(err(e)); }
+    }
+    async function unstake(id){
+      try{ const s=await connect(); if(!s) return; const tx=await new ethers.Contract(VAULT,VABI,s).unstake(WANTED,id); await tx.wait(); alert('Unstaked WANTED #'+id); refresh(); }
+      catch(e){ alert(err(e)); }
+    }
+    async function claimBounty(id){
+      try{ const s=await connect(); if(!s) return; if(!(await onRH(s))) return;
+        const bc=new ethers.Contract(BOUNTY,BABI,s);
+        try{ await bc.claim.estimateGas(id); } catch(e){ alert(err(e)); return; }
+        const tx=await bc.claim(id); await tx.wait(); alert('Bounty claimed for WANTED #'+id+' 💰 $STAG sent to your wallet.'); refresh();
+      } catch(e){ alert(err(e)); }
+    }
+    async function currentAccount(){ try{ const a=await window.ethereum?.request({method:'eth_accounts'}); return a&&a[0]?a[0].toLowerCase():null; }catch(e){ return null; } }
+    async function refresh(){
+      let active=false, avail=[]; try{ active=await c.mintActive(); }catch(e){} try{ avail=(await c.availableIds()).map(Number); }catch(e){}
+      const availSet=new Set(avail); const me=await currentAccount();
+      let bountiesLive=false; if(bountyRead){ try{ bountiesLive=await bountyRead.locked(); }catch(e){} }
+      for (const {id,mint,claim,el} of cards){
+        mint.classList.remove('live','done'); mint.onclick=null; mint.disabled=true; claim.style.display='none'; claim.classList.remove('live'); claim.onclick=null; claim.disabled=true;
+        let price=null; try{ price=await c.priceOf(id); }catch(e){}
+        const eth = price!=null ? Number(ethers.formatEther(price)).toString() : null;
+        if (availSet.has(id)){
+          if(!active){ mint.textContent='Mint opens Fri'; }
+          else { mint.textContent = eth ? ('Mint '+eth+' Ξ') : 'Mint'; mint.disabled=false; mint.classList.add('live'); mint.onclick=()=>mintPick(id); }
+          continue;
+        }
+        // minted
+        let owner=null; try{ owner=(await c.ownerOf(id)).toLowerCase(); }catch(e){}
+        let staker=null; if(vaultRead && owner===VAULT?.toLowerCase()){ try{ staker=(await vaultRead.stakeOf(WANTED,id)).staker.toLowerCase(); }catch(e){} }
+        const held = me && (owner===me || staker===me);
+        if (me && staker===me){ mint.textContent='Unstake'; mint.disabled=false; mint.classList.add('live'); mint.onclick=()=>unstake(id); }
+        else if (staker && staker!=='0x0000000000000000000000000000000000000000'){ mint.textContent='🟢 Staked'; mint.classList.add('done'); }
+        else if (me && owner===me && VAULT){ mint.textContent='Stake — earn ETH'; mint.disabled=false; mint.classList.add('live'); mint.onclick=()=>stake(id); }
+        else { mint.textContent='Minted'; mint.classList.add('done'); }
+        // bounty claim button — only for the holder, when live + unclaimed
+        if (held && bountyRead && bountiesLive){
+          let done=true; try{ done=await bountyRead.claimed(id); }catch(e){}
+          if(!done){ claim.style.display='block'; claim.disabled=false; claim.classList.add('live'); claim.textContent='💰 Claim bounty'; claim.onclick=()=>claimBounty(id); }
+        }
+      }
+    }
+    function mintPick(id){ return mint(id); }
     if (window.ethereum && window.ethereum.on) window.ethereum.on('accountsChanged', refresh);
     refresh();
   })();
