@@ -366,4 +366,37 @@
   })();
 
   form.addEventListener('submit', (e) => { e.preventDefault(); scan(input.value); });
+
+  /* ---- 🔥 live trending panel (Uniswap volume, cached server-side) ---- */
+  (function trending() {
+    const wrap = $('tt'), list = $('tt-list'), sub = $('tt-sub');
+    if (!wrap || !list) return;
+    const pct = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+    async function load() {
+      let data;
+      try { const r = await fetch('/api/trending'); data = await r.json(); } catch { return; }
+      const toks = (data && data.tokens) || [];
+      if (!toks.length) { if (wrap.hidden) return; }         // keep whatever's shown if a refresh comes back empty
+      wrap.hidden = false;
+      if (sub && data.windowMin) sub.textContent = 'live · ' + data.windowMin + '-min volume';
+      list.innerHTML = toks.map((t) => {
+        const chg = Number(t.changePct || 0);
+        const boosted = t.boosted;
+        return '<button class="tt-row" data-ca="' + t.address + '">' +
+          '<span class="tt-rank' + (boosted ? ' boost' : '') + '">' + (boosted ? '🚀' : t.rank) + '</span>' +
+          '<span class="tt-name"><span class="tt-sym">' + escapeHtml(t.symbol || '—') + '</span>' +
+            '<span class="tt-flow">' + t.buys + ' buys · ' + t.sells + ' sells</span></span>' +
+          '<span class="tt-vol">' + fmtUsd(t.volumeUsd) + '<span>' + (t.volumeEth || 0).toFixed(2) + ' Ξ</span></span>' +
+          '<span class="tt-chg ' + (chg >= 0 ? 'up' : 'down') + '">' + pct(chg) + '</span>' +
+        '</button>';
+      }).join('');
+      list.querySelectorAll('.tt-row').forEach((b) => b.onclick = () => {
+        input.value = b.dataset.ca; scan(b.dataset.ca);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    load();
+    setInterval(load, 60000);
+  })();
 })();
