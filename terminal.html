@@ -55,6 +55,17 @@
     .tt-gate-actions{display:flex;gap:.5rem;flex:0 0 auto;flex-wrap:wrap}
     @media(max-width:560px){.tt-gate-actions{width:100%}.tt-gate-actions .btn{flex:1}}
     .scan-gate-actions{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+    .stake-input .mx{border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.12);color:var(--gold-lite);font:700 .62rem/1 'Space Grotesk',monospace;padding:.3rem .45rem;border-radius:6px;cursor:pointer;margin:0 .4rem}
+    .trade-quick{display:flex;gap:.35rem;margin:.5rem 0 .1rem;flex-wrap:wrap}
+    .trade-quick button{flex:1;min-width:3rem;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--muted);font:600 .72rem/1 'Space Grotesk',monospace;padding:.4rem .3rem;border-radius:7px;cursor:pointer}
+    .trade-quick button:hover{border-color:var(--gold);color:var(--gold-lite)}
+    .trade-est{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin:.6rem 0;font:500 .78rem/1.3 'Space Grotesk',monospace;color:var(--muted)}
+    .trade-est b{color:#eafff2;font-weight:700}
+    .trade-min{font-size:.62rem}
+    .trade-slip{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:.5rem 0;font:600 .68rem/1 'Space Grotesk',monospace;color:var(--muted)}
+    .slip-opts{display:flex;gap:.3rem}
+    .slip-opts button{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--muted);font:600 .68rem/1 'Space Grotesk',monospace;padding:.35rem .5rem;border-radius:6px;cursor:pointer}
+    .slip-opts button.on{border-color:var(--gold);color:#12180f;background:linear-gradient(135deg,#e9c86a,#d4af37)}
   </style>
 </head>
 <body>
@@ -226,11 +237,17 @@
             </div>
             <label class="stake-field">
               <span class="stake-field-top"><span id="trade-amt-label">You pay</span><span class="stake-bal" id="trade-bal">Balance: —</span></span>
-              <span class="stake-input"><input id="trade-amt" type="text" inputmode="decimal" placeholder="0.0" disabled /><span class="stake-tok" id="trade-tok">ETH</span></span>
+              <span class="stake-input"><input id="trade-amt" type="text" inputmode="decimal" placeholder="0.0" disabled /><button class="mx" id="trade-max" type="button">MAX</button><span class="stake-tok" id="trade-tok">ETH</span></span>
             </label>
+            <div class="trade-quick" id="trade-quick"></div>
+            <div class="trade-est" id="trade-est" hidden><span>You receive ≈ <b id="trade-out">—</b></span><span class="trade-min" id="trade-min"></span></div>
+            <div class="trade-slip"><span>Slippage</span><div class="slip-opts" id="slip-opts">
+              <button data-s="5" type="button">5%</button><button data-s="10" type="button">10%</button>
+              <button data-s="15" class="on" type="button">15%</button><button data-s="25" type="button">25%</button>
+            </div></div>
             <button class="btn btn-gold btn-lg" id="trade-btn" disabled>Connect Wallet</button>
             <p class="mint-status" id="trade-status"></p>
-            <p class="term-trade-note">Non-custodial swap on Robinhood Chain. We simulate the trade (balance + gas) <strong>before</strong> you sign — so your wallet won't flash a false “malicious” warning. Routing goes live with the $STAG pool.</p>
+            <p class="term-trade-note">Non-custodial swap via Uniswap on Robinhood Chain — a <strong>1% fee</strong> supports $STAG. We simulate (balance + gas) <strong>before</strong> you sign. Set slippage higher for thin/volatile tokens.</p>
           </div>
         </div>
       </div>

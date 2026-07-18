@@ -215,6 +215,9 @@
 
       renderHeader(ca, tok, addr, supplyHuman);
       renderMetrics(tok, counters, addr, supplyHuman, holders.length);
+      // hand the current token to the Quick Trade panel (terminal-wallet.js)
+      window.TERM_TOKEN = { ca, symbol: tok.symbol || '', decimals: dec, priceUsd: Number(tok.exchange_rate) || 0 };
+      document.dispatchEvent(new Event('term-token'));
       const score = renderSecurity(tok, addr, nodes, groups, pctById);
       renderScore(score);
       renderBundles(groups, pctById, nodes, xferWindow);
