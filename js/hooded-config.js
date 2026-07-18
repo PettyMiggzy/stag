@@ -12,6 +12,7 @@ window.HOODED = {
   vault: '0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c',         // SherwoodVault (future-proof NFT staking)
   wanted: '',        // SherwoodWanted (WANTED 20x 1/1) — paste after deploy; UI shows "Mint opens Fri" until set
   wantedBounty: '',  // WantedBounty ($STAG bounty claim) — paste after deploy; enables the Claim button
+  market: '0xa113238953b660230bF97237A2cc9b9f48Fe06A6', // SherwoodMarket (P2P order-book, 1% buy / 1% sell -> marketing)
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
   // WalletConnect (Reown) project id — enables mobile "connect any wallet" (Trust, Rainbow,
