@@ -63,13 +63,13 @@ Fees are collected **in-kind** — in whatever token each side used — and the 
 - **Escrow-based** — funds are held by the contract, not by a stranger's promise.
 - **Independently audited + fuzz-tested** before going live (reentrancy-guarded, checks-before-transfers, per-token escrow isolation, 200-op randomized invariant simulations).
 - **Owner powers are minimal** — the owner (the $STAG dev wallet) can only *retune fees within the 3% cap* and *change the fee wallet*. The owner **cannot** touch, move, or cancel anyone's escrowed orders. Ever.
-- **Verified on-chain** — read the full source on the [explorer](https://robinhoodchain.blockscout.com/address/0xa113238953b660230bF97237A2cc9b9f48Fe06A6).
+- **Verified on-chain** — read the full source on the [explorer](https://robinhoodchain.blockscout.com/address/0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7).
 
 ## Contract
 
 | Item | Value |
 |---|---|
-| **Sherwood Market** | `0xa113238953b660230bF97237A2cc9b9f48Fe06A6` |
+| **Sherwood Market** | `0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7` |
 | Network | Robinhood Chain (4663) |
 | Fees | 1% buy / 1% sell (3% hard cap) |
 | Verified | ✅ Blockscout |

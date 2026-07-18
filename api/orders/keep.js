@@ -20,6 +20,16 @@ const ABI = [
 ];
 const MAX_FILLS = 8;   // cap per run so one invocation can't run long
 
+// Out-of-band fee sweeps. Swap/Market hold their 1% fee in-contract (so a user's
+// signed tx never fans ETH out to the marketing wallet — that shape is what wallet
+// scanners flag). These permissionless sweeps move the accrued fees to the fee wallet;
+// each reverts on a zero balance, so we swallow those. STAG is the common market pay-token.
+const SWAP = '0xd43d5aa252077d0Cfd2CFdCD13f9B8e85C5C1392';
+const MARKET = '0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7';
+const STAG = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+const SWAP_ABI = ['function forwardFees()'];
+const MARKET_ABI = ['function forwardFees(address token)', 'function forwardFeesEth()'];
+
 module.exports = async (req, res) => {
   res.setHeader('content-type', 'application/json');
   const secret = process.env.CRON_SECRET;
@@ -45,7 +55,16 @@ module.exports = async (req, res) => {
       try { const tx = await c.execute(id); await tx.wait(); filled.push(Number(id)); }
       catch (e) { /* another keeper/tx beat us, or transient — skip */ }
     }
-    res.end(JSON.stringify({ ok: true, open: ids.length, checked, filled }));
+    // ---- out-of-band fee sweeps (best-effort; ignore "no fees" reverts) ----
+    const swept = [];
+    const sweep = async (label, fn) => { try { const tx = await fn(); await tx.wait(); swept.push(label); } catch { /* no fees / raced */ } };
+    const swap = new ethers.Contract(SWAP, SWAP_ABI, wallet);
+    const market = new ethers.Contract(MARKET, MARKET_ABI, wallet);
+    await sweep('swap.eth', () => swap.forwardFees());
+    await sweep('market.eth', () => market.forwardFeesEth());
+    await sweep('market.stag', () => market.forwardFees(STAG));
+
+    res.end(JSON.stringify({ ok: true, open: ids.length, checked, filled, swept }));
   } catch (e) {
     res.statusCode = 500; res.end(JSON.stringify({ error: (e && e.message) || 'error' }));
   }

@@ -10,7 +10,7 @@
   'use strict';
   if (!window.ethers) return;
 
-  const SWAP = '0x481d3A3E9C28627Ed91e58d83a5D6790A6416055';
+  const SWAP = '0xd43d5aa252077d0Cfd2CFdCD13f9B8e85C5C1392'; // out-of-band-fee redeploy (Blockaid-safe)
   const WETH = '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73';
   const FACTORY = '0x1f7d7550b1b028f7571e69a784071f0205fd2efa'; // Uniswap V3 factory
   const RPC = 'https://rpc.mainnet.chain.robinhood.com';

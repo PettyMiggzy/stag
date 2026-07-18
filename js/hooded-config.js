@@ -12,8 +12,8 @@ window.HOODED = {
   vault: '0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c',         // SherwoodVault (future-proof NFT staking)
   wanted: '',        // SherwoodWanted (WANTED 20x 1/1) — paste after deploy; UI shows "Mint opens Fri" until set
   wantedBounty: '',  // WantedBounty ($STAG bounty claim) — paste after deploy; enables the Claim button
-  market: '0xa113238953b660230bF97237A2cc9b9f48Fe06A6', // SherwoodMarket (P2P order-book, 1% buy / 1% sell -> marketing)
-  swap: '0x481d3A3E9C28627Ed91e58d83a5D6790A6416055',   // SherwoodSwap (Terminal buy/sell, 1% -> marketing)
+  market: '0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7', // SherwoodMarket (P2P order-book, 1%/1% fees held out-of-band -> forwardFees)
+  swap: '0xd43d5aa252077d0Cfd2CFdCD13f9B8e85C5C1392',   // SherwoodSwap (Terminal buy/sell, 1% fee held out-of-band -> forwardFees)
   orders: '0x689988a1adB3Da7554Ba1fFc256904498aaF1F54', // SherwoodOrders (limit/take-profit, 1% -> marketing)
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',

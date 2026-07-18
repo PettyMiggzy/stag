@@ -15,7 +15,7 @@
    ============================================================ */
 'use strict';
 
-const MARKET = '0xa113238953b660230bF97237A2cc9b9f48Fe06A6';
+const MARKET = '0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7';
 const PUBLIC_RPC = 'https://rpc.mainnet.chain.robinhood.com';
 const ETH = '0x0000000000000000000000000000000000000000';
 // Use the canonical www host in all outbound links — the apex 308-redirects here, and some

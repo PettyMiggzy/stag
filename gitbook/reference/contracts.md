@@ -12,7 +12,7 @@ Everything is on **Robinhood Chain (chain 4663)**. You can paste any of these in
 | **Stag Staking** (earn ETH) | `0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF` |
 | **Sherwood Vault** (NFT staking) | `0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c` |
 | **Sherwood Pact** (proof-of-hold) | `0xc36662D2db9432702f018963ABdab19432AA488B` |
-| **Sherwood Market** (P2P trading) | `0xa113238953b660230bF97237A2cc9b9f48Fe06A6` |
+| **Sherwood Market** (P2P trading) | `0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7` |
 
 ## NFT Collections
 
