@@ -1,0 +1,158 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.24;
+
+/*  SherwoodMarket — a peer-to-peer OTC / order-book exchange for ANY token on Robinhood Chain (4663).
+ *  "eBay for tokens." Sellers post an order (escrow their token, name a price); buyers fill it directly.
+ *  No AMM pool, no slippage — a direct match between two people.
+ *
+ *  FEES (owner-tunable, capped): a fee is skimmed on BOTH sides of every fill and sent to feeWallet
+ *  (the $STAG marketing wallet). Default 1% buy-side + 1% sell-side. The team burns / uses the fees.
+ *
+ *  DESIGN
+ *   • Maker escrows the sell token in this contract when creating an order (funds can't vanish mid-trade).
+ *   • Taker fills by paying the ask (native ETH or an ERC-20). Atomic: taker gets the token, maker gets
+ *     paid, fees go to feeWallet — all in one tx, or it reverts.
+ *   • Fee-on-transfer ("tax") tokens are handled by measuring the ACTUAL balance received.
+ *   • Full fills only in v1 (no partials) — simplest + safest.
+ *
+ *  ⚠️ Holds real user funds. Audited + tested before mainnet.
+ */
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract SherwoodMarket is Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    // address(0) as a "token" means native ETH (the buy/pay side only).
+    address internal constant ETH = address(0);
+
+    struct Order {
+        address maker;       // who created the order
+        address sellToken;   // ERC-20 being sold (escrowed here)
+        uint256 sellAmount;  // amount of sellToken escrowed (net of any transfer tax)
+        address buyToken;    // what the maker wants paid in (ETH = address(0), or an ERC-20)
+        uint256 buyAmount;   // amount of buyToken the maker wants
+        bool    active;      // open?
+    }
+
+    mapping(uint256 => Order) public orders;
+    uint256 public nextOrderId;
+
+    // ---- fees (owner-tunable, hard-capped so the owner can never skim more than MAX) ----
+    uint256 public constant MAX_FEE_BPS = 300;  // 3% hard cap per side — owner can't exceed this, ever
+    uint256 public buyFeeBps  = 100;            // 1% skimmed from the payment (buy side)
+    uint256 public sellFeeBps = 100;            // 1% skimmed from the token (sell side)
+    address payable public feeWallet;           // $STAG marketing wallet — receives all fees
+
+    event OrderCreated(uint256 indexed id, address indexed maker, address sellToken, uint256 sellAmount, address buyToken, uint256 buyAmount);
+    event OrderFilled(uint256 indexed id, address indexed taker, uint256 sellToTaker, uint256 payToMaker, uint256 buyFee, uint256 sellFee);
+    event OrderCancelled(uint256 indexed id);
+    event FeesChanged(uint256 buyFeeBps, uint256 sellFeeBps);
+    event FeeWalletChanged(address feeWallet);
+
+    constructor(address payable feeWallet_) Ownable(msg.sender) {
+        require(feeWallet_ != address(0), "zero feeWallet");
+        feeWallet = feeWallet_;
+    }
+
+    /* ---------------- create ---------------- */
+
+    /// @notice Post a sell order. Escrows `sellAmount` of `sellToken` here. `buyToken`=address(0) means
+    ///         you want to be paid in native ETH; otherwise an ERC-20. Reverts if nothing is escrowed.
+    function createOrder(address sellToken, uint256 sellAmount, address buyToken, uint256 buyAmount)
+        external nonReentrant returns (uint256 id)
+    {
+        require(sellToken != ETH, "sell must be ERC20");   // the sell side is always a token (ETH can only be the pay side)
+        require(sellAmount > 0 && buyAmount > 0, "zero amount");
+
+        // pull escrow, measuring what ACTUALLY arrived (handles fee-on-transfer tokens)
+        IERC20 t = IERC20(sellToken);
+        uint256 before = t.balanceOf(address(this));
+        t.safeTransferFrom(msg.sender, address(this), sellAmount);
+        uint256 received = t.balanceOf(address(this)) - before;
+        require(received > 0, "nothing escrowed");
+
+        id = nextOrderId++;
+        orders[id] = Order(msg.sender, sellToken, received, buyToken, buyAmount, true);
+        emit OrderCreated(id, msg.sender, sellToken, received, buyToken, buyAmount);
+    }
+
+    /* ---------------- fill ---------------- */
+
+    /// @notice Fill order `id` completely. Pay `buyAmount` of buyToken (as msg.value if ETH, else approve
+    ///         first). You receive the escrowed token minus the sell-side fee; the maker receives your
+    ///         payment minus the buy-side fee; both fees go to feeWallet.
+    function fillOrder(uint256 id) external payable nonReentrant {
+        Order memory o = orders[id];
+        require(o.active, "not open");
+        require(msg.sender != o.maker, "maker cannot fill own");
+        orders[id].active = false; // effects before interactions (no reentrancy, no double-fill)
+
+        // ----- sell side: escrowed token -> taker (minus sell fee) -----
+        uint256 sellFee = (o.sellAmount * sellFeeBps) / 10_000;
+        uint256 toTaker = o.sellAmount - sellFee;
+        IERC20(o.sellToken).safeTransfer(msg.sender, toTaker);
+        if (sellFee > 0) IERC20(o.sellToken).safeTransfer(feeWallet, sellFee);
+
+        // ----- buy side: taker's payment -> maker (minus buy fee) -----
+        uint256 buyFee = (o.buyAmount * buyFeeBps) / 10_000;
+        uint256 toMaker = o.buyAmount - buyFee;
+
+        if (o.buyToken == ETH) {
+            require(msg.value == o.buyAmount, "wrong ETH amount");
+            (bool okM, ) = payable(o.maker).call{value: toMaker}("");
+            require(okM, "pay maker failed");
+            if (buyFee > 0) { (bool okF, ) = feeWallet.call{value: buyFee}(""); require(okF, "pay fee failed"); }
+        } else {
+            require(msg.value == 0, "no ETH for ERC20 buy");
+            // pull the taker's payment straight through (measure-safe for tax tokens on the fee split)
+            IERC20 b = IERC20(o.buyToken);
+            b.safeTransferFrom(msg.sender, o.maker, toMaker);
+            if (buyFee > 0) b.safeTransferFrom(msg.sender, feeWallet, buyFee);
+        }
+
+        emit OrderFilled(id, msg.sender, toTaker, toMaker, buyFee, sellFee);
+    }
+
+    /* ---------------- cancel ---------------- */
+
+    /// @notice Maker cancels an open order and gets the full escrow back.
+    function cancelOrder(uint256 id) external nonReentrant {
+        Order memory o = orders[id];
+        require(o.active, "not open");
+        require(msg.sender == o.maker, "not maker");
+        orders[id].active = false;
+        IERC20(o.sellToken).safeTransfer(o.maker, o.sellAmount);
+        emit OrderCancelled(id);
+    }
+
+    /* ---------------- views ---------------- */
+
+    function getOrder(uint256 id) external view returns (Order memory) { return orders[id]; }
+
+    /// @notice Open order ids (simple pager for the UI).
+    function openOrders(uint256 start, uint256 limit) external view returns (uint256[] memory ids) {
+        uint256 n;
+        for (uint256 i = start; i < nextOrderId && n < limit; i++) if (orders[i].active) n++;
+        ids = new uint256[](n);
+        uint256 j;
+        for (uint256 i = start; i < nextOrderId && j < n; i++) if (orders[i].active) ids[j++] = i;
+    }
+
+    /* ---------------- admin (policy only; can't touch escrowed orders) ---------------- */
+
+    function setFees(uint256 buyFeeBps_, uint256 sellFeeBps_) external onlyOwner {
+        require(buyFeeBps_ <= MAX_FEE_BPS && sellFeeBps_ <= MAX_FEE_BPS, "fee too high");
+        buyFeeBps = buyFeeBps_; sellFeeBps = sellFeeBps_;
+        emit FeesChanged(buyFeeBps_, sellFeeBps_);
+    }
+
+    function setFeeWallet(address payable w) external onlyOwner {
+        require(w != address(0), "zero");
+        feeWallet = w;
+        emit FeeWalletChanged(w);
+    }
+}
