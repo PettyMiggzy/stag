@@ -18,7 +18,9 @@
 const MARKET = '0xa113238953b660230bF97237A2cc9b9f48Fe06A6';
 const PUBLIC_RPC = 'https://rpc.mainnet.chain.robinhood.com';
 const ETH = '0x0000000000000000000000000000000000000000';
-const SITE = process.env.SITE || 'https://stagwifhood.fun';
+// Use the canonical www host in all outbound links — the apex 308-redirects here, and some
+// mobile DNS resolvers fail on the apex even when www resolves fine.
+const SITE = process.env.SITE || 'https://www.stagwifhood.fun';
 
 // event topic0 (keccak256 of the signatures)
 const T = {
