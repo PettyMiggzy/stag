@@ -46,6 +46,14 @@
     .pill-row button.on{border-color:var(--gold);color:var(--gold-lite)}
     .safe-note{margin-top:.8rem;padding:.7rem .8rem;border:1px solid rgba(120,200,150,.2);border-radius:10px;background:rgba(20,60,40,.25);font-size:.76rem;color:#bfe9cf;line-height:1.45}
     .mini{font-size:.7rem;color:var(--muted)}
+    .bridge-cta{display:flex;align-items:center;gap:.8rem;margin:0 0 1.1rem;padding:.85rem 1rem;border-radius:14px;text-decoration:none;
+      border:1px solid rgba(90,170,255,.28);background:linear-gradient(100deg,rgba(20,45,80,.55),rgba(16,60,45,.4));transition:border-color .2s,transform .1s}
+    .bridge-cta:hover{border-color:rgba(120,190,255,.55);transform:translateY(-1px)}
+    .bridge-cta-ic{font-size:1.4rem;flex:0 0 auto}
+    .bridge-cta-txt{color:#cfe4ff;font-size:.82rem;line-height:1.4;flex:1 1 auto}
+    .bridge-cta-txt b{color:#eaf3ff}
+    .bridge-cta-go{flex:0 0 auto;font:700 .76rem/1 'Space Grotesk',monospace;color:#8fc7ff;white-space:nowrap;padding:.5rem .7rem;border:1px solid rgba(120,190,255,.35);border-radius:9px}
+    @media(max-width:640px){.bridge-cta{flex-wrap:wrap}.bridge-cta-go{width:100%;text-align:center}}
   </style>
 </head>
 <body data-page="market">
@@ -119,6 +127,13 @@
       <button id="w-connect" class="btn btn-gold btn-sm">Connect Wallet</button>
       <button id="w-disconnect" class="btn btn-ghost btn-sm" hidden title="Disconnect wallet">Disconnect</button>
     </div>
+
+    <!-- BRIDGE-IN CALLOUT — anyone from any chain can fund up, then trade here -->
+    <a class="bridge-cta" href="/bridge">
+      <span class="bridge-cta-ic">🌉</span>
+      <span class="bridge-cta-txt"><b>Coming from another chain?</b> Bridge in from Ethereum, Base, Arbitrum or <b>Solana</b> → then trade any Robinhood Chain token right here.</span>
+      <span class="bridge-cta-go">Bridge in →</span>
+    </a>
 
     <section class="app-panel">
       <div class="stat-row s4">
