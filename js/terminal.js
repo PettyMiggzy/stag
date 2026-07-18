@@ -507,7 +507,7 @@
         const pfp = t.image
           ? '<img class="tt-pfp" src="' + escapeHtml(t.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=&quot;tt-pfp ph&quot;>' + initial + '</span>\'" />'
           : '<span class="tt-pfp ph">' + initial + '</span>';
-        return '<button class="tt-row" data-ca="' + t.address + '">' +
+        return '<div class="tt-row" data-ca="' + t.address + '" role="button" tabindex="0">' +
           '<span class="tt-rank">' + t.rank + '</span>' +
           pfp +
           '<span class="tt-name"><span class="tt-sym">' + escapeHtml(t.symbol || '—') + '</span>' +
@@ -515,11 +515,17 @@
           '<span class="tt-vol">' + fmtUsd(t.priceUsd) + '<span>$' + fmtNum(t.volH24) + ' vol</span></span>' +
           '<span class="tt-chg ' + (chg >= 0 ? 'up' : 'down') + '">' + pct(chg) +
             '<span>$' + fmtNum(t.mcapUsd) + ' mc</span></span>' +
-        '</button>';
+          '<button class="tt-trade" data-ca="' + t.address + '" title="Trade ' + escapeHtml(t.symbol || '') + '" type="button">⚡</button>' +
+        '</div>';
       }).join('');
       list.querySelectorAll('.tt-row').forEach((b) => b.onclick = () => {
         input.value = b.dataset.ca; scan(b.dataset.ca);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      list.querySelectorAll('.tt-trade').forEach((b) => b.onclick = async (e) => {
+        e.stopPropagation();
+        input.value = b.dataset.ca; await scan(b.dataset.ca);
+        const tp = document.querySelector('.term-trade'); if (tp) tp.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     }
     async function load() {
@@ -544,4 +550,48 @@
     if (pendingScanCA && Gate.held() >= SCAN_GATE) { hideScanGate(); const ca = pendingScanCA; pendingScanCA = null; scan(ca); }
   });
   try { const a = localStorage.getItem('tt_addr'); if (a && /^0x[0-9a-fA-F]{40}$/.test(a)) { Gate.addr = a; Gate.refresh(); } } catch {}
+
+  /* ---- 💼 wallet portfolio (holdings + live USD value) ---- */
+  (function portfolio() {
+    const pf = $('pf'), list = $('pf-list'), totalEl = $('pf-total'), connectWrap = $('pf-connect'), cbtn = $('pf-connect-btn');
+    if (!pf || !list) return;
+    let busy = false;
+    async function loadPf(addr) {
+      if (busy) return; busy = true;
+      if (connectWrap) connectWrap.hidden = true; list.hidden = false;
+      totalEl.textContent = 'loading…';
+      let items = [];
+      try { const d = await j(BASE + '/addresses/' + addr + '/tokens?type=ERC-20', 2); items = d.items || []; }
+      catch { totalEl.textContent = '—'; list.innerHTML = '<div class="tt-load">Couldn’t load holdings — try again.</div>'; busy = false; return; }
+      let holds = items.map((it) => { const t = it.token || {}; const dec = Number(t.decimals || 18);
+        return { addr: (t.address_hash || t.address || '').toLowerCase(), sym: t.symbol || '?', icon: t.icon_url || null, dec,
+          bal: Number(it.value || 0) / Math.pow(10, dec), price: Number(t.exchange_rate) || 0 }; }).filter((h) => h.addr && h.bal > 0);
+      // enrich prices from GeckoTerminal (broader coverage than the explorer)
+      try {
+        const g = await (await fetch('https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/multi/' + holds.map((h) => h.addr).slice(0, 30).join(','))).json();
+        const pm = {}; (g.data || []).forEach((t) => { const a = t.attributes || {}; pm[(a.address || '').toLowerCase()] = Number(a.price_usd) || 0; });
+        holds.forEach((h) => { if (pm[h.addr] > 0) h.price = pm[h.addr]; });
+      } catch {}
+      holds.forEach((h) => { h.value = h.bal * h.price; });
+      holds.sort((a, b) => b.value - a.value);
+      const total = holds.reduce((s, h) => s + h.value, 0);
+      totalEl.textContent = total > 0 ? fmtUsd(total) : '$0';
+      if (!holds.length) { list.innerHTML = '<div class="tt-load">No tokens held on Robinhood Chain.</div>'; busy = false; return; }
+      list.innerHTML = holds.slice(0, 30).map((h) => {
+        const initial = esc((h.sym || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 1).toUpperCase() || '?');
+        const pfp = h.icon
+          ? '<img class="tt-pfp" src="' + esc(h.icon) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=&quot;tt-pfp ph&quot;>' + initial + '</span>\'" />'
+          : '<span class="tt-pfp ph">' + initial + '</span>';
+        return '<div class="pf-row" role="button" tabindex="0" data-ca="' + h.addr + '">' + pfp +
+          '<span class="tt-name"><span class="tt-sym">' + esc(h.sym) + '</span><span class="pf-bal">' + fmtNum(h.bal) + ' ' + esc(h.sym) + '</span></span>' +
+          '<span class="pf-val">' + (h.value > 0 ? fmtUsd(h.value) : '—') + '<span>' + (h.price > 0 ? fmtUsd(h.price) : 'no price') + '</span></span>' +
+        '</div>';
+      }).join('');
+      list.querySelectorAll('.pf-row').forEach((b) => b.onclick = () => { input.value = b.dataset.ca; scan(b.dataset.ca); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      busy = false;
+    }
+    if (cbtn) cbtn.onclick = async () => { try { await Gate.connect(); } catch {} if (Gate.addr) loadPf(Gate.addr); };
+    document.addEventListener('stag-gate', () => { if (Gate.addr) loadPf(Gate.addr); });
+    if (Gate.addr) loadPf(Gate.addr);
+  })();
 })();
