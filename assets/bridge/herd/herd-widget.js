@@ -102990,22 +102990,26 @@ const ePu = ({ toChain: e, gasTopUpEnabled: u, onGasTopUpEnabled: t, gasTopUpReq
   ssr: !1
 }), cPu = new TJe(), lPu = {
   primaryColor: "#9ef418",
-  focusColor: "#37d6c4",
-  anchor: { color: "#9ef418", hover: { color: "#b6ff36" } },
-  widget: {
-    background: "#0e2113",
-    borderRadius: "16px",
-    boxShadow: "0 0 0 1px rgba(158,244,24,.28)",
-    card: { background: "rgba(158,244,24,.05)", borderRadius: "14px" },
-    selector: { background: "rgba(158,244,24,.12)", hover: { background: "rgba(158,244,24,.2)" } },
-    swapCurrencyButtonBorderColor: "rgba(158,244,24,.3)"
-  },
-  text: { default: "#eaf7e2", subtle: "#9fb0a4" },
-  input: { background: "rgba(0,0,0,.25)", color: "#eaf7e2" },
+  focusColor: "#9ef418",
+  subtleBackgroundColor: "rgba(158,244,24,.06)",
+  subtleBorderColor: "rgba(158,244,24,.18)",
+  text: { default: "#eaf7e2", subtle: "#9fb0a4", error: "#ff6b6b", success: "#9ef418" },
+  input: { background: "rgba(0,0,0,.3)", color: "#eaf7e2", borderRadius: "12px" },
+  anchor: { color: "#9ef418", hover: { color: "#c6ff5a" } },
+  dropdown: { background: "#0e2113", border: "1px solid rgba(158,244,24,.2)", borderRadius: "14px" },
+  modal: { background: "#0c1a10", border: "1px solid rgba(158,244,24,.22)", borderRadius: "18px" },
   buttons: {
     primary: { background: "#9ef418", color: "#08120a", hover: { background: "#b6ff36", color: "#08120a" } },
-    secondary: { background: "rgba(158,244,24,.14)", color: "#eaf7e2", hover: { background: "rgba(158,244,24,.24)", color: "#fff" } },
-    tertiary: { background: "rgba(158,244,24,.1)", color: "#dfeccf" }
+    secondary: { background: "rgba(158,244,24,.14)", color: "#eaf7e2", hover: { background: "rgba(158,244,24,.26)", color: "#fff" } },
+    disabled: { background: "rgba(255,255,255,.06)", color: "#6b7a6e" }
+  },
+  widget: {
+    background: "#0b170e",
+    borderRadius: "18px",
+    border: "1px solid rgba(158,244,24,.22)",
+    card: { background: "rgba(158,244,24,.05)", borderRadius: "14px", border: "1px solid rgba(158,244,24,.12)" },
+    selector: { background: "rgba(158,244,24,.14)", hover: { background: "rgba(158,244,24,.26)" } },
+    swapCurrencyButtonBorderColor: "rgba(158,244,24,.3)"
   }
 };
 function dPu() {
@@ -103029,6 +103033,7 @@ function dPu() {
       supportedWalletVMs: ["evm", "svm"],
       lockChainId: 4663,
       toToken: aPu,
+      lockToToken: !0,
       wallet: p,
       linkedWallets: l,
       multiWalletSupportEnabled: !0,
