@@ -192,7 +192,9 @@
         const held = await erc.balanceOf(me);
         if (held < amtWei) { setStatus('You don\'t hold that much ' + (tok.symbol || 'token') + '.', 'err'); return; }
         const allow = await erc.allowance(me, SWAP);
-        if (allow < amtWei) { setStatus('Approve ' + (tok.symbol || 'token') + ' first…'); const at = await erc.approve(SWAP, ethers.MaxUint256); await at.wait(); }
+        // exact-amount approval (never infinite) — an unlimited approval to a swap contract
+        // is the pattern wallet scanners flag as "swapping could lead to loss of your assets".
+        if (allow < amtWei) { setStatus('Approve ' + (tok.symbol || 'token') + ' first…'); const at = await erc.approve(SWAP, amtWei); await at.wait(); }
         const minOut = ethers.parseEther(trimNum(q.minOut) || '0');
         setStatus('Simulating…');
         await swap.sell.staticCall(tok.ca, pool, amtWei, minOut);      // PRE-SIGN GUARD
@@ -255,7 +257,8 @@
         const amtWei = ethers.parseUnits(String(amt), tok.decimals);
         const erc = new ethers.Contract(tok.ca, ERC20, signer);
         if ((await erc.balanceOf(me)) < amtWei) return setStatus("You don't hold that much " + (tok.symbol || 'token') + '.', 'err');
-        if ((await erc.allowance(me, ORDERS)) < amtWei) { setStatus('Approve ' + (tok.symbol || 'token') + ' first…'); await (await erc.approve(ORDERS, ethers.MaxUint256)).wait(); }
+        // exact-amount approval (never infinite) — scanner-safe, matches WALLET_SAFETY.md
+        if ((await erc.allowance(me, ORDERS)) < amtWei) { setStatus('Approve ' + (tok.symbol || 'token') + ' first…'); await (await erc.approve(ORDERS, amtWei)).wait(); }
         const outEth = (amt * target / ethUsd) * feeMul;
         const minOut = ethers.parseEther(trimNum(outEth) || '0');
         setStatus('Confirm the take-profit in your wallet…');
