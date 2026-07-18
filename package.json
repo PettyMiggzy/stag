@@ -1,0 +1,8 @@
+{
+  "name": "stagwifhood",
+  "private": true,
+  "description": "STAGWIFHOOD site — static pages + Vercel serverless functions.",
+  "dependencies": {
+    "ethers": "^6.13.5"
+  }
+}

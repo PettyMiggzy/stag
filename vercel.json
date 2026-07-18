@@ -16,6 +16,7 @@
     }
   ],
   "crons": [
-    { "path": "/api/market/poll", "schedule": "* * * * *" }
+    { "path": "/api/market/poll", "schedule": "* * * * *" },
+    { "path": "/api/orders/keep", "schedule": "* * * * *" }
   ]
 }

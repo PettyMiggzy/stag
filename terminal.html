@@ -38,6 +38,17 @@
     .pf-val{text-align:right;font:700 .84rem/1 'Space Grotesk',monospace;color:#eafff2;white-space:nowrap}
     .pf-val span{display:block;font:500 .58rem/1.3 'Space Grotesk',monospace;color:var(--muted)}
     #pf-total{color:var(--gold-lite)}
+    .trade-mode{display:flex;gap:.3rem;margin:.1rem 0 .6rem}
+    .trade-mode button{flex:1;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--muted);font:700 .74rem/1 'Space Grotesk',monospace;padding:.5rem;border-radius:8px;cursor:pointer}
+    .trade-mode button.on{border-color:var(--gold);color:#12180f;background:linear-gradient(135deg,#e9c86a,#d4af37)}
+    .trade-limit{margin:.2rem 0 .1rem}
+    .my-orders{margin-top:1rem;border-top:1px solid rgba(255,255,255,.08);padding-top:.7rem}
+    .mo-head{font:700 .72rem/1 'Space Grotesk',monospace;color:#eafff2;margin-bottom:.5rem}
+    .mo-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.5rem .6rem;border:1px solid rgba(255,255,255,.07);border-radius:9px;margin-bottom:.4rem}
+    .mo-row .mo-info{font:500 .68rem/1.35 'Space Grotesk',monospace;color:var(--muted);min-width:0}
+    .mo-row .mo-info b{color:#eafff2;display:block;font-size:.76rem}
+    .mo-cancel{flex:0 0 auto;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.1);color:#ff9b9b;font:700 .64rem/1 'Space Grotesk',monospace;padding:.4rem .55rem;border-radius:7px;cursor:pointer}
+    .mo-cancel:hover{background:rgba(255,107,107,.2)}
     .tt-pfp{width:32px;height:32px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
     .tt-pfp.ph{display:flex;align-items:center;justify-content:center;font:800 .8rem/1 'Space Grotesk',monospace;color:#cbb26a}
     .tt-row:hover{background:rgba(255,255,255,.04)}
@@ -283,19 +294,33 @@
               <button class="term-trade-tab active" data-side="buy" type="button">Buy</button>
               <button class="term-trade-tab" data-side="sell" type="button">Sell</button>
             </div>
+            <div class="trade-mode" id="trade-mode">
+              <button data-m="market" class="on" type="button">⚡ Market</button>
+              <button data-m="limit" type="button">🎯 Limit</button>
+            </div>
             <label class="stake-field">
               <span class="stake-field-top"><span id="trade-amt-label">You pay</span><span class="stake-bal" id="trade-bal">Balance: —</span></span>
               <span class="stake-input"><input id="trade-amt" type="text" inputmode="decimal" placeholder="0.0" disabled /><button class="mx" id="trade-max" type="button">MAX</button><span class="stake-tok" id="trade-tok">ETH</span></span>
             </label>
             <div class="trade-quick" id="trade-quick"></div>
             <div class="trade-est" id="trade-est" hidden><span>You receive ≈ <b id="trade-out">—</b></span><span class="trade-min" id="trade-min"></span></div>
-            <div class="trade-slip"><span>Slippage</span><div class="slip-opts" id="slip-opts">
+            <div class="trade-slip" id="trade-slip-row"><span>Slippage</span><div class="slip-opts" id="slip-opts">
               <button data-s="5" type="button">5%</button><button data-s="10" type="button">10%</button>
               <button data-s="15" class="on" type="button">15%</button><button data-s="25" type="button">25%</button>
             </div></div>
+            <div class="trade-limit" id="trade-limit" hidden>
+              <label class="mini" id="limit-label">Target price (USD)</label>
+              <div class="stake-input"><input id="limit-price" type="text" inputmode="decimal" placeholder="0.00" /><span class="stake-tok">$</span></div>
+              <div class="trade-quick" id="limit-quick"></div>
+              <div class="trade-min" id="limit-hint"></div>
+            </div>
             <button class="btn btn-gold btn-lg" id="trade-btn" disabled>Connect Wallet</button>
             <p class="mint-status" id="trade-status"></p>
-            <p class="term-trade-note">Non-custodial swap via Uniswap on Robinhood Chain — a <strong>1% fee</strong> supports $STAG. We simulate (balance + gas) <strong>before</strong> you sign. Set slippage higher for thin/volatile tokens.</p>
+            <p class="term-trade-note" id="trade-note">Non-custodial swap via Uniswap on Robinhood Chain — a <strong>1% fee</strong> supports $STAG. We simulate (balance + gas) <strong>before</strong> you sign. Set slippage higher for thin/volatile tokens.</p>
+            <div class="my-orders" id="my-orders" hidden>
+              <div class="mo-head">🎯 Your open orders</div>
+              <div id="mo-list"></div>
+            </div>
           </div>
         </div>
       </div>
