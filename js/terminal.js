@@ -367,21 +367,57 @@
 
   form.addEventListener('submit', (e) => { e.preventDefault(); scan(input.value); });
 
-  /* ---- 🔥 live trending panel (Uniswap volume, cached server-side) ---- */
+  /* ---- 🔥 live trending panel — GATED: hold 1,000,000 $STAG to unlock ---- */
   (function trending() {
-    const wrap = $('tt'), list = $('tt-list'), sub = $('tt-sub');
+    const wrap = $('tt'), list = $('tt-list'), foot = $('tt-foot'), sub = $('tt-sub');
+    const gate = $('tt-gate'), gsub = $('tt-gate-sub'), connectBtn = $('tt-connect');
     if (!wrap || !list) return;
+
+    const STAG = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+    const RPC = 'https://rpc.mainnet.chain.robinhood.com';
+    const GATE = 1000000n * (10n ** 18n);   // 1,000,000 $STAG
     const pct = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+    let unlocked = false, timer = null;
+
+    // read-only $STAG balanceOf via public RPC (no signer needed, just the address)
+    async function stagBalance(addr) {
+      try {
+        const data = '0x70a08231' + addr.slice(2).toLowerCase().padStart(64, '0');
+        const r = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: STAG, data }, 'latest'] }) });
+        const j = await r.json();
+        return BigInt(j.result && j.result !== '0x' ? j.result : '0x0');
+      } catch { return 0n; }
+    }
+    const fmtStag = (bal) => Number(bal / (10n ** 18n)).toLocaleString();
+
+    async function checkAddr(addr) {
+      const bal = await stagBalance(addr);
+      if (bal >= GATE) unlock();
+      else gsub.innerHTML = 'You hold <b>' + fmtStag(bal) + ' $STAG</b> — need <b>1,000,000</b> to unlock. <a href="/bridge" style="color:var(--gold-lite)">Get more →</a>';
+    }
+    async function connect() {
+      if (!window.ethereum) { gsub.textContent = 'No wallet found — open this page in your wallet’s browser, or install MetaMask.'; return; }
+      try {
+        const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accs && accs[0]) { try { localStorage.setItem('tt_addr', accs[0]); } catch {} gsub.textContent = 'Checking your $STAG balance…'; await checkAddr(accs[0]); }
+      } catch {}
+    }
+    function unlock() {
+      if (unlocked) return; unlocked = true;
+      gate.hidden = true; list.hidden = false; foot.hidden = false;
+      sub.textContent = 'live · 15-min volume';
+      load(); timer = setInterval(load, 60000);
+    }
+
     async function load() {
       let data;
-      try { const r = await fetch('/api/trending'); data = await r.json(); } catch { return; }
+      try { data = await (await fetch('/api/trending')).json(); } catch { return; }
       const toks = (data && data.tokens) || [];
-      if (!toks.length) { if (wrap.hidden) return; }         // keep whatever's shown if a refresh comes back empty
-      wrap.hidden = false;
-      if (sub && data.windowMin) sub.textContent = 'live · ' + data.windowMin + '-min volume';
+      if (!toks.length) return;
+      if (data.windowMin) sub.textContent = 'live · ' + data.windowMin + '-min volume';
       list.innerHTML = toks.map((t) => {
-        const chg = Number(t.changePct || 0);
-        const boosted = t.boosted;
+        const chg = Number(t.changePct || 0), boosted = t.boosted;
         return '<button class="tt-row" data-ca="' + t.address + '">' +
           '<span class="tt-rank' + (boosted ? ' boost' : '') + '">' + (boosted ? '🚀' : t.rank) + '</span>' +
           '<span class="tt-name"><span class="tt-sym">' + escapeHtml(t.symbol || '—') + '</span>' +
@@ -396,7 +432,8 @@
       });
     }
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-    load();
-    setInterval(load, 60000);
+
+    if (connectBtn) connectBtn.onclick = connect;
+    try { const a = localStorage.getItem('tt_addr'); if (a && /^0x[0-9a-fA-F]{40}$/.test(a)) checkAddr(a); } catch {}
   })();
 })();

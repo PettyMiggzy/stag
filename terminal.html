@@ -39,6 +39,14 @@
     .tt-chg.up{color:#3fd07a}.tt-chg.down{color:#ff6b6b}
     .tt-foot{padding:.55rem 1rem;font:500 .6rem/1.3 'Space Grotesk',monospace;color:var(--muted);text-align:center;border-top:1px solid rgba(255,255,255,.05)}
     .tt-load{padding:1.1rem;text-align:center;color:var(--muted);font-size:.8rem}
+    .tt-gate{display:flex;align-items:center;gap:.9rem;padding:1.1rem 1rem;flex-wrap:wrap}
+    .tt-gate-ic{font-size:1.7rem;flex:0 0 auto}
+    .tt-gate-txt{flex:1 1 220px;min-width:0}
+    .tt-gate-txt b{color:#eafff2}
+    .tt-gate-txt > b{display:block;font:800 .9rem/1.3 'Space Grotesk',monospace;margin-bottom:.15rem}
+    .tt-gate-txt span{color:var(--muted);font:500 .76rem/1.45 'Space Grotesk',monospace}
+    .tt-gate-actions{display:flex;gap:.5rem;flex:0 0 auto;flex-wrap:wrap}
+    @media(max-width:560px){.tt-gate-actions{width:100%}.tt-gate-actions .btn{flex:1}}
   </style>
 </head>
 <body>
@@ -100,14 +108,25 @@
     </form>
     <div class="chips" id="term-chips"><span class="chips-label">Try:</span></div>
 
-    <!-- 🔥 LIVE TRENDING -->
-    <div class="tt" id="tt" hidden>
+    <!-- 🔥 LIVE TRENDING (gated: hold 1,000,000 $STAG) -->
+    <div class="tt" id="tt">
       <div class="tt-head">
         <span class="tt-title">🔥 Trending on Robinhood Chain</span>
-        <span class="tt-sub" id="tt-sub">live · 15-min volume</span>
+        <span class="tt-sub" id="tt-sub">🔒 holders only</span>
       </div>
-      <div class="tt-list" id="tt-list"></div>
-      <div class="tt-foot">Ranked by real Uniswap volume · tap a token to scan it</div>
+      <div class="tt-gate" id="tt-gate">
+        <div class="tt-gate-ic">🔒</div>
+        <div class="tt-gate-txt">
+          <b>Live Trending — a $STAG holder perk</b>
+          <span id="tt-gate-sub">Hold <b>1,000,000 $STAG</b> to unlock the live leaderboard.</span>
+        </div>
+        <div class="tt-gate-actions">
+          <button class="btn btn-gold btn-sm" id="tt-connect">Connect Wallet</button>
+          <a class="btn btn-ghost btn-sm" href="/bridge">Buy $STAG →</a>
+        </div>
+      </div>
+      <div class="tt-list" id="tt-list" hidden></div>
+      <div class="tt-foot" id="tt-foot" hidden>Ranked by real Uniswap volume · tap a token to scan it</div>
     </div>
 
     <!-- EMPTY / LOADING STATE -->
