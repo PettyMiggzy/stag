@@ -438,27 +438,31 @@
       try { await Gate.connect(); } catch { gsub.textContent = 'No wallet found — open this page in your wallet’s browser, or install MetaMask.'; return; }
       evaluate();
     }
+    const tabs = $('tt-tabs');
+    let views = null, view = 'trending';
+
     function unlock() {
       if (unlocked) return; unlocked = true;
-      gate.hidden = true; list.hidden = false; foot.hidden = false;
-      sub.textContent = 'live · 15-min volume';
+      gate.hidden = true; list.hidden = false; foot.hidden = false; if (tabs) tabs.hidden = false;
+      sub.textContent = 'live · powered by GeckoTerminal';
       load(); timer = setInterval(load, 60000);
     }
 
-    async function load() {
-      let data;
-      try { data = await (await fetch('/api/trending')).json(); } catch { return; }
-      const toks = (data && data.tokens) || [];
-      if (!toks.length) return;
-      if (data.windowMin) sub.textContent = 'live · ' + data.windowMin + '-min volume';
-      list.innerHTML = toks.map((t) => {
-        const chg = Number(t.changePct || 0), boosted = t.boosted;
+    const shortCa = (a) => a.slice(0, 6) + '…' + a.slice(-4);
+    function render() {
+      const rows = (views && views[view]) || [];
+      if (!rows.length) { list.innerHTML = '<div class="tt-load">No tokens in this view right now.</div>'; return; }
+      list.innerHTML = rows.map((t) => {
+        const chg = Number(t.chg && t.chg.h24 || 0);
+        const flow = view === 'new' && t.ageH != null ? (t.ageH < 1 ? Math.round(t.ageH * 60) + 'm old' : Math.round(t.ageH) + 'h old')
+          : (t.buys24 + t.sells24) + ' trades 24h';
         return '<button class="tt-row" data-ca="' + t.address + '">' +
-          '<span class="tt-rank' + (boosted ? ' boost' : '') + '">' + (boosted ? '🚀' : t.rank) + '</span>' +
+          '<span class="tt-rank">' + t.rank + '</span>' +
           '<span class="tt-name"><span class="tt-sym">' + escapeHtml(t.symbol || '—') + '</span>' +
-            '<span class="tt-flow">' + t.buys + ' buys · ' + t.sells + ' sells</span></span>' +
-          '<span class="tt-vol">' + fmtUsd(t.volumeUsd) + '<span>' + (t.volumeEth || 0).toFixed(2) + ' Ξ</span></span>' +
-          '<span class="tt-chg ' + (chg >= 0 ? 'up' : 'down') + '">' + pct(chg) + '</span>' +
+            '<span class="tt-ca">' + shortCa(t.address) + ' · ' + flow + '</span></span>' +
+          '<span class="tt-vol">' + fmtUsd(t.priceUsd) + '<span>$' + fmtNum(t.volH24) + ' vol</span></span>' +
+          '<span class="tt-chg ' + (chg >= 0 ? 'up' : 'down') + '">' + pct(chg) +
+            '<span>$' + fmtNum(t.mcapUsd) + ' mc</span></span>' +
         '</button>';
       }).join('');
       list.querySelectorAll('.tt-row').forEach((b) => b.onclick = () => {
@@ -466,6 +470,15 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     }
+    async function load() {
+      let data;
+      try { data = await (await fetch('/api/trending')).json(); } catch { return; }
+      if (data && data.views) { views = data.views; render(); }
+    }
+    if (tabs) tabs.querySelectorAll('button').forEach((b) => b.onclick = () => {
+      tabs.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+      b.classList.add('on'); view = b.dataset.v; render();
+    });
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
     if (connectBtn) connectBtn.onclick = connect;

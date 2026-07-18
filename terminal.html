@@ -35,8 +35,13 @@
     .tt-flow{font:500 .62rem/1.2 'Space Grotesk',monospace;color:var(--muted)}
     .tt-vol{font:700 .82rem/1 'Space Grotesk',monospace;color:#eafff2;text-align:right;white-space:nowrap}
     .tt-vol span{display:block;font:500 .58rem/1.3 'Space Grotesk',monospace;color:var(--muted)}
-    .tt-chg{font:700 .8rem/1 'Space Grotesk',monospace;text-align:right;white-space:nowrap;min-width:3.6rem}
+    .tt-chg{font:700 .8rem/1 'Space Grotesk',monospace;text-align:right;white-space:nowrap;min-width:4rem}
+    .tt-chg span{display:block;font:500 .58rem/1.3 'Space Grotesk',monospace;color:var(--muted)}
     .tt-chg.up{color:#3fd07a}.tt-chg.down{color:#ff6b6b}
+    .tt-ca{font:500 .56rem/1.3 'Space Grotesk',monospace;color:#6f8579;letter-spacing:.02em}
+    .tt-tabs{display:flex;gap:.3rem;padding:.55rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);overflow-x:auto}
+    .tt-tabs button{flex:0 0 auto;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--muted);font:700 .72rem/1 'Space Grotesk',monospace;padding:.45rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap}
+    .tt-tabs button.on{border-color:var(--gold);color:#12180f;background:linear-gradient(135deg,#e9c86a,#d4af37)}
     .tt-foot{padding:.55rem 1rem;font:500 .6rem/1.3 'Space Grotesk',monospace;color:var(--muted);text-align:center;border-top:1px solid rgba(255,255,255,.05)}
     .tt-load{padding:1.1rem;text-align:center;color:var(--muted);font-size:.8rem}
     .tt-gate{display:flex;align-items:center;gap:.9rem;padding:1.1rem 1rem;flex-wrap:wrap}
@@ -112,8 +117,14 @@
     <!-- 🔥 LIVE TRENDING (gated: hold 1,000,000 $STAG) -->
     <div class="tt" id="tt">
       <div class="tt-head">
-        <span class="tt-title">🔥 Trending on Robinhood Chain</span>
+        <span class="tt-title">📊 Robinhood Chain — Live Markets</span>
         <span class="tt-sub" id="tt-sub">🔒 holders only</span>
+      </div>
+      <div class="tt-tabs" id="tt-tabs" hidden>
+        <button data-v="trending" class="on">🔥 Trending</button>
+        <button data-v="gainers">🚀 Gainers</button>
+        <button data-v="dips">📉 Dips</button>
+        <button data-v="new">🆕 New</button>
       </div>
       <div class="tt-gate" id="tt-gate">
         <div class="tt-gate-ic">🔒</div>
@@ -127,7 +138,7 @@
         </div>
       </div>
       <div class="tt-list" id="tt-list" hidden></div>
-      <div class="tt-foot" id="tt-foot" hidden>Ranked by real Uniswap volume · tap a token to scan it</div>
+      <div class="tt-foot" id="tt-foot" hidden>Live data via GeckoTerminal · tap any token to scan it</div>
     </div>
 
     <!-- EMPTY / LOADING / GATE STATE -->
