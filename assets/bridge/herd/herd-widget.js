@@ -102982,7 +102982,8 @@ const ePu = ({ toChain: e, gasTopUpEnabled: u, onGasTopUpEnabled: t, gasTopUpReq
   decimals: 18,
   name: "$STAG",
   symbol: "STAG",
-  logoURI: "https://stagwifhood.fun/assets/img/mark.png"
+  logoURI: "https://stagwifhood.fun/assets/img/mark.png",
+  verified: !0
 }, sPu = 792703809, oPu = V6u({
   appName: "The Herd",
   projectId: "a00014837c68f5d7133c3cc329dcfe6d",
@@ -103013,36 +103014,39 @@ const ePu = ({ toChain: e, gasTopUpEnabled: u, onGasTopUpEnabled: t, gasTopUpReq
   }
 };
 function dPu() {
-  const { address: e } = _r(), { data: u } = Tbe(), { openConnectModal: t } = Wwe(), { connection: n } = bDe(), r = FDe(), { setVisible: i } = hFe(), [a, s] = z.useState(null), o = z.useMemo(() => u ? Ry(u) : void 0, [u]), c = z.useMemo(() => {
+  const { address: e } = _r(), { data: u } = Tbe(), { openConnectModal: t } = Wwe(), { connection: n } = bDe(), r = FDe(), { setVisible: i } = hFe(), [a, s] = z.useState(null), [o, c] = z.useState(aPu), [l, d] = z.useState(void 0), p = z.useMemo(() => u ? Ry(u) : void 0, [u]), E = z.useMemo(() => {
     if (!(!r.publicKey || !r.sendTransaction || !n))
       return rPu(
         r.publicKey.toBase58(),
         sPu,
         n,
-        async (f, h) => ({ signature: await r.sendTransaction(f, n, h) })
+        async (C, y) => ({ signature: await r.sendTransaction(C, n, y) })
       );
-  }, [r.publicKey, r.sendTransaction, n]), l = z.useMemo(() => {
-    const f = [];
-    return e && f.push({ address: e, vmType: "evm", connector: "wallet" }), r.publicKey && f.push({ address: r.publicKey.toBase58(), vmType: "svm", connector: r.wallet?.adapter?.name || "solana" }), f;
-  }, [e, r.publicKey, r.wallet]), p = (a || (e ? "evm" : r.publicKey ? "svm" : null)) === "svm" ? c : o, E = (f) => {
-    (f && (f.chainVmType || f.vmType || f.chain && f.chain.vmType)) === "svm" ? i(!0) : t ? t() : i(!0);
+  }, [r.publicKey, r.sendTransaction, n]), f = z.useMemo(() => {
+    const C = [];
+    return e && C.push({ address: e, vmType: "evm", connector: "wallet" }), r.publicKey && C.push({ address: r.publicKey.toBase58(), vmType: "svm", connector: r.wallet?.adapter?.name || "solana" }), C;
+  }, [e, r.publicKey, r.wallet]), m = (a || (e ? "evm" : r.publicKey ? "svm" : null)) === "svm" ? E : p, g = (C) => {
+    (C && (C.chainVmType || C.vmType || C.chain && C.chain.vmType)) === "svm" ? i(!0) : t ? t() : i(!0);
   };
   return /* @__PURE__ */ R.jsx(
     tPu,
     {
       supportedWalletVMs: ["evm", "svm"],
       lockChainId: 4663,
-      toToken: aPu,
+      fromToken: l,
+      setFromToken: d,
+      toToken: o,
+      setToToken: c,
       lockToToken: !0,
-      wallet: p,
-      linkedWallets: l,
+      wallet: m,
+      linkedWallets: f,
       multiWalletSupportEnabled: !0,
-      onSetPrimaryWallet: (f) => {
-        const h = l.find((m) => m.address === f);
-        h && s(h.vmType);
+      onSetPrimaryWallet: (C) => {
+        const y = f.find((A) => A.address === C);
+        y && s(y.vmType);
       },
-      onLinkNewWallet: E,
-      onConnectWallet: E,
+      onLinkNewWallet: g,
+      onConnectWallet: g,
       onAnalyticEvent: () => {
       }
     }
