@@ -87,8 +87,10 @@ function fmtAmount(raw, decimals) {
 /* ---------------- Upstash Redis REST ---------------- */
 // kv('SET','k','v') / kv('GET','k') / kv('SADD','set','m') / kv('SMEMBERS','set') / kv('SREM'...)
 async function kvFactory() {
-  const url = process.env.KV_REST_API_URL, tok = process.env.KV_REST_API_TOKEN;
-  if (!url || !tok) throw new Error('KV not configured (set KV_REST_API_URL + KV_REST_API_TOKEN)');
+  // Accept whatever the Vercel/Upstash integration names them — no manual aliasing needed.
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_REST_URL;
+  const tok = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_REST_TOKEN;
+  if (!url || !tok) throw new Error('KV not configured (add the Upstash Redis / Vercel KV store)');
   return async (...cmd) => {
     const r = await fetch(url, {
       method: 'POST',
