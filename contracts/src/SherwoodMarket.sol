@@ -30,12 +30,14 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
     address internal constant ETH = address(0);
 
     struct Order {
-        address maker;       // who created the order
+        address maker;       // who created the order        ┐
+        bool    active;      // open?                         │ these four pack
+        uint16  buyFeeBps;   // buy-side fee SNAPSHOT at post │ into one 32-byte
+        uint16  sellFeeBps;  // sell-side fee SNAPSHOT at post ┘ slot (20+1+2+2)
         address sellToken;   // ERC-20 being sold (escrowed here)
         uint256 sellAmount;  // amount of sellToken escrowed (net of any transfer tax)
         address buyToken;    // what the maker wants paid in (ETH = address(0), or an ERC-20)
         uint256 buyAmount;   // amount of buyToken the maker wants
-        bool    active;      // open?
     }
 
     mapping(uint256 => Order) public orders;
@@ -75,8 +77,10 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         uint256 received = t.balanceOf(address(this)) - before;
         require(received > 0, "nothing escrowed");
 
+        // snapshot the CURRENT fee rates into the order — the owner can never retroactively
+        // re-tax an already-posted order; a later setFees() only affects future orders.
         id = nextOrderId++;
-        orders[id] = Order(msg.sender, sellToken, received, buyToken, buyAmount, true);
+        orders[id] = Order(msg.sender, true, uint16(buyFeeBps), uint16(sellFeeBps), sellToken, received, buyToken, buyAmount);
         emit OrderCreated(id, msg.sender, sellToken, received, buyToken, buyAmount);
     }
 
@@ -91,14 +95,14 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         require(msg.sender != o.maker, "maker cannot fill own");
         orders[id].active = false; // effects before interactions (no reentrancy, no double-fill)
 
-        // ----- sell side: escrowed token -> taker (minus sell fee) -----
-        uint256 sellFee = (o.sellAmount * sellFeeBps) / 10_000;
+        // ----- sell side: escrowed token -> taker (minus sell fee, using the order's SNAPSHOT rate) -----
+        uint256 sellFee = (o.sellAmount * o.sellFeeBps) / 10_000;
         uint256 toTaker = o.sellAmount - sellFee;
         IERC20(o.sellToken).safeTransfer(msg.sender, toTaker);
         if (sellFee > 0) IERC20(o.sellToken).safeTransfer(feeWallet, sellFee);
 
-        // ----- buy side: taker's payment -> maker (minus buy fee) -----
-        uint256 buyFee = (o.buyAmount * buyFeeBps) / 10_000;
+        // ----- buy side: taker's payment -> maker (minus buy fee, using the order's SNAPSHOT rate) -----
+        uint256 buyFee = (o.buyAmount * o.buyFeeBps) / 10_000;
         uint256 toMaker = o.buyAmount - buyFee;
 
         if (o.buyToken == ETH) {
