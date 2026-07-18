@@ -50,21 +50,6 @@
     .brg-a p{color:#9fb0a4;font:500 .82rem/1.4 'Inter',sans-serif;margin:0}
     .brg-sec{max-width:1180px;margin:1.8rem auto 0;padding:1rem 1.2rem;border-radius:14px;background:rgba(245,179,1,.06);border:1px solid rgba(245,179,1,.22);color:#e6d8b0;font:500 .82rem/1.5 'Inter',sans-serif}
     .brg-sec b{color:#f5b301}
-    /* on-page swap panel */
-    .brg-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(3,8,4,.82);backdrop-filter:blur(6px);padding:1rem}
-    .brg-modal.open{display:flex}
-    .brg-panel{width:100%;max-width:460px;background:linear-gradient(160deg,#0e2113,#0a160d);border:1px solid rgba(158,244,24,.35);border-radius:20px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 40px rgba(158,244,24,.12);display:flex;flex-direction:column;max-height:92vh}
-    .brg-panel-head{display:flex;align-items:center;gap:.6rem;padding:.9rem 1.1rem;border-bottom:1px solid rgba(158,244,24,.18);background:rgba(158,244,24,.05)}
-    .brg-panel-head img{width:26px;height:26px;border-radius:6px}
-    .brg-panel-head h3{flex:1;margin:0;font:800 1rem/1.1 'Cinzel',serif;color:#fff}
-    .brg-panel-head .pw{font:700 .62rem/1 'Space Grotesk',monospace;color:#9ef418;background:rgba(158,244,24,.1);border:1px solid rgba(158,244,24,.3);border-radius:999px;padding:.3rem .55rem}
-    .brg-x{background:none;border:none;color:#cfe0c4;font-size:1.5rem;line-height:1;cursor:pointer;padding:.1rem .4rem;border-radius:8px}
-    .brg-x:hover{background:rgba(255,255,255,.08);color:#fff}
-    .brg-frame-wrap{position:relative;flex:1;min-height:560px;background:#0a160d}
-    .brg-frame-wrap iframe{width:100%;height:100%;min-height:560px;border:0;display:block}
-    .brg-fallback{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;text-align:center;padding:2rem;color:#cfe0c4;font:500 .95rem/1.5 'Inter',sans-serif}
-    .brg-fallback.show{display:flex}
-    .brg-fallback a{display:inline-block;padding:.9rem 1.4rem;border-radius:12px;background:linear-gradient(90deg,#9ef418,#37d6c4);color:#08120a;font:800 1rem/1 'Space Grotesk',monospace;text-decoration:none}
   </style>
 </head>
 <body data-page="bridge">
@@ -121,8 +106,8 @@
         <div class="brg-chains">
           <span>◎ Solana</span><span>Ξ Ethereum</span><span>🔵 Base</span><span>🔷 Arbitrum</span><span>→ 🦌 $STAG</span>
         </div>
-        <button class="brg-go" id="brg-buy" data-url="https://relay.link/bridge?toChainId=4663&toCurrency=0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49" data-title="Buy $STAG with any chain">🦌 Buy $STAG with any chain →</button>
-        <button class="brg-go brg-go2" id="brg-bridge" data-url="https://relay.link/bridge?toChainId=4663" data-title="Bridge to Robinhood Chain">Just bridge to ETH on Robinhood Chain →</button>
+        <a class="brg-go" id="brg-buy" href="https://relay.link/bridge?toChainId=4663&toCurrency=0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49" target="_blank" rel="noopener">🦌 Buy $STAG with any chain →</a>
+        <a class="brg-go brg-go2" id="brg-bridge" href="https://relay.link/bridge?toChainId=4663" target="_blank" rel="noopener">Just bridge to ETH on Robinhood Chain →</a>
         <p class="brg-note"><b>Buy $STAG</b> converts SOL/ETH from any chain <b>straight into $STAG</b> in one flow (~seconds). <b>Just bridge</b> gets you ETH on Robinhood Chain to use however you want. Connect your Solana or EVM wallet, pick an amount, confirm.</p>
       </div>
 
@@ -147,24 +132,6 @@
     <div class="brg-sec">
       🛡️ <b>Only bridge here.</b> This is the official $STAG bridge at <b>stagwifhood.fun/bridge</b>. Scam lookalike bridge domains exist — never connect your wallet to a "$STAG bridge" on any other domain. We never DM you a bridge link, and we never ask you to approve unlimited token access.
     </div>
-    <!-- on-page swap panel (stays on stagwifhood.fun) -->
-    <div class="brg-modal" id="brg-modal" role="dialog" aria-modal="true" aria-label="Bridge to Robinhood Chain">
-      <div class="brg-panel">
-        <div class="brg-panel-head">
-          <img src="assets/img/mark.png" alt="" />
-          <h3 id="brg-modal-title">Buy $STAG</h3>
-          <span class="pw">powered by The Herd</span>
-          <button class="brg-x" id="brg-close" aria-label="Close">×</button>
-        </div>
-        <div class="brg-frame-wrap">
-          <iframe id="brg-frame" title="$STAG bridge" allow="clipboard-write; clipboard-read; web3" referrerpolicy="no-referrer-when-downgrade"></iframe>
-          <div class="brg-fallback" id="brg-fallback">
-            <div>The bridge widget can't run inside the page in this browser.<br>No problem — open it in a secure tab:</div>
-            <a id="brg-fallback-link" href="#" target="_blank" rel="noopener">Open the $STAG bridge →</a>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 
   <footer class="footer">
@@ -179,33 +146,5 @@
   </footer>
 
   <script src="js/main.js"></script>
-  <script>
-  /* Open the swap INSIDE the page (our branding), no tab-leaving.
-     If the provider refuses to be framed (X-Frame-Options), we detect it and fall back
-     to a secure new-tab link — the page is never left broken. We build NO transactions
-     ourselves; the routing provider handles wallets/Solana/signing on their reputable domain. */
-  (function(){
-    const modal=document.getElementById('brg-modal'), frame=document.getElementById('brg-frame');
-    const title=document.getElementById('brg-modal-title'), fb=document.getElementById('brg-fallback');
-    const fbLink=document.getElementById('brg-fallback-link');
-    let frameTimer=null, loaded=false;
-    function open(url, label){
-      title.textContent=label||'Buy $STAG'; fbLink.href=url; fb.classList.remove('show'); loaded=false;
-      modal.classList.add('open'); document.body.style.overflow='hidden';
-      frame.src=url;
-      // if the iframe hasn't fired load within 3.5s, assume it's frame-blocked -> show fallback
-      clearTimeout(frameTimer);
-      frameTimer=setTimeout(()=>{ if(!loaded) fb.classList.add('show'); }, 3500);
-    }
-    function close(){ modal.classList.remove('open'); document.body.style.overflow=''; frame.src='about:blank'; clearTimeout(frameTimer); }
-    frame.addEventListener('load', ()=>{ if(frame.src && frame.src!=='about:blank'){ loaded=true; fb.classList.remove('show'); } });
-    document.querySelectorAll('#brg-buy,#brg-bridge').forEach((btn)=>{
-      btn.addEventListener('click',()=>open(btn.getAttribute('data-url'), btn.getAttribute('data-title')));
-    });
-    document.getElementById('brg-close').addEventListener('click', close);
-    modal.addEventListener('click',(e)=>{ if(e.target===modal) close(); });
-    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&modal.classList.contains('open')) close(); });
-  })();
-  </script>
 </body>
 </html>
