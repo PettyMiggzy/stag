@@ -100,9 +100,60 @@
 
   let feedTimer = null, currentCA = null, termSeq = 0;
 
+  /* ============================================================
+     $STAG holder gates — Scanner needs 100k, Trending needs 1m.
+     One wallet connect reads the balance; each feature checks its tier.
+     ============================================================ */
+  const STAG_ADDR = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+  const STAG_RPC = 'https://rpc.mainnet.chain.robinhood.com';
+  const SCAN_GATE = 100000n * (10n ** 18n);   // 100,000 $STAG to use the scanner
+  const fmtStagN = (bal) => Number(bal / (10n ** 18n)).toLocaleString();
+  async function stagBalanceOf(addr) {
+    try {
+      const data = '0x70a08231' + addr.slice(2).toLowerCase().padStart(64, '0');
+      const r = await fetch(STAG_RPC, { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: STAG_ADDR, data }, 'latest'] }) });
+      const jr = await r.json();
+      return BigInt(jr.result && jr.result !== '0x' ? jr.result : '0x0');
+    } catch { return 0n; }
+  }
+  const Gate = {
+    addr: null, balance: 0n, ready: false,
+    async connect() {
+      if (!window.ethereum) throw new Error('nowallet');
+      const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accs && accs[0]) { this.addr = accs[0]; try { localStorage.setItem('tt_addr', accs[0]); } catch {} await this.refresh(); }
+      return this.balance;
+    },
+    async refresh() { if (this.addr) { this.balance = await stagBalanceOf(this.addr); this.ready = true; document.dispatchEvent(new Event('stag-gate')); } return this.balance; },
+    held() { return this.balance; },
+  };
+  let pendingScanCA = null;
+  function showScanGate(ca) {
+    pendingScanCA = ca || pendingScanCA;
+    empty.hidden = false; board.hidden = true; empty.classList.remove('err');
+    const ico = $('term-empty-ico'); if (ico) ico.textContent = '🔒';
+    if (Gate.ready && Gate.held() < SCAN_GATE) {
+      emptyMsg.innerHTML = 'The Terminal scanner is a <b>$STAG holder tool</b>. You hold <b>' + fmtStagN(Gate.held()) + ' $STAG</b> — need <b>100,000</b> to scan. <a href="/bridge" style="color:var(--gold-lite)">Get more →</a>';
+    } else {
+      emptyMsg.innerHTML = 'The Terminal scanner is a <b>$STAG holder tool</b> — hold <b>100,000 $STAG</b> to scan any token. Connect your wallet to unlock.';
+    }
+    const ga = $('scan-gate-actions'); if (ga) ga.hidden = false;
+  }
+  function hideScanGate() { const ga = $('scan-gate-actions'); if (ga) ga.hidden = true; const ico = $('term-empty-ico'); if (ico) ico.textContent = '🏹'; }
+  async function onScanConnect() {
+    emptyMsg.textContent = 'Connecting…';
+    try { await Gate.connect(); }
+    catch { emptyMsg.innerHTML = 'No wallet found — open this page in your wallet’s browser, or install MetaMask.'; return; }
+    if (Gate.held() >= SCAN_GATE) { hideScanGate(); if (pendingScanCA) scan(pendingScanCA); }
+    else showScanGate();
+  }
+
   async function scan(caRaw) {
     const ca = (caRaw || '').trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(ca)) { setEmpty('That doesn\'t look like a contract address (0x + 40 hex).', true); return; }
+    // 🔒 holder gate — need 100k $STAG to run the scanner
+    if (Gate.held() < SCAN_GATE) { showScanGate(ca); return; }
     // each scan supersedes any in-flight one so tapping a new token always switches
     const myScan = ++termSeq; currentCA = ca;
     if (feedTimer) { clearInterval(feedTimer); feedTimer = null; }
@@ -373,35 +424,19 @@
     const gate = $('tt-gate'), gsub = $('tt-gate-sub'), connectBtn = $('tt-connect');
     if (!wrap || !list) return;
 
-    const STAG = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
-    const RPC = 'https://rpc.mainnet.chain.robinhood.com';
-    const GATE = 1000000n * (10n ** 18n);   // 1,000,000 $STAG
+    const TREND_GATE = 1000000n * (10n ** 18n);   // 1,000,000 $STAG
     const pct = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
     let unlocked = false, timer = null;
 
-    // read-only $STAG balanceOf via public RPC (no signer needed, just the address)
-    async function stagBalance(addr) {
-      try {
-        const data = '0x70a08231' + addr.slice(2).toLowerCase().padStart(64, '0');
-        const r = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: STAG, data }, 'latest'] }) });
-        const j = await r.json();
-        return BigInt(j.result && j.result !== '0x' ? j.result : '0x0');
-      } catch { return 0n; }
-    }
-    const fmtStag = (bal) => Number(bal / (10n ** 18n)).toLocaleString();
-
-    async function checkAddr(addr) {
-      const bal = await stagBalance(addr);
-      if (bal >= GATE) unlock();
-      else gsub.innerHTML = 'You hold <b>' + fmtStag(bal) + ' $STAG</b> — need <b>1,000,000</b> to unlock. <a href="/bridge" style="color:var(--gold-lite)">Get more →</a>';
+    function evaluate() {
+      if (unlocked) return;
+      if (Gate.held() >= TREND_GATE) unlock();
+      else if (Gate.ready) gsub.innerHTML = 'You hold <b>' + fmtStagN(Gate.held()) + ' $STAG</b> — need <b>1,000,000</b> to unlock. <a href="/bridge" style="color:var(--gold-lite)">Get more →</a>';
     }
     async function connect() {
-      if (!window.ethereum) { gsub.textContent = 'No wallet found — open this page in your wallet’s browser, or install MetaMask.'; return; }
-      try {
-        const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accs && accs[0]) { try { localStorage.setItem('tt_addr', accs[0]); } catch {} gsub.textContent = 'Checking your $STAG balance…'; await checkAddr(accs[0]); }
-      } catch {}
+      gsub.textContent = 'Connecting…';
+      try { await Gate.connect(); } catch { gsub.textContent = 'No wallet found — open this page in your wallet’s browser, or install MetaMask.'; return; }
+      evaluate();
     }
     function unlock() {
       if (unlocked) return; unlocked = true;
@@ -434,6 +469,14 @@
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
     if (connectBtn) connectBtn.onclick = connect;
-    try { const a = localStorage.getItem('tt_addr'); if (a && /^0x[0-9a-fA-F]{40}$/.test(a)) checkAddr(a); } catch {}
+    document.addEventListener('stag-gate', evaluate);
+    evaluate();
   })();
+
+  /* ---- gate init: wire scanner connect + silently restore a prior wallet ---- */
+  { const sc = $('scan-connect'); if (sc) sc.onclick = onScanConnect; }
+  document.addEventListener('stag-gate', () => {
+    if (pendingScanCA && Gate.held() >= SCAN_GATE) { hideScanGate(); const ca = pendingScanCA; pendingScanCA = null; scan(ca); }
+  });
+  try { const a = localStorage.getItem('tt_addr'); if (a && /^0x[0-9a-fA-F]{40}$/.test(a)) { Gate.addr = a; Gate.refresh(); } } catch {}
 })();

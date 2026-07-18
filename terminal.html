@@ -47,6 +47,7 @@
     .tt-gate-txt span{color:var(--muted);font:500 .76rem/1.45 'Space Grotesk',monospace}
     .tt-gate-actions{display:flex;gap:.5rem;flex:0 0 auto;flex-wrap:wrap}
     @media(max-width:560px){.tt-gate-actions{width:100%}.tt-gate-actions .btn{flex:1}}
+    .scan-gate-actions{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
   </style>
 </head>
 <body>
@@ -129,11 +130,15 @@
       <div class="tt-foot" id="tt-foot" hidden>Ranked by real Uniswap volume · tap a token to scan it</div>
     </div>
 
-    <!-- EMPTY / LOADING STATE -->
+    <!-- EMPTY / LOADING / GATE STATE -->
     <div class="term-empty" id="term-empty">
       <div class="term-empty-inner">
-        <span class="term-empty-ico">🏹</span>
+        <span class="term-empty-ico" id="term-empty-ico">🏹</span>
         <p id="term-empty-msg">Paste a Robinhood Chain token address to scan it — or tap a token above.</p>
+        <div class="scan-gate-actions" id="scan-gate-actions" hidden>
+          <button class="btn btn-gold btn-sm" id="scan-connect" type="button">Connect Wallet</button>
+          <a class="btn btn-ghost btn-sm" href="/bridge">Buy $STAG →</a>
+        </div>
       </div>
     </div>
 
