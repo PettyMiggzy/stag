@@ -455,8 +455,8 @@
       'function mintPick(uint256) payable',
       'function freeMints(address) view returns (uint256)',
       'function ownerOf(uint256) view returns (address)',
-      'function isApprovedForAll(address,address) view returns (bool)',
-      'function setApprovalForAll(address,bool)'
+      'function getApproved(uint256) view returns (address)',
+      'function approve(address,uint256)'
     ];
     const VABI = [
       'function stake(address,uint256)',
@@ -560,7 +560,9 @@
     async function stake(id) {
       try { const s = await connect(); if (!s) return; const me = await s.getAddress();
         const nft = new ethers.Contract(SAINTS, ABI, s);
-        if (!(await nft.isApprovedForAll(me, VAULT))) { const a = await nft.setApprovalForAll(VAULT, true); await a.wait(); }
+        // per-token approval (never setApprovalForAll) — the vault only needs this one NFT, and a
+        // blanket operator grant over the whole collection is what wallet scanners flag.
+        if (((await nft.getApproved(id)) || '').toLowerCase() !== VAULT.toLowerCase()) { const a = await nft.approve(VAULT, id); await a.wait(); }
         const tx = await new ethers.Contract(VAULT, VABI, s).stake(SAINTS, id); await tx.wait();
         alert('Staked Saint #' + id + ' — now earning ETH 🟢'); refresh();
       } catch (e) { alert(e.shortMessage || e.message || e); }
@@ -619,8 +621,8 @@
       'function mintPick(uint256) payable',
       'function freeMints(address) view returns (uint256)',
       'function ownerOf(uint256) view returns (address)',
-      'function isApprovedForAll(address,address) view returns (bool)',
-      'function setApprovalForAll(address,bool)'
+      'function getApproved(uint256) view returns (address)',
+      'function approve(address,uint256)'
     ];
     const VABI = [
       'function stake(address,uint256)','function unstake(address,uint256)',
@@ -712,7 +714,8 @@
     async function stake(id){
       try{ const s=await connect(); if(!s) return; const me=await s.getAddress();
         const nft=new ethers.Contract(WANTED,ABI,s);
-        if(!(await nft.isApprovedForAll(me,VAULT))){ const a=await nft.setApprovalForAll(VAULT,true); await a.wait(); }
+        // per-token approval (never setApprovalForAll) — scanner-safe, vault only needs this NFT
+        if(((await nft.getApproved(id))||'').toLowerCase() !== VAULT.toLowerCase()){ const a=await nft.approve(VAULT,id); await a.wait(); }
         const tx=await new ethers.Contract(VAULT,VABI,s).stake(WANTED,id); await tx.wait();
         alert('Staked WANTED #'+id+' — earning ETH 🟢'); refresh();
       } catch(e){ alert(err(e)); }
