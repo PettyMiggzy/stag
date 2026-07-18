@@ -16,6 +16,9 @@
 * [Staking (Earn ETH)](earn/staking.md)
 * [Sherwood Pact (No-Wallet Staking)](earn/sherwood-pact.md)
 
+## Sherwood Market
+* [Trade Tokens P2P](market/sherwood-market.md)
+
 ## NFTs
 * [The Collections](nfts/collections.md)
 * [How to Mint](nfts/how-to-mint.md)
