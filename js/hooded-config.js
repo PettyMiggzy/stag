@@ -14,6 +14,7 @@ window.HOODED = {
   wantedBounty: '',  // WantedBounty ($STAG bounty claim) — paste after deploy; enables the Claim button
   market: '0xa113238953b660230bF97237A2cc9b9f48Fe06A6', // SherwoodMarket (P2P order-book, 1% buy / 1% sell -> marketing)
   swap: '0x481d3A3E9C28627Ed91e58d83a5D6790A6416055',   // SherwoodSwap (Terminal buy/sell, 1% -> marketing)
+  orders: '0x689988a1adB3Da7554Ba1fFc256904498aaF1F54', // SherwoodOrders (limit/take-profit, 1% -> marketing)
   // ================================================================
   stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
   // WalletConnect (Reown) project id — enables mobile "connect any wallet" (Trust, Rainbow,
