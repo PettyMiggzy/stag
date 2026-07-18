@@ -180,6 +180,58 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
     expect(await A.balanceOf(feeWallet.address)).to.equal(0n);
   });
 
+  it("H11: escrowedOf tracks live escrow exactly through create/fill/cancel", async () => {
+    const { market, A, maker, taker } = await fresh();
+    const mAddr = await market.getAddress();
+    const aAddr = await A.getAddress();
+    await A.connect(maker).approve(mAddr, E(3000));
+    await market.connect(maker).createOrder(aAddr, E(1000), ZERO, E(1)); // id0
+    await market.connect(maker).createOrder(aAddr, E(2000), ZERO, E(2)); // id1
+    expect(await market.escrowedOf(aAddr)).to.equal(E(3000));
+    await market.connect(taker).fillOrder(0, { value: E(1) });
+    expect(await market.escrowedOf(aAddr)).to.equal(E(2000)); // id0 released
+    await market.connect(maker).cancelOrder(1);
+    expect(await market.escrowedOf(aAddr)).to.equal(0);       // id1 released
+  });
+
+  it("H12: rescueSurplus recovers ONLY donated tokens, never live escrow", async () => {
+    const { market, A, maker, owner, other } = await fresh();
+    const mAddr = await market.getAddress();
+    const aAddr = await A.getAddress();
+    await A.connect(maker).approve(mAddr, E(1000));
+    await market.connect(maker).createOrder(aAddr, E(1000), ZERO, E(1)); // 1000 escrowed
+    await A.mint(mAddr, E(250)); // someone donates/misfires 250 directly to the contract
+
+    await market.connect(owner).rescueSurplus(aAddr, other.address);
+    expect(await A.balanceOf(other.address)).to.equal(E(250)); // only the surplus
+    expect(await A.balanceOf(mAddr)).to.equal(E(1000));        // live escrow untouched
+    // no surplus left -> reverts
+    await expect(market.connect(owner).rescueSurplus(aAddr, other.address)).to.be.revertedWith("no surplus");
+    // maker can still cancel and get the FULL escrow back
+    await market.connect(maker).cancelOrder(0);
+    expect(await A.balanceOf(mAddr)).to.equal(0);
+  });
+
+  it("H13: input validation — codeless buyToken and same-token orders are rejected at post", async () => {
+    const { market, A, maker } = await fresh();
+    const mAddr = await market.getAddress();
+    const aAddr = await A.getAddress();
+    await A.connect(maker).approve(mAddr, E(2000));
+    // codeless buyToken (an EOA address) -> rejected
+    await expect(
+      market.connect(maker).createOrder(aAddr, E(1000), maker.address, E(1))
+    ).to.be.revertedWith("bad buyToken");
+    // sell == buy -> rejected
+    await expect(
+      market.connect(maker).createOrder(aAddr, E(1000), aAddr, E(1))
+    ).to.be.revertedWith("same token");
+  });
+
+  it("H14: rescueSurplus is owner-only", async () => {
+    const { market, A, other } = await fresh();
+    await expect(market.connect(other).rescueSurplus(await A.getAddress(), other.address)).to.be.reverted;
+  });
+
   // ---------- randomized invariant fuzzer ----------
   it("FUZZ: 200 random create/fill/cancel ops — escrow invariant + no stuck ETH always hold", async () => {
     const signers = await ethers.getSigners();
@@ -226,9 +278,10 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
         live.splice(idx, 1);
       }
 
-      // INVARIANT 1: contract token balance == sum of active escrows
+      // INVARIANT 1: contract token balance == sum of active escrows == escrowedOf accounting
       const expected = live.reduce((acc, o) => acc + o.sellAmount, 0n);
       expect(await A.balanceOf(mAddr)).to.equal(expected);
+      expect(await market.escrowedOf(aAddr)).to.equal(expected);
       // INVARIANT 2: the market never holds ETH between txs (all forwarded atomically)
       expect(await ethers.provider.getBalance(mAddr)).to.equal(0n);
     }

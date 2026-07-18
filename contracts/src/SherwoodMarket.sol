@@ -12,10 +12,15 @@ pragma solidity 0.8.24;
  *   • Maker escrows the sell token in this contract when creating an order (funds can't vanish mid-trade).
  *   • Taker fills by paying the ask (native ETH or an ERC-20). Atomic: taker gets the token, maker gets
  *     paid, fees go to feeWallet — all in one tx, or it reverts.
- *   • Fee-on-transfer ("tax") tokens are handled by measuring the ACTUAL balance received.
+ *   • Standard fee-on-transfer ("tax") tokens are handled by measuring the ACTUAL balance received.
+ *   • Per-token escrow accounting (`escrowedOf`) means the contract never pays out more of a token
+ *     than its own live orders hold — orders of one token are fully isolated from every other token.
  *   • Full fills only in v1 (no partials) — simplest + safest.
  *
- *  ⚠️ Holds real user funds. Audited + tested before mainnet.
+ *  ⚠️ SUPPORTED TOKENS: standard, balance-preserving ERC-20s + native ETH. Rebasing / elastic-supply
+ *     and sender-side-tax tokens are NOT supported — pooled escrow can't track a balance that moves on
+ *     its own, so same-token orders in such assets may settle unpredictably. The UI warns on these.
+ *  ⚠️ Holds real user funds. Independently audited + fuzzed before mainnet.
  */
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -43,6 +48,11 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
     mapping(uint256 => Order) public orders;
     uint256 public nextOrderId;
 
+    // Total currently escrowed per sell-token across all ACTIVE orders. Lets the contract prove it
+    // never pays out more of a token than it holds for live orders, and lets rescue() touch ONLY the
+    // untracked surplus (donations / transfer-tax dust) — never anyone's live escrow.
+    mapping(address => uint256) public escrowedOf;
+
     // ---- fees (owner-tunable, hard-capped so the owner can never skim more than MAX) ----
     uint256 public constant MAX_FEE_BPS = 300;  // 3% hard cap per side — owner can't exceed this, ever
     uint256 public buyFeeBps  = 100;            // 1% skimmed from the payment (buy side)
@@ -69,6 +79,10 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
     {
         require(sellToken != ETH, "sell must be ERC20");   // the sell side is always a token (ETH can only be the pay side)
         require(sellAmount > 0 && buyAmount > 0, "zero amount");
+        // buyToken must be native ETH or a real contract, and can't equal the sell token — kills
+        // codeless-buyToken self-grief (order that can never be filled) up front.
+        require(buyToken == ETH || buyToken.code.length > 0, "bad buyToken");
+        require(buyToken != sellToken, "same token");
 
         // pull escrow, measuring what ACTUALLY arrived (handles fee-on-transfer tokens)
         IERC20 t = IERC20(sellToken);
@@ -81,6 +95,7 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         // re-tax an already-posted order; a later setFees() only affects future orders.
         id = nextOrderId++;
         orders[id] = Order(msg.sender, true, uint16(buyFeeBps), uint16(sellFeeBps), sellToken, received, buyToken, buyAmount);
+        escrowedOf[sellToken] += received;
         emit OrderCreated(id, msg.sender, sellToken, received, buyToken, buyAmount);
     }
 
@@ -93,7 +108,8 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         Order memory o = orders[id];
         require(o.active, "not open");
         require(msg.sender != o.maker, "maker cannot fill own");
-        orders[id].active = false; // effects before interactions (no reentrancy, no double-fill)
+        orders[id].active = false;               // effects before interactions (no reentrancy, no double-fill)
+        escrowedOf[o.sellToken] -= o.sellAmount;  // release this order's escrow from the tracked total
 
         // ----- sell side: escrowed token -> taker (minus sell fee, using the order's SNAPSHOT rate) -----
         uint256 sellFee = (o.sellAmount * o.sellFeeBps) / 10_000;
@@ -129,6 +145,7 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         require(o.active, "not open");
         require(msg.sender == o.maker, "not maker");
         orders[id].active = false;
+        escrowedOf[o.sellToken] -= o.sellAmount;
         IERC20(o.sellToken).safeTransfer(o.maker, o.sellAmount);
         emit OrderCancelled(id);
     }
@@ -158,5 +175,16 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         require(w != address(0), "zero");
         feeWallet = w;
         emit FeeWalletChanged(w);
+    }
+
+    /// @notice Recover ONLY the untracked surplus of a token — tokens sent here directly (donations,
+    ///         mistaken transfers, transfer-tax dust) that were never part of any order. Live escrow
+    ///         (`escrowedOf[token]`) is subtracted first, so this can NEVER touch a maker's funds.
+    function rescueSurplus(address token, address to) external onlyOwner {
+        require(to != address(0), "zero to");
+        uint256 bal = IERC20(token).balanceOf(address(this));
+        uint256 locked = escrowedOf[token];
+        require(bal > locked, "no surplus");
+        IERC20(token).safeTransfer(to, bal - locked);
     }
 }
