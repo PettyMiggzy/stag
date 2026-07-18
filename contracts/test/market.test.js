@@ -37,18 +37,25 @@ describe("SherwoodMarket — P2P token exchange", () => {
 
     await market.connect(taker).fillOrder(0, { value: E(1) });
 
-    // taker gets 99% of the token; fee wallet gets 1% of the token
+    // taker gets 99% of the token; the 1% fee STAYS in the market (out-of-band), not sent to feeWallet
     expect(await TokenA.balanceOf(taker.address)).to.equal(E(990));
-    expect(await TokenA.balanceOf(feeWallet.address)).to.equal(E(10));
-    // maker gets 99% of the ETH; fee wallet gets 1% of the ETH
+    expect(await TokenA.balanceOf(feeWallet.address)).to.equal(0);
+    expect(await TokenA.balanceOf(mAddr)).to.equal(E(10));                // sell fee held
+    // maker gets 99% of the ETH; the 1% ETH fee stays in the market
     expect(await ethers.provider.getBalance(maker.address)).to.equal(makerEthBefore + E("0.99"));
-    expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeEthBefore + E("0.01"));
-    // order closed, escrow drained
+    expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeEthBefore);
+    expect(await ethers.provider.getBalance(mAddr)).to.equal(E("0.01"));  // buy fee held
     expect((await market.getOrder(0)).active).to.equal(false);
+    // out-of-band sweep (anyone can call) moves fees to the fee wallet
+    await market.connect(taker).forwardFees(await TokenA.getAddress());
+    await market.connect(taker).forwardFeesEth();
+    expect(await TokenA.balanceOf(feeWallet.address)).to.equal(E(10));
+    expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeEthBefore + E("0.01"));
     expect(await TokenA.balanceOf(mAddr)).to.equal(0);
+    expect(await ethers.provider.getBalance(mAddr)).to.equal(0);
   });
 
-  it("fills an ERC20-priced order with 1%/1% fees", async () => {
+  it("fills an ERC20-priced order; fees accrue in-contract then forwardFees sweeps", async () => {
     const { market, TokenA, TokenB, maker, taker, feeWallet } = await deploy();
     const mAddr = await market.getAddress();
     await TokenA.connect(maker).approve(mAddr, E(1000));
@@ -57,10 +64,15 @@ describe("SherwoodMarket — P2P token exchange", () => {
 
     await market.connect(taker).fillOrder(0);
 
-    expect(await TokenA.balanceOf(taker.address)).to.equal(E(990));       // 99% of A
-    expect(await TokenB.balanceOf(maker.address)).to.equal(E(495));       // 99% of B
-    expect(await TokenA.balanceOf(feeWallet.address)).to.equal(E(10));    // 1% A
-    expect(await TokenB.balanceOf(feeWallet.address)).to.equal(E(5));     // 1% B
+    expect(await TokenA.balanceOf(taker.address)).to.equal(E(990));       // 99% of A to taker
+    expect(await TokenB.balanceOf(maker.address)).to.equal(E(495));       // 99% of B to maker
+    expect(await TokenA.balanceOf(mAddr)).to.equal(E(10));                // 1% A fee held
+    expect(await TokenB.balanceOf(mAddr)).to.equal(E(5));                 // 1% B fee held
+    expect(await TokenA.balanceOf(feeWallet.address)).to.equal(0);
+    await market.connect(taker).forwardFees(await TokenA.getAddress());
+    await market.connect(taker).forwardFees(await TokenB.getAddress());
+    expect(await TokenA.balanceOf(feeWallet.address)).to.equal(E(10));
+    expect(await TokenB.balanceOf(feeWallet.address)).to.equal(E(5));
   });
 
   it("maker can cancel and get the full escrow back", async () => {

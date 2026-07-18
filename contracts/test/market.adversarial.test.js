@@ -30,8 +30,12 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
 
     // still settled at the SNAPSHOT 1% — not the new 3%
     expect(await A.balanceOf(taker.address)).to.equal(E(990));       // 1% sell fee, not 3%
-    expect(await A.balanceOf(feeWallet.address)).to.equal(E(10));
+    expect(await A.balanceOf(await market.getAddress())).to.equal(E(10)); // fee held in-contract (out-of-band)
+    expect(await A.balanceOf(feeWallet.address)).to.equal(0);        // not sent during the fill
     expect(await ethers.provider.getBalance(maker.address)).to.equal(makerEthBefore + E("0.99")); // 1% buy fee
+    // sweep confirms the snapshot 1% (not 3%) reaches the fee wallet
+    await market.connect(taker).forwardFees(await A.getAddress());
+    expect(await A.balanceOf(feeWallet.address)).to.equal(E(10));
   });
 
   it("H2: fee snapshot — a NEW order after setFees uses the NEW rate", async () => {
@@ -63,14 +67,18 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
     expect(await TAX.balanceOf(mAddr)).to.equal(E(980));
 
     await market.connect(taker).fillOrder(0, { value: E(1) });
-    // contract fully drained, never tried to move more than it held
-    expect(await TAX.balanceOf(mAddr)).to.equal(0);
     // taker got 99% of the 980 escrow, minus the token's own 2% transfer tax on the way out
     // sellFee = 9.8 -> toTaker = 970.2, then 2% burn -> taker nets 950.796
     expect(await TAX.balanceOf(taker.address)).to.equal(E("950.796"));
+    // the 9.8 sell fee is held in-contract (out-of-band), never over-transferred
+    expect(await TAX.balanceOf(mAddr)).to.equal(E("9.8"));
+    // forwardFees sweeps it (minus the token's own 2% tax on that transfer)
+    await market.connect(taker).forwardFees(await TAX.getAddress());
+    expect(await TAX.balanceOf(feeWallet.address)).to.equal(E("9.604")); // 9.8 * 0.98
+    expect(await TAX.balanceOf(mAddr)).to.equal(0);
   });
 
-  it("H4: fee-on-transfer BUY token — maker + feeWallet receive net, no revert, no stuck funds", async () => {
+  it("H4: fee-on-transfer BUY token — maker receives net; fees held then swept, nothing stuck", async () => {
     const { market, A, maker, taker, feeWallet } = await fresh();
     const mAddr = await market.getAddress();
     const TAX = await (await ethers.getContractFactory("MockFeeToken")).deploy(100); // 1% burn
@@ -83,9 +91,15 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
     expect(await A.balanceOf(taker.address)).to.equal(E(990)); // sell side unaffected
     // buy side: toMaker=495 (1% market fee) then 1% token tax -> maker nets 490.05
     expect(await TAX.balanceOf(maker.address)).to.equal(E("490.05"));
-    // buyFee=5 then 1% tax -> feeWallet nets 4.95
-    expect(await TAX.balanceOf(feeWallet.address)).to.equal(E("4.95"));
-    expect(await TAX.balanceOf(mAddr)).to.equal(0); // nothing stuck
+    // fees held in-contract: 10 A (sell fee) + 4.95 TAX (buyFee 5, minus 1% tax pulling into contract)
+    expect(await A.balanceOf(mAddr)).to.equal(E(10));
+    expect(await TAX.balanceOf(mAddr)).to.equal(E("4.95"));
+    expect(await TAX.balanceOf(feeWallet.address)).to.equal(0);
+    // sweep
+    await market.connect(taker).forwardFees(await A.getAddress());
+    await market.connect(taker).forwardFees(await TAX.getAddress());
+    expect(await A.balanceOf(feeWallet.address)).to.equal(E(10));
+    expect(await TAX.balanceOf(feeWallet.address)).to.equal(E("4.9005")); // 4.95 * 0.99
   });
 
   it("H5: reentrancy — a hostile buy token trying to re-enter fillOrder reverts the whole tx", async () => {
@@ -124,7 +138,7 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
     expect(await A.balanceOf(mAddr)).to.equal(0);
   });
 
-  it("H7: hostile feeWallet that rejects ETH bricks only ETH fills — owner can hot-swap it to recover", async () => {
+  it("H7: hostile feeWallet that rejects ETH NEVER bricks a fill (fees are out-of-band); it only bricks the sweep, which the owner recovers by hot-swapping", async () => {
     const [owner, , maker, taker, other] = await ethers.getSigners();
     const REV = await (await ethers.getContractFactory("Reverter")).deploy();
     const market = await (await ethers.getContractFactory("SherwoodMarket")).deploy(await REV.getAddress());
@@ -134,12 +148,20 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
     await A.connect(maker).approve(mAddr, E(1000));
     await market.connect(maker).createOrder(await A.getAddress(), E(1000), ZERO, E(1));
 
-    await expect(market.connect(taker).fillOrder(0, { value: E(1) })).to.be.revertedWith("pay fee failed");
-    // owner repoints feeWallet to a good address; fill now works
-    await market.connect(owner).setFeeWallet(other.address);
+    // fill SUCCEEDS regardless of a hostile feeWallet — fees never touch it in the user's tx
     await market.connect(taker).fillOrder(0, { value: E(1) });
-    expect(await A.balanceOf(taker.address)).to.equal(E(990));
+    expect(await A.balanceOf(taker.address)).to.equal(E(990));       // taker paid, maker paid
+    expect(await A.balanceOf(mAddr)).to.equal(E(10));                // sell fee held
+    expect(await ethers.provider.getBalance(mAddr)).to.equal(E("0.01")); // buy fee held
+
+    // the hostile feeWallet only bricks the out-of-band ETH sweep (token sweep is fine)
+    await expect(market.connect(taker).forwardFeesEth()).to.be.revertedWith("xfer");
+    // owner repoints feeWallet to a good address; sweeps now succeed
+    await market.connect(owner).setFeeWallet(other.address);
+    await market.connect(taker).forwardFees(await A.getAddress());
+    await market.connect(taker).forwardFeesEth();
     expect(await A.balanceOf(other.address)).to.equal(E(10));
+    expect(await ethers.provider.getBalance(mAddr)).to.equal(0);
   });
 
   it("H8: cancel racing a fill — cancel wins, the fill reverts and the taker's ETH is refunded", async () => {
@@ -164,8 +186,9 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
     await market.connect(maker).createOrder(await A.getAddress(), E(2000), ZERO, E(2)); // id1
     expect(await A.balanceOf(mAddr)).to.equal(E(3000));
     await market.connect(taker).fillOrder(0, { value: E(1) });
-    // exactly id0's 1000 left; id1's 2000 still escrowed
-    expect(await A.balanceOf(mAddr)).to.equal(E(2000));
+    // id1's 2000 still escrowed + 10 sell-fee held from id0's fill = 2010; id1 untouched
+    expect(await market.escrowedOf(await A.getAddress())).to.equal(E(2000));
+    expect(await A.balanceOf(mAddr)).to.equal(E(2010));
     expect((await market.getOrder(1)).sellAmount).to.equal(E(2000));
     expect((await market.getOrder(1)).active).to.equal(true);
   });
@@ -278,18 +301,20 @@ describe("SherwoodMarket — ADVERSARIAL", () => {
         live.splice(idx, 1);
       }
 
-      // INVARIANT 1: contract token balance == sum of active escrows == escrowedOf accounting
+      // INVARIANT: escrow accounting is exact, and the contract balance FULLY BACKS escrow
+      // (accrued fees may sit on top of escrow now that fees are held out-of-band).
       const expected = live.reduce((acc, o) => acc + o.sellAmount, 0n);
-      expect(await A.balanceOf(mAddr)).to.equal(expected);
       expect(await market.escrowedOf(aAddr)).to.equal(expected);
-      // INVARIANT 2: the market never holds ETH between txs (all forwarded atomically)
-      expect(await ethers.provider.getBalance(mAddr)).to.equal(0n);
+      expect(await A.balanceOf(mAddr)).to.be.gte(expected);
     }
-    // drain everything that's left and re-check the invariant lands at zero
+    // cancel everything -> escrow fully returned; only accrued fees remain, sweepable to zero
     for (const o of [...live]) {
       const maker = actors.find((s) => s.address === o.maker);
       await market.connect(maker).cancelOrder(o.id);
     }
+    expect(await market.escrowedOf(aAddr)).to.equal(0n);
+    if ((await A.balanceOf(mAddr)) > 0n) await market.connect(actors[0]).forwardFees(aAddr);
+    if ((await ethers.provider.getBalance(mAddr)) > 0n) await market.connect(actors[0]).forwardFeesEth();
     expect(await A.balanceOf(mAddr)).to.equal(0n);
     expect(await ethers.provider.getBalance(mAddr)).to.equal(0n);
   });

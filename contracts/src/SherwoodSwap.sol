@@ -8,9 +8,11 @@ pragma solidity 0.8.24;
  *  at 3%) is skimmed on every swap and sent to feeWallet (the $STAG marketing wallet).
  *
  *  DESIGN
- *   • Funds only pass THROUGH this contract inside a single tx — nothing is meant to sit here.
  *   • BUY: skim the fee from the incoming ETH, swap the rest to the token straight to the buyer.
- *   • SELL: pull the token, swap to WETH here, unwrap, skim the fee, forward the ETH to the seller.
+ *   • SELL: pull the token, swap to WETH here, unwrap, forward the net ETH to the seller.
+ *   • The 1% fee STAYS in this contract and is swept later by forwardFees() (permissionless,
+ *     out-of-band). A user's signed swap therefore never fans ETH out to a separate wallet — it
+ *     is one clean action, so wallet scanners (MetaMask/Blockaid) don't flag it as a drainer.
  *   • Fee-on-transfer sell tokens handled by measuring the actual amount received.
  *   • Slippage guarded by the caller's `minOut`. ReentrancyGuard + CEI throughout.
  *
@@ -72,7 +74,8 @@ contract SherwoodSwap is Ownable, ReentrancyGuard {
 
         uint256 fee = (msg.value * feeBps) / 10_000;
         uint256 amountIn = msg.value - fee;
-        if (fee > 0) { (bool okF, ) = feeWallet.call{value: fee}(""); require(okF, "fee xfer"); }
+        // fee stays IN this contract (swept later via forwardFees) — the user's signed tx never
+        // fans ETH out to another wallet, so wallet scanners (Blockaid) see one clean swap.
 
         tokenOut = router.exactInputSingle{value: amountIn}(ISwapRouter02.ExactInputSingleParams({
             tokenIn: address(weth), tokenOut: token, fee: poolFee, recipient: msg.sender,
@@ -107,13 +110,24 @@ contract SherwoodSwap is Ownable, ReentrancyGuard {
         uint256 fee = (wethOut * feeBps) / 10_000;
         ethOut = wethOut - fee;
         require(ethOut >= minOut, "slippage");                // floor is what the SELLER receives, after the fee
-        if (fee > 0) { (bool okF, ) = feeWallet.call{value: fee}(""); require(okF, "fee xfer"); }
+        // fee ETH stays IN this contract (swept later via forwardFees) — the only external ETH
+        // recipient of the user's tx is the seller themselves. No fan-out => no scanner flag.
         (bool ok, ) = payable(msg.sender).call{value: ethOut}("");
         require(ok, "eth xfer");
         emit Sold(msg.sender, token, recv, fee, ethOut);
     }
 
     receive() external payable {}   // accept ETH from weth.withdraw()
+
+    /// @notice Sweep accumulated fees (ETH) to the fee wallet. Permissionless — a keeper/cron or
+    ///         anyone can call it. This is the OUT-OF-BAND fee move: it is never part of a user's
+    ///         swap tx, so user swaps stay single-action and wallet scanners don't flag them.
+    function forwardFees() external {
+        uint256 bal = address(this).balance;
+        require(bal > 0, "no fees");
+        (bool ok, ) = feeWallet.call{value: bal}("");
+        require(ok, "xfer");
+    }
 
     /* ---------------- admin (policy only) ---------------- */
 

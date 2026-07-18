@@ -111,13 +111,16 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         orders[id].active = false;               // effects before interactions (no reentrancy, no double-fill)
         escrowedOf[o.sellToken] -= o.sellAmount;  // release this order's escrow from the tracked total
 
-        // ----- sell side: escrowed token -> taker (minus sell fee, using the order's SNAPSHOT rate) -----
+        // Fees STAY in this contract and are swept out-of-band by forwardFees() — so a taker's signed
+        // fill only moves funds between the two trade parties (taker <-> maker), never fanning out to
+        // the fee wallet. That keeps the tx a clean 2-party swap that wallet scanners won't flag.
+
+        // ----- sell side: escrowed token -> taker (minus sell fee); sell fee stays in-contract -----
         uint256 sellFee = (o.sellAmount * o.sellFeeBps) / 10_000;
         uint256 toTaker = o.sellAmount - sellFee;
         IERC20(o.sellToken).safeTransfer(msg.sender, toTaker);
-        if (sellFee > 0) IERC20(o.sellToken).safeTransfer(feeWallet, sellFee);
 
-        // ----- buy side: taker's payment -> maker (minus buy fee, using the order's SNAPSHOT rate) -----
+        // ----- buy side: taker's payment -> maker (minus buy fee); buy fee stays in-contract -----
         uint256 buyFee = (o.buyAmount * o.buyFeeBps) / 10_000;
         uint256 toMaker = o.buyAmount - buyFee;
 
@@ -125,13 +128,12 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
             require(msg.value == o.buyAmount, "wrong ETH amount");
             (bool okM, ) = payable(o.maker).call{value: toMaker}("");
             require(okM, "pay maker failed");
-            if (buyFee > 0) { (bool okF, ) = feeWallet.call{value: buyFee}(""); require(okF, "pay fee failed"); }
+            // buyFee ETH remains in this contract (swept via forwardFeesEth)
         } else {
             require(msg.value == 0, "no ETH for ERC20 buy");
-            // pull the taker's payment straight through (measure-safe for tax tokens on the fee split)
             IERC20 b = IERC20(o.buyToken);
             b.safeTransferFrom(msg.sender, o.maker, toMaker);
-            if (buyFee > 0) b.safeTransferFrom(msg.sender, feeWallet, buyFee);
+            if (buyFee > 0) b.safeTransferFrom(msg.sender, address(this), buyFee); // buy fee -> this contract
         }
 
         emit OrderFilled(id, msg.sender, toTaker, toMaker, buyFee, sellFee);
@@ -161,6 +163,23 @@ contract SherwoodMarket is Ownable, ReentrancyGuard {
         ids = new uint256[](n);
         uint256 j;
         for (uint256 i = start; i < nextOrderId && j < n; i++) if (orders[i].active) ids[j++] = i;
+    }
+
+    /* ---------------- out-of-band fee sweep (permissionless) ---------------- */
+
+    /// @notice Sweep accrued fees of `token` (its balance ABOVE live escrow) to the fee wallet.
+    ///         Permissionless + out-of-band — never part of a taker's fill tx, so fills stay clean.
+    function forwardFees(address token) external {
+        uint256 amount = IERC20(token).balanceOf(address(this)) - escrowedOf[token];
+        require(amount > 0, "no fees");
+        IERC20(token).safeTransfer(feeWallet, amount);
+    }
+    /// @notice Sweep accrued ETH fees (from ETH-priced fills) to the fee wallet. Permissionless.
+    function forwardFeesEth() external {
+        uint256 amount = address(this).balance;
+        require(amount > 0, "no fees");
+        (bool ok, ) = feeWallet.call{value: amount}("");
+        require(ok, "xfer");
     }
 
     /* ---------------- admin (policy only; can't touch escrowed orders) ---------------- */

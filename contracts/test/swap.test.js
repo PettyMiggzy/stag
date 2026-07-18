@@ -18,33 +18,38 @@ async function deploy() {
 }
 
 describe("SherwoodSwap — fee-taking swap router", () => {
-  it("BUY: 1% fee to feeWallet, rest swapped to the buyer", async () => {
-    const { Swap, TOKEN, user, feeWallet } = await deploy();
+  it("BUY: fee stays in-contract (out-of-band), buyer gets 99%; forwardFees sweeps to feeWallet", async () => {
+    const { Swap, TOKEN, user, feeWallet, other } = await deploy();
+    const swapAddr = await Swap.getAddress();
     const feeBefore = await ethers.provider.getBalance(feeWallet.address);
     await Swap.connect(user).buy(await TOKEN.getAddress(), 10000, 0, { value: E(1) });
-    // fee = 0.01 ETH; amountIn = 0.99 ETH -> 990 TOKEN
+    // amountIn = 0.99 ETH -> 990 TOKEN to buyer; the 0.01 fee is NOT sent out in the user tx
     expect(await TOKEN.balanceOf(user.address)).to.equal(E(990));
+    expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeBefore); // unchanged during the swap
+    expect(await ethers.provider.getBalance(swapAddr)).to.equal(E("0.01"));          // fee held in-contract
+    // out-of-band sweep (anyone can call)
+    await Swap.connect(other).forwardFees();
     expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeBefore + E("0.01"));
-    // nothing stuck in the swap contract
-    expect(await ethers.provider.getBalance(await Swap.getAddress())).to.equal(0);
+    expect(await ethers.provider.getBalance(swapAddr)).to.equal(0);
   });
 
-  it("SELL: token -> ETH, 1% fee to feeWallet, rest to the seller", async () => {
-    const { Swap, TOKEN, WETH, user, feeWallet } = await deploy();
+  it("SELL: seller is the only ETH recipient; fee held then swept by forwardFees", async () => {
+    const { Swap, TOKEN, WETH, user, feeWallet, other } = await deploy();
+    const swapAddr = await Swap.getAddress();
     await TOKEN.mint(user.address, E(1000));
-    await TOKEN.connect(user).approve(await Swap.getAddress(), E(1000));
+    await TOKEN.connect(user).approve(swapAddr, E(1000));
     const feeBefore = await ethers.provider.getBalance(feeWallet.address);
     const userBefore = await ethers.provider.getBalance(user.address);
-    // 1000 TOKEN -> 1 WETH -> 1 ETH; fee 0.01 -> feeWallet; user nets 0.99 (minus gas)
     const tx = await Swap.connect(user).sell(await TOKEN.getAddress(), 10000, E(1000), 0);
     const rc = await tx.wait();
     const gas = rc.gasUsed * rc.gasPrice;
+    expect(await ethers.provider.getBalance(user.address)).to.equal(userBefore + E("0.99") - gas); // seller nets 99%
+    expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeBefore);                // not touched in the swap
+    expect(await ethers.provider.getBalance(swapAddr)).to.equal(E("0.01"));                         // fee held
+    expect(await WETH.balanceOf(swapAddr)).to.equal(0);
+    await Swap.connect(other).forwardFees();
     expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeBefore + E("0.01"));
-    const userAfter = await ethers.provider.getBalance(user.address);
-    expect(userAfter).to.equal(userBefore + E("0.99") - gas);
-    expect(await TOKEN.balanceOf(user.address)).to.equal(0);
-    expect(await ethers.provider.getBalance(await Swap.getAddress())).to.equal(0);
-    expect(await WETH.balanceOf(await Swap.getAddress())).to.equal(0);
+    expect(await ethers.provider.getBalance(swapAddr)).to.equal(0);
   });
 
   it("SELL slippage: minOut is the POST-fee ETH the seller receives", async () => {
@@ -77,10 +82,9 @@ describe("SherwoodSwap — fee-taking swap router", () => {
     await expect(Swap.connect(other).setFee(50)).to.be.reverted;
     await Swap.connect(owner).setFee(50); // 0.5%
     expect(await Swap.feeBps()).to.equal(50n);
-    // a buy now takes 0.5%
-    const feeBefore = await ethers.provider.getBalance(feeWallet.address);
+    // a buy now takes 0.5% (held in-contract, then sweepable)
     await Swap.connect(user).buy(await TOKEN.getAddress(), 10000, 0, { value: E(1) });
-    expect(await ethers.provider.getBalance(feeWallet.address)).to.equal(feeBefore + E("0.005"));
+    expect(await ethers.provider.getBalance(await Swap.getAddress())).to.equal(E("0.005"));
     expect(await TOKEN.balanceOf(user.address)).to.equal(E(995));
     await Swap.connect(owner).setFeeWallet(other.address);
     expect(await Swap.feeWallet()).to.equal(other.address);
