@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bridge to Robinhood Chain — STAGWIFHOOD ($STAG)</title>
-  <meta name="description" content="Get on the Hood. Bridge funds from any chain — including Solana — into Robinhood Chain in seconds, then buy $STAG. Instant, non-custodial, powered by Relay." />
+  <meta name="description" content="Get on the Hood. Bridge funds from any chain — including Solana — into Robinhood Chain in seconds, then buy $STAG. Instant, non-custodial, powered by The Herd." />
   <meta property="og:title" content="Bridge to Robinhood Chain — $STAG" />
   <meta property="og:description" content="Bring SOL or ETH from any chain into Robinhood Chain in seconds and buy $STAG. Instant · non-custodial." />
   <meta property="og:type" content="website" />
@@ -117,7 +117,7 @@
     <div class="brg-wrap">
       <div class="brg-card">
         <h2>Bridge in seconds</h2>
-        <p class="sub">Instant · non-custodial · you keep control of your funds the whole way. Powered by <b style="color:#9ef418">Relay</b> — the same intent-based routing Robinhood Chain lists.</p>
+        <p class="sub">Instant · non-custodial · you keep control of your funds the whole way. Powered by <b style="color:#9ef418">The Herd</b> — instant intent-based routing straight into Robinhood Chain.</p>
         <div class="brg-chains">
           <span>◎ Solana</span><span>Ξ Ethereum</span><span>🔵 Base</span><span>🔷 Arbitrum</span><span>→ 🦌 $STAG</span>
         </div>
@@ -131,7 +131,7 @@
         <p class="sub">Three steps, no bridge accounts, no custody.</p>
         <ol class="brg-steps">
           <li>Tap <b>Bridge to Robinhood Chain</b> and connect your wallet — <b>Solana</b> (Phantom, Solflare) or any EVM wallet.</li>
-          <li>Pick your source token (SOL, ETH, USDC…) and an amount. Relay routes it to <b>Robinhood Chain</b> — settles in seconds.</li>
+          <li>Pick your source token (SOL, ETH, USDC…) and an amount. The Herd routes it to <b>Robinhood Chain</b> — settles in seconds.</li>
           <li>You now hold ETH on Robinhood Chain. Come back and <b>buy $STAG</b>, stake, or grab an NFT. 🦌</li>
         </ol>
       </div>
@@ -153,11 +153,11 @@
         <div class="brg-panel-head">
           <img src="assets/img/mark.png" alt="" />
           <h3 id="brg-modal-title">Buy $STAG</h3>
-          <span class="pw">powered by Relay</span>
+          <span class="pw">powered by The Herd</span>
           <button class="brg-x" id="brg-close" aria-label="Close">×</button>
         </div>
         <div class="brg-frame-wrap">
-          <iframe id="brg-frame" title="Relay bridge" allow="clipboard-write; clipboard-read; web3" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <iframe id="brg-frame" title="$STAG bridge" allow="clipboard-write; clipboard-read; web3" referrerpolicy="no-referrer-when-downgrade"></iframe>
           <div class="brg-fallback" id="brg-fallback">
             <div>The bridge widget can't run inside the page in this browser.<br>No problem — open it in a secure tab:</div>
             <a id="brg-fallback-link" href="#" target="_blank" rel="noopener">Open the $STAG bridge →</a>
@@ -174,16 +174,16 @@
     </div>
     <p class="footer-tag">The stag who stole Robin Hood's hood. $STAG.</p>
     <div class="footer-social"><a href="/">Home</a><a href="#" data-social="x">X / Twitter</a><a href="#" data-social="tg">Telegram</a></div>
-    <p class="footer-fine">Bridging is provided by a third-party aggregator (Relay). $STAG is non-custodial and never holds your bridged funds. Nothing here is financial advice. DYOR.</p>
+    <p class="footer-fine">Bridging is routed by a third-party provider; $STAG is non-custodial and never holds your bridged funds. Nothing here is financial advice. DYOR.</p>
     <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
   </footer>
 
   <script src="js/main.js"></script>
   <script>
-  /* Open the Relay bridge INSIDE the page (our branding), no tab-leaving.
+  /* Open the swap INSIDE the page (our branding), no tab-leaving.
      If the provider refuses to be framed (X-Frame-Options), we detect it and fall back
      to a secure new-tab link — the page is never left broken. We build NO transactions
-     ourselves; Relay handles wallets/Solana/signing on their reputable domain. */
+     ourselves; the routing provider handles wallets/Solana/signing on their reputable domain. */
   (function(){
     const modal=document.getElementById('brg-modal'), frame=document.getElementById('brg-frame');
     const title=document.getElementById('brg-modal-title'), fb=document.getElementById('brg-fallback');
