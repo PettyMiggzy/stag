@@ -52,7 +52,7 @@ Then **redeploy** (Deployments → ⋯ → Redeploy) so the new env + cron take 
 This tells Telegram to send `/watch` commands to the site. Paste in a browser (fill in your values):
 
 ```
-https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://stagwifhood.fun/api/tg/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>
+https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://www.stagwifhood.fun/api/tg/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>
 ```
 
 You should see `{"ok":true,"result":true,...}`. Now DM your bot `/start` — it should reply.

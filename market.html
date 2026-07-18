@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sherwood Market · P2P Token Trading — STAGWIFHOOD ($STAG)</title>
+  <meta name="description" content="Sherwood Market — the peer-to-peer 'eBay for tokens' on Robinhood Chain. Post a sell order, name your price, and trade any token directly. Escrow-safe, 1% fees." />
+  <meta property="og:title" content="Sherwood Market · Trade Tokens P2P — STAGWIFHOOD" />
+  <meta property="og:description" content="Post it, price it, sell it. A peer-to-peer token marketplace on Robinhood Chain — escrow-safe, no slippage." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stagwifhood.fun/market" />
+  <meta property="og:image" content="https://stagwifhood.fun/assets/img/market/og-market.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://stagwifhood.fun/assets/img/market/og-market.webp" />
+  <link rel="icon" type="image/png" href="assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <style>
+    /* Sherwood Market — page-specific accents on top of the shared app design system */
+    .mkt-hero{position:relative;border-radius:20px;overflow:hidden;margin:0 0 1.4rem;border:1px solid rgba(212,175,55,.22);box-shadow:0 24px 60px -30px rgba(0,0,0,.7)}
+    .mkt-hero img{width:100%;display:block;object-fit:cover;max-height:340px}
+    .mkt-hero .mkt-hero-cap{position:absolute;left:0;right:0;bottom:0;padding:1.4rem 1.5rem .9rem;background:linear-gradient(to top,rgba(6,20,12,.92),rgba(6,20,12,.35) 60%,transparent);display:flex;align-items:flex-end;gap:.9rem;flex-wrap:wrap}
+    .mkt-hero h1{font-family:'Cinzel',serif;font-size:clamp(1.5rem,3.6vw,2.3rem);margin:0;line-height:1}
+    .mkt-hero p{margin:.35rem 0 0;color:var(--muted);font-size:.9rem;max-width:46ch}
+    .mkt-badges{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.2rem}
+    .mkt-badge{font:600 .64rem/1 'Space Grotesk',monospace;letter-spacing:.06em;text-transform:uppercase;padding:.4rem .6rem;border-radius:999px;background:rgba(20,60,40,.6);border:1px solid rgba(120,200,150,.25);color:#bfe9cf}
+    .order-list{display:grid;gap:.7rem;margin-top:.3rem}
+    .order{display:flex;align-items:center;gap:1rem;padding:.9rem 1rem;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);flex-wrap:wrap}
+    .order .leg{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+    .order .leg .amt{font:700 1.02rem/1 'Space Grotesk',monospace;color:var(--ink)}
+    .order .leg .sym{font-size:.7rem;color:var(--muted);letter-spacing:.04em}
+    .order .arrow{color:var(--gold-lite);font-size:1.1rem;flex:0 0 auto}
+    .order .who{font:500 .66rem/1.3 'Space Grotesk',monospace;color:var(--muted);margin-left:auto;text-align:right}
+    .order .who a{color:var(--gold-lite);text-decoration:none}
+    .order .oact{display:flex;gap:.4rem;flex:0 0 auto}
+    .order .mine-tag{font:600 .6rem/1 'Space Grotesk',monospace;color:#f0c674;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .5rem;border:1px solid rgba(240,198,116,.3);border-radius:999px}
+    .seg{display:inline-flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.25rem;gap:.25rem}
+    .seg button{border:none;background:none;color:var(--muted);font:600 .8rem/1 'Space Grotesk',monospace;padding:.5rem .9rem;border-radius:9px;cursor:pointer}
+    .seg button.on{background:linear-gradient(135deg,#1f6d43,#124a2c);color:#eafff2}
+    .pill-row{display:flex;gap:.4rem;flex-wrap:wrap;margin:.15rem 0 .5rem}
+    .pill-row button{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--muted);font:600 .72rem/1 'Space Grotesk',monospace;padding:.4rem .6rem;border-radius:8px;cursor:pointer}
+    .pill-row button.on{border-color:var(--gold);color:var(--gold-lite)}
+    .safe-note{margin-top:.8rem;padding:.7rem .8rem;border:1px solid rgba(120,200,150,.2);border-radius:10px;background:rgba(20,60,40,.25);font-size:.76rem;color:#bfe9cf;line-height:1.45}
+    .mini{font-size:.7rem;color:var(--muted)}
+  </style>
+</head>
+<body data-page="market">
+  <div class="bg-layer bg-forest" aria-hidden="true"></div>
+  <div class="bg-layer bg-glow" aria-hidden="true"></div>
+  <div class="bg-layer bg-fog" aria-hidden="true"></div>
+  <div class="bg-rays" aria-hidden="true"></div>
+
+  <!-- STICKY TOP BAR -->
+  <div class="topbar">
+    <a class="topbar-msg" href="/market">🛒 Sherwood Market is LIVE — trade any token P2P on Robinhood Chain →</a>
+    <div class="topbar-links">
+      <a href="https://x.com/StagWifHood" target="_blank" rel="noopener" data-social="x">𝕏</a>
+      <a href="https://t.me/StagWifHood" target="_blank" rel="noopener" data-social="tg">TG</a>
+      <a class="btn btn-gold btn-xs" href="/bridge">Buy $STAG</a>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <header class="nav scrolled" id="nav">
+    <a class="nav-brand" href="/" aria-label="STAGWIFHOOD home">
+      <img src="assets/img/mark.png" alt="" class="nav-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/#legend">The Legend</a>
+      <a href="/#chart">Chart</a>
+      <a href="/nfts">Mint</a>
+      <a href="/stake">Stake</a>
+      <a href="/bridge">Bridge</a>
+      <a href="/market">Market</a>
+      <a href="/pact">Pact</a>
+      <a href="/terminal">Terminal</a>
+      <a href="/docs">Docs</a>
+      <a href="https://stag.gitbook.io/stag-docs/" target="_blank" rel="noopener">📖 Guide</a>
+      <a href="/play">Play</a>
+      <a href="/#buy">How to Buy</a>
+    </nav>
+    <div class="nav-social">
+      <a class="ic" href="#" aria-label="X / Twitter" data-social="x">𝕏</a>
+      <a class="btn btn-gold btn-sm" href="/bridge">Buy $STAG</a>
+    </div>
+  </header>
+
+  <main>
+  <div class="app">
+    <!-- HERO -->
+    <div class="mkt-hero">
+      <img src="assets/img/market/hero-market-alt.webp" alt="Sherwood Market — a hooded stag merchant trading tokens in the forest" />
+      <div class="mkt-hero-cap">
+        <div>
+          <h1>Sherwood Market</h1>
+          <p>The peer-to-peer marketplace for tokens on Robinhood Chain. Post it, price it, sell it — directly to another trader. No pool, no slippage.</p>
+        </div>
+        <div class="mkt-badges">
+          <span class="mkt-badge">🔒 Escrow-safe</span>
+          <span class="mkt-badge">✅ Audited</span>
+          <span class="mkt-badge">1% / 1% fee</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- WALLET BAR -->
+    <div class="wbar">
+      <div class="wbar-net off" id="w-net"><span class="dot"></span><span id="w-net-txt">Not connected</span></div>
+      <div class="wbar-bals" id="w-bals" hidden>
+        <div class="b"><span>ETH</span><div id="w-eth">—</div></div>
+        <div class="b"><span>$STAG</span><div id="w-stag">—</div></div>
+      </div>
+      <div class="wbar-spacer"></div>
+      <button id="w-connect" class="btn btn-gold btn-sm">Connect Wallet</button>
+      <button id="w-disconnect" class="btn btn-ghost btn-sm" hidden title="Disconnect wallet">Disconnect</button>
+    </div>
+
+    <section class="app-panel">
+      <div class="stat-row s4">
+        <div class="stat"><div class="v" id="m-open">—</div><div class="l">Open Orders</div></div>
+        <div class="stat"><div class="v" id="m-fee">1% / 1%</div><div class="l">Buy / Sell Fee</div></div>
+        <div class="stat"><div class="v" id="m-yours">0</div><div class="l">Your Orders</div></div>
+        <div class="stat"><div class="v"><a id="m-scan" href="#" target="_blank" rel="noopener" style="color:var(--gold-lite);text-decoration:none">Verified ↗</a></div><div class="l">Contract</div></div>
+      </div>
+
+      <div class="cols">
+        <!-- POST AN ORDER -->
+        <div class="card">
+          <h3>Post an Order</h3>
+          <p class="hint">Escrow a token and name your price. Buyers fill it directly. Cancel any time to get it back.</p>
+
+          <label class="mini">You're selling</label>
+          <div class="pill-row" id="sell-pills">
+            <button data-tok="STAG" class="on">$STAG</button>
+            <button data-tok="custom">Other token…</button>
+          </div>
+          <div class="fld" id="sell-addr-row" hidden style="margin-bottom:.5rem">
+            <input id="sell-addr" type="text" placeholder="0x… token address" style="flex:1;background:none;border:none;color:var(--ink);font:500 .82rem/1 'Space Grotesk',monospace;outline:none" />
+          </div>
+          <div class="fld">
+            <input id="sell-amt" type="text" inputmode="decimal" placeholder="0.0" />
+            <button class="mx" id="sell-max">MAX</button><span class="tok" id="sell-sym">$STAG</span>
+          </div>
+          <div class="hint" id="sell-bal">Balance: —</div>
+
+          <label class="mini" style="margin-top:.7rem;display:block">You want to be paid in</label>
+          <div class="pill-row" id="pay-pills">
+            <button data-tok="ETH" class="on">ETH</button>
+            <button data-tok="STAG">$STAG</button>
+            <button data-tok="custom">Other…</button>
+          </div>
+          <div class="fld" id="pay-addr-row" hidden style="margin-bottom:.5rem">
+            <input id="pay-addr" type="text" placeholder="0x… token address" style="flex:1;background:none;border:none;color:var(--ink);font:500 .82rem/1 'Space Grotesk',monospace;outline:none" />
+          </div>
+          <div class="fld">
+            <input id="pay-amt" type="text" inputmode="decimal" placeholder="0.0" /><span class="tok" id="pay-sym">Ξ ETH</span>
+          </div>
+
+          <div class="actions" style="margin-top:.8rem">
+            <button class="btn btn-gold" id="post-btn" style="width:100%">Post Order</button>
+          </div>
+          <div class="safe-note">🔒 Your token moves into the contract's escrow when you post — you can't lose it in a half-trade, and only you can cancel. <b>Standard tokens only</b> (rebasing / tax-on-transfer tokens aren't supported).</div>
+          <p class="status" id="post-status"></p>
+        </div>
+
+        <!-- OPEN ORDERS -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+            <h3 style="margin:0">Open Orders</h3>
+            <div class="seg" id="filter-seg">
+              <button data-f="all" class="on">All</button>
+              <button data-f="stag">$STAG</button>
+              <button data-f="mine">Mine</button>
+            </div>
+          </div>
+          <div class="order-list" id="order-list"><p class="hint" style="text-align:center;padding:1rem 0">Loading open orders…</p></div>
+          <button class="btn btn-ghost btn-sm" id="refresh-btn" style="width:100%;margin-top:.7rem">↻ Refresh</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <img src="assets/img/mark.png" alt="" class="footer-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </div>
+    <p class="footer-tag">The stag who stole Robin Hood's hood. $STAG.</p>
+    <div class="footer-social">
+      <a href="/">Home</a><a href="#" data-social="x">X / Twitter</a><a href="#" data-social="tg">Telegram</a>
+    </div>
+    <p class="footer-fine">Sherwood Market is a peer-to-peer contract. Trades are final and on-chain. Standard ERC-20s + ETH only. Nothing here is financial advice. DYOR.</p>
+    <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/hooded-config.js?v=4"></script>
+  <script src="js/market.js?v=1"></script>
+</body>
+</html>
