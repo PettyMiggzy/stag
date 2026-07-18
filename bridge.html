@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bridge to Robinhood Chain — STAGWIFHOOD ($STAG)</title>
+  <meta name="description" content="Get on the Hood. Bridge funds from any chain — including Solana — into Robinhood Chain in seconds, then buy $STAG. Instant, non-custodial, powered by Relay." />
+  <meta property="og:title" content="Bridge to Robinhood Chain — $STAG" />
+  <meta property="og:description" content="Bring SOL or ETH from any chain into Robinhood Chain in seconds and buy $STAG. Instant · non-custodial." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stagwifhood.fun/bridge" />
+  <meta property="og:image" content="https://stagwifhood.fun/assets/bridge/hero.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://stagwifhood.fun/assets/bridge/hero.jpg" />
+  <link rel="icon" type="image/png" href="assets/img/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <style>
+    .brg-hero{max-width:1180px;margin:1.4rem auto 0;padding:0 1.1rem;position:relative}
+    .brg-hero-img{width:100%;max-height:360px;object-fit:cover;border-radius:20px;border:1px solid rgba(158,244,24,.22);display:block}
+    .brg-hero-cap{position:absolute;left:2.2rem;bottom:1.6rem;right:2.2rem}
+    .brg-eyebrow{font:700 .74rem/1 'Space Grotesk',monospace;letter-spacing:.18em;text-transform:uppercase;color:#9ef418;text-shadow:0 2px 12px #000}
+    .brg-hero-cap h1{font:900 clamp(2rem,5vw,3.4rem)/1 'Cinzel',serif;color:#fff;margin:.25rem 0 .2rem;text-shadow:0 3px 20px #000}
+    .brg-hero-cap p{color:#dfeccf;font:600 clamp(.9rem,2vw,1.1rem)/1.4 'Inter',sans-serif;max-width:560px;text-shadow:0 2px 12px #000;margin:0}
+    .brg-wrap{max-width:1180px;margin:0 auto;padding:1.6rem 1.1rem 0;display:grid;grid-template-columns:1.1fr .9fr;gap:1.6rem;align-items:start}
+    @media(max-width:860px){.brg-wrap{grid-template-columns:1fr}}
+    .brg-card{background:linear-gradient(160deg,rgba(20,40,24,.9),rgba(10,20,12,.92));border:1px solid rgba(158,244,24,.22);border-radius:18px;padding:1.6rem 1.5rem}
+    .brg-card h2{font:800 1.3rem/1.1 'Cinzel',serif;color:#fff;margin:0 0 .3rem}
+    .brg-card .sub{color:#9fb0a4;font:500 .92rem/1.5 'Inter',sans-serif;margin:0 0 1.1rem}
+    .brg-chains{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.1rem}
+    .brg-chains span{background:rgba(158,244,24,.08);border:1px solid rgba(158,244,24,.22);border-radius:999px;padding:.4rem .8rem;font:700 .76rem/1 'Space Grotesk',monospace;color:#dfeccf}
+    .brg-go{display:block;width:100%;text-align:center;padding:1rem;border-radius:12px;background:linear-gradient(90deg,#9ef418,#37d6c4);color:#08120a;font:800 1.05rem/1 'Space Grotesk',monospace;text-decoration:none;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(158,244,24,.28)}
+    .brg-go:hover{filter:brightness(1.07)}
+    .brg-note{margin:.9rem 0 0;color:#7f9384;font:500 .78rem/1.5 'Inter',sans-serif;text-align:center}
+    .brg-steps{list-style:none;margin:0;padding:0;counter-reset:s}
+    .brg-steps li{counter-increment:s;position:relative;padding:.7rem 0 .7rem 2.6rem;border-bottom:1px solid rgba(255,255,255,.06);color:#cfe0c4;font:500 .92rem/1.45 'Inter',sans-serif}
+    .brg-steps li:last-child{border-bottom:none}
+    .brg-steps li::before{content:counter(s);position:absolute;left:0;top:.6rem;width:1.7rem;height:1.7rem;border-radius:50%;background:rgba(158,244,24,.14);border:1px solid rgba(158,244,24,.4);color:#9ef418;font:800 .85rem/1.7rem 'Space Grotesk',monospace;text-align:center}
+    .brg-steps b{color:#fff}
+    .brg-after{max-width:1180px;margin:1.6rem auto 0;padding:0 1.1rem;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+    @media(max-width:720px){.brg-after{grid-template-columns:1fr}}
+    .brg-a{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1.1rem 1.2rem;text-decoration:none;display:block;transition:border-color .15s,transform .15s}
+    .brg-a:hover{border-color:rgba(158,244,24,.4);transform:translateY(-3px)}
+    .brg-a h3{font:800 1rem/1.1 'Cinzel',serif;color:#fff;margin:0 0 .2rem}
+    .brg-a p{color:#9fb0a4;font:500 .82rem/1.4 'Inter',sans-serif;margin:0}
+    .brg-sec{max-width:1180px;margin:1.8rem auto 0;padding:1rem 1.2rem;border-radius:14px;background:rgba(245,179,1,.06);border:1px solid rgba(245,179,1,.22);color:#e6d8b0;font:500 .82rem/1.5 'Inter',sans-serif}
+    .brg-sec b{color:#f5b301}
+  </style>
+</head>
+<body data-page="bridge">
+  <div class="bg-layer bg-forest" aria-hidden="true"></div>
+  <div class="bg-layer bg-glow" aria-hidden="true"></div>
+  <div class="bg-layer bg-fog" aria-hidden="true"></div>
+
+  <div class="topbar">
+    <a class="topbar-msg" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">🦌 $STAG is LIVE on Robinhood Chain — <strong>Buy Now</strong> →</a>
+    <div class="topbar-links">
+      <a href="https://x.com/StagWifHood" target="_blank" rel="noopener" data-social="x">𝕏</a>
+      <a href="https://t.me/StagWifHood" target="_blank" rel="noopener" data-social="tg">TG</a>
+      <a class="btn btn-gold btn-xs" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </div>
+
+  <header class="nav scrolled" id="nav">
+    <a class="nav-brand" href="/" aria-label="STAGWIFHOOD home">
+      <img src="assets/img/mark.png" alt="" class="nav-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/#legend">The Legend</a>
+      <a href="/#chart">Chart</a>
+      <a href="/nfts">Mint</a>
+      <a href="/stake">Stake</a>
+      <a href="/bridge" class="active">Bridge</a>
+      <a href="/pact">Pact</a>
+      <a href="/docs">Docs</a>
+      <a href="/locker">Locker</a>
+      <a href="/play">Play</a>
+      <a href="/arena">⚔ Arena</a>
+      <a href="/#buy">How to Buy</a>
+    </nav>
+    <div class="nav-social">
+      <a class="btn btn-gold btn-sm" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">Buy $STAG</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="brg-hero">
+      <img class="brg-hero-img" src="assets/bridge/hero.jpg" alt="A hooded stag striding from Solana into Robinhood Chain" />
+      <div class="brg-hero-cap">
+        <span class="brg-eyebrow">Official $STAG Bridge · Robinhood Chain</span>
+        <h1>Get on the Hood</h1>
+        <p>Bring funds from any chain — <b>Solana</b>, Ethereum, Base, Arbitrum — into Robinhood Chain in <b>seconds</b>, then buy $STAG.</p>
+      </div>
+    </section>
+
+    <div class="brg-wrap">
+      <div class="brg-card">
+        <h2>Bridge in seconds</h2>
+        <p class="sub">Instant · non-custodial · you keep control of your funds the whole way. Powered by <b style="color:#9ef418">Relay</b> — the same intent-based routing Robinhood Chain lists.</p>
+        <div class="brg-chains">
+          <span>◎ Solana</span><span>Ξ Ethereum</span><span>🔵 Base</span><span>🔷 Arbitrum</span><span>→ 🦌 Robinhood Chain</span>
+        </div>
+        <a class="brg-go" id="brg-launch" href="https://relay.link/bridge?toChainId=4663" target="_blank" rel="noopener">Bridge to Robinhood Chain →</a>
+        <p class="brg-note">Opens the Relay bridge with <b>Robinhood Chain</b> pre-selected as the destination. Connect your Solana or EVM wallet, pick an amount, confirm — done in seconds.</p>
+      </div>
+
+      <div class="brg-card">
+        <h2>How it works</h2>
+        <p class="sub">Three steps, no bridge accounts, no custody.</p>
+        <ol class="brg-steps">
+          <li>Tap <b>Bridge to Robinhood Chain</b> and connect your wallet — <b>Solana</b> (Phantom, Solflare) or any EVM wallet.</li>
+          <li>Pick your source token (SOL, ETH, USDC…) and an amount. Relay routes it to <b>Robinhood Chain</b> — settles in seconds.</li>
+          <li>You now hold ETH on Robinhood Chain. Come back and <b>buy $STAG</b>, stake, or grab an NFT. 🦌</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="brg-after">
+      <a class="brg-a" href="https://fun.noxa.fi/robinhood/token/0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49" target="_blank" rel="noopener">
+        <h3>Buy $STAG →</h3><p>Now that you're on the Hood, swap your ETH for $STAG.</p></a>
+      <a class="brg-a" href="/stake"><h3>Stake for ETH →</h3><p>Stake $STAG (or your NFTs) and earn ETH rewards.</p></a>
+      <a class="brg-a" href="/nfts"><h3>WANTED NFTs →</h3><p>Grab an animated 1/1 outlaw with a real $STAG bounty.</p></a>
+    </div>
+
+    <div class="brg-sec">
+      🛡️ <b>Only bridge here.</b> This is the official $STAG bridge at <b>stagwifhood.fun/bridge</b>. Scam lookalike bridge domains exist — never connect your wallet to a "$STAG bridge" on any other domain. We never DM you a bridge link, and we never ask you to approve unlimited token access.
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <img src="assets/img/mark.png" alt="" class="footer-mark" />
+      <span class="nav-brand-text">STAG<span class="gold">WIF</span>HOOD</span>
+    </div>
+    <p class="footer-tag">The stag who stole Robin Hood's hood. $STAG.</p>
+    <div class="footer-social"><a href="/">Home</a><a href="#" data-social="x">X / Twitter</a><a href="#" data-social="tg">Telegram</a></div>
+    <p class="footer-fine">Bridging is provided by a third-party aggregator (Relay). $STAG is non-custodial and never holds your bridged funds. Nothing here is financial advice. DYOR.</p>
+    <p class="footer-copy">© 2026 STAGWIFHOOD · Made in the forest with $STAG AI</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
