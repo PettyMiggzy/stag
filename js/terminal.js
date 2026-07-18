@@ -17,6 +17,7 @@
   const empty = $('term-empty'), emptyMsg = $('term-empty-msg'), board = $('term-board');
 
   const short = (a) => a.slice(0, 6) + '…' + a.slice(-4);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtNum = (n) => {
     n = Number(n);
     if (!isFinite(n)) return '—';
@@ -156,6 +157,7 @@
     if (Gate.held() < SCAN_GATE) { showScanGate(ca); return; }
     // each scan supersedes any in-flight one so tapping a new token always switches
     const myScan = ++termSeq; currentCA = ca;
+    loadDex(ca);   // chart + price changes + socials (DexScreener, non-blocking)
     if (feedTimer) { clearInterval(feedTimer); feedTimer = null; }
     goBtn.disabled = true; goBtn.textContent = 'Scanning…';
     setEmpty('Reading token…');
@@ -242,6 +244,48 @@
     } finally {
       if (myScan === termSeq) { goBtn.disabled = false; goBtn.textContent = 'Scan'; }
     }
+  }
+
+  /* ---------- DexScreener: chart + price changes + socials ---------- */
+  async function loadDex(ca) {
+    const chartPanel = $('t-chart-panel'), changes = $('t-changes'), socials = $('t-socials'), chart = $('t-chart');
+    if (changes) changes.hidden = true;
+    if (chartPanel) chartPanel.hidden = true;
+    if (socials) socials.innerHTML = '';
+    if (chart) chart.removeAttribute('src');
+    let pair = null;
+    try {
+      const d = await j('https://api.dexscreener.com/latest/dex/tokens/' + ca, 2);
+      const ps = (d.pairs || []).filter((p) => p.chainId === 'robinhood');
+      pair = ps.sort((a, b) => ((b.liquidity || {}).usd || 0) - ((a.liquidity || {}).usd || 0))[0];
+    } catch (_) {}
+    if (ca !== currentCA || !pair) return;   // superseded or no market
+
+    const img = (pair.info || {}).imageUrl; if (img) { const lg = $('t-logo'); if (lg) lg.src = img; }
+    if (chart && pair.pairAddress) {
+      chart.src = 'https://dexscreener.com/robinhood/' + pair.pairAddress + '?embed=1&theme=dark&info=0&trades=0';
+      if (chartPanel) chartPanel.hidden = false;
+    }
+    const pc = pair.priceChange || {};
+    const wins = [['5M', 'm5'], ['1H', 'h1'], ['6H', 'h6'], ['24H', 'h24']];
+    let html = wins.map(([l, k]) => {
+      const v = Number(pc[k]); const has = isFinite(v);
+      const cls = has ? (v >= 0 ? 'up' : 'down') : '';
+      const txt = has ? ((v >= 0 ? '+' : '') + v.toFixed(1) + '%') : '—';
+      return '<div class="term-chg ' + cls + '"><span class="cl">' + l + '</span><span class="cv">' + txt + '</span></div>';
+    }).join('');
+    const liq = (pair.liquidity || {}).usd;
+    html += '<div class="term-chg"><span class="cl">Liquidity</span><span class="cv" style="color:#eafff2">' + (liq ? fmtUsd(liq) : '—') + '</span></div>';
+    if (changes) { changes.innerHTML = html; changes.hidden = false; }
+
+    const links = [];
+    ((pair.info || {}).websites || []).forEach((w) => links.push(['🌐 Site', w.url]));
+    ((pair.info || {}).socials || []).forEach((s) => {
+      const ic = s.type === 'twitter' ? '𝕏 X' : s.type === 'telegram' ? '✈️ Telegram' : s.type === 'reddit' ? '👽 Reddit' : '🔗 Link';
+      links.push([ic, s.url]);
+    });
+    if (pair.pairAddress) links.push(['📊 DexScreener', 'https://dexscreener.com/robinhood/' + pair.pairAddress]);
+    if (socials) socials.innerHTML = links.map(([l, u]) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(l) + '</a>').join('');
   }
 
   /* ---------- renderers ---------- */
