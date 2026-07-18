@@ -66,6 +66,6 @@ contract WantedBounty {
     /// After expiry, owner reclaims whatever $STAG is left (unclaimed bounties).
     function sweep() external onlyOwner {
         require(block.timestamp>=expiry,"not expired");
-        STAG.transfer(owner, STAG.balanceOf(address(this)));
+        require(STAG.transfer(owner, STAG.balanceOf(address(this))),"sweep failed");
     }
 }
