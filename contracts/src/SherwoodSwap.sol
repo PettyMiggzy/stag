@@ -105,8 +105,9 @@ contract SherwoodSwap is Ownable, ReentrancyGuard {
 
         weth.withdraw(wethOut);                               // WETH -> ETH (to this)
         uint256 fee = (wethOut * feeBps) / 10_000;
-        if (fee > 0) { (bool okF, ) = feeWallet.call{value: fee}(""); require(okF, "fee xfer"); }
         ethOut = wethOut - fee;
+        require(ethOut >= minOut, "slippage");                // floor is what the SELLER receives, after the fee
+        if (fee > 0) { (bool okF, ) = feeWallet.call{value: fee}(""); require(okF, "fee xfer"); }
         (bool ok, ) = payable(msg.sender).call{value: ethOut}("");
         require(ok, "eth xfer");
         emit Sold(msg.sender, token, recv, fee, ethOut);

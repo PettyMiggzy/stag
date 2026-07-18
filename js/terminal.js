@@ -456,8 +456,13 @@
         const chg = Number(t.chg && t.chg.h24 || 0);
         const flow = view === 'new' && t.ageH != null ? (t.ageH < 1 ? Math.round(t.ageH * 60) + 'm old' : Math.round(t.ageH) + 'h old')
           : (t.buys24 + t.sells24) + ' trades 24h';
+        const initial = escapeHtml((t.symbol || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 1).toUpperCase() || '?');
+        const pfp = t.image
+          ? '<img class="tt-pfp" src="' + escapeHtml(t.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=&quot;tt-pfp ph&quot;>' + initial + '</span>\'" />'
+          : '<span class="tt-pfp ph">' + initial + '</span>';
         return '<button class="tt-row" data-ca="' + t.address + '">' +
           '<span class="tt-rank">' + t.rank + '</span>' +
+          pfp +
           '<span class="tt-name"><span class="tt-sym">' + escapeHtml(t.symbol || '—') + '</span>' +
             '<span class="tt-ca">' + shortCa(t.address) + ' · ' + flow + '</span></span>' +
           '<span class="tt-vol">' + fmtUsd(t.priceUsd) + '<span>$' + fmtNum(t.volH24) + ' vol</span></span>' +

@@ -38,8 +38,9 @@ function absorb(map, payload, order) {
     const pc = a.price_change_percentage || {};
     const tx = a.transactions?.h24 || {};
     const created = a.pool_created_at ? Date.parse(a.pool_created_at) : 0;
+    const img = tok.image_url && !/missing|null/i.test(tok.image_url) ? tok.image_url : null;
     const entry = {
-      symbol: tok.symbol || '?', address,
+      symbol: tok.symbol || '?', address, image: img,
       priceUsd: num(a.base_token_price_usd),
       mcapUsd: num(a.market_cap_usd) || num(a.fdv_usd),
       volH24: vol,
@@ -49,7 +50,8 @@ function absorb(map, payload, order) {
       trendRank: order ? rank++ : (map.get(address)?.trendRank ?? 9999),
     };
     const prev = map.get(address);
-    if (!prev || entry.volH24 >= prev.volH24) map.set(address, { ...prev, ...entry, trendRank: Math.min(prev?.trendRank ?? 9999, entry.trendRank) });
+    if (!prev || entry.volH24 >= prev.volH24) map.set(address, { ...prev, ...entry, image: entry.image || prev?.image || null, trendRank: Math.min(prev?.trendRank ?? 9999, entry.trendRank) });
+    else if (prev && !prev.image && entry.image) prev.image = entry.image;
   }
 }
 

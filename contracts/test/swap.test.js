@@ -47,6 +47,16 @@ describe("SherwoodSwap — fee-taking swap router", () => {
     expect(await WETH.balanceOf(await Swap.getAddress())).to.equal(0);
   });
 
+  it("SELL slippage: minOut is the POST-fee ETH the seller receives", async () => {
+    const { Swap, TOKEN, user } = await deploy();
+    await TOKEN.mint(user.address, E(2000));
+    await TOKEN.connect(user).approve(await Swap.getAddress(), E(2000));
+    // 1000 TOKEN -> 1 ETH gross -> 0.99 net after 1% fee. Floor of exactly 0.99 passes:
+    await Swap.connect(user).sell(await TOKEN.getAddress(), 10000, E(1000), E("0.99"));
+    // a floor above the net amount reverts (not silently shorted):
+    await expect(Swap.connect(user).sell(await TOKEN.getAddress(), 10000, E(1000), E("0.991"))).to.be.revertedWith("slippage");
+  });
+
   it("slippage: reverts when out < minOut", async () => {
     const { Swap, TOKEN, user } = await deploy();
     await expect(
