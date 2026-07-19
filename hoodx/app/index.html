@@ -161,6 +161,30 @@
   .feesplit .fs.h .p{color:var(--gold)} .feesplit .fs.h .w{color:var(--gold)}
   .feesplit .fs.b .p{color:#FF8A3D} .feesplit .fs.p .p{color:var(--green)}
   @media(max-width:640px){.feesplit{grid-template-columns:1fr 1fr 1fr;gap:6px}.feesplit .fs .p{font-size:22px}}
+  /* dedicated fee band */
+  .feeband{position:relative;padding:96px 0;background:
+     radial-gradient(1000px 500px at 50% -10%,rgba(245,196,69,.10),transparent 60%),
+     linear-gradient(180deg,#05070B,#070B10);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+  .feeband::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(245,196,69,.05),transparent);pointer-events:none}
+  .fb-head{text-align:center;max-width:760px;margin:0 auto 44px}
+  .fb-title{font-family:var(--cond,var(--sans));font-weight:900;text-transform:uppercase;font-size:clamp(38px,7vw,84px);line-height:.95;letter-spacing:-.01em;margin:8px 0 14px;
+     background:linear-gradient(180deg,#FFEAA0,var(--gold) 52%,#B8860B);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 30px rgba(245,196,69,.3))}
+  .fb-sub{color:var(--dim,#9DB0AB);font-size:clamp(15px,1.6vw,19px);line-height:1.5}.fb-sub b{color:var(--gold)}
+  .fb-cards{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:16px;max-width:980px;margin:0 auto}
+  .fb-card{position:relative;border:1px solid var(--line);border-radius:20px;padding:38px 24px;text-align:center;background:linear-gradient(180deg,rgba(15,23,31,.9),rgba(11,16,23,.9));overflow:hidden;box-shadow:0 30px 60px -30px #000}
+  .fb-ic{font-size:30px;margin-bottom:6px}
+  .fb-pct{font-family:var(--cond,var(--sans));font-weight:900;font-size:clamp(54px,8vw,96px);line-height:1}
+  .fb-who{font-family:var(--cond,var(--sans));font-weight:800;text-transform:uppercase;font-size:22px;letter-spacing:.03em;margin-top:2px}
+  .fb-d{color:var(--muted,#63776B);font-size:13px;margin-top:8px}
+  .fb-card.big{border-color:rgba(245,196,69,.55);background:linear-gradient(180deg,rgba(245,196,69,.14),rgba(245,196,69,.03)),rgba(11,16,23,.92);transform:translateY(-8px)}
+  .fb-card.big::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 0%,rgba(245,196,69,.22),transparent 60%);pointer-events:none}
+  .fb-card.big .fb-pct{background:linear-gradient(180deg,#FFEAA0,var(--gold) 60%,#C9971A);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .fb-card.big .fb-who{color:var(--gold)}
+  .fb-card.burn .fb-pct{color:#FF8A3D} .fb-card.plat .fb-pct{color:var(--green)}
+  .fb-bar{display:flex;max-width:980px;margin:22px auto 0;height:16px;border-radius:99px;overflow:hidden;border:1px solid var(--line);font-size:0}
+  .fb-seg{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#06140C;white-space:nowrap;overflow:hidden}
+  .fb-seg.h{background:linear-gradient(90deg,var(--gold),#FFE79A)} .fb-seg.b{background:linear-gradient(90deg,#FF8A3D,#FFB454)} .fb-seg.p{background:linear-gradient(90deg,var(--green),var(--lime))}
+  @media(max-width:720px){.feeband{padding:64px 0}.fb-cards{grid-template-columns:1fr;max-width:420px}.fb-card.big{transform:none}.fb-bar{display:none}}
   .rcard .ic{font-size:26px;margin-bottom:12px}
   .rcard h4{margin:0 0 8px;font-family:var(--cond);text-transform:uppercase;font-weight:800;font-size:23px}
   .rcard p{margin:0;color:var(--dim);font-size:14.5px}
@@ -218,7 +242,7 @@
 
 <header><div class="wrap">
   <a class="brand" href="/hoodx"><img class="logomark" src="/hx-art/logo.jpg" alt="HoodXchange"></a>
-  <nav class="tabs"><a href="#board">Board</a><a href="#how">How it works</a><a href="#rewards">Rewards</a><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏</a></nav>
+  <nav class="tabs"><a href="#board">Board</a><a href="#how">How it works</a><a href="#fees" style="color:var(--gold)">Fees</a><a href="#rewards">Rewards</a><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏</a></nav>
   <div class="grow"></div>
   <span class="chip"><span class="d"></span>Robinhood Chain</span>
   <button class="btn solid">Launch a coin</button>
@@ -284,6 +308,21 @@
   </div>
 </div></section>
 
+<!-- FEE STRUCTURE -->
+<section class="feeband" id="fees"><div class="wrap">
+  <div class="fb-head reveal">
+    <div class="eyebrow" style="color:var(--gold)">The split · every trade, every launch</div>
+    <h2 class="fb-title">Where the fees go</h2>
+    <p class="fb-sub">No hidden cut. Every fee on the pad is split three ways — and <b>half goes straight back to the people</b>.</p>
+  </div>
+  <div class="fb-cards">
+    <div class="fb-card big reveal"><div class="fb-ic">💸</div><div class="fb-pct num" data-to="50">50%</div><div class="fb-who">Holders</div><div class="fb-d">Paid out via the staking pool</div></div>
+    <div class="fb-card burn reveal"><div class="fb-ic">🔥</div><div class="fb-pct num" data-to="25">25%</div><div class="fb-who">Burned</div><div class="fb-d">Supply gone forever</div></div>
+    <div class="fb-card plat reveal"><div class="fb-ic">🏹</div><div class="fb-pct num" data-to="25">25%</div><div class="fb-who">Platform</div><div class="fb-d">Keeps the lights on</div></div>
+  </div>
+  <div class="fb-bar reveal"><span class="fb-seg h" style="flex:50">50% Holders</span><span class="fb-seg b" style="flex:25">25% Burn</span><span class="fb-seg p" style="flex:25">25% Platform</span></div>
+</div></section>
+
 <!-- REWARDS -->
 <section class="rewards" id="rewards">
   <div class="bgimg"></div><div class="veil"></div>
@@ -338,8 +377,9 @@
   var rnd=function(seed){return function(){seed=(seed*9301+49297)%233280;return seed/233280;};};
 
   // scroll reveals
-  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}})},{threshold:.12});
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");if(e.target.classList.contains("fb-card"))countPct(e.target);io.unobserve(e.target);}})},{threshold:.12});
   document.querySelectorAll(".reveal").forEach(function(el){io.observe(el);});
+  function countPct(card){var el=card.querySelector(".fb-pct");if(!el||el._ran)return;el._ran=1;var to=+el.dataset.to,st=null;function step(ts){if(!st)st=ts;var k=Math.min(1,(ts-st)/1000),e=1-Math.pow(1-k,3);el.textContent=Math.round(to*e)+"%";if(k<1)requestAnimationFrame(step);}el.textContent="0%";requestAnimationFrame(step);}
 
   // hero parallax + ember/arrow canvas
   var hart=$("#hart"),hero=$("#hero");
