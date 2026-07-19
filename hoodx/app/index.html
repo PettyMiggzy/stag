@@ -174,11 +174,35 @@
   footer{border-top:1px solid var(--line-soft);padding:28px 0 46px;color:var(--muted);font-size:12.5px}
   footer .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 
+  /* SPLASH intro */
+  #splash{position:fixed;inset:0;z-index:9999;background:#04060A;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .9s ease}
+  #splash.gone{opacity:0;pointer-events:none}
+  #splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+  #splash .sv-veil{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(4,6,10,.15),rgba(4,6,10,.72)),linear-gradient(0deg,#04060A,transparent 62%)}
+  #splash .sp-inner{position:relative;z-index:2;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;transition:opacity .5s}
+  #splash .sp-logo{width:min(380px,74vw);filter:drop-shadow(0 16px 54px rgba(0,0,0,.9));opacity:0;animation:spinIn 1s .25s cubic-bezier(.2,.9,.2,1) forwards}
+  #splash .sp-tag{font-family:var(--cond);text-transform:uppercase;letter-spacing:.3em;color:var(--green);font-weight:700;font-size:13px;opacity:0;animation:fade .8s 1s forwards}
+  #splash .sp-enter{margin-top:4px;background:linear-gradient(180deg,var(--green),var(--green-deep));color:#04160C;font-weight:800;font-size:15px;padding:14px 28px;border-radius:999px;cursor:pointer;border:none;box-shadow:0 0 44px -8px var(--glow);opacity:0;animation:fade .8s 1.3s forwards}
+  #splash .sp-enter:hover{filter:brightness(1.08)}
+  #splash .sp-skip{background:none;border:none;color:var(--muted);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;animation:fade .8s 1.6s forwards}
+  #splash .sp-skip:hover{color:var(--ink)}
+  @keyframes spinIn{from{opacity:0;transform:scale(.55) rotate(-14deg)}to{opacity:1;transform:none}}
   @media(max-width:1040px){.feature{grid-template-columns:1fr}.tgrid{grid-template-columns:repeat(2,1fr)}.how .g{grid-template-columns:1fr}.how .frame{order:-1}.rgrid{grid-template-columns:1fr}}
   @media(max-width:640px){nav.tabs,.chip{display:none}.tgrid{grid-template-columns:1fr 1fr}.hero .grade{background:linear-gradient(180deg,rgba(4,6,10,.35),rgba(4,6,10,.82) 60%,var(--bg)),linear-gradient(0deg,var(--bg),transparent 40%)}.hero .art{background-position:center}section{padding:56px 0}}
 </style>
 </head>
 <body>
+
+<div id="splash">
+  <video id="sv" playsinline muted loop preload="auto" poster="/hx-art/epic.jpg"><source src="/hx-art/promo.mp4" type="video/mp4"></video>
+  <div class="sv-veil"></div>
+  <div class="sp-inner">
+    <img class="sp-logo" src="/hx-art/logo.jpg" alt="HoodXchange">
+    <div class="sp-tag">Launchpad for the People</div>
+    <button class="sp-enter" id="sp-enter">▶&nbsp;&nbsp;Enter with sound</button>
+    <button class="sp-skip" id="sp-skip">skip →</button>
+  </div>
+</div>
 
 <div class="actbar"><div class="track" id="act"></div></div>
 
@@ -359,6 +383,20 @@
   document.querySelectorAll(".filters button").forEach(function(b){b.onclick=function(){document.querySelectorAll(".filters button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");filter=b.dataset.f;renderGrid();};});
   $("#tb").onclick=function(){side="buy";this.classList.add("on");$("#ts").classList.remove("on");$("#go").className="btn solid go";$("#go").textContent="Buy $"+TOKENS[sel].sym;};
   $("#ts").onclick=function(){side="sell";this.classList.add("on");$("#tb").classList.remove("on");$("#go").textContent="Sell $"+TOKENS[sel].sym;};
+})();
+</script>
+<script>
+(function(){
+  var sp=document.getElementById("splash"); if(!sp) return;
+  if(sessionStorage.getItem("hx_splashed")){ sp.parentNode.removeChild(sp); return; }
+  var v=document.getElementById("sv"); if(v){ v.play&&v.play().catch(function(){}); }
+  function reveal(){ sessionStorage.setItem("hx_splashed","1"); sp.classList.add("gone"); setTimeout(function(){ if(sp.parentNode)sp.parentNode.removeChild(sp); },950); }
+  document.getElementById("sp-enter").onclick=function(){
+    if(v){ try{ v.muted=false; v.currentTime=0; v.play(); }catch(e){} v.onended=reveal; }
+    var inner=sp.querySelector(".sp-inner"); if(inner) inner.style.opacity="0";  // let the cinematic play
+    setTimeout(reveal, 9500);  // fallback if onended doesn't fire
+  };
+  document.getElementById("sp-skip").onclick=reveal;
 })();
 </script>
 </body>
