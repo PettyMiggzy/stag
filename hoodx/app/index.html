@@ -60,7 +60,7 @@
 
   /* HERO — art forward */
   .hero{position:relative;min-height:82vh;display:flex;align-items:center;overflow:hidden}
-  .hero .art{position:absolute;inset:-6%;background:url('/hx-art/epic.jpg') center/cover no-repeat;will-change:transform}
+  .hero .art{position:absolute;inset:-6%;background:url('/hx-art/hero-archer.jpg') center/cover no-repeat;will-change:transform}
   .herologo{width:min(430px,78vw);height:auto;display:block;filter:drop-shadow(0 14px 50px rgba(0,0,0,.85));opacity:0;animation:fade .9s .2s forwards}
   .logomark{height:42px;width:auto;display:block;border-radius:9px}
   .hero .grade{position:absolute;inset:0;z-index:2;background:linear-gradient(90deg,var(--bg) 6%,rgba(4,6,10,.7) 42%,rgba(4,6,10,.1) 76%),linear-gradient(0deg,var(--bg),transparent 42%)}
@@ -177,10 +177,11 @@
   /* SPLASH intro */
   #splash{position:fixed;inset:0;z-index:9999;background:#04060A;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .9s ease}
   #splash.gone{opacity:0;pointer-events:none}
-  #splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
-  #splash .sv-veil{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(4,6,10,.15),rgba(4,6,10,.72)),linear-gradient(0deg,#04060A,transparent 62%)}
+  #splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.4}
+  #splash .sv-veil{position:absolute;inset:0;background:radial-gradient(circle at 50% 44%,rgba(4,6,10,.35),rgba(4,6,10,.88)),linear-gradient(0deg,#04060A,transparent 48%)}
   #splash .sp-inner{position:relative;z-index:2;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;transition:opacity .5s}
-  #splash .sp-logo{width:min(380px,74vw);filter:drop-shadow(0 16px 54px rgba(0,0,0,.9));opacity:0;animation:spinIn 1s .25s cubic-bezier(.2,.9,.2,1) forwards}
+  #splash .sp-inner::before{content:"";position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);width:min(580px,94vw);height:min(580px,94vw);border-radius:50%;background:radial-gradient(circle,rgba(0,230,118,.15),transparent 62%);z-index:-1;pointer-events:none}
+  #splash .sp-logo{width:min(440px,86vw);filter:drop-shadow(0 0 60px rgba(0,230,118,.28)) drop-shadow(0 16px 54px rgba(0,0,0,.9));opacity:0;animation:fade 1.3s .3s forwards}
   #splash .sp-tag{font-family:var(--cond);text-transform:uppercase;letter-spacing:.3em;color:var(--green);font-weight:700;font-size:13px;opacity:0;animation:fade .8s 1s forwards}
   #splash .sp-enter{margin-top:4px;background:linear-gradient(180deg,var(--green),var(--green-deep));color:#04160C;font-weight:800;font-size:15px;padding:14px 28px;border-radius:999px;cursor:pointer;border:none;box-shadow:0 0 44px -8px var(--glow);opacity:0;animation:fade .8s 1.3s forwards}
   #splash .sp-enter:hover{filter:brightness(1.08)}
