@@ -89,14 +89,6 @@ em{color:var(--gold-lite);font-style:italic}
   border-color:var(--line);backdrop-filter:blur(6px);
 }
 .btn-ghost:hover{transform:translateY(-3px);border-color:var(--gold);color:var(--gold-lite)}
-/* prominent unstake / exit button */
-.btn-exit{
-  background:linear-gradient(180deg,rgba(0,230,118,.16),rgba(0,230,118,.05));
-  color:#8CFF4A;border-color:rgba(0,230,118,.55);font-weight:700;
-  box-shadow:0 8px 26px -10px rgba(0,230,118,.5), inset 0 1px 0 rgba(255,255,255,.06);
-}
-.btn-exit:hover{transform:translateY(-3px);border-color:#00E676;color:#B6FF8A;box-shadow:0 16px 38px -12px rgba(0,230,118,.6)}
-.btn-exit:disabled{opacity:.5}
 
 /* ---------- nav ---------- */
 .nav{

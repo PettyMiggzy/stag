@@ -68,6 +68,7 @@
     'function tierInfo() view returns (uint256[3],uint256[3])',
     'function notifyRewardAmount(uint256,uint256)',
     'function setTierMultBps(uint8,uint256)',
+    'function setTierDuration(uint8,uint256)',
     'function setHoldingTiers(uint256[],uint256[])',
     'function setTokenWeight(address,uint256)',
     'function setEarlyPenaltyBps(uint256)',
@@ -440,6 +441,31 @@
       [$('vt-col-addr').value.trim(), BigInt($('vt-col-w').value || '10000') * (10n ** 18n), !!$('vt-col-lip').checked], 'Collection added ✓'));
     for (let t = 0; t < 3; t++) $('sk-mult-' + t) && ($('sk-mult-' + t).onclick = () =>
       ownerSend(stk(), STAKING_ABI, 'setTierMultBps', [t, BigInt(Math.round((+$('sk-mult-in-' + t).value || 1) * 10000))], 'Lock multiplier set ✓'));
+    // Lock period per tier (days -> seconds). Contract floor is 1h, ceiling 365d.
+    for (let t = 0; t < 3; t++) $('sk-dur-' + t) && ($('sk-dur-' + t).onclick = () => {
+      const days = +$('sk-dur-in-' + t).value;
+      if (!(days > 0)) return toast('Enter a lock period in days.', 'err');
+      const secs = Math.round(days * 86400);
+      if (secs < 3600) return toast('Minimum lock period is 1 hour (≈0.05 days).', 'err');
+      if (secs > 365 * 86400) return toast('Maximum lock period is 365 days.', 'err');
+      ownerSend(stk(), STAKING_ABI, 'setTierDuration', [t, BigInt(secs)], `Tier ${t + 1} lock set to ${days} day${days === 1 ? '' : 's'} ✓`);
+    });
+    // Early-unstake penalty (% -> bps, contract max 30%).
+    $('sk-pen-set') && ($('sk-pen-set').onclick = () => {
+      const pct = +$('sk-pen').value;
+      if (!(pct >= 0)) return toast('Enter a penalty percent (0–30).', 'err');
+      if (pct > 30) return toast('Max penalty is 30%.', 'err');
+      ownerSend(stk(), STAKING_ABI, 'setEarlyPenaltyBps', [BigInt(Math.round(pct * 100))], `Early penalty set to ${pct}% ✓`);
+    });
+    // One-click migration exit: unlock all tiers (1h floor) + zero the penalty. 4 sequential txns.
+    $('sk-openexit') && ($('sk-openexit').onclick = async () => {
+      if (!confirm('Open penalty-free exit?\n\nThis sets ALL three lock periods to 1 hour and the early-unstake penalty to 0%, so every current staker can withdraw full principal + rewards. You will confirm 4 transactions.')) return;
+      await ownerSend(stk(), STAKING_ABI, 'setTierDuration', [0n, 3600n], 'Tier 1 unlocked ✓');
+      await ownerSend(stk(), STAKING_ABI, 'setTierDuration', [1n, 3600n], 'Tier 2 unlocked ✓');
+      await ownerSend(stk(), STAKING_ABI, 'setTierDuration', [2n, 3600n], 'Tier 3 unlocked ✓');
+      await ownerSend(stk(), STAKING_ABI, 'setEarlyPenaltyBps', [0n], 'Penalty zeroed — exit is open ✓');
+      toast('Penalty-free exit is live. Stakers can unstake with no penalty.', 'ok');
+    });
     $('sk-hold') && ($('sk-hold').onclick = () => ownerSend(stk(), STAKING_ABI, 'setHoldingTiers',
       [[0n, ethers.parseEther($('sk-h1').value || '1000000'), ethers.parseEther($('sk-h2').value || '10000000')],
        [10000n, BigInt(Math.round((+$('sk-hm1').value || 2) * 10000)), BigInt(Math.round((+$('sk-hm2').value || 3) * 10000))]], 'Holding tiers set ✓'));

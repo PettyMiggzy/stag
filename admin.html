@@ -210,6 +210,13 @@
         <input id="sk-mult-in-0" class="adm-input" placeholder="1" style="max-width:64px" /><button id="sk-mult-0" class="btn-mini">↑</button>
         <input id="sk-mult-in-1" class="adm-input" placeholder="1.5" style="max-width:64px" /><button id="sk-mult-1" class="btn-mini">↑</button>
         <input id="sk-mult-in-2" class="adm-input" placeholder="2" style="max-width:64px" /><button id="sk-mult-2" class="btn-mini">↑</button></div>
+      <div class="adm-field"><label>Lock period (days) T1/T2/T3</label>
+        <input id="sk-dur-in-0" class="adm-input" placeholder="30" style="max-width:64px" /><button id="sk-dur-0" class="btn-mini">Set</button>
+        <input id="sk-dur-in-1" class="adm-input" placeholder="60" style="max-width:64px" /><button id="sk-dur-1" class="btn-mini">Set</button>
+        <input id="sk-dur-in-2" class="adm-input" placeholder="90" style="max-width:64px" /><button id="sk-dur-2" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label>Early-unstake penalty (%)</label><input id="sk-pen" class="adm-input" placeholder="15" style="max-width:70px" /><button id="sk-pen-set" class="btn-mini">Set</button></div>
+      <div class="adm-field"><label style="color:#ffb454">⚠ Migration: unlock everyone</label><button id="sk-openexit" class="btn-mini" style="background:rgba(0,230,118,.14);border-color:rgba(0,230,118,.5);color:#8CFF4A">🔓 Open penalty-free exit</button></div>
+      <p class="hint">“Open penalty-free exit” sets all three lock periods to the 1-hour floor and the penalty to 0 — every current staker becomes unlocked so they can unstake with full principal + rewards. Use for the HoodX migration.</p>
       <div class="adm-field"><label>Holding 1M→ / 10M→ (×)</label><input id="sk-h1" class="adm-input" value="1000000" style="max-width:96px"/><input id="sk-hm1" class="adm-input" placeholder="2" style="max-width:56px"/><input id="sk-h2" class="adm-input" value="10000000" style="max-width:96px"/><input id="sk-hm2" class="adm-input" placeholder="3" style="max-width:56px"/><button id="sk-hold" class="btn-mini">Set</button></div>
       <div class="adm-field"><label>Advanced: approve a token (CA)</label><input id="sk-tok" class="adm-input" placeholder="token 0x… — not needed for payouts" /><input id="sk-tokw" class="adm-input" placeholder="× (1)" style="max-width:70px"/><button id="sk-approve" class="btn-mini">Approve</button></div>
     </div>
