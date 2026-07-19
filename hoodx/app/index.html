@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HoodXchange — The Pad</title>
+<style>
+  :root{
+    --bg:#05070A;--panel:#0A0F15;--panel-2:#0F151D;--raise:#141C25;--line:#1B2733;--line-soft:#141D26;
+    --ink:#EAF3F1;--dim:#9DB0AB;--muted:#647668;
+    --green:#00E676;--green-deep:#00A650;--lime:#8CFF4A;--gold:#F5C445;--glow:rgba(0,230,118,.5);
+    --up:#00E676;--down:#FF5A6E;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --cond:"Arial Narrow","Helvetica Neue",Impact,var(--sans);
+    --radius:14px;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1000px 500px at 85% -10%,rgba(0,230,118,.07),transparent 60%),var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5;font-size:15px;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1300px;margin:0 auto;padding:0 20px}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .cond{font-family:var(--cond);font-weight:800;text-transform:uppercase;line-height:.9}
+  .up{color:var(--up)} .down{color:var(--down)}
+  button{font-family:inherit;cursor:pointer;border:none;color:inherit}
+  :focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:10px;font-weight:800;font-size:13.5px;transition:filter .12s,transform .1s}
+  .btn:active{transform:translateY(1px)}
+  .btn.solid{background:linear-gradient(180deg,var(--green),var(--green-deep));color:#04160C;box-shadow:0 0 26px -10px var(--glow)}
+  .btn.solid:hover{filter:brightness(1.08)}
+  .btn.ghost{background:var(--panel-2);border:1px solid var(--line);color:var(--ink)} .btn.ghost:hover{border-color:var(--green);color:var(--green)}
+
+  /* ticker */
+  .actbar{border-bottom:1px solid var(--line);background:#070B10;height:34px;overflow:hidden;display:flex;align-items:center;font-size:12.5px}
+  .actbar .track{display:flex;gap:26px;white-space:nowrap;padding-left:100%;animation:scroll 40s linear infinite;font-family:var(--mono)}
+  .actbar .track:hover{animation-play-state:paused}
+  .actbar b{color:var(--ink)} .actbar .g{color:var(--green)}
+  @keyframes scroll{to{transform:translateX(-100%)}}
+
+  /* header */
+  header{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);background:linear-gradient(180deg,rgba(5,7,10,.92),rgba(5,7,10,.55));border-bottom:1px solid var(--line-soft)}
+  header .wrap{display:flex;align-items:center;gap:18px;height:60px}
+  .brand{display:flex;align-items:center;gap:3px;font-family:var(--cond);font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.02em}
+  .brand .x{color:var(--green)}
+  nav.tabs{display:flex;gap:3px;margin-left:8px}
+  nav.tabs a{padding:7px 12px;border-radius:8px;font-size:13.5px;font-weight:650;color:var(--dim)} nav.tabs a.on{color:var(--ink);background:var(--panel-2)} nav.tabs a:hover{color:var(--ink)}
+  .grow{flex:1}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--dim);padding:7px 11px;border:1px solid var(--line);border-radius:999px}
+  .chip .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+
+  /* rewards banner */
+  .rewards-band{background:linear-gradient(90deg,rgba(0,230,118,.10),rgba(245,196,69,.06));border-bottom:1px solid var(--line-soft)}
+  .rewards-band .wrap{display:flex;align-items:center;gap:16px;padding:12px 20px;flex-wrap:wrap}
+  .rewards-band .ic{font-size:20px}
+  .rewards-band b{color:var(--gold)}
+  .rewards-band .txt{font-size:13.5px;color:var(--ink-dim,#c7d6cf)}
+  .rewards-band .pill{margin-left:auto;font-size:12px;font-weight:800;color:var(--green);border:1px solid var(--line);padding:6px 12px;border-radius:999px;background:var(--panel)}
+
+  /* stat strip */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px 0}
+  .stat{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+  .stat .v{font-size:22px;font-weight:800;margin-top:3px} .stat .v.g{color:var(--green)} .stat .v.gd{color:var(--gold)}
+
+  /* app grid */
+  .app{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start;padding-bottom:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .card .hd{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--line-soft)}
+  .card .hd h3{margin:0;font-family:var(--cond);text-transform:uppercase;font-weight:800;font-size:16px;letter-spacing:.02em}
+  .filters{display:flex;gap:4px}
+  .filters button{padding:5px 10px;border-radius:7px;font-size:12px;font-weight:700;color:var(--muted);background:transparent} .filters button.on{background:var(--panel-2);color:var(--ink)}
+
+  .board{max-height:620px;overflow-y:auto}
+  .row{display:grid;grid-template-columns:40px 1fr auto;gap:11px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .12s}
+  .row:hover{background:var(--panel-2)}
+  .row.sel{background:linear-gradient(90deg,rgba(0,230,118,.09),transparent);box-shadow:inset 2px 0 0 var(--green)}
+  .pfp{width:40px;height:40px;border-radius:11px;object-fit:cover;background:var(--raise);border:1px solid var(--line)}
+  .pfp.ph{display:grid;place-items:center;font-weight:800;color:#06140C;font-size:15px}
+  .row .nm{font-weight:750;font-size:13.5px;line-height:1.15;display:flex;align-items:center;gap:6px}
+  .row .badge-new{font-size:9px;font-weight:800;color:var(--green);border:1px solid var(--green);border-radius:4px;padding:0 4px;letter-spacing:.05em}
+  .row .sy{font-size:11.5px;color:var(--muted);font-weight:600}
+  .row .rt{text-align:right}
+  .row .px{font-size:13px;font-weight:750}
+  .row .ch{font-size:11.5px;font-weight:700}
+  .row .vol{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+  /* featured */
+  .feat .fhd{display:flex;align-items:center;gap:12px;padding:14px 16px}
+  .feat .fpfp{width:44px;height:44px;border-radius:12px;object-fit:cover;border:1px solid var(--line)}
+  .feat h2{margin:0;font-size:18px;font-weight:800}
+  .feat .fsy{font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .feat .fp{margin-left:auto;text-align:right}
+  .feat .fp .p{font-size:22px;font-weight:800}
+  .chartbox{position:relative;height:340px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:#0a0e13}
+  .chartbox iframe{width:100%;height:100%;border:0;display:block}
+  .chartbox .load{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr)}
+  .metrics div{padding:12px 15px;border-right:1px solid var(--line-soft)} .metrics div:last-child{border-right:none}
+  .metrics .k{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .metrics .m{font-size:15px;font-weight:750;margin-top:2px}
+  .buyrow{display:flex;gap:9px;padding:14px 16px;border-top:1px solid var(--line-soft)}
+  .buyrow input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--ink);font-family:var(--mono);font-size:15px}
+  .buyrow input:focus{outline:none;border-color:var(--green)}
+
+  /* rewards section */
+  section.rewards{padding:30px 0 60px}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+  .sec-h h2{font-family:var(--cond);text-transform:uppercase;font-weight:800;font-size:30px;margin:0}
+  .sec-h .tag{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);font-weight:700}
+  .rgrid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px}
+  .rcard{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;padding:22px;position:relative;overflow:hidden}
+  .rcard.hero{background:linear-gradient(135deg,rgba(0,230,118,.12),rgba(245,196,69,.06)),var(--panel)}
+  .rcard .ic{font-size:24px;margin-bottom:12px}
+  .rcard h4{margin:0 0 8px;font-family:var(--cond);text-transform:uppercase;font-weight:800;font-size:22px}
+  .rcard p{margin:0;color:var(--dim);font-size:14px}
+  .rcard .big{font-family:var(--cond);font-weight:800;font-size:42px;color:var(--gold);line-height:1;margin:6px 0}
+  .rcard .sub{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .rcard .claim{margin-top:16px}
+  .leader{margin-top:12px;display:grid;gap:8px}
+  .lrow{display:flex;align-items:center;gap:10px;font-size:13px}
+  .lrow .rank{width:22px;color:var(--muted);font-weight:800;font-family:var(--mono)}
+  .lrow .amt{margin-left:auto;color:var(--green);font-weight:750;font-family:var(--mono)}
+
+  footer{border-top:1px solid var(--line-soft);padding:26px 0 44px;color:var(--muted);font-size:12.5px}
+  footer .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+
+  @media(max-width:1000px){.app{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.rgrid{grid-template-columns:1fr}nav.tabs,.chip{display:none}}
+</style>
+</head>
+<body>
+
+<div class="actbar"><div class="track" id="act"></div></div>
+
+<header><div class="wrap">
+  <a class="brand" href="/hoodx">HOOD<span class="x">✕</span>CHANGE</a>
+  <nav class="tabs"><a class="on">Board</a><a href="#rewards">Rewards</a><a>Launch</a><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏</a></nav>
+  <div class="grow"></div>
+  <span class="chip"><span class="d"></span>Robinhood Chain</span>
+  <button class="btn ghost" id="connect">Connect</button>
+  <button class="btn solid">Launch a coin</button>
+</div></header>
+
+<div class="rewards-band"><div class="wrap">
+  <span class="ic">🎁</span>
+  <span class="txt"><b>Holder Rewards</b> — hold any coin launched on HoodX and earn a cut of platform fees. The house's take goes back to the people.</span>
+  <a href="#rewards" class="pill">See rewards →</a>
+</div></div>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="l">Value locked</div><div class="v g num" id="s-tvl">$5.24M</div></div>
+    <div class="stat"><div class="l">Live coins</div><div class="v num" id="s-live">—</div></div>
+    <div class="stat"><div class="l">24h volume</div><div class="v num" id="s-vol">—</div></div>
+    <div class="stat"><div class="l">Rewards paid to holders</div><div class="v gd num" id="s-rew">$126.4K</div></div>
+  </div>
+
+  <div class="app">
+    <!-- BOARD -->
+    <section class="card">
+      <div class="hd"><h3>Live Board</h3>
+        <div class="filters"><button class="on" data-f="trending">Trending</button><button data-f="new">New</button><button data-f="gainers">Gainers</button></div>
+      </div>
+      <div class="board" id="board"><div style="padding:30px;text-align:center;color:var(--muted)">Loading live coins…</div></div>
+    </section>
+
+    <!-- FEATURED -->
+    <section class="card feat">
+      <div class="fhd">
+        <img class="fpfp" id="f-pfp" alt="">
+        <div><h2 id="f-name">—</h2><div class="fsy" id="f-sy">—</div></div>
+        <div class="fp"><div class="p num" id="f-price">—</div><div class="num" id="f-ch">—</div></div>
+      </div>
+      <div class="chartbox"><div class="load" id="f-load">Select a coin to load its live chart</div><iframe id="f-chart" title="chart" loading="lazy"></iframe></div>
+      <div class="metrics">
+        <div><div class="k">Market cap</div><div class="m num" id="m-mc">—</div></div>
+        <div><div class="k">Liquidity</div><div class="m num" id="m-lq">—</div></div>
+        <div><div class="k">24h Vol</div><div class="m num" id="m-vol">—</div></div>
+        <div><div class="k">LP</div><div class="m" style="color:var(--gold)">🔒 Locked</div></div>
+      </div>
+      <div class="buyrow">
+        <input id="buyamt" value="0.25" inputmode="decimal">
+        <button class="btn solid" style="padding:11px 20px" id="buybtn">Buy —</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- REWARDS -->
+  <section class="rewards" id="rewards">
+    <div class="sec-h"><span class="tag">Robinhood vibe</span><h2>Hold coins. Earn rewards.</h2></div>
+    <div class="rgrid">
+      <div class="rcard hero">
+        <div class="ic">🎁</div>
+        <h4>The house pays you back</h4>
+        <p>HoodX skims a small platform fee on every trade — and instead of pocketing it, a chunk is redistributed to the people <b>holding coins launched here</b>. Steal from the rig, hand it to the holders.</p>
+        <div class="big num">$126,412</div>
+        <div class="sub">paid to holders · all-time</div>
+        <button class="btn solid claim">Connect to check your rewards</button>
+      </div>
+      <div class="rcard">
+        <div class="ic">⚡</div>
+        <h4>This week's pool</h4>
+        <div class="big num" style="color:var(--green)">$8,240</div>
+        <div class="sub">splits Sunday · to eligible holders</div>
+        <p style="margin-top:14px">Hold any HoodX-launched coin through the snapshot and your share drops automatically. No staking, no lockups.</p>
+      </div>
+      <div class="rcard">
+        <div class="ic">🏆</div>
+        <h4>Top earners</h4>
+        <div class="leader" id="leader"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer><div class="wrap">
+  <a class="brand" href="/hoodx" style="font-size:17px">HOOD<span class="x">✕</span>CHANGE</a>
+  <span>Launchpad for the people — Robinhood Chain.</span><div class="grow"></div>
+  <span style="color:#4d5a45;font-size:11px">Concept build · live market data via GeckoTerminal / DexScreener · not financial advice</span>
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s){return document.querySelector(s)};
+  var fmtUsd=function(p){p=+p;if(!isFinite(p))return"—";if(p>=1)return"$"+p.toLocaleString(undefined,{maximumFractionDigits:2});if(p>=0.001)return"$"+p.toFixed(5);return"$"+p.toPrecision(3).replace(/e.*/,"")};
+  var fmtBig=function(n){n=+n;if(!isFinite(n)||!n)return"—";if(n>=1e9)return"$"+(n/1e9).toFixed(2)+"B";if(n>=1e6)return"$"+(n/1e6).toFixed(2)+"M";if(n>=1e3)return"$"+(n/1e3).toFixed(1)+"K";return"$"+n.toFixed(0)};
+  var COLORS=["#00E676","#8CFF4A","#F5C445","#57B8FF","#FF7AC6","#B98CFF","#4ADE9E","#FFB454"];
+
+  // ---- mock fallback (Robin Hood themed) so it always looks busy ----
+  var MOCK=[
+    {name:"Sherwood",sym:"WOOD",price:0.0143,ch:161658,vol:32921915,mc:9200000,lq:410000,isNew:0},
+    {name:"CashCat",sym:"CASHCAT",price:0.0733,ch:22.1,vol:6094187,mc:4100000,lq:520000,isNew:0},
+    {name:"Stonkbroker",sym:"STONK",price:0.0034,ch:431,vol:3652436,mc:880000,lq:190000,isNew:1},
+    {name:"Little John",sym:"JOHN",price:0.00061,ch:-9.4,vol:540000,mc:210000,lq:88000,isNew:0},
+    {name:"Merry Men",sym:"MERRY",price:0.0000091,ch:122.5,vol:280000,mc:91000,lq:32000,isNew:1},
+    {name:"Quiver",sym:"QUIVER",price:0.00007,ch:220,vol:400000,mc:180000,lq:55000,isNew:1},
+    {name:"Friar Tuck",sym:"TUCK",price:0.00405,ch:14.7,vol:260000,mc:405000,lq:77000,isNew:0},
+    {name:"Greenwood",sym:"GRN",price:0.0021,ch:33,vol:150000,mc:150000,lq:44000,isNew:0}
+  ];
+  MOCK.forEach(function(m,i){m.col=COLORS[i%COLORS.length];m.pool=null;});
+
+  // ---- activity ticker ----
+  function buildTicker(rows){
+    var verbs=["launched","aped","bought","is pumping","just graduated"];
+    var html="";
+    for(var r=0;r<2;r++) rows.slice(0,10).forEach(function(t,i){
+      html+='<span>🏹 <b>$'+t.sym+'</b> <span class="g">'+verbs[i%verbs.length]+'</span></span>';
+    });
+    $("#act").innerHTML=html;
+  }
+
+  // ---- leaderboard (mock) ----
+  (function(){var names=["0x9f…c21b","robin.hood","0x41…88a0","sher_wood","0xa7…0459"];var amts=[4210,3180,2740,1990,1450];
+    $("#leader").innerHTML=names.map(function(n,i){return '<div class="lrow"><span class="rank">'+(i+1)+'</span><span>'+n+'</span><span class="amt">$'+amts[i].toLocaleString()+'</span></div>';}).join("");})();
+
+  var TOKENS=[], sel=0, filter="trending";
+
+  function boardData(){
+    var a=TOKENS.slice();
+    if(filter==="new") a.sort(function(x,y){return (y.isNew?1:0)-(x.isNew?1:0)||y.vol-x.vol;});
+    else if(filter==="gainers") a.sort(function(x,y){return y.ch-x.ch;});
+    else a.sort(function(x,y){return y.vol-x.vol;});
+    return a;
+  }
+  function avatar(t){
+    if(t.pfp) return '<img class="pfp" src="'+t.pfp+'" alt="" onerror="this.outerHTML=\'<div class=&quot;pfp ph&quot; style=&quot;background:'+t.col+'&quot;>'+t.sym[0]+'</div>\'">';
+    return '<div class="pfp ph" style="background:'+t.col+'">'+t.sym[0]+'</div>';
+  }
+  function renderBoard(){
+    var data=boardData();
+    $("#board").innerHTML=data.map(function(t){var up=t.ch>=0;
+      return '<div class="row'+(t===TOKENS[sel]?" sel":"")+'" data-i="'+TOKENS.indexOf(t)+'">'+
+        avatar(t)+
+        '<div><div class="nm">'+t.name+(t.isNew?' <span class="badge-new">NEW</span>':'')+'</div><div class="sy num">$'+t.sym+'</div></div>'+
+        '<div class="rt"><div class="px num">'+fmtUsd(t.price)+'</div>'+
+        '<div class="ch num '+(up?"up":"down")+'">'+(up?"▲":"▼")+' '+Math.abs(t.ch).toLocaleString(undefined,{maximumFractionDigits:1})+'%</div>'+
+        '<div class="vol num">Vol '+fmtBig(t.vol)+'</div></div></div>';
+    }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll(".row"),function(r){r.onclick=function(){select(+r.dataset.i);};});
+  }
+  function select(i){ sel=i; renderBoard(); var t=TOKENS[i]; if(!t)return;
+    $("#f-pfp").src=t.pfp||""; $("#f-pfp").style.background=t.col;
+    $("#f-name").textContent=t.name; $("#f-sy").textContent="$"+t.sym;
+    $("#f-price").textContent=fmtUsd(t.price);
+    var up=t.ch>=0; var ch=$("#f-ch"); ch.textContent=(up?"▲ ":"▼ ")+Math.abs(t.ch).toLocaleString(undefined,{maximumFractionDigits:1})+"%"; ch.className="num "+(up?"up":"down");
+    $("#m-mc").textContent=fmtBig(t.mc); $("#m-lq").textContent=fmtBig(t.lq); $("#m-vol").textContent=fmtBig(t.vol);
+    $("#buybtn").textContent="Buy $"+t.sym;
+    var cf=$("#f-chart"), load=$("#f-load");
+    if(t.pool){ load.style.display="none"; cf.style.display="block"; cf.src="https://dexscreener.com/robinhood/"+t.pool+"?embed=1&theme=dark&info=0&trades=0&chartType=usd&interval=15"; }
+    else { cf.style.display="none"; cf.src="about:blank"; load.style.display="grid"; load.textContent="Live chart available at launch"; }
+  }
+
+  // ---- load live data from GeckoTerminal (network=robinhood) ----
+  function parse(j){
+    var inc={}; (j.included||[]).forEach(function(x){if(x.type==="token")inc[x.id]=x.attributes;});
+    return (j.data||[]).map(function(p){
+      var a=p.attributes||{}; var btId=p.relationships&&p.relationships.base_token&&p.relationships.base_token.data&&p.relationships.base_token.data.id;
+      var bt=btId&&inc[btId]||{};
+      var nm=(a.name||"").split("/")[0].trim();
+      return {
+        name: bt.name||nm||"Token", sym:(bt.symbol||nm||"?").toUpperCase().slice(0,10),
+        price:+a.base_token_price_usd||0, ch:+((a.price_change_percentage&&a.price_change_percentage.h24))||0,
+        vol:+((a.volume_usd&&a.volume_usd.h24))||0, mc:+(a.market_cap_usd||a.fdv_usd||0),
+        lq:+(a.reserve_in_usd||0), pfp:(bt.image_url&&bt.image_url!=="missing.png")?bt.image_url:null,
+        pool:(p.id||"").replace("robinhood_",""), isNew:false,
+        col:COLORS[Math.floor(Math.random()*COLORS.length)]
+      };
+    }).filter(function(t){return t.price>0;});
+  }
+  function afterData(){
+    // stats
+    $("#s-live").textContent=TOKENS.length? (TOKENS.length+ (TOKENS.length>=20?"+":"")) : "8";
+    var vol=TOKENS.reduce(function(a,t){return a+t.vol;},0);
+    $("#s-vol").textContent=fmtBig(vol||42000000);
+    buildTicker(TOKENS); renderBoard(); select(0);
+  }
+  Promise.all([
+    fetch("https://api.geckoterminal.com/api/v2/networks/robinhood/trending_pools?include=base_token").then(function(r){return r.json();}).catch(function(){return{};}),
+    fetch("https://api.geckoterminal.com/api/v2/networks/robinhood/new_pools?include=base_token").then(function(r){return r.json();}).catch(function(){return{};})
+  ]).then(function(res){
+    var trend=parse(res[0]), fresh=parse(res[1]); fresh.forEach(function(t){t.isNew=true;});
+    var seen={}, all=[];
+    trend.concat(fresh).forEach(function(t){var k=t.sym+t.pool; if(!seen[k]){seen[k]=1;all.push(t);}});
+    TOKENS = all.length? all : MOCK;
+    afterData();
+  }).catch(function(){ TOKENS=MOCK; afterData(); });
+
+  // filters
+  Array.prototype.forEach.call(document.querySelectorAll(".filters button"),function(b){b.onclick=function(){
+    Array.prototype.forEach.call(document.querySelectorAll(".filters button"),function(x){x.classList.remove("on");});
+    b.classList.add("on"); filter=b.dataset.f; renderBoard();
+  };});
+  $("#connect").onclick=function(){this.textContent="robin.hood";this.classList.remove("ghost");this.classList.add("solid");};
+})();
+</script>
+</body>
+</html>
