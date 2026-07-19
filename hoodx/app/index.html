@@ -61,8 +61,17 @@
   /* HERO — art forward */
   .hero{position:relative;min-height:82vh;display:flex;align-items:center;overflow:hidden}
   .hero .art{position:absolute;inset:-6%;background:url('/hx-art/hero-archer.jpg') center/cover no-repeat;will-change:transform}
-  .herologo{width:min(430px,78vw);height:auto;display:block;filter:drop-shadow(0 14px 50px rgba(0,0,0,.85));opacity:0;animation:fade .9s .2s forwards}
-  .logomark{height:42px;width:auto;display:block;border-radius:9px}
+  .hero-med{position:relative;width:min(300px,62vw);aspect-ratio:1;display:grid;place-items:center;opacity:0;animation:fade 1s .2s forwards}
+  .hero-med img{position:relative;width:100%;height:100%;object-fit:contain;border-radius:50%;filter:drop-shadow(0 0 44px rgba(0,230,118,.28)) drop-shadow(0 18px 50px rgba(0,0,0,.9))}
+  .hero-med .hm-halo{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(0,230,118,.20),transparent 60%);filter:blur(6px);animation:breathe 3.6s ease-in-out infinite}
+  .hero-med .hm-ring{position:absolute;inset:-6%;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 10%,var(--green) 24%,transparent 42%,transparent 62%,var(--lime) 76%,transparent 92%);
+     -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));
+     filter:drop-shadow(0 0 12px var(--glow));animation:spin 10s linear infinite;opacity:.85}
+  .logomark{height:40px;width:40px;display:block;border-radius:50%;box-shadow:0 0 0 1px rgba(0,230,118,.35),0 0 18px -4px var(--glow)}
+  .brand{gap:10px}
+  .brand .wm{font-family:var(--cond);font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.01em;color:#fff}
+  .brand .wm .x{color:var(--green)}
+  @media(max-width:360px){.brand .wm{display:none}}
   .hero .grade{position:absolute;inset:0;z-index:2;background:linear-gradient(90deg,var(--bg) 6%,rgba(4,6,10,.7) 42%,rgba(4,6,10,.1) 76%),linear-gradient(0deg,var(--bg),transparent 42%)}
   #fx{position:absolute;inset:0;z-index:3;pointer-events:none}
   .hero .wrap{position:relative;z-index:4;padding:56px 22px}
@@ -207,19 +216,31 @@
   footer{border-top:1px solid var(--line-soft);padding:28px 0 46px;color:var(--muted);font-size:12.5px}
   footer .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 
-  /* SPLASH intro */
-  #splash{position:fixed;inset:0;z-index:9999;background:#04060A;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .9s ease}
+  /* SPLASH intro — cinematic medallion reveal */
+  #splash{position:fixed;inset:0;z-index:9999;background:
+      radial-gradient(1200px 700px at 50% 30%,rgba(0,60,28,.28),transparent 62%),
+      radial-gradient(900px 600px at 50% 120%,rgba(0,230,118,.06),transparent 60%),#03050A;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity 1s ease}
   #splash.gone{opacity:0;pointer-events:none}
-  #splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.4}
-  #splash .sv-veil{position:absolute;inset:0;background:radial-gradient(circle at 50% 44%,rgba(4,6,10,.35),rgba(4,6,10,.88)),linear-gradient(0deg,#04060A,transparent 48%)}
-  #splash .sp-inner{position:relative;z-index:2;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;transition:opacity .5s}
-  #splash .sp-inner::before{content:"";position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);width:min(580px,94vw);height:min(580px,94vw);border-radius:50%;background:radial-gradient(circle,rgba(0,230,118,.15),transparent 62%);z-index:-1;pointer-events:none}
-  #splash .sp-logo{width:min(440px,86vw);filter:drop-shadow(0 0 60px rgba(0,230,118,.28)) drop-shadow(0 16px 54px rgba(0,0,0,.9));opacity:0;animation:fade 1.3s .3s forwards}
-  #splash .sp-tag{font-family:var(--cond);text-transform:uppercase;letter-spacing:.3em;color:var(--green);font-weight:700;font-size:13px;opacity:0;animation:fade .8s 1s forwards}
-  #splash .sp-enter{margin-top:4px;background:linear-gradient(180deg,var(--green),var(--green-deep));color:#04160C;font-weight:800;font-size:15px;padding:14px 28px;border-radius:999px;cursor:pointer;border:none;box-shadow:0 0 44px -8px var(--glow);opacity:0;animation:fade .8s 1.3s forwards}
-  #splash .sp-enter:hover{filter:brightness(1.08)}
-  #splash .sp-skip{background:none;border:none;color:var(--muted);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;animation:fade .8s 1.6s forwards}
+  #splash .grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(rgba(255,255,255,.03) 1px,transparent 1px);background-size:3px 3px;pointer-events:none}
+  #splash .sp-inner{position:relative;z-index:2;text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px;padding:24px;transition:opacity .6s}
+  /* medallion */
+  #splash .med{position:relative;width:min(360px,74vw);aspect-ratio:1;display:grid;place-items:center;opacity:0;animation:medIn 1.4s cubic-bezier(.2,.7,.2,1) .25s forwards}
+  #splash .med .ring{position:absolute;inset:-7%;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 8%,var(--green) 22%,transparent 40%,transparent 60%,var(--lime) 74%,transparent 92%);
+     -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
+     filter:drop-shadow(0 0 14px var(--glow));animation:spin 8s linear infinite;opacity:.9}
+  #splash .med .halo{position:absolute;inset:-22%;border-radius:50%;background:radial-gradient(circle,rgba(0,230,118,.22),transparent 60%);filter:blur(6px);animation:breathe 3.4s ease-in-out infinite}
+  #splash .med img{position:relative;width:100%;height:100%;object-fit:contain;border-radius:50%;filter:drop-shadow(0 0 46px rgba(0,230,118,.30)) drop-shadow(0 20px 50px rgba(0,0,0,.9))}
+  #splash .sp-cs{font-family:var(--cond);text-transform:uppercase;letter-spacing:.42em;font-weight:800;font-size:clamp(15px,2vw,20px);color:#fff;text-shadow:0 0 22px var(--glow);opacity:0;animation:fade .9s 1.15s forwards}
+  #splash .sp-cs b{color:var(--green)}
+  #splash .sp-tag{text-transform:uppercase;letter-spacing:.34em;color:var(--green);font-weight:700;font-size:11.5px;opacity:0;animation:fade .8s 1.4s forwards}
+  #splash .sp-enter{margin-top:6px;background:linear-gradient(180deg,var(--green),var(--green-deep));color:#04160C;font-weight:800;font-size:15px;padding:15px 34px;border-radius:999px;cursor:pointer;border:none;box-shadow:0 0 50px -8px var(--glow);opacity:0;animation:fade .8s 1.65s forwards}
+  #splash .sp-enter:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  #splash .sp-skip{background:none;border:none;color:var(--muted);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;animation:fade .8s 1.9s forwards}
   #splash .sp-skip:hover{color:var(--ink)}
+  @keyframes medIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes breathe{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
   @keyframes spinIn{from{opacity:0;transform:scale(.55) rotate(-14deg)}to{opacity:1;transform:none}}
   @media(max-width:1040px){.feature{grid-template-columns:1fr}.tgrid{grid-template-columns:repeat(2,1fr)}.how .g{grid-template-columns:1fr}.how .frame{order:-1}.rgrid{grid-template-columns:1fr}}
   @media(max-width:640px){nav.tabs,.chip{display:none}.tgrid{grid-template-columns:1fr 1fr}.hero .grade{background:linear-gradient(180deg,rgba(4,6,10,.35),rgba(4,6,10,.82) 60%,var(--bg)),linear-gradient(0deg,var(--bg),transparent 40%)}.hero .art{background-position:center}section{padding:56px 0}}
@@ -228,20 +249,21 @@
 <body>
 
 <div id="splash">
-  <video id="sv" playsinline muted loop preload="auto" poster="/hx-art/epic.jpg"><source src="/hx-art/promo.mp4" type="video/mp4"></video>
-  <div class="sv-veil"></div>
+  <div class="grain"></div>
+  <video id="sv" playsinline muted loop preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.14;z-index:0"><source src="/hx-art/promo.mp4" type="video/mp4"></video>
   <div class="sp-inner">
-    <img class="sp-logo" src="/hx-art/logo.jpg" alt="HoodXchange">
+    <div class="med"><span class="halo"></span><span class="ring"></span><img src="/hx-art/logo-round.png" alt="HoodXchange"></div>
+    <div class="sp-cs">Coming <b>Soon</b></div>
     <div class="sp-tag">Launchpad for the People</div>
     <button class="sp-enter" id="sp-enter">▶&nbsp;&nbsp;Enter with sound</button>
-    <button class="sp-skip" id="sp-skip">skip →</button>
+    <button class="sp-skip" id="sp-skip">enter silently →</button>
   </div>
 </div>
 
 <div class="actbar"><div class="track" id="act"></div></div>
 
 <header><div class="wrap">
-  <a class="brand" href="/hoodx"><img class="logomark" src="/hx-art/logo.jpg" alt="HoodXchange"></a>
+  <a class="brand" href="/hoodx"><img class="logomark" src="/hx-art/logo-round.png" alt="HoodXchange"><span class="wm">Hood<span class="x">X</span>change</span></a>
   <nav class="tabs"><a href="#board">Board</a><a href="#how">How it works</a><a href="#fees" style="color:var(--gold)">Fees</a><a href="#rewards">Rewards</a><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏</a></nav>
   <div class="grow"></div>
   <span class="chip"><span class="d"></span>Robinhood Chain</span>
@@ -252,8 +274,8 @@
 <section class="hero" id="hero">
   <div class="art" id="hart"></div><div class="grade"></div><canvas id="fx"></canvas>
   <div class="wrap">
-    <img class="herologo" src="/hx-art/logo.jpg" alt="HoodXchange — Launchpad for the People">
-    <p class="lead" style="margin-top:24px">Fair launches on locked liquidity. Real charts, real coins, and a cut of every fee handed back to the people who hold. Steal from the rig — give it to the builders.</p>
+    <div class="hero-med"><span class="hm-halo"></span><span class="hm-ring"></span><img src="/hx-art/logo-round.png" alt="HoodXchange — Launchpad for the People"></div>
+    <p class="lead" style="margin-top:26px">Fair launches on locked liquidity. Real charts, real coins, and a cut of every fee handed back to the people who hold. Steal from the rig — give it to the builders.</p>
     <div class="cta"><a class="btn solid" href="#board">Explore live coins →</a><a class="btn ghost" href="#rewards">🎁 Holder rewards</a></div>
     <div class="mini">
       <div><div class="v num">$5.24M</div><div class="l">Value locked</div></div>
@@ -443,15 +465,16 @@
 <script>
 (function(){
   var sp=document.getElementById("splash"); if(!sp) return;
-  if(sessionStorage.getItem("hx_splashed")){ sp.parentNode.removeChild(sp); return; }
+  // Always show the splash on load so the brand reveal is seen every time.
   var v=document.getElementById("sv"); if(v){ v.play&&v.play().catch(function(){}); }
-  function reveal(){ sessionStorage.setItem("hx_splashed","1"); sp.classList.add("gone"); setTimeout(function(){ if(sp.parentNode)sp.parentNode.removeChild(sp); },950); }
+  function reveal(){ sp.classList.add("gone"); setTimeout(function(){ if(sp.parentNode)sp.parentNode.removeChild(sp); },1050); }
   document.getElementById("sp-enter").onclick=function(){
-    if(v){ try{ v.muted=false; v.currentTime=0; v.play(); }catch(e){} v.onended=reveal; }
-    var inner=sp.querySelector(".sp-inner"); if(inner) inner.style.opacity="0";  // let the cinematic play
-    setTimeout(reveal, 9500);  // fallback if onended doesn't fire
+    if(v){ try{ v.muted=false; v.currentTime=0; v.play(); }catch(e){} }
+    reveal();
   };
   document.getElementById("sp-skip").onclick=reveal;
+  // safety: never trap the user — auto-dismiss after a while if they don't act
+  setTimeout(function(){ if(sp.parentNode && !sp.classList.contains("gone")) reveal(); }, 9000);
 })();
 </script>
 </body>
