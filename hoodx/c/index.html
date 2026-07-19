@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HoodXchange — The Exchange</title>
+<style>
+  :root{
+    --bg:#07090C; --ink:#F3F8F5; --dim:#A6B6AE; --muted:#66766B;
+    --panel:#0D1116; --panel-2:#12181D; --line:#1D2833;
+    --green:#00E676; --lime:#8CFF4A; --green-deep:#00A64F; --glow:rgba(0,230,118,.5);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --cond:"Arial Narrow","Helvetica Neue",Impact,var(--sans);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.55}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  .cond{font-family:var(--cond);font-weight:800;text-transform:uppercase;line-height:.9}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 24px;border-radius:999px;font-weight:800;font-size:15px;cursor:pointer;border:none;transition:transform .12s,filter .12s,box-shadow .2s}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--green);color:#04160C;box-shadow:0 0 34px -8px var(--glow)}
+  .btn.primary:hover{filter:brightness(1.09);box-shadow:0 0 50px -6px var(--glow)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--green);color:var(--green)}
+  :focus-visible{outline:2px solid var(--green);outline-offset:3px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:40;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(7,9,12,.85),transparent)}
+  header .wrap{display:flex;align-items:center;gap:20px;height:64px}
+  .brand{display:flex;align-items:center;gap:3px;font-family:var(--cond);font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.03em}
+  .brand .x{color:var(--green)}
+  nav.links{display:flex;gap:24px;margin-left:12px}
+  nav.links a{font-size:14px;font-weight:600;color:var(--dim)} nav.links a:hover{color:var(--green)}
+  .grow{flex:1}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--dim);padding:7px 12px;border:1px solid var(--line);border-radius:999px}
+  .chip .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* hero — kinetic wordmark */
+  .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:80px 16px 40px}
+  #grid{position:absolute;inset:0;z-index:0;opacity:.5}
+  .hero .aura{position:absolute;z-index:0;width:70vw;height:70vw;max-width:760px;max-height:760px;border-radius:50%;background:radial-gradient(circle,rgba(0,230,118,.16),transparent 62%);filter:blur(20px);animation:breathe 6s ease-in-out infinite}
+  @keyframes breathe{50%{transform:scale(1.12);opacity:.8}}
+  .hero .inner{position:relative;z-index:3;width:100%}
+  .kick{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--green);font-weight:700;opacity:0;animation:fade .8s .2s forwards}
+  .lockup{display:flex;align-items:center;justify-content:center;gap:min(3vw,34px);margin:22px 0 0;flex-wrap:nowrap}
+  .word{font-family:var(--cond);font-weight:800;text-transform:uppercase;font-size:clamp(46px,13vw,150px);line-height:.86;letter-spacing:-.01em;color:var(--ink)}
+  #wHood{opacity:0;animation:inLeft .9s .3s cubic-bezier(.2,.8,.2,1) forwards}
+  #wChange{opacity:0;animation:inRight .9s .3s cubic-bezier(.2,.8,.2,1) forwards;color:var(--green)}
+  @keyframes inLeft{from{opacity:0;transform:translateX(-14vw) skewX(8deg)}to{opacity:1;transform:none}}
+  @keyframes inRight{from{opacity:0;transform:translateX(14vw) skewX(-8deg)}to{opacity:1;transform:none}}
+  /* the exchange X */
+  .xbtn{position:relative;width:clamp(58px,11vw,120px);height:clamp(58px,11vw,120px);flex:0 0 auto;cursor:pointer;background:none;border:none;opacity:0;animation:pop .7s .95s cubic-bezier(.2,1.4,.4,1) forwards;transition:transform .18s}
+  .xbtn svg{width:100%;height:100%;overflow:visible}
+  .xbtn .spin{transform-origin:50% 50%;animation:spin 9s linear infinite}
+  .xbtn:hover .spin{animation-duration:1.6s}
+  .xbtn:hover{filter:drop-shadow(0 0 16px var(--glow))}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pop{from{opacity:0;transform:scale(.2) rotate(-90deg)}to{opacity:1;transform:none}}
+  .hint{margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;opacity:0;animation:fade 1s 1.6s forwards}
+  .lead{max-width:52ch;margin:26px auto 0;color:var(--dim);font-size:clamp(16px,2vw,19px);opacity:0;animation:fade .8s 1s forwards}
+  .cta{display:flex;gap:13px;justify-content:center;flex-wrap:wrap;margin-top:30px;opacity:0;animation:fade .8s 1.15s forwards}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  /* the swap state */
+  .lockup.swapped #wHood{order:3;color:var(--green)} .lockup.swapped #wChange{order:1;color:var(--ink)}
+
+  section{padding:90px 0;position:relative}
+  .eyebrow{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--green);font-weight:700}
+  .h2{font-family:var(--cond);font-weight:800;text-transform:uppercase;font-size:clamp(32px,5.5vw,58px);line-height:.95;margin:12px 0 0}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s,transform .7s}
+  .reveal.in{opacity:1;transform:none}
+
+  .band{border-top:1px solid var(--line);background:var(--panel)}
+  .band .grid{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;margin-top:36px}
+  .steps{display:grid;gap:12px}
+  .step{display:grid;grid-template-columns:46px 1fr;gap:15px;padding:19px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);transition:transform .2s,border-color .2s}
+  .step:hover{border-color:var(--green);transform:translateY(-3px)}
+  .step .n{font-family:var(--cond);font-weight:800;font-size:26px;color:var(--green);display:grid;place-items:center;border:1px solid var(--line);border-radius:11px}
+  .step h4{margin:0 0 3px;font-size:17px} .step p{margin:0;color:var(--dim);font-size:14px}
+  .band img{width:100%;border:1px solid var(--line);border-radius:16px;display:block;box-shadow:0 30px 60px -30px #000}
+
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:38px}
+  .feat{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:16px;padding:26px;transition:transform .2s,border-color .2s}
+  .feat:hover{transform:translateY(-5px);border-color:var(--green)}
+  .feat .ic{font-size:22px;margin-bottom:12px}
+  .feat h4{margin:0 0 7px;font-family:var(--cond);text-transform:uppercase;font-weight:800;font-size:21px}
+  .feat p{margin:0;color:var(--dim);font-size:14px}
+
+  .final{text-align:center;border-top:1px solid var(--line)}
+  .final .h2{font-size:clamp(38px,7vw,78px)}
+  .final p{color:var(--dim);font-size:18px;margin:14px auto 26px;max-width:38ch}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--muted);font-size:13px}
+  footer .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  @media(max-width:860px){nav.links,.chip{display:none}.band .grid{grid-template-columns:1fr}.band .visual{order:-1}.feats{grid-template-columns:1fr}section{padding:60px 0}}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <a class="brand" href="#top">HOOD<span class="x">✕</span>CHANGE</a>
+  <nav class="links"><a href="#how">How it works</a><a href="#why">Why HoodX</a><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏</a></nav>
+  <div class="grow"></div>
+  <span class="chip"><span class="d"></span>Robinhood Chain</span>
+  <a class="btn primary" href="#launch">Launch</a>
+</div></header>
+
+<a id="top"></a>
+<section class="hero" id="hero">
+  <canvas id="grid"></canvas>
+  <div class="aura"></div>
+  <div class="inner">
+    <div class="kick">Launchpad for the people</div>
+    <div class="lockup" id="lockup">
+      <span class="word" id="wHood">HOOD</span>
+      <button class="xbtn" id="xbtn" aria-label="Exchange" title="Exchange">
+        <svg viewBox="0 0 100 100"><g class="spin">
+          <path d="M50 12 A38 38 0 0 1 84 44" fill="none" stroke="var(--green)" stroke-width="9" stroke-linecap="round"/>
+          <path d="M84 44 l-2 -16 m2 16 l-16 -3" fill="none" stroke="var(--green)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M50 88 A38 38 0 0 1 16 56" fill="none" stroke="var(--lime)" stroke-width="9" stroke-linecap="round"/>
+          <path d="M16 56 l2 16 m-2 -16 l16 3" fill="none" stroke="var(--lime)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        </g></svg>
+      </button>
+      <span class="word" id="wChange">CHANGE</span>
+    </div>
+    <div class="hint">↻ tap the mark to make the exchange</div>
+    <p class="lead">Hood takes. Change gives. Between them sits the exchange — fair launches, liquidity locked forever, and the fees handed back to the people who build.</p>
+    <div class="cta"><a class="btn primary" href="#launch">Launch a coin →</a><a class="btn ghost" href="#how">How it works</a></div>
+  </div>
+</section>
+
+<section class="band" id="how"><div class="wrap">
+  <div class="reveal"><div class="eyebrow">The exchange</div><h2 class="h2">Give it three steps.<br>Change <span style="color:var(--green)">everything</span>.</h2></div>
+  <div class="grid">
+    <div class="steps reveal">
+      <div class="step"><div class="n">1</div><div><h4>Launch fair</h4><p>Straight onto a real Uniswap V3 pool. No presale, no team bag, no snipe edge.</p></div></div>
+      <div class="step"><div class="n">2</div><div><h4>Lock forever</h4><p>The LP burns to a locker on block one — no withdraw path exists. Un-ruggable, on-chain.</p></div></div>
+      <div class="step"><div class="n">3</div><div><h4>Fees come home</h4><p>Trading fees flow back to the builder. Set the split up front — up to 90% yours.</p></div></div>
+    </div>
+    <div class="visual reveal"><img src="/hx-art/exchange.jpg" alt="A green Robin Hood cap and a black cap exchanged over a neon-green loop" loading="lazy"></div>
+  </div>
+</div></section>
+
+<section id="why"><div class="wrap">
+  <div class="reveal"><div class="eyebrow">Why HoodX</div><h2 class="h2">The house doesn't<br>get the cut. You do.</h2></div>
+  <div class="feats">
+    <div class="feat reveal"><div class="ic">🔒</div><h4>Un-ruggable LP</h4><p>Locked in a contract with no way out. Not the dev, not us. Prove it on the explorer.</p></div>
+    <div class="feat reveal"><div class="ic">🪙</div><h4>Creators keep fees</h4><p>The real money goes to the builder. Old pads kept it all — this one hands it back.</p></div>
+    <div class="feat reveal"><div class="ic">🛡️</div><h4>Scanner-safe</h4><p>One clean action per swap, no fund fan-out. Your coin doesn't get flagged.</p></div>
+  </div>
+</div></section>
+
+<section class="final" id="launch"><div class="wrap reveal">
+  <div class="eyebrow">Your turn</div>
+  <h2 class="h2">Make the change.</h2>
+  <p>Gas-only launch. Locked liquidity. Fees that come home.</p>
+  <div class="cta" style="justify-content:center;opacity:1;animation:none"><a class="btn primary" href="#">Launch a coin →</a><a class="btn ghost" href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏 @HoodXchange</a></div>
+</div></section>
+
+<footer><div class="wrap"><a class="brand" href="#top" style="font-size:18px">HOOD<span class="x">✕</span>CHANGE</a><span>Launchpad for the people — Robinhood Chain.</span><div class="grow"></div><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏 @HoodXchange</a></div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}})},{threshold:.15});
+  document.querySelectorAll(".reveal").forEach(function(el){io.observe(el);});
+
+  // X: magnetic tilt + click to swap HOOD<->CHANGE
+  var xb=document.getElementById("xbtn"), lock=document.getElementById("lockup"), hero=document.getElementById("hero");
+  if(!reduce){ hero.addEventListener("pointermove",function(e){var r=xb.getBoundingClientRect();var cx=r.left+r.width/2,cy=r.top+r.height/2;var dx=(e.clientX-cx)/60,dy=(e.clientY-cy)/60;dx=Math.max(-8,Math.min(8,dx));dy=Math.max(-8,Math.min(8,dy));xb.style.transform="translate("+dx+"px,"+dy+"px)";}); }
+  xb.addEventListener("click",function(){ lock.classList.toggle("swapped"); });
+
+  // subtle animated grid backdrop
+  var cv=document.getElementById("grid"), ctx=cv.getContext("2d"), W,H,DPR=Math.min(devicePixelRatio||1,2);
+  function size(){W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+  size(); addEventListener("resize",size);
+  var t=0;
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    if(!reduce){
+      var gap=46, ox=(t*0.3)%gap, oy=(t*0.15)%gap;
+      ctx.lineWidth=1;
+      for(var x=-gap;x<W+gap;x+=gap){ for(var y=-gap;y<H+gap;y+=gap){
+        var px=x+ox, py=y+oy;
+        var d=Math.hypot(px-W/2,py-H/2), a=Math.max(0,.14-d/2600) + (Math.sin((px+py)/60 + t/30)+1)*0.02;
+        ctx.fillStyle="rgba(0,230,118,"+a+")"; ctx.fillRect(px,py,1.6,1.6);
+      }}
+    }
+    t++; requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HoodXchange — The Outlaw</title>
+<style>
+  :root{
+    --bg:#050705; --panel:#0B0F0A; --panel-2:#111710; --line:#1E2C18;
+    --ink:#EEF6EB; --dim:#AEC0A6; --muted:#728068;
+    --green:#43E80B; --green-2:#00C805; --green-deep:#2A9006; --glow:rgba(67,232,11,.5);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --cond:"Arial Narrow","Helvetica Neue",Impact,var(--sans);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.55}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+  .cond{font-family:var(--cond);font-weight:800;text-transform:uppercase;line-height:.9}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 24px;border-radius:4px;font-weight:800;font-size:15px;cursor:pointer;border:none;letter-spacing:.03em;transition:transform .12s,filter .12s,box-shadow .2s}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--green);color:#041405;box-shadow:0 0 34px -8px var(--glow),inset 0 0 0 1px rgba(255,255,255,.1)}
+  .btn.primary:hover{filter:brightness(1.1);box-shadow:0 0 50px -6px var(--glow)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+  .btn.ghost:hover{border-color:var(--green);color:var(--green)}
+  :focus-visible{outline:2px solid var(--green);outline-offset:3px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:40;transition:background .3s,border-color .3s}
+  header.solid{backdrop-filter:blur(12px);background:linear-gradient(180deg,rgba(5,7,5,.9),rgba(5,7,5,.4));border-bottom:1px solid var(--line)}
+  header .wrap{display:flex;align-items:center;gap:20px;height:66px}
+  .brand{display:flex;align-items:center;gap:2px;font-family:var(--cond);font-weight:800;font-size:23px;text-transform:uppercase;letter-spacing:.03em}
+  .brand .x{color:var(--green);margin:0 2px}
+  nav.links{display:flex;gap:24px;margin-left:12px}
+  nav.links a{font-size:14px;font-weight:600;color:var(--dim)} nav.links a:hover{color:var(--green)}
+  .grow{flex:1}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--dim);padding:7px 12px;border:1px solid var(--line);border-radius:999px}
+  .chip .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* hero */
+  .hero{position:relative;height:100vh;min-height:640px;overflow:hidden;display:flex;align-items:center}
+  .layer{position:absolute;inset:-6%;background-size:cover;background-position:center right;will-change:transform}
+  #L-art{background-image:url('/hx-art/hero-archer.jpg')}
+  .hero .grade{position:absolute;inset:0;z-index:3;background:linear-gradient(90deg,var(--bg) 4%,rgba(5,7,5,.66) 40%,rgba(5,7,5,.05) 78%),linear-gradient(0deg,var(--bg),transparent 34%)}
+  #fx{position:absolute;inset:0;z-index:4;pointer-events:none}
+  .hero .wrap{position:relative;z-index:5;padding-top:40px}
+  .kick{display:inline-flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--green);font-weight:700;opacity:0;animation:fade .8s .2s forwards}
+  .kick::before{content:"";width:26px;height:1px;background:var(--green)}
+  h1.mark{margin:16px 0 0;font-size:clamp(50px,11vw,122px);letter-spacing:.005em;position:relative}
+  h1.mark .row{display:block;opacity:0;animation:slb .7s forwards}
+  h1.mark .r2{animation-delay:.18s}
+  h1.mark .x{color:var(--green);position:relative;display:inline-block}
+  h1.mark .x::after{content:"";position:absolute;inset:-30% -30%;border:2px solid var(--green);border-radius:50%;opacity:.0;animation:ring 3.4s .9s infinite}
+  @keyframes ring{0%{transform:scale(.5);opacity:.7}70%{opacity:0}100%{transform:scale(1.5);opacity:0}}
+  .glitch{position:relative}
+  .glitch::before,.glitch::after{content:attr(data-t);position:absolute;left:0;top:0;width:100%;clip-path:inset(0);opacity:.0}
+  .glitch:hover::before{opacity:.8;color:#00C805;transform:translate(-2px,-1px);animation:gl .3s steps(2) infinite}
+  .glitch:hover::after{opacity:.8;color:#7CFF3D;transform:translate(2px,1px);animation:gl .3s steps(2) reverse infinite}
+  @keyframes gl{50%{clip-path:inset(30% 0 40% 0)}}
+  .lead{max-width:40ch;color:var(--dim);font-size:clamp(16px,2vw,19px);margin:22px 0 30px;opacity:0;animation:fade .8s .7s forwards}
+  .cta{display:flex;gap:13px;flex-wrap:wrap;opacity:0;animation:fade .8s .85s forwards}
+  .scrollcue{position:absolute;bottom:26px;left:0;right:0;z-index:5;text-align:center;color:var(--muted);font-size:11px;letter-spacing:.2em;text-transform:uppercase;animation:bob 2s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(6px);opacity:.5}}
+  @keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes slb{from{opacity:0;transform:translateX(-40px) skewX(6deg)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+
+  section{padding:88px 0;position:relative}
+  .eyebrow{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--green);font-weight:700}
+  .h2{font-family:var(--cond);font-weight:800;text-transform:uppercase;font-size:clamp(32px,5.5vw,60px);line-height:.94;margin:12px 0 0}
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+  .reveal.in{opacity:1;transform:none}
+
+  .band{border-top:1px solid var(--line);background:var(--panel)}
+  .band .grid{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;margin-top:36px}
+  .steps{display:grid;gap:12px}
+  .step{display:grid;grid-template-columns:46px 1fr;gap:15px;padding:19px;border:1px solid var(--line);border-radius:4px;background:var(--panel-2);transition:transform .2s,border-color .2s;clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+  .step:hover{border-color:var(--green);transform:translateX(5px)}
+  .step .n{font-family:var(--cond);font-weight:800;font-size:26px;color:var(--green);display:grid;place-items:center}
+  .step h4{margin:0 0 3px;font-size:17px} .step p{margin:0;color:var(--dim);font-size:14px}
+  .band img{width:100%;border:1px solid var(--line);border-radius:6px;display:block;box-shadow:0 30px 60px -30px #000}
+
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:38px}
+  .feat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px;transition:transform .2s,border-color .2s;position:relative;overflow:hidden}
+  .feat:hover{transform:translateY(-5px);border-color:var(--green)}
+  .feat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);transform:scaleY(0);transform-origin:top;transition:transform .3s}
+  .feat:hover::before{transform:scaleY(1)}
+  .feat .ic{font-size:22px;margin-bottom:12px}
+  .feat h4{margin:0 0 7px;font-family:var(--cond);text-transform:uppercase;font-weight:800;font-size:21px}
+  .feat p{margin:0;color:var(--dim);font-size:14px}
+
+  .final{position:relative;overflow:hidden;text-align:center;border-top:1px solid var(--line)}
+  .final .bgimg{position:absolute;inset:0;background:url('/hx-art/hero-rooftop.jpg') center/cover;opacity:.32}
+  .final .veil{position:absolute;inset:0;background:linear-gradient(180deg,var(--bg),rgba(5,7,5,.55),var(--bg))}
+  .final .wrap{position:relative;z-index:2;padding:96px 20px}
+  .final .h2{font-size:clamp(40px,7vw,80px)}
+  .final p{color:var(--dim);font-size:18px;margin:14px auto 26px;max-width:38ch}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--muted);font-size:13px}
+  footer .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+
+  @media(max-width:860px){nav.links,.chip{display:none}.band .grid{grid-template-columns:1fr}.band .visual{order:-1}.feats{grid-template-columns:1fr}.hero .grade{background:linear-gradient(180deg,rgba(5,7,5,.4),rgba(5,7,5,.8) 60%,var(--bg)),linear-gradient(0deg,var(--bg),transparent 40%)}#L-art{background-position:center}section{padding:60px 0}}
+</style>
+</head>
+<body>
+
+<header id="hdr"><div class="wrap">
+  <a class="brand" href="#top">HOOD<span class="x">✕</span>CHANGE</a>
+  <nav class="links"><a href="#how">How it works</a><a href="#why">Why HoodX</a><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏</a></nav>
+  <div class="grow"></div>
+  <span class="chip"><span class="d"></span>Robinhood Chain</span>
+  <a class="btn primary" href="#launch">Launch</a>
+</div></header>
+
+<a id="top"></a>
+<section class="hero" id="hero">
+  <div class="layer" id="L-art"></div>
+  <div class="grade"></div>
+  <canvas id="fx"></canvas>
+  <div class="wrap">
+    <div class="kick">Steal it back · hand it out</div>
+    <h1 class="mark cond">
+      <span class="row glitch" data-t="HOOD">HOOD</span>
+      <span class="row r2"><span class="x">✕</span> <span class="glitch" data-t="CHANGE">CHANGE</span></span>
+    </h1>
+    <p class="lead">A launchpad with a hood on. Fair launches, liquidity locked forever, and the fees fired straight back to the people who build. Draw. Aim. Launch.</p>
+    <div class="cta">
+      <a class="btn primary" href="#launch">Launch a coin →</a>
+      <a class="btn ghost" href="#how">How it works</a>
+    </div>
+  </div>
+  <div class="scrollcue">scroll ↓</div>
+</section>
+
+<section class="band" id="how"><div class="wrap">
+  <div class="reveal"><div class="eyebrow">The exchange</div><h2 class="h2">Two hats. One trade.<br>Everything <span style="color:var(--green)">changes</span>.</h2></div>
+  <div class="grid">
+    <div class="steps reveal">
+      <div class="step"><div class="n">1</div><div><h4>Nock it — launch fair</h4><p>Ship your coin straight onto a real Uniswap V3 pool. No presale, no team bag, no snipe edge.</p></div></div>
+      <div class="step"><div class="n">2</div><div><h4>Lock it — forever</h4><p>The LP burns to a locker on block one. No withdraw, no transfer, no decrease. Un-ruggable, and you can prove it.</p></div></div>
+      <div class="step"><div class="n">3</div><div><h4>Loose it — fees to you</h4><p>Every trade's fees fly back to the builder. Set the split up front — up to 90% yours.</p></div></div>
+    </div>
+    <div class="visual reveal"><img src="/hx-art/exchange.jpg" alt="A green Robin Hood cap and a black cap exchanged over a neon-green loop" loading="lazy"></div>
+  </div>
+</div></section>
+
+<section id="why"><div class="wrap">
+  <div class="reveal"><div class="eyebrow">Why HoodX</div><h2 class="h2">Rob the rig.<br>Not the people.</h2></div>
+  <div class="feats">
+    <div class="feat reveal"><div class="ic">🔒</div><h4>Un-ruggable LP</h4><p>Liquidity locked in a contract with no way out. Not the dev, not us. Verify on the explorer.</p></div>
+    <div class="feat reveal"><div class="ic">🪙</div><h4>Creators keep fees</h4><p>The real money goes to the builder. Old pads kept it all — this one hands it back.</p></div>
+    <div class="feat reveal"><div class="ic">🛡️</div><h4>Scanner-safe</h4><p>One clean action per swap, no fund fan-out. Your coin doesn't get flagged as a drainer.</p></div>
+  </div>
+</div></section>
+
+<section class="final" id="launch">
+  <div class="bgimg"></div><div class="veil"></div>
+  <div class="wrap reveal">
+    <div class="eyebrow">Your turn</div>
+    <h2 class="h2">Put your hood up.</h2>
+    <p>Gas-only launch. Locked liquidity. Fees that come home.</p>
+    <div class="cta" style="justify-content:center;opacity:1;animation:none"><a class="btn primary" href="#">Launch a coin →</a><a class="btn ghost" href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏 @HoodXchange</a></div>
+  </div>
+</section>
+
+<footer><div class="wrap"><a class="brand" href="#top" style="font-size:18px">HOOD<span class="x">✕</span>CHANGE</a><span>Launchpad for the people — Robinhood Chain.</span><div class="grow"></div><a href="https://x.com/HoodXchange" target="_blank" rel="noopener">𝕏 @HoodXchange</a></div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce=matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches;
+  // header solid on scroll
+  var hdr=document.getElementById("hdr");
+  addEventListener("scroll",function(){hdr.classList.toggle("solid",scrollY>40);},{passive:true});
+  // reveals
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}})},{threshold:.15});
+  document.querySelectorAll(".reveal").forEach(function(el){io.observe(el);});
+  // parallax on the art
+  var art=document.getElementById("L-art"), hero=document.getElementById("hero");
+  if(!reduce){ hero.addEventListener("pointermove",function(e){var r=hero.getBoundingClientRect();var x=(e.clientX/r.width-.5),y=(e.clientY/r.height-.5);art.style.transform="translate("+(-x*18)+"px,"+(-y*14)+"px) scale(1.06)";});
+    addEventListener("scroll",function(){art.style.filter="brightness("+(1-Math.min(scrollY/900,.5))+")";},{passive:true}); }
+
+  /* ---- FX canvas: embers + an arrow that fires across on a loop ---- */
+  var cv=document.getElementById("fx"), ctx=cv.getContext("2d"), W,H,DPR=Math.min(devicePixelRatio||1,2);
+  function size(){W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+  size(); addEventListener("resize",size);
+  var embers=[]; for(var i=0;i<46;i++) embers.push({x:Math.random()*1,y:Math.random(),s:Math.random()*1.6+.4,d:Math.random()*.5+.15,tw:Math.random()*6});
+  var arrow=null, trail=[], cool=40;
+  function fireArrow(){ arrow={x:W*0.18,y:H*0.62,vx:9,vy:-3.1,life:1}; }
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    if(!reduce){
+      // embers rising
+      ctx.fillStyle="#43E80B";
+      embers.forEach(function(p){ p.y-=p.d/H; p.tw+=.05; if(p.y<-.02){p.y=1.02;p.x=Math.random();}
+        var a=(Math.sin(p.tw)*.3+.5)*.55; ctx.globalAlpha=a; ctx.beginPath(); ctx.arc(p.x*W,p.y*H,p.s,0,7); ctx.fill(); });
+      ctx.globalAlpha=1;
+      // arrow
+      if(!arrow){ if(--cool<=0){ fireArrow(); cool=170; } }
+      if(arrow){ arrow.x+=arrow.vx; arrow.y+=arrow.vy; arrow.vy+=0.02;
+        trail.push({x:arrow.x,y:arrow.y,l:1});
+        if(arrow.x>W*1.1||arrow.y>H*1.1){arrow=null;}
+      }
+      // trail
+      for(i=trail.length-1;i>=0;i--){var t=trail[i];t.l-=.03;if(t.l<=0){trail.splice(i,1);continue;}
+        ctx.globalAlpha=t.l*.8; ctx.fillStyle=t.l>.6?"#7CFF3D":"#43E80B"; ctx.beginPath(); ctx.arc(t.x,t.y,t.l*2.4,0,7); ctx.fill();}
+      ctx.globalAlpha=1;
+      // arrowhead
+      if(arrow){ var ang=Math.atan2(arrow.vy,arrow.vx);
+        ctx.save(); ctx.translate(arrow.x,arrow.y); ctx.rotate(ang);
+        ctx.strokeStyle="#CFFFAE"; ctx.lineWidth=3; ctx.shadowColor="#43E80B"; ctx.shadowBlur=14;
+        ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(12,0); ctx.moveTo(3,-8); ctx.lineTo(12,0); ctx.lineTo(3,8); ctx.stroke();
+        ctx.restore(); ctx.shadowBlur=0; }
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
