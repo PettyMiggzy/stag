@@ -146,9 +146,9 @@ describe("WantedBounty — $STAG claim", () => {
 
   it("setBounties after lock reverts; sweep only after expiry", async () => {
     const { bounty, stag, owner, alice, expiry } = await setup();
+    await stag.mint(await bounty.getAddress(), E(TOTAL)); // fund before lock (lock() now requires it)
     await bounty.lock();
     await expect(bounty.setBounties([1], [E(1)])).to.be.revertedWith("locked");
-    await stag.mint(await bounty.getAddress(), E(TOTAL));
     await expect(bounty.sweep()).to.be.revertedWith("not expired");
     await ethers.provider.send("evm_setNextBlockTimestamp", [expiry + 1]);
     await ethers.provider.send("evm_mine", []);
@@ -157,11 +157,49 @@ describe("WantedBounty — $STAG claim", () => {
     expect(await stag.balanceOf(owner.address)).to.equal(before + E(TOTAL));
   });
 
-  it("underfunded claim reverts (funds must be deposited first)", async () => {
-    const { bounty, wanted, alice } = await setup();
-    await wanted.connect(alice).mintPick(1, { value: P_MYTH });
-    await bounty.lock(); // locked but NOT funded
-    await expect(bounty.connect(alice).claim(1)).to.be.reverted; // ERC20 insufficient balance
+  it("lock() reverts until fully funded, then succeeds (H-1 funding guard)", async () => {
+    const { bounty, stag } = await setup(); // 87,000 in bounties set
+    await expect(bounty.lock()).to.be.revertedWith("underfunded");
+    await stag.mint(await bounty.getAddress(), E(TOTAL - 6000)); // 6,000 short (one Mythic)
+    await expect(bounty.lock()).to.be.revertedWith("underfunded");
+    await stag.mint(await bounty.getAddress(), E(6000)); // top up to the full total
+    await bounty.lock();
+    expect(await bounty.locked()).to.equal(true);
+    expect(await bounty.totalBounty()).to.equal(E(TOTAL));
+  });
+});
+
+describe("WantedBounty — hardening (audit fixes)", () => {
+  it("constructor rejects an expiry inside the 30-day min claim window", async () => {
+    const [owner] = await ethers.getSigners();
+    const stag = await (await ethers.getContractFactory("MockERC20")).deploy();
+    const wanted = await (await ethers.getContractFactory("SherwoodWanted")).deploy(BASE, owner.address, 500);
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    const F = await ethers.getContractFactory("WantedBounty");
+    await expect(F.deploy(await stag.getAddress(), await wanted.getAddress(), now + 10 * 86400))
+      .to.be.revertedWith("expiry too soon");
+    await (await F.deploy(await stag.getAddress(), await wanted.getAddress(), now + 31 * 86400)).waitForDeployment();
+  });
+
+  it("constructor rejects zero addresses", async () => {
+    const [owner] = await ethers.getSigners();
+    const stag = await (await ethers.getContractFactory("MockERC20")).deploy();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    const F = await ethers.getContractFactory("WantedBounty");
+    await expect(F.deploy(ethers.ZeroAddress, await stag.getAddress(), now + 365 * 86400)).to.be.revertedWith("zero addr");
+    await expect(F.deploy(await stag.getAddress(), ethers.ZeroAddress, now + 365 * 86400)).to.be.revertedWith("zero addr");
+  });
+
+  it("setBounties rejects out-of-range ids and zero amounts; totalBounty tracks overwrites", async () => {
+    const { bounty } = await deploy();
+    await bounty.setBounties(Object.keys(BOUNTY).map(Number), Object.values(BOUNTY).map((v) => E(v)));
+    await expect(bounty.setBounties([0], [E(1)])).to.be.revertedWith("bad id");
+    await expect(bounty.setBounties([22], [E(1)])).to.be.revertedWith("bad id");
+    await expect(bounty.setBounties([1], [0])).to.be.revertedWith("zero amount");
+    // overwrite id 1 (was 6000) with 4000 → totalBounty drops by 2000
+    const before = await bounty.totalBounty();
+    await bounty.setBounties([1], [E(4000)]);
+    expect(await bounty.totalBounty()).to.equal(before - E(2000));
   });
 });
 
@@ -217,5 +255,104 @@ describe("WANTED — randomized invariant sim (200 rounds)", () => {
     }
     // paid can never exceed funded
     expect(paidTotal <= E(TOTAL)).to.equal(true);
+  });
+});
+
+describe("WANTED — lock-in-place staking keeps the bounty claimable (vault integration, ship-blocker fix)", () => {
+  async function full() {
+    const d = await deploy();
+    const { owner, wanted, stag, bounty } = d;
+    const ids = Object.keys(BOUNTY).map(Number);
+    await bounty.setBounties(ids, ids.map((i) => E(BOUNTY[i])));
+    await stag.mint(await bounty.getAddress(), E(TOTAL));
+    await bounty.lock();
+    const vault = await (await ethers.getContractFactory("SherwoodVault")).deploy(owner.address);
+    await vault.addCollection(await wanted.getAddress(), 10000n * 10n ** 18n, true); // true = LOCK-IN-PLACE
+    await wanted.setLocker(await vault.getAddress());
+    await wanted.setMaxPerWallet(21);
+    return { ...d, vault };
+  }
+
+  it("stake → claim bounty WHILE staked → unstake; NFT never leaves the wallet", async () => {
+    const { wanted, stag, bounty, vault, alice } = await full();
+    const wAddr = await wanted.getAddress();
+    await wanted.connect(alice).mintPick(1, { value: P_MYTH }); // id 1 = 6000 bounty
+    await vault.connect(alice).stake(wAddr, 1);
+    expect(await wanted.ownerOf(1)).to.equal(alice.address); // stayed in her wallet
+    expect(await wanted.locked(1)).to.equal(true);
+    // THE FIX: bounty still claimable while staked (ownerOf == alice)
+    await bounty.connect(alice).claim(1);
+    expect(await stag.balanceOf(alice.address)).to.equal(E(6000));
+    // transfers blocked while staked
+    const bob = (await ethers.getSigners())[9];
+    await expect(wanted.connect(alice).transferFrom(alice.address, bob.address, 1))
+      .to.be.revertedWith("locked (staked)");
+    // unstake → unlocked → transferable again
+    await vault.connect(alice).unstake(wAddr, 1);
+    expect(await wanted.locked(1)).to.equal(false);
+    await wanted.connect(alice).transferFrom(alice.address, bob.address, 1);
+    expect(await wanted.ownerOf(1)).to.equal(bob.address);
+  });
+
+  it("only the vault can lock/unlock; owner adminUnlock is an escape hatch", async () => {
+    const { wanted, vault, alice, owner } = await full();
+    const wAddr = await wanted.getAddress();
+    await wanted.connect(alice).mintPick(2, { value: P_MYTH });
+    await expect(wanted.connect(alice).lock(2)).to.be.revertedWith("not locker");
+    await vault.connect(alice).stake(wAddr, 2);
+    await wanted.connect(owner).adminUnlock(2); // owner can free a stuck lock
+    expect(await wanted.locked(2)).to.equal(false);
+  });
+});
+
+describe("WANTED — expanded randomized sim: mint + stake + claim + transfer (150 rounds)", () => {
+  it("bounty claimable while staked; funded invariant holds; no double-pay; locked can't transfer", async () => {
+    const signers = await ethers.getSigners();
+    const { owner, wanted, stag, bounty } = await deploy();
+    const vault = await (await ethers.getContractFactory("SherwoodVault")).deploy(owner.address);
+    const wAddr = await wanted.getAddress(), bAddr = await bounty.getAddress();
+    await vault.addCollection(wAddr, 10000n * 10n ** 18n, true);
+    await wanted.setLocker(await vault.getAddress());
+    const ids = Object.keys(BOUNTY).map(Number);
+    await bounty.setBounties(ids, ids.map((i) => E(BOUNTY[i])));
+    await stag.mint(bAddr, E(TOTAL));
+    await bounty.lock();
+    await wanted.setMaxPerWallet(21);
+
+    const buyers = signers.slice(2, 8);
+    const holderOf = {}, staked = {}, claimedExp = {};
+    let paid = 0n, seed = 424242;
+    const rnd = (n) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+
+    for (let r = 0; r < 150; r++) {
+      const id = 1 + rnd(21);
+      const actor = buyers[rnd(buyers.length)];
+      const ai = buyers.indexOf(actor);
+      const isHolder = holderOf[id] === ai;
+      const pick = rnd(4);
+
+      if (holderOf[id] === undefined) {
+        await wanted.connect(actor).mintPick(id, { value: priceOf(id) });
+        holderOf[id] = ai;
+      } else if (pick === 0 && isHolder && !staked[id]) {
+        await vault.connect(actor).stake(wAddr, id); staked[id] = true;
+      } else if (pick === 1 && isHolder && staked[id]) {
+        await vault.connect(actor).unstake(wAddr, id); staked[id] = false;
+      } else if (pick === 2 && isHolder && !claimedExp[id]) {
+        // claim works whether staked or not (ownerOf stays the holder under lock-in-place)
+        await bounty.connect(actor).claim(id); claimedExp[id] = true; paid += E(BOUNTY[id]);
+      } else if (pick === 3 && isHolder && !staked[id]) {
+        const to = buyers[rnd(buyers.length)], ti = buyers.indexOf(to);
+        if (ti !== ai) { await wanted.connect(actor).transferFrom(actor.address, to.address, id); holderOf[id] = ti; }
+      } else if (isHolder && staked[id]) {
+        // a staked token must reject transfers
+        const to = buyers[(ai + 1) % buyers.length];
+        await expect(wanted.connect(actor).transferFrom(actor.address, to.address, id)).to.be.revertedWith("locked (staked)");
+      }
+      // funded invariant every round
+      expect(await stag.balanceOf(bAddr)).to.equal(E(TOTAL) - paid);
+    }
+    expect(paid <= E(TOTAL)).to.equal(true);
+    for (const id of Object.keys(claimedExp)) expect(await bounty.claimed(id)).to.equal(true);
   });
 });

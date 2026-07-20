@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-/*  WANTED — STAGWIFHOOD's 20-piece, animated 1/1 "outlaws of Sherwood" drop (Robinhood Chain 4663).
+/*  WANTED — STAGWIFHOOD's 21-piece, animated 1/1 "outlaws of Sherwood" drop (Robinhood Chain 4663).
  *  Every piece is a WANTED poster: a hooded stag outlaw with a real $STAG bounty the holder claims
  *  on-chain (via the separate WantedBounty contract). Sits alongside the Sherwood Saints.
+ *
+ *  • LOCK-IN-PLACE STAKING (ERC-5192): the SherwoodVault (the "locker") can lock/unlock a token for
+ *    staking; the NFT NEVER leaves the holder's wallet, so ownerOf stays the holder and the $STAG
+ *    bounty remains claimable while staked. (Do NOT add this to the vault as custody mode.)
  *
  *  • Supply: 21 (token ids 1..21, every one a 1/1). Ids 1-7 Mythic whales, 8-11 Legendary,
  *    12-16 Epic, 17-21 Rare (see the hosted metadata / roster).
@@ -17,7 +21,7 @@ pragma solidity 0.8.24;
  *  SCANNER-SAFE: the signed mint tx pays ONLY this contract (single recipient) — no ETH fan-out
  *  inside the user's tx. The split happens out-of-band via forwardProceeds().
  *
- *  The $STAG BOUNTY is NOT held here — it lives in WantedBounty.sol (funded with 81,000 $STAG,
+ *  The $STAG BOUNTY is NOT held here — it lives in WantedBounty.sol (funded with 87,000 $STAG,
  *  bountied per id, then locked). This contract is just the collection + mint.
  *
  *  ⚠️ Holds real funds. Audited + tested before mainnet.
@@ -45,6 +49,10 @@ contract SherwoodWanted is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     mapping(address => uint256) public mintedBy;
     mapping(address => uint256) public freeMints; // allowlist: remaining free mints per wallet
 
+    // ---- lock-in-place staking (ERC-5192): the vault locks/unlocks; token never leaves the wallet ----
+    address public locker;                     // SherwoodVault (staking) allowed to lock/unlock
+    mapping(uint256 => bool) public locked;    // tokenId => staked/locked (blocks transfer)
+
     event Minted(address indexed to, uint256 indexed tokenId, uint256 pricePaid);
     event ProceedsForwarded(uint256 amount);
     event MintStateChanged(bool active);
@@ -52,6 +60,9 @@ contract SherwoodWanted is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     event TokenPriceChanged(uint256 indexed tokenId, uint256 price);
     event SplitterChanged(address splitter);
     event FreeMintsGranted(address indexed wallet, uint256 count);
+    event Locked(uint256 indexed tokenId);     // ERC-5192
+    event Unlocked(uint256 indexed tokenId);
+    event LockerChanged(address locker);
 
     constructor(string memory baseURI, address royaltyReceiver, uint96 royaltyBps)
         ERC721("WANTED", "WANTED")
@@ -63,7 +74,7 @@ contract SherwoodWanted is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
 
     /* ---------------- mint ---------------- */
 
-    /// @notice Mint a specific available outlaw (id 1..20) at its price (flat or per-id override).
+    /// @notice Mint a specific available outlaw (id 1..21) at its price (flat or per-id override).
     function mintPick(uint256 tokenId) external payable nonReentrant {
         require(isAvailable(tokenId), "unavailable");
         // EOA-only: removes the _safeMint reentrancy surface and contract-grinding (same as Saints/Hooded).
@@ -156,7 +167,28 @@ contract SherwoodWanted is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
         emit FreeMintsGranted(wallet, count);
     }
 
+    /* ---------------- lock-in-place staking (only the vault/locker) ---------------- */
+
+    modifier onlyLocker() { require(msg.sender == locker && locker != address(0), "not locker"); _; }
+
+    /// @notice Vault locks a token when it's staked. Token stays in the holder's wallet (ownerOf
+    ///         unchanged) so the $STAG bounty stays claimable; transfers are blocked until unlock.
+    function lock(uint256 tokenId) external onlyLocker { require(_ownerOf(tokenId) != address(0), "nonexistent"); locked[tokenId] = true; emit Locked(tokenId); }
+    function unlock(uint256 tokenId) external onlyLocker { locked[tokenId] = false; emit Unlocked(tokenId); }
+    /// @notice Owner escape hatch if the vault ever mis-locks / is replaced (never traps a holder's NFT).
+    function adminUnlock(uint256 tokenId) external onlyOwner { locked[tokenId] = false; emit Unlocked(tokenId); }
+    function setLocker(address v) external onlyOwner { locker = v; emit LockerChanged(v); }
+
     /* ---------------- required overrides ---------------- */
+
+    /// @dev Block transfers of a locked (staked) token. Mint (from==0) always allowed.
+    function _update(address to, uint256 tokenId, address auth)
+        internal override(ERC721Enumerable) returns (address)
+    {
+        address from = _ownerOf(tokenId);
+        if (from != address(0) && to != address(0)) require(!locked[tokenId], "locked (staked)");
+        return super._update(to, tokenId, auth);
+    }
 
     function supportsInterface(bytes4 id)
         public view override(ERC721Enumerable, ERC2981) returns (bool)

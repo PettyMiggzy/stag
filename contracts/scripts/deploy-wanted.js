@@ -15,6 +15,8 @@ const { ethers } = require("hardhat");
 const BASE_URI = process.env.WANTED_BASE_URI || "https://stagwifhood.fun/assets/nft/wanted/metadata/";
 const STAG     = "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49";
 const SPLITTER = process.env.WANTED_SPLITTER || "0x101a344172f15ABe969027ea06624305F4a63082"; // SaintsSplitter (60/30/10) — reuse or override
+const VAULT    = process.env.WANTED_VAULT || "0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c";     // SherwoodVault (NFT staking)
+const VAULT_WEIGHT = process.env.WANTED_VAULT_WEIGHT || (10_000n * 10n ** 18n).toString();      // reward weight / staked WANTED (matches Saints)
 const ROYALTY_BPS = process.env.WANTED_ROYALTY_BPS || "500"; // 5%
 const EXPIRY_DAYS = Number(process.env.WANTED_EXPIRY_DAYS || "365"); // owner can reclaim unclaimed bounties after this
 
@@ -65,13 +67,17 @@ async function main() {
   const total = bids.reduce((s, i) => s + BOUNTY[i], 0);
   console.log(`bounties set: ${total.toLocaleString()} $STAG across ${bids.length} ids`);
 
+  // 5) point WANTED's locker at the vault so lock-in-place staking works (deployer owns WANTED)
+  await (await wanted.setLocker(VAULT)).wait();
+  console.log("locker set to SherwoodVault:", VAULT);
+
   console.log("\n=== paste into js/hooded-config.js ===");
   console.log(`  wanted: '${wAddr}',`);
   console.log(`  wantedBounty: '${bAddr}',`);
   console.log("\n=== OWNER does these from the owner wallet ===");
-  console.log(`  1. Fund bounty:  STAG.transfer(${bAddr}, ${total} * 1e18)   // ${total.toLocaleString()} $STAG`);
-  console.log(`  2. Lock bounty:  WantedBounty(${bAddr}).lock()`);
-  console.log(`  3. Add to Vault: SherwoodVault.addCollection(${wAddr})   // makes WANTED stakeable`);
+  console.log(`  1. Fund bounty:  STAG.transfer(${bAddr}, ${total} * 1e18)   // ${total.toLocaleString()} $STAG — MUST fund the full total BEFORE step 2 (lock() now reverts if underfunded)`);
+  console.log(`  2. Lock bounty:  WantedBounty(${bAddr}).lock()   // verifies balance >= ${total.toLocaleString()} $STAG, then freezes`);
+  console.log(`  3. Add to Vault: SherwoodVault(${VAULT}).addCollection(${wAddr}, "${VAULT_WEIGHT}", true)   // LOCK-IN-PLACE (true) — NOT custody`);
   console.log(`  4. Go live:      SherwoodWanted(${wAddr}).setMintActive(true)`);
   console.log("\nVerify:");
   console.log(`  npx hardhat verify --network rhmainnet ${wAddr} "${BASE_URI}" ${SPLITTER} ${ROYALTY_BPS}`);
