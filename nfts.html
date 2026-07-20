@@ -440,6 +440,43 @@
   <script src="js/main.js"></script>
   <script src="js/hooded-config.js?v=3"></script>
   <script src="js/app.js?v=3"></script>
+  <style>
+    .sec-collapsed .saints-grid, .sec-collapsed .wanted-grid, .sec-collapsed .saints-econ, .sec-collapsed .wanted-econ{display:none!important}
+    .sec-open .saints-grid, .sec-open .wanted-grid{display:grid!important}
+    .soldout-bar{display:flex;align-items:center;gap:.75rem;width:100%;cursor:pointer;margin:.7rem 0 0;
+      background:rgba(6,18,10,.6);border:1px solid var(--line);border-radius:14px;padding:.85rem 1.1rem;color:var(--ink);font:inherit;text-align:left;transition:border-color .15s}
+    .soldout-bar:hover{border-color:#f5b301}
+    .so-badge{font:800 .7rem/1 'Space Grotesk',monospace;letter-spacing:.14em;color:#0b1610;background:#f5b301;padding:.45em .7em;border-radius:999px;white-space:nowrap}
+    .so-label{flex:1;color:var(--muted);font:600 .85rem/1.2 'Space Grotesk',monospace}
+    .so-chev{color:var(--muted);font-size:1.1rem}
+  </style>
+  <script>
+  // Sold-out collections collapse to a compact bar (tap to view). Each collection's refresh() calls this.
+  window.__setSoldOut = function(secId, sold){
+    var sec = document.getElementById(secId); if(!sec) return;
+    var head = sec.querySelector('.saints-head, .wanted-head');
+    var bar = sec.querySelector('.soldout-bar');
+    if(sold){
+      if(!bar){
+        bar = document.createElement('button');
+        bar.type = 'button'; bar.className = 'soldout-bar';
+        bar.innerHTML = '<span class="so-badge">SOLD OUT</span><span class="so-label">100% minted — tap to view the collection</span><span class="so-chev">&#9662;</span>';
+        bar.addEventListener('click', function(){
+          var open = sec.classList.toggle('sec-open');
+          sec.classList.toggle('sec-collapsed', !open);
+          bar.querySelector('.so-chev').innerHTML = open ? '&#9652;' : '&#9662;';
+          bar.querySelector('.so-label').textContent = open ? 'Sold out — tap to hide' : '100% minted — tap to view the collection';
+        });
+        if(head && head.nextSibling){ sec.insertBefore(bar, head.nextSibling); } else { sec.appendChild(bar); }
+      }
+      bar.style.display = '';
+      if(!sec.classList.contains('sec-open')) sec.classList.add('sec-collapsed'); // respect a manual expand
+    } else {
+      sec.classList.remove('sec-collapsed','sec-open');
+      if(bar) bar.style.display = 'none';
+    }
+  };
+  </script>
   <script>
   /* Sherwood Saints mint — self-contained. Reads the live contract, shows "Opens at reveal" while
      mint is inactive, flips to a live Mint button the moment setMintActive(true) is called. */
@@ -582,7 +619,7 @@
       let price = 30000000000000000n, active = true, avail = [1, 2, 3, 4, 5];
       try { price = await c.mintPrice(); } catch (e) {}
       try { active = await c.mintActive(); } catch (e) {}
-      try { avail = (await c.availableIds()).map(Number); } catch (e) {}
+      let availOk = false; try { avail = (await c.availableIds()).map(Number); availOk = true; } catch (e) {}
       const availSet = new Set(avail.map(Number));
       const eth = Number(ethers.formatEther(price)).toString();
       const me = await currentAccount();
@@ -602,6 +639,7 @@
         else if (me && owner === me && VAULT) { btn.textContent = 'Stake — earn ETH'; btn.disabled = false; btn.classList.add('live'); btn.onclick = () => stake(id); }
         else { btn.textContent = 'Minted'; btn.classList.add('done'); }
       }
+      try { if (window.__setSoldOut) window.__setSoldOut('saints', availOk && avail.length === 0); } catch (e) {}
     }
     if (window.ethereum && window.ethereum.on) window.ethereum.on('accountsChanged', refresh);
     refresh();
@@ -733,7 +771,7 @@
     }
     async function currentAccount(){ try{ const a=await window.ethereum?.request({method:'eth_accounts'}); return a&&a[0]?a[0].toLowerCase():null; }catch(e){ return null; } }
     async function refresh(){
-      let active=false, avail=[]; try{ active=await c.mintActive(); }catch(e){} try{ avail=(await c.availableIds()).map(Number); }catch(e){}
+      let active=false, avail=[], availOk=false; try{ active=await c.mintActive(); }catch(e){} try{ avail=(await c.availableIds()).map(Number); availOk=true; }catch(e){}
       const availSet=new Set(avail); const me=await currentAccount();
       let bountiesLive=false; if(bountyRead){ try{ bountiesLive=await bountyRead.locked(); }catch(e){} }
       for (const {id,mint,claim,el} of cards){
@@ -759,6 +797,7 @@
           if(!done){ claim.style.display='block'; claim.disabled=false; claim.classList.add('live'); claim.textContent='💰 Claim bounty'; claim.onclick=()=>claimBounty(id); }
         }
       }
+      try { if (window.__setSoldOut) window.__setSoldOut('wanted', availOk && avail.length === 0); } catch (e) {}
     }
     function mintPick(id){ return mint(id); }
     if (window.ethereum && window.ethereum.on) window.ethereum.on('accountsChanged', refresh);
