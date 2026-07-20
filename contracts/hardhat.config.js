@@ -1,4 +1,4 @@
-require("dotenv").config(); // loads contracts/.env (gitignored) → process.env.DEPLOYER_KEY
+require("dotenv").config({ quiet: true }); // loads contracts/.env (gitignored) → process.env.DEPLOYER_KEY
 require("@nomicfoundation/hardhat-ethers");
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@nomicfoundation/hardhat-verify");
