@@ -262,6 +262,11 @@
     },
     card(it, opts) {
       const t = tierIdx(it.rarity); const id = parseInt(it.id, 10) || 0;
+      const total = items.length || 20; const rank = parseInt(it.rank, 10) || 0;
+      // Corner badge is the TOKEN NUMBER (#id) — the NFT's on-chain identity. The rarity
+      // rank is a separate, clearly-labelled chip so a top-ranked piece (e.g. #20 = rank 1)
+      // can't be mistaken for token #1.
+      const rankChip = rank ? `<span class="hcard-rankflex${rank === 1 ? ' top' : ''}">${rank === 1 ? '★ ' : ''}Rank ${rank}/${total}</span>` : '';
       const badge = opts.badge ? `<span class="hcard-badge ${opts.badge.cls}">${esc(opts.badge.txt)}</span>` : '';
       const btn = opts.btn ? `<button class="hcard-btn" ${opts.btn.dis ? 'disabled' : ''}>${esc(opts.btn.txt)}</button>` : '';
       const el = document.createElement('div');
@@ -270,8 +275,8 @@
         <div class="hcard-media">
           <img src="${BASE}/img/${id}.jpg" alt="${esc(it.character || 'Stag #' + id)}" loading="lazy" />
           <video muted loop playsinline preload="none" poster="${BASE}/img/${id}.jpg"><source src="${BASE}/anim/${id}.mp4" type="video/mp4"></video>
-          <span class="hcard-rank">#${esc(it.rank || id)}</span>
-          <span class="hcard-tier t${t}">${esc(it.rarity || '')}</span>${badge}
+          <span class="hcard-rank">#${id}</span>
+          <span class="hcard-tier t${t}">${esc(it.rarity || '')}</span>${rankChip}${badge}
         </div>
         <div class="hcard-foot"><div class="hcard-name">${esc(it.character || 'Hooded #' + id)}</div>${btn}</div>`;
       const v = el.querySelector('video'), med = el.querySelector('.hcard-media');

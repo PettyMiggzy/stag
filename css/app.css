@@ -108,6 +108,8 @@
     .hcard-rank{position:absolute;top:8px;left:8px;font:700 .66rem/1 'Space Grotesk',monospace;color:var(--gold-lite);background:rgba(6,18,10,.8);border:1px solid var(--line);border-radius:999px;padding:.35em .6em}
     .hcard-tier{position:absolute;top:8px;right:8px;font:700 .58rem/1 'Space Grotesk',monospace;letter-spacing:.1em;text-transform:uppercase;border-radius:999px;padding:.4em .6em;background:rgba(6,18,10,.85);border:1px solid var(--line)}
     .hcard-tier.t0{color:#b7c6b3}.hcard-tier.t1{color:#8ff0a4}.hcard-tier.t2{color:#7fd4ff}.hcard-tier.t3{color:#c9a0ff}.hcard-tier.t4{color:#f8e6a0}
+    .hcard-rankflex{position:absolute;top:34px;right:8px;font:700 .54rem/1 'Space Grotesk',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:rgba(6,18,10,.85);border:1px solid var(--line);border-radius:999px;padding:.4em .6em}
+    .hcard-rankflex.top{color:#f8e6a0;border-color:rgba(248,230,160,.4)}
     .hcard-badge{position:absolute;inset:auto 0 0 0;text-align:center;font:700 .66rem/1 'Space Grotesk',monospace;letter-spacing:.18em;padding:.5em;background:rgba(6,18,10,.78)}
     .hcard-badge.minted{color:#ffcabb}.hcard-badge.owned{color:#8ff0a4}.hcard-badge.staked{color:#f8e6a0}
     .hcard-foot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.65rem .75rem}
