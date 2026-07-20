@@ -67,6 +67,12 @@
   .kpi:hover{transform:translateY(-2px);border-color:#2c4657}
   .kpi .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
   .kpi .v{font-weight:800;font-size:18px;margin-top:5px}
+  .grad{margin-top:16px;background:var(--card);border:1px solid rgba(245,196,69,.28);border-radius:15px;padding:14px 17px;box-shadow:var(--hair)}
+  .grad .gh{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;color:var(--dim)}
+  .grad .gh b{color:var(--gold);font-size:14px}
+  .grad .gbar{height:11px;border-radius:99px;background:rgba(6,10,14,.7);border:1px solid var(--line);overflow:hidden;margin:9px 0 8px}
+  .grad .gbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#FFE79A);box-shadow:0 0 16px -2px var(--goldglow);transition:width 1.2s cubic-bezier(.3,.8,.3,1)}
+  .grad .gsub{font-size:11.5px;color:var(--muted)}
 
   /* main grid */
   .main{display:grid;grid-template-columns:1fr 384px;gap:20px;padding:20px 0 70px}
@@ -200,6 +206,11 @@
       </div>
     </div>
     <div class="kpis" id="kpis"></div>
+    <div class="grad" id="grad">
+      <div class="gh"><span>🎓 Bonding curve → graduation</span><b class="num" id="grad-pct">78%</b></div>
+      <div class="gbar"><i id="grad-fill" style="width:78%"></i></div>
+      <div class="gsub" id="grad-sub">When the curve fills, liquidity migrates to a locked Uniswap V3 pool and $WOOD hits the open market.</div>
+    </div>
   </section>
 
   <div class="main">
@@ -218,6 +229,7 @@
 
       <div class="card" style="margin-top:16px">
         <div class="tabs" id="tabs">
+          <button data-tab="info">Info</button>
           <button data-tab="trades" class="on">Trades</button>
           <button data-tab="holders">Holders <span class="badge" id="hc">1,204</span></button>
           <button data-tab="top">Top Traders</button>
@@ -314,6 +326,10 @@
   var kp=[["Market cap",big(t.mc)],["24h Volume",big(t.vol)],["Liquidity",big(t.lq)+" 🔒"],["Holders",t.holders.toLocaleString()],["Txns 24h",(1200+Math.floor(rnd()*4000)).toLocaleString()]];
   $("#kpis").innerHTML=kp.map(function(k){return '<div class="kpi"><div class="k">'+k[0]+'</div><div class="v num">'+k[1]+'</div></div>';}).join("");
   $("#hc").textContent=t.holders.toLocaleString();
+  // graduation / bonding progress (deterministic per token)
+  var gpct=Math.min(96,42+(seed0%54));
+  $("#grad-pct").textContent=gpct+"%"; $("#grad-sub").textContent="When the curve fills, liquidity migrates to a locked Uniswap V3 pool and $"+sym+" hits the open market.";
+  var gf=$("#grad-fill"); gf.style.width="0%"; requestAnimationFrame(function(){requestAnimationFrame(function(){gf.style.width=gpct+"%";});});
 
   // ---- swap ----
   $("#rec-d").textContent=sym[0]; $("#rec-d").style.background=col; $("#rec-sym").textContent=sym; $("#go").textContent="Buy $"+sym;
@@ -399,7 +415,20 @@
     var msgs=[["robin.hood","W","this is the one 🏹",col],["tuck.eth","T","LP locked forever, devs can’t rug","#A3E635"],["0x9f…c21b","0","just aped 2 eth lfg",col],["merryman","M","holders eating with that 50% fee split 🤑","#FF7AC6"],["greenarrow","G","chart looking clean af","#5EEAD4"],["friar.eth","F","up 400% and still early?","#F5C445"]];
     var log=msgs.map(function(m){return '<div class="msg"><div class="a" style="background:'+m[3]+'">'+m[1]+'</div><div><div class="u"><b>'+m[0]+'</b></div><div class="b">'+m[2]+'</div></div></div>';}).join("");
     return '<div class="chat"><div class="chatlog" id="clog">'+log+'</div><div class="chatin"><input id="cin" placeholder="Message $'+sym+' chat…" maxlength="160"><button id="csend">Send</button></div></div>';}
-  var TABS={trades:trades,holders:holders,top:top,chat:chat};
+  function info(){
+    function fact(k,v){return '<div style="background:rgba(6,10,14,.5);border:1px solid var(--line-soft);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800">'+k+'</div><div class="num" style="font-weight:800;font-size:14px;margin-top:4px">'+v+'</div></div>';}
+    function badge(t){return '<span style="font-size:11.5px;font-weight:700;color:var(--green);background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.25);border-radius:8px;padding:6px 10px">'+t+'</span>';}
+    function soc(t){return '<a href="#" style="font-size:13px;font-weight:700;color:var(--dim);background:rgba(6,10,14,.5);border:1px solid var(--line);border-radius:10px;padding:9px 14px">'+t+'</a>';}
+    return '<div style="padding:16px 16px 8px">'+
+      '<p style="color:var(--dim);font-size:14px;line-height:1.65;max-width:72ch">$'+sym+' is a fair-launch coin on HoodXchange — shipped gas-only onto a locked Uniswap V3 pool, with no presale and no team bag. Half of every trading fee flows straight back to holders through the staking pool.</p>'+
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0">'+
+        fact("Contract",shortAddr(t.ca))+fact("Chain","Robinhood Chain · 4663")+
+        fact("Total supply",Math.round(t.mc/t.price).toLocaleString())+fact("Launched",t.age+" ago")+'</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">'+
+        badge("🔒 LP locked forever")+badge("✅ Mint authority revoked")+badge("✅ Exact approvals only")+badge("🛡️ Verified on Blockscout")+'</div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">'+soc("𝕏 Twitter")+soc("✈ Telegram")+soc("🌐 Website")+'</div></div>';
+  }
+  var TABS={info:info,trades:trades,holders:holders,top:top,chat:chat};
   function showTab(name){
     $("#tabwrap").innerHTML=TABS[name]();
     if(name==="chat"){
