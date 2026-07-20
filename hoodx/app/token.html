@@ -224,7 +224,7 @@
           <div class="ohlc" id="ohlc"></div>
           <span class="powered">📈 HoodX charts</span>
         </div>
-        <div class="chartbox"><canvas id="chart"></canvas></div>
+        <div class="chartbox"><canvas id="chart"></canvas><iframe id="dexframe" title="live chart" style="display:none;width:100%;height:100%;border:0"></iframe></div>
       </div>
 
       <div class="card" style="margin-top:16px">
@@ -306,6 +306,7 @@
   if(!t.holders)t.holders=200+Math.floor((seed0%1200));
   if(!t.ca)t.ca=synthCa();
   var col=COLORS[sym[0]]||"#00E676";
+  var pool=P.get("pool")||null; var pfpUrl=P.get("pfp")||null;
   // seeded rng from symbol
   var seed=0; for(var i=0;i<sym.length;i++) seed=(seed*31+sym.charCodeAt(i))>>>0;
   function rnd(){seed=(seed*9301+49297)%233280;return seed/233280;}
@@ -316,7 +317,8 @@
 
   // ---- fill hero ----
   document.title="HoodXchange — "+t.name+" ($"+sym+")";
-  var pf=$("#t-pfp"); pf.textContent=sym[0]; pf.style.background=col;
+  var pf=$("#t-pfp"); pf.style.background=col;
+  if(pfpUrl){pf.style.padding="0";pf.innerHTML='<img src="'+pfpUrl+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:19px" onerror="this.parentNode.style.padding=\'\';this.parentNode.textContent=\''+sym[0]+'\'">';}else{pf.textContent=sym[0];}
   $("#t-name").innerHTML=t.name+' <span class="lockpill">🔒 LP Locked</span>';
   $("#t-sym").textContent="$"+sym; $("#t-age").textContent="age "+t.age;
   $("#t-ca").textContent=shortAddr(t.ca)+" ⧉";
@@ -397,7 +399,15 @@
   }
   $("#tf").querySelectorAll("button").forEach(function(b){b.onclick=function(){$("#tf").querySelectorAll("button").forEach(function(x){x.classList.remove("on")});b.classList.add("on");TF=b.dataset.t;var n={ "5m":90,"1h":64,"4h":48,"1D":34 }[TF];candles=genCandles(n);drawChart();};});
   // subtle live update of the last candle
-  setInterval(function(){var d=candles[candles.length-1];d.c=t.price*(1+(rnd()-0.5)*0.01);d.h=Math.max(d.h,d.c);d.l=Math.min(d.l,d.c);drawChart();},1400);
+  var liveChart=!!pool;
+  if(liveChart){
+    var fr=$("#dexframe"); fr.src="https://dexscreener.com/robinhood/"+pool+"?embed=1&theme=dark&info=0&trades=0&interval=15";
+    fr.style.display="block"; cv.style.display="none";
+    $("#tf").style.display="none"; $("#ohlc").style.display="none";
+    var pw=document.querySelector(".powered"); if(pw)pw.textContent="● Live · DexScreener";
+  } else {
+    setInterval(function(){var d=candles[candles.length-1];d.c=t.price*(1+(rnd()-0.5)*0.01);d.h=Math.max(d.h,d.c);d.l=Math.min(d.l,d.c);drawChart();},1400);
+  }
   window.addEventListener("resize",drawChart);
 
   // ---- tabs data ----
@@ -438,7 +448,9 @@
   }
   $("#tabs").querySelectorAll("button").forEach(function(b){b.onclick=function(){$("#tabs").querySelectorAll("button").forEach(function(x){x.classList.remove("on")});b.classList.add("on");showTab(b.dataset.tab);};});
 
-  drawChart(); showTab("trades");
+  if(!liveChart) drawChart();
+  $("#tabs").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x.dataset.tab==="info");});
+  showTab("info");
 })();
 </script>
 </body>
