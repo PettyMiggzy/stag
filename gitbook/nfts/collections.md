@@ -1,6 +1,14 @@
 # The NFT Collections
 
-$STAG NFTs aren't just pictures — they're **keys**. Every one **boosts your staking rewards** and feeds the treasury. There are three collections.
+$STAG NFTs aren't just pictures — they **earn**. Every collection pays you to stake it and feeds the treasury — but they don't all earn the *same way*. There are three collections.
+
+| Collection | Where you stake | What it earns |
+|---|---|---|
+| **Hooded 20** | the $STAG staking contract | **Boosts** your $STAG staking rewards (multiplier + extra weight) |
+| **Sherwood Saints** | the Sherwood Vault | **ETH** yield (a share of mint revenue) |
+| **WANTED** | the Sherwood Vault | **ETH** yield **+** a one-time **$STAG bounty** |
+
+> Only the **Hooded 20** boosts the $STAG-staking multiplier — that's hard-wired into the staking contract and can't be swapped out. Saints and WANTED earn on the **Sherwood Vault** (the ETH-yield rail), which the team *can* add more collections to over time.
 
 ## 1. The Hooded 20
 - **20 unique stags** across **5 rarity tiers** (Common → Mythic). The founding collection.
