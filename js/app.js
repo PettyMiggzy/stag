@@ -62,6 +62,8 @@
   const ro = () => (H.readProvider ? H.readProvider() : new ethers.JsonRpcProvider(H.chain.rpcUrls[0], { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) }));
   const short = (a) => a.slice(0, 6) + '…' + a.slice(-4);
   const eth = (v, d = 3) => { try { return (+ethers.formatEther(v)).toLocaleString(undefined, { maximumFractionDigits: d }); } catch { return '—'; } };
+  // Pending ETH rewards are small per-staker — show enough precision so a real balance never reads as a flat "0".
+  const ethSmall = (v) => { try { const n = +ethers.formatEther(v); if (n === 0) return '0'; if (n < 0.000001) return '<0.000001'; return n.toLocaleString(undefined, { maximumFractionDigits: 6 }); } catch { return '—'; } };
   const num = (v) => { try { return Number(ethers.formatEther(v)).toLocaleString(undefined, { maximumFractionDigits: 0 }); } catch { return '—'; } };
   const days = (s) => Math.round(Number(s) / 86400);
   const tierIdx = (name) => Math.max(0, TIERS.indexOf(name));
@@ -403,7 +405,7 @@
         const [info, staked, bal] = await Promise.all([c.userInfo(me), c.stakedOf(me, curTok.address), new ethers.Contract(curTok.address, ERC20, p).balanceOf(me)]);
         const stakedN = numTok(staked, curTok);
         $('s-your').textContent = stakedN + ' ' + curTok.symbol; $('p-staked').textContent = stakedN;
-        $('s-claim').textContent = eth(info.pendingEth) + ' Ξ'; $('p-claim').textContent = eth(info.pendingEth) + ' Ξ';
+        $('s-claim').textContent = ethSmall(info.pendingEth) + ' Ξ'; $('p-claim').textContent = ethSmall(info.pendingEth) + ' Ξ';
         const mult = (Number(info.lockMultBps) / 10000) * (Number(info.holdMult) / 10000);
         const mtxt = mult ? (mult.toFixed(2).replace(/\.00$/, '') + '×') : '1×';
         $('p-mult').textContent = mtxt;
