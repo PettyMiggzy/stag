@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8CFF4A"/>
+      <stop offset="1" stop-color="#00E676"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- dark rounded tile + green ring -->
+  <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="#05080C" stroke="rgba(0,230,118,.35)" stroke-width="1.5"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#g)" opacity=".06"/>
+  <!-- hood arc over the X -->
+  <path d="M17 21 Q32 8 47 21" fill="none" stroke="#5B6B60" stroke-width="2.4" stroke-linecap="round" opacity=".6"/>
+  <!-- crossed-arrow X -->
+  <g filter="url(#glow)" stroke="url(#g)" stroke-width="6.2" stroke-linecap="round">
+    <line x1="19" y1="19" x2="45" y2="45"/>
+    <line x1="45" y1="19" x2="19" y2="45"/>
+  </g>
+  <!-- arrowheads on the down-right ends (exchange + archer) -->
+  <g fill="url(#g)">
+    <path d="M45 45 l-8.4 1.2 l1.2 -8.4 z"/>
+    <path d="M19 45 l8.4 1.2 l-1.2 -8.4 z"/>
+  </g>
+</svg>
