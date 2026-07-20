@@ -288,7 +288,7 @@
 
   <div class="feature reveal">
     <div class="chartcard">
-      <div class="fhd"><img class="fpfp" id="f-pfp" alt=""><div><h3 id="f-name">—</h3><div class="fsy" id="f-sy">—</div></div><div class="fp"><div class="p num" id="f-price">—</div><div class="num" id="f-ch">—</div></div></div>
+      <div class="fhd" id="f-open" style="cursor:pointer" title="Open full dashboard"><img class="fpfp" id="f-pfp" alt=""><div><h3 id="f-name">—</h3><div class="fsy" id="f-sy">—</div></div><div class="fp"><div class="p num" id="f-price">—</div><div class="num" id="f-ch">—</div></div><span style="margin-left:14px;align-self:center;color:var(--green);font-weight:800;font-size:13px;white-space:nowrap">Open ↗</span></div>
       <div class="chartbox"><div class="load" id="f-load">Loading live chart…</div><iframe id="f-chart" title="chart" loading="lazy"></iframe></div>
     </div>
     <div class="side">
@@ -422,13 +422,15 @@
   var MOCK=[["Sherwood","WOOD",0.0143,161658,32921915,9200000,410000,0],["CashCat","CASHCAT",0.0733,22.1,6094187,4100000,520000,0],["Stonkbroker","STONK",0.0034,431,3652436,880000,190000,1],["Pons","PONS",0.0152,72.6,6187221,2100000,340000,0],["Wallet","WALLET",0.0085,39.3,1984547,760000,150000,1],["Little John","JOHN",0.00061,-9.4,540000,210000,88000,0],["Merry Men","MERRY",0.0000091,122.5,280000,91000,32000,1],["Quiver","QUIVER",0.00007,220,400000,180000,55000,1]].map(function(m,i){return{name:m[0],sym:m[1],price:m[2],ch:m[3],vol:m[4],mc:m[5],lq:m[6],isNew:m[7],pool:null,col:COLORS[i%COLORS.length]};});
 
   var TOKENS=[],sel=0,filter="trending",side="buy";
+  function tokenURL(t){var q="token.html?t="+encodeURIComponent(t.sym)+"&n="+encodeURIComponent(t.name)+"&p="+t.price+"&c="+t.ch+"&mc="+Math.round(t.mc)+"&v="+Math.round(t.vol)+"&lq="+Math.round(t.lq);return q;}
   function boardData(){var a=TOKENS.slice();if(filter==="new")a.sort(function(x,y){return (y.isNew?1:0)-(x.isNew?1:0)||y.vol-x.vol;});else if(filter==="gainers")a.sort(function(x,y){return y.ch-x.ch;});else a.sort(function(x,y){return y.vol-x.vol;});return a;}
   function av(t,cls){if(t.pfp)return '<img class="pfp'+(cls||"")+'" src="'+t.pfp+'" alt="" onerror="this.outerHTML=\'<div class=&quot;pfp'+(cls||"")+' ph&quot; style=&quot;background:'+t.col+'&quot;>'+t.sym[0]+'</div>\'">';return '<div class="pfp'+(cls||"")+' ph" style="background:'+t.col+'">'+t.sym[0]+'</div>';}
   function renderGrid(){
     var data=boardData().slice(0,12);
     $("#tgrid").innerHTML=data.map(function(t){var up=t.ch>=0;return '<div class="tcard" data-i="'+TOKENS.indexOf(t)+'"><div class="lp">🔒</div><div class="top">'+av(t)+'<div><div class="nm">'+t.name+(t.isNew?' <span class="badge-new">NEW</span>':'')+'</div><div class="sy">$'+t.sym+'</div></div></div><canvas class="spark"></canvas><div class="bot"><div><div class="px num">'+fmtUsd(t.price)+'</div><div class="vl">Vol '+fmtBig(t.vol)+'</div></div><div class="ch '+(up?"up":"down")+'">'+(up?"▲":"▼")+' '+Math.abs(t.ch).toLocaleString(undefined,{maximumFractionDigits:1})+'%</div></div></div>';}).join("");
-    document.querySelectorAll(".tcard").forEach(function(c){var t=TOKENS[+c.dataset.i];spark(c.querySelector(".spark"),t.ch,t.ch>=0);c.onclick=function(){select(+c.dataset.i);document.getElementById("board").scrollIntoView({behavior:"smooth"});};});
+    document.querySelectorAll(".tcard").forEach(function(c){var t=TOKENS[+c.dataset.i];spark(c.querySelector(".spark"),t.ch,t.ch>=0);c.onclick=function(){location.href=tokenURL(t);};});
   }
+  (function(){var o=document.getElementById("f-open");if(o)o.onclick=function(){var t=TOKENS[sel];if(t)location.href=tokenURL(t);};})();
   function select(i){sel=i;var t=TOKENS[i];if(!t)return;
     $("#f-pfp").src=t.pfp||"";$("#f-pfp").style.background=t.col;if(!t.pfp){$("#f-pfp").outerHTML='<div class="fpfp ph" id="f-pfp" style="display:grid;place-items:center;font-weight:800;color:#06140C;background:'+t.col+'">'+t.sym[0]+'</div>';}
     $("#f-name").textContent=t.name;$("#f-sy").textContent="$"+t.sym;$("#f-price").textContent=fmtUsd(t.price);
