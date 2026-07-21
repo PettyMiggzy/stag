@@ -253,12 +253,18 @@
     supply(m) { const f = $('m-fill'); if (f) f.style.width = (m / 20 * 100) + '%'; const c = $('m-count'); if (c) c.textContent = `${m} / 20 minted`; },
     priceFor(it) { return this.prices[tierIdx(it.rarity)] || 0n; },
     renderModes(c, soldOut) {
+      const md = $('m-modes'), gh = $('m-grid-head');
+      if (soldOut) {                          // fully minted — no reason to show the mint modes
+        if (md) md.style.display = 'none';
+        if (gh) gh.textContent = 'The Hooded 20 · Sold Out';
+        return;
+      }
+      if (md) md.style.display = '';
+      if (gh) gh.textContent = 'All 20 Stags · Pick to mint';
       const cheapest = this.prices.length ? this.prices.reduce((a, b) => (a < b ? a : b)) : 0n;
-      $('m-pick-price').textContent = soldOut ? 'sold out' : (cheapest > 0n ? 'from ' + eth(cheapest) + ' Ξ' : 'live');
-      $('m-gamble-price').textContent = soldOut ? 'sold out' : (this.randomPrice > 0n ? eth(this.randomPrice) + ' Ξ' : 'live');
-      const gb = $('m-gamble');
-      if (gb) { if (soldOut) { gb.textContent = 'Sold Out'; gb.disabled = true; gb.onclick = null; } else { gb.disabled = false; gb.onclick = () => this.mintGamble(); } }
-      if (soldOut) { const el = $('m-odds'); if (el) el.innerHTML = ''; return; }
+      $('m-pick-price').textContent = cheapest > 0n ? 'from ' + eth(cheapest) + ' Ξ' : 'live';
+      $('m-gamble-price').textContent = this.randomPrice > 0n ? eth(this.randomPrice) + ' Ξ' : 'live';
+      const gb = $('m-gamble'); if (gb) { gb.disabled = false; gb.onclick = () => this.mintGamble(); }
       const counts = [0, 0, 0, 0, 0]; items.forEach((it) => counts[tierIdx(it.rarity)]++);
       Promise.all([0, 1, 2, 3, 4].map((t) => c.tierWeight(t))).then((ws) => {
         const tot = ws.reduce((s, w, t) => s + Number(w) * counts[t], 0);
