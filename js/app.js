@@ -244,18 +244,21 @@
       try { this.randomPrice = await c.randomPrice(); } catch (e) {}
       try { this.prices = await Promise.all([0, 1, 2, 3, 4].map((t) => c.tierPrice(t))); } catch (e) {}
       try { await Promise.all(items.map(async (it) => { avail[it.id] = await c.isAvailable(it.id); })); } catch (e) { avail = {}; }
-      this.renderGrid(avail); this.renderModes(c);
+      const soldOut = mintedN >= (items.length || 20);
+      this.renderGrid(avail, soldOut); this.renderModes(c, soldOut);
       this.supply(mintedN);
       setStatus('m-status', me ? '' : 'Connect your wallet to mint.', '');
       if (withUser && me) this.loadOwned(c);
     },
     supply(m) { const f = $('m-fill'); if (f) f.style.width = (m / 20 * 100) + '%'; const c = $('m-count'); if (c) c.textContent = `${m} / 20 minted`; },
     priceFor(it) { return this.prices[tierIdx(it.rarity)] || 0n; },
-    renderModes(c) {
+    renderModes(c, soldOut) {
       const cheapest = this.prices.length ? this.prices.reduce((a, b) => (a < b ? a : b)) : 0n;
-      $('m-pick-price').textContent = cheapest > 0n ? 'from ' + eth(cheapest) + ' Ξ' : 'live';
-      $('m-gamble-price').textContent = this.randomPrice > 0n ? eth(this.randomPrice) + ' Ξ' : 'live';
-      const gb = $('m-gamble'); if (gb) { gb.disabled = false; gb.onclick = () => this.mintGamble(); }
+      $('m-pick-price').textContent = soldOut ? 'sold out' : (cheapest > 0n ? 'from ' + eth(cheapest) + ' Ξ' : 'live');
+      $('m-gamble-price').textContent = soldOut ? 'sold out' : (this.randomPrice > 0n ? eth(this.randomPrice) + ' Ξ' : 'live');
+      const gb = $('m-gamble');
+      if (gb) { if (soldOut) { gb.textContent = 'Sold Out'; gb.disabled = true; gb.onclick = null; } else { gb.disabled = false; gb.onclick = () => this.mintGamble(); } }
+      if (soldOut) { const el = $('m-odds'); if (el) el.innerHTML = ''; return; }
       const counts = [0, 0, 0, 0, 0]; items.forEach((it) => counts[tierIdx(it.rarity)]++);
       Promise.all([0, 1, 2, 3, 4].map((t) => c.tierWeight(t))).then((ws) => {
         const tot = ws.reduce((s, w, t) => s + Number(w) * counts[t], 0);
@@ -288,8 +291,9 @@
       const b = el.querySelector('.hcard-btn'); if (b && opts.btn && opts.btn.on && !opts.btn.dis) b.onclick = opts.btn.on;
       return el;
     },
-    renderGrid(avail) {
+    renderGrid(avail, soldOut) {
       const g = $('m-grid'); if (!g) return; g.innerHTML = '';
+      if (soldOut) { g.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem 1rem;background:rgba(6,18,10,.5);border:1px solid var(--line);border-radius:14px;color:var(--muted);font:600 .95rem/1.5 \'Space Grotesk\',monospace">✅ <b style="color:var(--gold-lite)">SOLD OUT</b> — all 20 Hooded minted. Grab one on the secondary market.</div>'; return; }
       for (const it of items) {
         const sold = avail && avail[it.id] === false;
         g.appendChild(this.card(it, {
