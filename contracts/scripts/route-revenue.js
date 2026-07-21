@@ -32,11 +32,16 @@ async function streamNew(name, poolAddr, signer, provider, durSec) {
   const outstanding = now < pf ? rate * (pf - now) : 0n;      // ETH already committed to the live stream
   const avail = bal > reserved ? bal - reserved : 0n;          // uncommitted-by-accrual
   let amount = avail > outstanding ? avail - outstanding : 0n; // genuinely NEW ETH
-  amount = (amount * 99n) / 100n;                              // 1% buffer → notify never reverts on rounding
-  if (amount === 0n) { console.log(`   ${name}: nothing new to stream (pool ${f(bal)} ETH, already committed)`); return; }
-  console.log(`   ${name}: streaming ${f(amount)} ETH over ${DAYS}d…`);
-  await (await pool.notifyRewardAmount(amount, durSec)).wait();
-  console.log(`   ${name}: ✓`);
+  amount = (amount * 95n) / 100n;                              // 5% buffer → notify never reverts on rounding/accrual
+  const MIN = ethers.parseEther("0.0005");                    // below this it's dust already committed — skip, don't waste gas
+  if (amount < MIN) { console.log(`   ${name}: nothing new to stream — pool ${f(bal)} ETH already fully committed to the live stream`); return; }
+  try {
+    console.log(`   ${name}: streaming ${f(amount)} ETH over ${DAYS}d…`);
+    await (await pool.notifyRewardAmount(amount, durSec)).wait();
+    console.log(`   ${name}: ✓`);
+  } catch (e) {
+    console.log(`   ${name}: skip — already fully committed (${(e.shortMessage || e.message || "").slice(0, 50)})`);
+  }
 }
 
 async function main() {
