@@ -111,6 +111,7 @@
           },
         });
         wcProvider.on('disconnect', () => { try { localStorage.removeItem('h20_wc'); } catch {} location.reload(); });
+        try{ window.STAGGuard && STAGGuard.wrap(wcProvider); }catch(e){} // GoPlus guard on WalletConnect txs
         await wcProvider.enable(); // opens the WalletConnect modal / deep-links the wallet
         return wcProvider;
       } catch (e) {

@@ -190,6 +190,7 @@
 </style>
 </head>
 <body>
+<script src="js/txguard.js?v=2"></script>
 
 <header>
   <a class="brand" href="https://stagwifhood.fun" style="text-decoration:none;color:inherit"><img src="/brand/icon.png" alt="Stag Locker"><h1>Stag <b>Locker</b></h1><span class="chain">Robinhood Chain · 4663</span></a>
@@ -595,6 +596,7 @@ async function resolveWallet(){
       metadata: { name:"Stag Locker", description:"Lock & vest $STAG on Robinhood Chain",
         url:"https://stagwifhood.fun", icons:["https://stagwifhood.fun/assets/img/mark.png"] },
     });
+    try{ window.STAGGuard && STAGGuard.wrap(walletEth); }catch(e){}
     await walletEth.enable(); // opens the WalletConnect modal / deep-links the wallet
     return walletEth;
   }catch(e){ alert("Wallet connect failed: " + (e.message||e)); return null; }

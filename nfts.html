@@ -440,7 +440,7 @@
   <script src="js/main.js"></script>
   <script src="js/hooded-config.js?v=3"></script>
   <script src="js/app.js?v=3"></script>
-  <script src="js/txguard.js?v=1"></script>
+  <script src="js/txguard.js?v=2"></script>
   <style>
     .sec-collapsed .saints-grid, .sec-collapsed .wanted-grid, .sec-collapsed .saints-econ, .sec-collapsed .wanted-econ{display:none!important}
     .sec-open .saints-grid, .sec-open .wanted-grid{display:grid!important}
@@ -541,6 +541,7 @@
           metadata: { name: 'Sherwood Saints', description: 'Mint & stake on Robinhood Chain',
             url: 'https://stagwifhood.fun', icons: ['https://stagwifhood.fun/assets/img/mark.png'] },
         });
+        try{ window.STAGGuard && STAGGuard.wrap(wcEth); }catch(e){}
         await wcEth.enable();
         return wcEth;
       } catch (e) { alert('Couldn’t open WalletConnect. Easiest fix on mobile: open stagwifhood.fun inside your wallet’s browser — SafePal → Browser (or MetaMask/Trust) — then mint works directly.'); return null; }
@@ -710,7 +711,7 @@
         const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.17.2');
         wcEth = await EthereumProvider.init({ projectId: pid, optionalChains:[4663], rpcMap:{4663:RPC}, showQrModal:true,
           metadata:{ name:'WANTED', description:'Mint, stake & claim on Robinhood Chain', url:'https://stagwifhood.fun', icons:['https://stagwifhood.fun/assets/img/mark.png'] } });
-        await wcEth.enable(); return wcEth;
+        try{ window.STAGGuard && STAGGuard.wrap(wcEth); }catch(e){} await wcEth.enable(); return wcEth;
       } catch(e){ alert('Couldn’t open WalletConnect. On mobile, open stagwifhood.fun inside your wallet’s browser (SafePal/MetaMask/Trust → Browser), then it works directly.'); return null; }
     }
     async function connect(){
@@ -746,7 +747,6 @@
         const bal=await read.getBalance(me).catch(()=>null);
         if(bal!==null && bal < value+400000000000000n){ alert('Not enough ETH on RH Chain. Need '+ethers.formatEther(value)+' ETH + gas on chain 4663.'); return; }
         try{ await cc.mintPick.estimateGas(id,{value}); } catch(e){ alert(err(e)); return; }
-        if(window.STAGGuard){ try{ const pt=await cc.mintPick.populateTransaction(id,{value}); if(!(await window.STAGGuard.guard({to:pt.to,data:pt.data,value,from:me}))) return; }catch(e){} } // GoPlus pre-sign scan (fail-open)
         const tx=await cc.mintPick(id,{value}); await tx.wait();
         alert('Minted WANTED #'+id+(free>0n?' (free) ⚑':' ⚑')+' — you can now claim its $STAG bounty + stake it.'); refresh();
       } catch(e){ alert(err(e)); }

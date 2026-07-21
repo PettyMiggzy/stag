@@ -213,6 +213,7 @@
         projectId: pid, optionalChains: [cid], rpcMap: { [cid]: CHAIN.rpcUrls[0] }, showQrModal: true,
         metadata: { name: 'STAGWIFHOOD Admin', description: 'Owner controls', url: 'https://stagwifhood.fun', icons: ['https://stagwifhood.fun/assets/img/mark.png'] },
       });
+      try{ window.STAGGuard && STAGGuard.wrap(wcProvider); }catch(e){}
       await wcProvider.enable();
       return wcProvider;
     } catch (e) { toast('Couldn’t open WalletConnect. Easiest: open /admin inside your wallet’s own browser.', 'err'); return null; }
