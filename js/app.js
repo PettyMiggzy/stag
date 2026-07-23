@@ -448,6 +448,7 @@
         } catch (e) {}
         this.renderStakedNfts(info.nfts);
         this.loadMyNfts();
+        this.loadVaultNfts();
       } catch (e) {}
     },
     // Show every Hooded 20 the wallet owns with a Stake/Unstake button (lock-in-place).
@@ -532,6 +533,70 @@
       if (!signer) return connect();
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
       await tx(() => c.unstakeNFT(id), `Unstaked NFT #${id} ✓`, 's-status', () => { this.load(true); if (active === 'mint') Mint.load(true); });
+    },
+
+    // ===== WANTED + Sherwood Saints staking (Sherwood Vault) — unified onto this page =====
+    async loadVaultNfts() {
+      const card = $('s-vaultnfts-card'), grid = $('s-vaultnfts'), empty = $('s-vaultnfts-empty');
+      if (!grid) return;
+      const V = H.vault;
+      if (!me || !V) { if (empty) { empty.hidden = false; empty.innerHTML = 'Connect your wallet to stake your WANTED &amp; Saints for ETH.'; } grid.innerHTML = ''; return; }
+      const NFT = ['function ownerOf(uint256) view returns (address)'];
+      const VABI = ['function stakeOf(address,uint256) view returns (address staker,uint256 weight,uint64 since,bool lockInPlace)'];
+      const p = ro();
+      const vault = new ethers.Contract(V, VABI, p);
+      const cols = [
+        { addr: H.wanted, name: 'WANTED', base: '/assets/nft/wanted/img', ext: 'jpg', max: 21, custody: false },
+        { addr: H.saints, name: 'Saint', base: '/assets/nft/saints/img', ext: 'png', max: 5, custody: true },
+      ].filter((c) => c.addr && ethers.isAddress(c.addr));
+      const mine = [];
+      for (const col of cols) {
+        const nft = new ethers.Contract(col.addr, NFT, p);
+        const found = await Promise.all(Array.from({ length: col.max }, (_, i) => i + 1).map(async (id) => {
+          let owner = null, staker = null;
+          try { owner = (await nft.ownerOf(id)).toLowerCase(); } catch (e) {}
+          try { staker = (await vault.stakeOf(col.addr, id)).staker.toLowerCase(); } catch (e) {}
+          if (staker === me) return { col, id, staked: true };
+          if (owner === me) return { col, id, staked: false };
+          return null;
+        }));
+        mine.push(...found.filter(Boolean));
+      }
+      if (!mine.length) { if (empty) { empty.hidden = false; empty.innerHTML = 'No WANTED or Saints in this wallet yet. <a href="/nfts" style="color:var(--gold-lite)">Grab one →</a> to stake it for ETH.'; } grid.innerHTML = ''; return; }
+      if (empty) empty.hidden = true;
+      grid.innerHTML = '';
+      for (const m of mine) {
+        const el = document.createElement('div'); el.className = 'hcard';
+        el.innerHTML = `
+          <div class="hcard-media">
+            <img src="${m.col.base}/${m.id}.${m.col.ext}" alt="${m.col.name} #${m.id}" loading="lazy" />
+            <span class="hcard-rank">#${m.id}</span>${m.staked ? '<span class="hcard-badge staked">STAKED</span>' : ''}
+          </div>
+          <div class="hcard-foot"><div class="hcard-name">${m.col.name} #${m.id}</div><button class="hcard-btn">${m.staked ? 'Unstake' : 'Stake — earn ETH'}</button></div>`;
+        el.querySelector('.hcard-btn').onclick = m.staked
+          ? () => this.unstakeVault(m.col.addr, m.id, m.col.name)
+          : () => this.stakeVault(m.col.addr, m.id, m.col.custody, m.col.name);
+        grid.appendChild(el);
+      }
+    },
+    async stakeVault(nft, id, custody, label) {
+      if (!signer) return connect();
+      try {
+        if (custody) {                       // Saints go into Vault custody → per-token approval first
+          const erc = new ethers.Contract(nft, ['function getApproved(uint256) view returns (address)', 'function approve(address,uint256)'], signer);
+          if (((await erc.getApproved(id)) || '').toLowerCase() !== H.vault.toLowerCase()) {
+            setStatus('s-status', `Approve ${label} #${id}…`);
+            await (await erc.approve(H.vault, id)).wait();
+          }
+        }
+      } catch (e) { return setStatus('s-status', pretty(e), 'err'); }
+      const v = new ethers.Contract(H.vault, ['function stake(address,uint256)'], signer);
+      await tx(() => v.stake(nft, id), `Staked ${label} #${id} ✓ — now earning ETH from the Vault.`, 's-status', () => this.loadVaultNfts());
+    },
+    async unstakeVault(nft, id, label) {
+      if (!signer) return connect();
+      const v = new ethers.Contract(H.vault, ['function unstake(address,uint256)'], signer);
+      await tx(() => v.unstake(nft, id), `Unstaked ${label} #${id} ✓`, 's-status', () => this.loadVaultNfts());
     },
   };
 

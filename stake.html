@@ -145,11 +145,12 @@
       </div>
       <p class="hint" id="s-mynfts-empty" hidden style="margin-top:1.1rem;text-align:center">Connect your wallet to stake your Hooded 20 NFTs in place. Don't have one yet? <a href="/nfts" style="color:var(--gold-lite)">Mint one →</a></p>
 
-      <!-- signpost: WANTED / Saints stake on the NFTs page (Vault), not here -->
-      <div class="card" style="margin-top:1.1rem;border:1px solid rgba(245,179,1,.4);background:linear-gradient(0deg,rgba(245,179,1,.06),transparent)">
-        <h3>Staking WANTED or Sherwood Saints? 🎯</h3>
-        <p class="hint">Those stake on the <b>NFTs page</b> — they earn <b>ETH from the Sherwood Vault</b> (this page is for $STAG + Hooded 20). Open the NFTs page, connect your wallet, and hit <em>Stake — earn ETH</em> on any WANTED or Saint you own. It locks in place — the NFT never leaves your wallet.</p>
-        <a class="btn btn-gold" href="/nfts" style="display:block;width:100%;text-align:center;box-sizing:border-box">Stake WANTED / Saints on the NFTs page →</a>
+      <!-- ===== stake your WANTED & Sherwood Saints into the Vault (earn ETH) ===== -->
+      <div class="card" id="s-vaultnfts-card" style="margin-top:1.1rem">
+        <h3>Stake Your WANTED &amp; Sherwood Saints 🎯</h3>
+        <p class="hint">Stake these into the <b>Sherwood Vault</b> to earn <b>ETH</b>. WANTED locks in place (never leaves your wallet); Saints go into the Vault while staked. Hit <em>Stake — earn ETH</em> on any you own; <em>Unstake</em> to release.</p>
+        <div class="hgrid" id="s-vaultnfts"></div>
+        <p class="hint" id="s-vaultnfts-empty" style="text-align:center;margin-top:.6rem">Connect your wallet to stake your WANTED &amp; Saints for ETH.</p>
       </div>
 
       <div class="cols" style="margin-top:1.1rem">
@@ -209,6 +210,6 @@
   <script src="js/main.js"></script>
   <script src="js/hooded-config.js?v=3"></script>
   <script src="js/txguard.js?v=2"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>
