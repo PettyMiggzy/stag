@@ -1,0 +1,17 @@
+{
+  "name": "hoodxchange-buybot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HOOD ✕ CHANGE buy bot — real-time buy alerts on Robinhood Chain (EVM 4663) to Telegram and/or Discord.",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "ethers": "^6.13.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
