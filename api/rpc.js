@@ -19,9 +19,9 @@
 
 const PUBLIC_RPC = 'https://rpc.mainnet.chain.robinhood.com';
 const ALLOWED = new Set([
-  'eth_getLogs', 'eth_blockNumber', 'eth_chainId', 'eth_call',
+  'eth_getLogs', 'eth_blockNumber', 'eth_chainId', 'eth_call', 'eth_estimateGas',
   'eth_getBlockByNumber', 'eth_getTransactionByHash', 'eth_getTransactionReceipt',
-  'eth_getBalance', 'eth_getCode',
+  'eth_getBalance', 'eth_getCode', 'eth_gasPrice', 'eth_getTransactionCount',
 ]);
 const CACHE_TTL = 30_000;   // ms
 const CACHE_MAX = 500;

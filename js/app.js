@@ -203,24 +203,23 @@
   const isReject = (e) => /user rejected|user denied|denied|\b4001\b|action[_ ]?rejected/i.test(
     (e && (e.shortMessage || e.reason || e.info?.error?.message || e.message || String(e.code))) || '');
   // run(overrides?) => Promise<tx>. Optional dry() => Promise<bigint gas> estimates via the
-  // reliable read RPC (proxy + Blockscout fallbacks) so a flaky wallet-side gas estimate on this
-  // custom chain doesn't kill the button: on estimate failure we re-estimate through the backup
-  // RPC and send with an explicit gasLimit — or surface the *real* revert reason if it truly fails.
+  // reliable read RPC. On this custom chain many wallets HANG (not throw) inside their own
+  // eth_estimateGas, which freezes the UI on "Confirm…". So we estimate the gas OURSELVES first
+  // (fast, reliable RPC) and hand the wallet an explicit gasLimit — it then just signs & sends,
+  // never running its own hang-prone estimate. If our estimate can't be had, we fall back to
+  // letting the wallet estimate (old behaviour) so nothing regresses.
   async function tx(run, okMsg, statusEl, after, dry) {
     if (!signer) return connect();
     if (!(await chainOk())) return setStatus(statusEl, 'Wrong network — switch to Robinhood Chain (4663).', 'err');
     try {
-      setStatus(statusEl, 'Confirm in your wallet…');
-      let t;
-      try {
-        t = await run();
-      } catch (e) {
-        if (isReject(e) || !dry) throw e;
-        setStatus(statusEl, 'Estimating via backup RPC…');
-        const gas = await dry();                       // throws the real revert if it would fail
-        setStatus(statusEl, 'Confirm in your wallet…');
-        t = await run({ gasLimit: (gas * 13n) / 10n }); // manual gas → wallet skips its flaky estimate
+      let overrides = {};
+      if (dry) {
+        setStatus(statusEl, 'Preparing…');
+        try { const gas = await dry(); overrides = { gasLimit: (gas * 13n) / 10n }; }
+        catch (e) { if (isReject(e)) throw e; /* estimate unavailable — let the wallet try */ }
       }
+      setStatus(statusEl, 'Confirm in your wallet…');
+      const t = await run(overrides);
       setStatus(statusEl, 'Submitting… waiting for confirmation');
       await t.wait();
       setStatus(statusEl, okMsg, 'ok');

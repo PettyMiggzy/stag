@@ -33,9 +33,10 @@ window.HOODED = {
     rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
     blockExplorerUrls: ['https://robinhoodchain.blockscout.com'],
   },
-  // Extra FREE read-only RPCs used only as read fallbacks (never handed to the
-  // wallet for sending — Blockscout's JSON-RPC can't broadcast/estimate reliably).
-  readRpcUrls: ['https://robinhoodchain.blockscout.com/api/eth-rpc'],
+  // Extra FREE read-only RPCs used only as read fallbacks. Left empty: the public
+  // RPC + the /api/rpc proxy are both healthy & fast, and Blockscout's JSON-RPC
+  // rate-limits hard (non-standard error bodies) so it's not worth the risk here.
+  readRpcUrls: [],
   tiers: ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'],
   metaBase: 'assets/nft/stagwifhood',
 };
