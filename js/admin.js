@@ -100,7 +100,14 @@
     if (!addr) return toast('Set the contract address in Config first.', 'err');
     const c = new ethers.Contract(addr, abi, signer);
     const ov = valueWei != null ? { value: valueWei } : {};
-    try { await c[method].estimateGas(...args, ov); } catch (e) { return toast('Would revert: ' + pretty(e), 'err'); }
+    // Estimate via the reliable READ RPC, not the wallet — mobile wallets often HANG in their own
+    // eth_estimateGas on this custom chain, so the button appears to "do nothing". Then send with
+    // an explicit gasLimit so the wallet only has to sign.
+    try {
+      const cr = new ethers.Contract(addr, abi, ro());
+      const gas = await cr[method].estimateGas(...args, { ...ov, from: me });
+      ov.gasLimit = (gas * 13n) / 10n;
+    } catch (e) { return toast('Would revert: ' + pretty(e), 'err'); }
     try {
       toast('Confirm in wallet…');
       const tx = await c[method](...args, ov);
@@ -261,12 +268,15 @@
     if (!mint) return toast('Set the mint contract address in Config first.', 'err');
     if (!isOwner) return toast('Connected wallet is not the contract owner.', 'err');
     const c = new ethers.Contract(mint, HOODED_ABI, signer);
+    let ov = {};
     try {
-      await c[method].estimateGas(...args);           // guard
+      const cr = new ethers.Contract(mint, HOODED_ABI, ro());
+      const gas = await cr[method].estimateGas(...args, { from: me }); // guard via reliable RPC
+      ov = { gasLimit: (gas * 13n) / 10n };
     } catch (e) { return toast('Would revert: ' + pretty(e), 'err'); }
     try {
       toast('Confirm in wallet…');
-      const tx = await c[method](...args);
+      const tx = await c[method](...args, ov);
       toast('Submitted — waiting for confirmation…');
       await tx.wait();
       toast(okMsg || 'Done ✓', 'ok');
