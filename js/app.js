@@ -134,6 +134,10 @@
     const eth = await getEip1193(silent);
     if (!eth) return;
     try {
+      // On an EXPLICIT connect, force the wallet's account picker so people can switch which
+      // account/wallet is connected (otherwise eth_requestAccounts silently reuses the last one).
+      // Not all wallets support this (WalletConnect, some in-app browsers) — ignore if unsupported.
+      if (!silent) { try { await eth.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] }); } catch (e) {} }
       // silent = reuse an existing authorization (no popup); bail if not already authorized
       const accs = await eth.request({ method: silent ? 'eth_accounts' : 'eth_requestAccounts' });
       if (silent && (!accs || !accs.length)) return;
@@ -161,6 +165,9 @@
     } catch (e) { if (!silent) flashConnect(pretty(e)); }
   }
   function disconnect() {
+    // Revoke the injected wallet's account permission so the NEXT connect re-prompts the picker
+    // (lets you pick a different account/wallet). Harmless where unsupported.
+    try { const inj = window.ethereum; if (inj && inj.request) inj.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }).catch(() => {}); } catch (e) {}
     signer = null; me = null; provider = null;
     if (wcProvider) { try { wcProvider.disconnect(); } catch {} wcProvider = null; }
     try { localStorage.removeItem('h20_wc'); } catch {}
