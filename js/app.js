@@ -200,12 +200,27 @@
   }
 
   // generic write helper: run tx, confirm, refresh
-  async function tx(run, okMsg, statusEl, after) {
+  const isReject = (e) => /user rejected|user denied|denied|\b4001\b|action[_ ]?rejected/i.test(
+    (e && (e.shortMessage || e.reason || e.info?.error?.message || e.message || String(e.code))) || '');
+  // run(overrides?) => Promise<tx>. Optional dry() => Promise<bigint gas> estimates via the
+  // reliable read RPC (proxy + Blockscout fallbacks) so a flaky wallet-side gas estimate on this
+  // custom chain doesn't kill the button: on estimate failure we re-estimate through the backup
+  // RPC and send with an explicit gasLimit — or surface the *real* revert reason if it truly fails.
+  async function tx(run, okMsg, statusEl, after, dry) {
     if (!signer) return connect();
     if (!(await chainOk())) return setStatus(statusEl, 'Wrong network — switch to Robinhood Chain (4663).', 'err');
     try {
       setStatus(statusEl, 'Confirm in your wallet…');
-      const t = await run();
+      let t;
+      try {
+        t = await run();
+      } catch (e) {
+        if (isReject(e) || !dry) throw e;
+        setStatus(statusEl, 'Estimating via backup RPC…');
+        const gas = await dry();                       // throws the real revert if it would fail
+        setStatus(statusEl, 'Confirm in your wallet…');
+        t = await run({ gasLimit: (gas * 13n) / 10n }); // manual gas → wallet skips its flaky estimate
+      }
       setStatus(statusEl, 'Submitting… waiting for confirmation');
       await t.wait();
       setStatus(statusEl, okMsg, 'ok');
@@ -492,20 +507,24 @@
       const amount = parseTok(s, curTok);
       const erc = new ethers.Contract(curTok.address, ERC20, signer);
       try {
-        if ((await erc.allowance(me, H.staking)) < amount) {
+        // read allowance via the reliable RPC (wallet RPC can stall on this custom chain)
+        const cur = await new ethers.Contract(curTok.address, ERC20, ro()).allowance(me, H.staking);
+        if (cur < amount) {
           setStatus('s-status', `Approve $${curTok.symbol} spending…`);
           await (await erc.approve(H.staking, amount)).wait();
         }
       } catch (e) { return setStatus('s-status', pretty(e), 'err'); }
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.stakeTokens(curTok.address, amount, tier), `Staked ${s} $${curTok.symbol} for ${durations[tier]} days ✓`, 's-status', () => this.load(true));
+      const dry = () => new ethers.Contract(H.staking, STK_ABI, ro()).stakeTokens.estimateGas(curTok.address, amount, tier, { from: me });
+      await tx((ov) => c.stakeTokens(curTok.address, amount, tier, ov || {}), `Staked ${s} $${curTok.symbol} for ${durations[tier]} days ✓`, 's-status', () => this.load(true), dry);
     },
     async unstake() {
       if (!signer) return connect();
-      const staked = await new ethers.Contract(H.staking, STK_ABI, provider || ro()).stakedOf(me, curTok.address);
+      const staked = await new ethers.Contract(H.staking, STK_ABI, ro()).stakedOf(me, curTok.address);
       if (staked === 0n) return setStatus('s-status', `Nothing staked in $${curTok.symbol}.`, 'err');
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.unstakeTokens(curTok.address, staked), `Unstaked $${curTok.symbol} ✓ — split applied if set`, 's-status', () => this.load(true));
+      const dry = () => new ethers.Contract(H.staking, STK_ABI, ro()).unstakeTokens.estimateGas(curTok.address, staked, { from: me });
+      await tx((ov) => c.unstakeTokens(curTok.address, staked, ov || {}), `Unstaked $${curTok.symbol} ✓ — split applied if set`, 's-status', () => this.load(true), dry);
     },
     async claim() { if (!signer) return connect(); const c = new ethers.Contract(H.staking, STK_ABI, signer); await tx(() => c.claim(), 'Rewards claimed ✓', 's-status', () => this.load(true)); },
     async donate() {
@@ -527,12 +546,14 @@
       // lock-in-place: the NFT stays in your wallet (just locked), no transfer/approval needed
       if (!signer) return connect();
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.stakeNFT(id), `Staked NFT #${id} ✓ — it stays in your wallet, just locked.`, 's-status', () => { this.load(true); if (active === 'mint') Mint.load(true); });
+      const dry = () => new ethers.Contract(H.staking, STK_ABI, ro()).stakeNFT.estimateGas(id, { from: me });
+      await tx((ov) => c.stakeNFT(id, ov || {}), `Staked NFT #${id} ✓ — it stays in your wallet, just locked.`, 's-status', () => { this.load(true); if (active === 'mint') Mint.load(true); }, dry);
     },
     async unstakeNFT(id) {
       if (!signer) return connect();
       const c = new ethers.Contract(H.staking, STK_ABI, signer);
-      await tx(() => c.unstakeNFT(id), `Unstaked NFT #${id} ✓`, 's-status', () => { this.load(true); if (active === 'mint') Mint.load(true); });
+      const dry = () => new ethers.Contract(H.staking, STK_ABI, ro()).unstakeNFT.estimateGas(id, { from: me });
+      await tx((ov) => c.unstakeNFT(id, ov || {}), `Unstaked NFT #${id} ✓`, 's-status', () => { this.load(true); if (active === 'mint') Mint.load(true); }, dry);
     },
 
     // ===== WANTED + Sherwood Saints staking (Sherwood Vault) — unified onto this page =====

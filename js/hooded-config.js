@@ -33,6 +33,9 @@ window.HOODED = {
     rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
     blockExplorerUrls: ['https://robinhoodchain.blockscout.com'],
   },
+  // Extra FREE read-only RPCs used only as read fallbacks (never handed to the
+  // wallet for sending — Blockscout's JSON-RPC can't broadcast/estimate reliably).
+  readRpcUrls: ['https://robinhoodchain.blockscout.com/api/eth-rpc'],
   tiers: ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'],
   metaBase: 'assets/nft/stagwifhood',
 };
@@ -50,13 +53,18 @@ window.HOODED = {
 // through the user's wallet. Falls back to a plain public provider if anything is unavailable.
 window.HOODED.readProvider = function () {
   const H = window.HOODED, net = { name: H.chain.chainName, chainId: parseInt(H.chain.chainId, 16) };
-  const pub = new ethers.JsonRpcProvider(H.chain.rpcUrls[0], net, { staticNetwork: true });
+  const mk = (url) => new ethers.JsonRpcProvider(url, net, { staticNetwork: true });
+  const pub = mk(H.chain.rpcUrls[0]);
   try {
     if (typeof location !== 'undefined' && /^https?:/.test(location.protocol)) {
-      const proxy = new ethers.JsonRpcProvider(location.origin + '/api/rpc', net, { staticNetwork: true });
-      return new ethers.FallbackProvider(
-        [{ provider: pub, priority: 1, stallTimeout: 1500, weight: 1 },
-         { provider: proxy, priority: 2, stallTimeout: 3000, weight: 1 }], net, { quorum: 1 });
+      const backends = [
+        { provider: pub, priority: 1, stallTimeout: 1500, weight: 1 },
+        { provider: mk(location.origin + '/api/rpc'), priority: 2, stallTimeout: 3000, weight: 1 },
+      ];
+      // extra free public read fallbacks (e.g. Blockscout JSON-RPC) — reads only
+      (H.readRpcUrls || []).forEach((u, i) =>
+        backends.push({ provider: mk(u), priority: 3 + i, stallTimeout: 4000, weight: 1 }));
+      return new ethers.FallbackProvider(backends, net, { quorum: 1 });
     }
   } catch (e) { /* fall through */ }
   return pub;
