@@ -2,18 +2,19 @@
    STAGWIFHOOD — RPC fallback proxy (Vercel serverless).
 
    The site talks to the FREE public Robinhood Chain RPC directly in the
-   browser. This endpoint is only hit when a public-RPC call fails, so it
-   keeps Alchemy usage (and cost) to a minimum. The paid key lives ONLY in
-   the ALCHEMY_RPC_URL env var — it is never shipped to the browser.
+   browser. This endpoint is only hit when a public-RPC call fails. It uses
+   the SAME free public RPC upstream — NO paid provider — so it can never run
+   up a bill. It still helps: a shared server IP dodges per-user rate limits,
+   and a response cache dedupes bursts of identical reads.
 
-   Cost guards:
+   Guards:
      • read-only method allowlist (can't be used as a write/relay)
      • only forwards to Robinhood Chain (fixed upstream)
      • in-memory response cache (dedupes bursts of identical getLogs)
-     • same-site Origin check (deters other sites from spending our quota)
+     • same-site Origin check (deters other sites from using it)
 
-   Set ALCHEMY_RPC_URL in Vercel → Project → Settings → Environment Variables.
-   If it's unset, this safely falls back to the public RPC.
+   No env var required. (Alchemy was removed — it was billing.) To re-enable a
+   paid upstream later, add PAID_RPC_URL to `upstreams` below.
    ============================================================ */
 'use strict';
 
@@ -69,9 +70,12 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // This endpoint is the BACKUP path (the browser already tried the free public RPC and failed),
-  // so prefer the PAID Alchemy RPC here, then fall back to the public RPC as a last resort.
-  const upstreams = [process.env.ALCHEMY_RPC_URL, PUBLIC_RPC].filter(Boolean);
+  // Backup path (the browser already tried the free public RPC and failed). We use ONLY the
+  // FREE public RPC here — no paid provider — but the proxy still adds value: a server-side
+  // response cache (dedupes getLogs bursts) and a single shared IP that dodges per-user rate
+  // limits. Alchemy is intentionally NOT used (was running up a bill); to re-enable a paid
+  // upstream later, set PAID_RPC_URL and add it to the front of `upstreams`.
+  const upstreams = [PUBLIC_RPC];
   let last = { jsonrpc: '2.0', id, error: { code: -32000, message: 'no upstream' } };
   for (const upstream of upstreams) {
     try {
