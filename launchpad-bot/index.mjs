@@ -11,7 +11,6 @@
 //
 //  No private keys. Read-only. Runs anywhere Node 18+ runs.
 // ============================================================
-import { ethers } from "ethers";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -28,6 +27,21 @@ try {
     if (process.env[m[1]] === undefined) process.env[m[1]] = v;
   }
 } catch { /* rely on real env */ }
+
+// ethers is the only external dependency — if it's missing, say so plainly instead of
+// dumping a module-not-found stack trace.
+let ethers;
+try {
+  ({ ethers } = await import("ethers"));
+} catch {
+  console.error("\n✖ Missing dependency 'ethers'.\n  In the launchpad-bot folder run:  npm install\n  then start the bot again.\n");
+  process.exit(1);
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Reject if a promise (e.g. a hung RPC call) doesn't settle in time, so we can retry instead of freeze.
+const withTimeout = (p, ms, label) => Promise.race([
+  p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timed out after ${ms}ms`)), ms)),
+]);
 
 const E = (k, d = "") => (process.env[k] ?? d).toString().trim();
 
@@ -74,8 +88,14 @@ const usd = (n) => {
   return "$" + n.toPrecision(3);
 };
 
-if (!CFG.token || !CFG.pool) {
-  console.error("FATAL: set TOKEN_ADDRESS and POOL_ADDRESS in launchpad-bot/.env");
+const isAddr = (a) => /^0x[0-9a-fA-F]{40}$/.test(a || "");
+if (!isAddr(CFG.token) || !isAddr(CFG.pool)) {
+  console.error(
+    "\n✖ Missing/invalid config. Create launchpad-bot/.env (copy .env.example) and set:\n" +
+    "    TOKEN_ADDRESS=0x…   (the coin's contract, 42 chars)\n" +
+    "    POOL_ADDRESS=0x…    (its liquidity pool)\n" +
+    `  Got: TOKEN_ADDRESS='${CFG.token || ""}'  POOL_ADDRESS='${CFG.pool || ""}'\n`
+  );
   process.exit(1);
 }
 if (!CFG.tg && !CFG.discord) {
@@ -242,16 +262,28 @@ async function scan(fromBlock, toBlock) {
   }
 }
 
+// Wait for the RPC to answer, retrying with backoff — never crash on a boot-time hiccup.
+async function connectRpc() {
+  for (let attempt = 1; ; attempt++) {
+    try { return await withTimeout(provider.getBlockNumber(), 12000, "RPC getBlockNumber"); }
+    catch (e) {
+      const wait = Math.min(60, 2 ** attempt);
+      log(`RPC not reachable yet (${e.shortMessage || e.code || e.message}); retry in ${wait}s — ${CFG.rpcHttp}`);
+      await sleep(wait * 1000);
+    }
+  }
+}
+
 async function main() {
+  const head = await connectRpc();   // blocks (with retries) until the chain answers
   await loadMeta();
   const st = loadState();
-  const head = await provider.getBlockNumber();
   let last = st.lastBlock || CFG.startBlock || head; // default: start now (don't spam history)
   log(`starting at block ${last} (head ${head}); poll every ${CFG.pollMs}ms`);
 
   async function tick() {
     try {
-      const h = await provider.getBlockNumber();
+      const h = await withTimeout(provider.getBlockNumber(), 12000, "RPC getBlockNumber");
       if (h > last) {
         // scan in chunks of 2000 to be RPC-friendly
         let from = last + 1;
@@ -269,4 +301,8 @@ async function main() {
   tick();
 }
 
-main().catch((e) => { console.error("fatal:", e); process.exit(1); });
+// Don't let a stray async error (a dropped fetch, a bad RPC response) kill the bot — log and keep running.
+process.on("unhandledRejection", (e) => log("unhandledRejection:", e?.message || e));
+process.on("uncaughtException", (e) => log("uncaughtException:", e?.message || e));
+
+main().catch((e) => { log("startup error, retrying in 10s:", e?.message || e); setTimeout(() => main(), 10000); });
