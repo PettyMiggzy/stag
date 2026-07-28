@@ -14,7 +14,7 @@ const { ethers } = require("hardhat");
 const WANTED = process.env.WANTED_ADDR        || "0x35c57109217319Df9feF0499F56b3f6a68d50931";
 const BOUNTY = process.env.WANTED_BOUNTY_ADDR || "0x5b0038579c066447Bc23AD7819D77FbC9cF146da";
 const VAULT  = process.env.WANTED_VAULT       || "0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c";
-const STAG   = "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49";
+const STAG   = "0xcC142366735c882F7885d3c747db99e45E13E453";
 const WEIGHT = process.env.WANTED_VAULT_WEIGHT || (10_000n * 10n ** 18n).toString();
 
 const stagAbi   = ["function transfer(address,uint256) returns (bool)", "function balanceOf(address) view returns (uint256)"];

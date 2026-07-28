@@ -5,7 +5,7 @@ Plain-English answers to the questions everyone asks. Can't find yours? Ask in t
 ## Buying
 
 **Q: I bought $STAG but I don't see it in my wallet.**
-Make sure you're on **Robinhood Chain**, then **import the token** using `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49`. New tokens don't show automatically.
+Make sure you're on **Robinhood Chain**, then **import the token** using `0xcC142366735c882F7885d3c747db99e45E13E453`. New tokens don't show automatically.
 
 **Q: Can I buy with Solana?**
 Yes — but the $STAG lands on Robinhood Chain, which needs a **0x (EVM) address**. So you pay from your Solana wallet and receive on an EVM wallet. Full guide: [Buying with Solana](../buy/from-solana.md).
@@ -52,7 +52,7 @@ You're on the **wrong network** or don't have enough **ETH on Robinhood Chain**.
 - **We will NEVER DM you first.** Not for "support," not for a "bridge link," not for anything.
 - **NEVER share your Secret Recovery Phrase (seed phrase).** No real site or person ever needs it. Anyone asking is stealing your money.
 - **We never ask you to approve "unlimited" token access** on the bridge — the widget scopes approvals for you.
-- **Always verify the $STAG address**: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49`. Fake tokens copy the name.
+- **Always verify the $STAG address**: `0xcC142366735c882F7885d3c747db99e45E13E453`. Fake tokens copy the name.
 - If something feels off, **stop and ask in the official Telegram** before signing anything.
 
 ## Still stuck?

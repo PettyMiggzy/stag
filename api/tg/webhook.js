@@ -60,7 +60,7 @@ module.exports = async (req, res) => {
       if (!isAddr(arg)) {
         await tg(chatId,
           '❌ I need the token\'s <b>contract address</b> after the command.\n\n' +
-          '<b>Like this:</b>\n<code>/watch 0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49</code>  (that\'s $STAG)\n\n' +
+          '<b>Like this:</b>\n<code>/watch 0xcC142366735c882F7885d3c747db99e45E13E453</code>  (that\'s $STAG)\n\n' +
           '<b>Where do I find an address?</b> On the token\'s page in the explorer (' + esc(SITE) + ' → any token), or copy it from the chart site. It always starts with <code>0x</code> and is 42 characters.');
         return ok();
       }

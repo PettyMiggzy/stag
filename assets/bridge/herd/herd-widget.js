@@ -102978,7 +102978,7 @@ const uPu = ({ toChain: e, gasTopUpEnabled: u, onGasTopUpEnabled: t, gasTopUpReq
   blockExplorers: { default: { name: "Blockscout", url: "https://robinhoodchain.blockscout.com" } }
 }, d2e = {
   chainId: 4663,
-  address: "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49",
+  address: "0xcC142366735c882F7885d3c747db99e45E13E453",
   decimals: 18,
   name: "$STAG",
   symbol: "STAG",

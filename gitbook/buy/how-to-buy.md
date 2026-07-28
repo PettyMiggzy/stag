@@ -38,7 +38,7 @@ Turns your coin into **ETH on Robinhood Chain** (useful for gas, so you can then
 Add the token to your wallet so it shows up:
 1. In MetaMask, make sure you're on **Robinhood Chain**.
 2. Tap **Import tokens**.
-3. Paste the $STAG address: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49`
+3. Paste the $STAG address: `0xcC142366735c882F7885d3c747db99e45E13E453`
 4. It'll appear. (The full contract list is [here](../reference/contracts.md).)
 
 ## Paying with Solana? Read this

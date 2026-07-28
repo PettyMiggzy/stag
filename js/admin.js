@@ -16,7 +16,7 @@
     rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
     blockExplorerUrls: ['https://robinhoodchain.blockscout.com'],
   };
-  const STAG = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+  const STAG = '0xcC142366735c882F7885d3c747db99e45E13E453';
   const CHAIN_ID = BigInt(parseInt(CHAIN.chainId, 16)); // 4663
   const WHITELIST_DEFAULT = '0x5db7ca9d2ce3f414b3fd94ec0fcaf9f3ab1a575f';
   const TIERS = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'];
@@ -313,7 +313,7 @@
 
     // ---- Burn $STAG (send to the dead address) ----
     const DEAD = '0x000000000000000000000000000000000000dEaD';
-    const STAGADDR = () => (window.HOODED && window.HOODED.stag) || '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+    const STAGADDR = () => (window.HOODED && window.HOODED.stag) || '0xcC142366735c882F7885d3c747db99e45E13E453';
     const STAG_ABI = ['function transfer(address,uint256) returns (bool)', 'function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
     async function loadBurnStats() {
       try {

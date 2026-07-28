@@ -7,7 +7,7 @@ and I'll flip the site's mint + stake pages live.
 
 | | |
 |---|---|
-| $STAG (18 decimals) | `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49` |
+| $STAG (18 decimals) | `0xcC142366735c882F7885d3c747db99e45E13E453` |
 | Your wallet (owner + dev, gets 40%) | `0xece5d15e567c801c835029a49b2e4067b0eb63aa` |
 | RPC | `https://rpc.mainnet.chain.robinhood.com` |
 | Chain ID | 4663 (0x1237) mainnet · 46630 (0xB626) testnet |
@@ -38,7 +38,7 @@ and I'll flip the site's mint + stake pages live.
 - `royaltyBps`: e.g. `500` (5%)
 
 **2. `StagStaking`** —
-- `_stag`: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49`
+- `_stag`: `0xcC142366735c882F7885d3c747db99e45E13E453`
 - `_hood`: the HoodedTwenty address from step 1
 
 **3. `RevenueSplitter`** —

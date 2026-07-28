@@ -26,7 +26,7 @@ const MAX_FILLS = 8;   // cap per run so one invocation can't run long
 // each reverts on a zero balance, so we swallow those. STAG is the common market pay-token.
 const SWAP = '0xd43d5aa252077d0Cfd2CFdCD13f9B8e85C5C1392';
 const MARKET = '0x6Dfb9800864Bd483Ffe17052B28e9a50EE81B6E7';
-const STAG = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+const STAG = '0xcC142366735c882F7885d3c747db99e45E13E453';
 const SWAP_ABI = ['function forwardFees()'];
 const MARKET_ABI = ['function forwardFees(address token)', 'function forwardFeesEth()'];
 

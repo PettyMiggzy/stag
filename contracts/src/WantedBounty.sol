@@ -22,7 +22,7 @@ contract WantedBounty is Ownable2Step {
     uint256 public constant MAX_ID = 21;             // WANTED token ids are 1..21
     uint256 public constant MIN_CLAIM_WINDOW = 30 days; // holders always get >= 30 days before sweep
 
-    IERC20  public immutable STAG;   // 0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49
+    IERC20  public immutable STAG;   // 0xcC142366735c882F7885d3c747db99e45E13E453
     IERC721 public immutable WANTED; // the WANTED collection NFT
     bool    public locked;           // once locked, bounties can't change
     uint256 public expiry;           // after this, owner may reclaim unclaimed $STAG

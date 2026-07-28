@@ -1,7 +1,7 @@
 {
   "_comment": "Deploy config for The Hooded 20 — Robinhood Chain mainnet 4663. Fund-holding contracts: get a review before deploy.",
   "chain": { "id": 4663, "hex": "0x1237", "rpc": "https://rpc.mainnet.chain.robinhood.com", "explorer": "https://robinhoodchain.blockscout.com" },
-  "stagToken": "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49",
+  "stagToken": "0xcC142366735c882F7885d3c747db99e45E13E453",
 
   "_admin": "0xb6a5059356332a0b222e9d21b1f72f3617d12516",
   "_adminNote": "owner==backend wallet. If set and != deployer, the script transfers ownership of NFT/staking/pact to it and points penaltyRecipient at it. Deploy FROM this key to skip the transfer.",

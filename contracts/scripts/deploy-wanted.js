@@ -13,7 +13,7 @@
 const { ethers } = require("hardhat");
 
 const BASE_URI = process.env.WANTED_BASE_URI || "https://stagwifhood.fun/assets/nft/wanted/metadata/";
-const STAG     = "0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49";
+const STAG     = "0xcC142366735c882F7885d3c747db99e45E13E453";
 const SPLITTER = process.env.WANTED_SPLITTER || "0x101a344172f15ABe969027ea06624305F4a63082"; // SaintsSplitter (60/30/10) — reuse or override
 const VAULT    = process.env.WANTED_VAULT || "0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c";     // SherwoodVault (NFT staking)
 const VAULT_WEIGHT = process.env.WANTED_VAULT_WEIGHT || (10_000n * 10n ** 18n).toString();      // reward weight / staked WANTED (matches Saints)

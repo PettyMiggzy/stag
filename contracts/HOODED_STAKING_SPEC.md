@@ -6,7 +6,7 @@ fund-holding contracts. Chain: Robinhood Chain mainnet 4663 / testnet 46630. **T
 Wallets referenced:
 - Owner / dev: `0xece5…63aa` (existing RevenueSplitter owner)
 - Backend-costs wallet: `0x5db7ca9d2ce3f414b3fd94ec0fcaf9f3ab1a575f`
-- $STAG token: `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49`
+- $STAG token: `0xcC142366735c882F7885d3c747db99e45E13E453`
 
 ---
 

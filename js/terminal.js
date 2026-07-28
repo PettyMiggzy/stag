@@ -105,7 +105,7 @@
      $STAG holder gates — Scanner needs 100k, Trending needs 1m.
      One wallet connect reads the balance; each feature checks its tier.
      ============================================================ */
-  const STAG_ADDR = '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49';
+  const STAG_ADDR = '0xcC142366735c882F7885d3c747db99e45E13E453';
   const STAG_RPC = 'https://rpc.mainnet.chain.robinhood.com';
   const SCAN_GATE = 100000n * (10n ** 18n);   // 100,000 $STAG to use the scanner
   const fmtStagN = (bal) => Number(bal / (10n ** 18n)).toLocaleString();

@@ -79,7 +79,7 @@ You should see `{"ok":true,"result":true,...}`. Now DM your bot `/start` — it 
 ## Test it
 
 1. DM the bot `/start` → you get the help message. ✅
-2. DM `/watch 0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49` (that's $STAG) → "Watching STAG". ✅
+2. DM `/watch 0xcC142366735c882F7885d3c747db99e45E13E453` (that's $STAG) → "Watching STAG". ✅
 3. Post a small order on **stagwifhood.fun/market** → within ~1 min the channel posts it and you get a DM. ✅
 
 ## Troubleshooting

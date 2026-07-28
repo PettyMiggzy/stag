@@ -8,7 +8,7 @@ Everything is on **Robinhood Chain (chain 4663)**. You can paste any of these in
 
 | Contract | Address |
 |---|---|
-| **$STAG token** | `0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49` |
+| **$STAG token** | `0xcC142366735c882F7885d3c747db99e45E13E453` |
 | **Stag Staking** (earn ETH) | `0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF` |
 | **Sherwood Vault** (NFT staking) | `0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c` |
 | **Sherwood Pact** (proof-of-hold) | `0xc36662D2db9432702f018963ABdab19432AA488B` |

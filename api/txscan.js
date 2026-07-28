@@ -29,7 +29,7 @@ const OWN = new Set([
   '0x6dfb9800864bd483ffe17052b28e9a50ee81b6e7', // SherwoodMarket
   '0xd43d5aa252077d0cfd2cfdcd13f9b8e85c5c1392', // SherwoodSwap
   '0x689988a1adb3da7554ba1ffc256904498aaf1f54', // SherwoodOrders
-  '0xcddb2d9838b7edab2f04af4943a6efe42c2f9f49', // $STAG token
+  '0xcC142366735c882F7885d3c747db99e45E13E453', // $STAG token
 ]);
 
 // address_security fields that are a REAL red flag when "1" (skip soft/noisy ones).

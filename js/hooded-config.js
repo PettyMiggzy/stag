@@ -16,7 +16,7 @@ window.HOODED = {
   swap: '0xd43d5aa252077d0Cfd2CFdCD13f9B8e85C5C1392',   // SherwoodSwap (Terminal buy/sell, 1% fee held out-of-band -> forwardFees)
   orders: '0x689988a1adB3Da7554Ba1fFc256904498aaF1F54', // SherwoodOrders (limit/take-profit, 1% -> marketing)
   // ================================================================
-  stag: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49',
+  stag: '0xcC142366735c882F7885d3c747db99e45E13E453',
   // WalletConnect (Reown) project id — enables mobile "connect any wallet" (Trust, Rainbow,
   // Coinbase, MetaMask…) when there's no injected wallet. Get one free at cloud.reown.com.
   walletConnectProjectId: 'a00014837c68f5d7133c3cc329dcfe6d',
@@ -24,7 +24,7 @@ window.HOODED = {
   // whitelisted by default in the contract. Add more here (or from /admin) and the stake tab
   // shows a token picker; the withdraw-split applies to whichever token you unstake.
   stakeTokens: [
-    { address: '0xCDdB2d9838b7eDab2F04aF4943a6EFE42C2f9F49', symbol: 'STAG', decimals: 18 },
+    { address: '0xcC142366735c882F7885d3c747db99e45E13E453', symbol: 'STAG', decimals: 18 },
   ],
   chain: {
     chainId: '0x1237', // 4663 mainnet (testnet 46630 => '0xB626')
