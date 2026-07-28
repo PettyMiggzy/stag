@@ -49,7 +49,7 @@ const CFG = {
   rpcHttp: E("RPC_HTTP", "https://rpc.mainnet.chain.robinhood.com"),
   rpcWs: E("RPC_WS"),
   explorer: E("EXPLORER", "https://robinhoodchain.blockscout.com").replace(/\/$/, ""),
-  launchpad: E("LAUNCHPAD_URL", "https://stagwifhood.fun/launchpad").replace(/\/$/, ""),
+  launchpad: E("LAUNCHPAD_URL", "https://hoodxchange.com/robinhood/token").replace(/\/$/, ""),
   token: E("TOKEN_ADDRESS").toLowerCase(),
   pool: E("POOL_ADDRESS").toLowerCase(),
   weth: E("WETH_ADDRESS").toLowerCase(),          // optional — measures ETH spent
@@ -157,7 +157,7 @@ function buildAlert(b) {
 
   const txUrl = `${CFG.explorer}/tx/${b.tx}`;
   const buyerUrl = `${CFG.explorer}/address/${b.buyer}`;
-  const chartUrl = `${CFG.launchpad}#/token/${CFG.token}`;
+  const chartUrl = `${CFG.launchpad}/${CFG.token}`;   // hoodxchange.com/robinhood/token/<CA> — buy + chart
 
   return {
     emojis,
@@ -176,7 +176,7 @@ async function sendTelegram(a) {
     `🪙 ${fmt(a.tokens, 0)} ${esc(META.symbol)}`,
     `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a>`,
     a.priceUsd ? `📈 ${usd(a.priceUsd)}${a.mcapUsd ? ` · MCap ${usd(a.mcapUsd)}` : ""}` : "",
-    `🔗 <a href="${a.txUrl}">Tx</a> · <a href="${a.chartUrl}">Chart</a>`,
+    `🔗 <a href="${a.txUrl}">Tx</a> · <a href="${a.chartUrl}">Buy</a>`,
   ].filter(Boolean);
   const text = lines.join("\n");
   try {
@@ -218,7 +218,7 @@ async function sendDiscord(a) {
     components: [], // links go in the embed
   };
   // add a plain link line so it's clickable everywhere
-  body.content = `[View tx](${a.txUrl}) · [Chart](${a.chartUrl})`;
+  body.content = `[View tx](${a.txUrl}) · [Buy](${a.chartUrl})`;
   try {
     await fetch(CFG.discord, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   } catch (e) { log("discord send err:", e.message); }

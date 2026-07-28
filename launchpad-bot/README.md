@@ -85,8 +85,8 @@ $ARROW BUY!
 🔗 Tx · Chart
 ```
 
-Emoji count scales with buy size (`EMOJI_STEP_ETH`). The **Chart** link points at
-that coin's page on the launchpad (`/launchpad#/token/<address>`).
+Emoji count scales with buy size (`EMOJI_STEP_ETH`). The **Buy** link points at
+that coin's page on Hood ✕ Change (`hoodxchange.com/robinhood/token/<address>`).
 
 ## Tuning (`.env`)
 
