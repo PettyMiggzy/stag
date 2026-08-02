@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🦌 Stag Cam — STAGWIFHOOD</title>
+<meta name="description" content="Live 24/7 stag & deer cams. The Hooded Ones, unbothered, in the wild. $STAG." />
+<style>
+  :root{ --bg:#08130c; --panel:#0f1d13; --line:#1d3a25; --green:#2fbd57; --neon:#5fe08a; --text:#eafff0; --muted:#8fd6a6; color-scheme:dark; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,sans-serif; background:
+     radial-gradient(1200px 600px at 50% -10%, #123a22 0, transparent 60%), var(--bg); color:var(--text); }
+  .wrap{ max-width:1000px; margin:0 auto; padding:20px 16px 60px; }
+  header{ text-align:center; padding:18px 0 8px; }
+  h1{ margin:0; font-size:clamp(26px,6vw,44px); letter-spacing:1px; }
+  .tag{ color:var(--muted); margin-top:6px; font-size:14px; }
+  .live{ display:inline-flex; align-items:center; gap:6px; background:#3a0f16; color:#ff6b6b; border:1px solid #5a1a22;
+         padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-top:12px; }
+  .dot{ width:8px; height:8px; border-radius:50%; background:#ff4d4d; animation:pulse 1.2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.3} }
+  .player{ position:relative; margin-top:16px; border-radius:16px; overflow:hidden; border:1px solid var(--line);
+           box-shadow:0 16px 50px #0009; aspect-ratio:16/9; background:#000; }
+  .player iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .cams{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:14px; }
+  .cam{ text-align:left; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+        cursor:pointer; color:var(--text); transition:.15s; }
+  .cam:hover{ border-color:var(--green); transform:translateY(-2px); }
+  .cam.active{ border-color:var(--green); box-shadow:0 0 0 1px var(--green) inset; }
+  .cam b{ display:block; font-size:14px; }
+  .cam span{ font-size:11.5px; color:var(--muted); }
+  .note{ margin-top:22px; color:var(--muted); font-size:13px; text-align:center; line-height:1.6; }
+  .note a{ color:var(--neon); }
+  .foot{ margin-top:26px; text-align:center; }
+  .foot a{ color:var(--neon); text-decoration:none; font-weight:600; }
+  .credits{ margin-top:18px; font-size:11.5px; color:#5f8a6f; text-align:center; }
+  .credits a{ color:#7fb894; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🦌 STAG CAM</h1>
+      <div class="tag">The Hooded Ones — live, wild, and unbothered. Touch grass with the herd. 🌲</div>
+      <div class="live"><span class="dot"></span> LIVE 24/7</div>
+    </header>
+
+    <div class="player">
+      <iframe id="feed" src="https://www.youtube.com/embed/QuDA1wHFuIo?autoplay=1&mute=1&rel=0"
+        title="Stag Cam" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    </div>
+
+    <div class="cams" id="cams"></div>
+
+    <div class="note">
+      Streams are run by real wildlife lovers and rotate / go seasonal — if one's offline, tap another. 🦌<br>
+      Watching stags all day is officially a <b>$STAG</b> holder activity now. Stay hooded.
+    </div>
+
+    <div class="foot"><a href="/">← back to stagwifhood.fun</a></div>
+
+    <div class="credits">
+      Live feeds courtesy of their creators —
+      <a href="https://www.youtube.com/@BrownvillesFoodPantryForDeer" target="_blank" rel="noopener">Brownville's Food Pantry For Deer</a>,
+      <a href="https://www.youtube.com/channel/UCPTxD85Hwe7Eq2cWWoGzgkA" target="_blank" rel="noopener">Live Deer Cam by Cajun</a>,
+      and public 24/7 wildlife cams. Not affiliated with STAGWIFHOOD.
+    </div>
+  </div>
+
+<script>
+  // Each cam: either a video id (v) or a channel id (c) for its current live stream.
+  const CAMS = [
+    { name:"Forest Stag Cam", sub:"24/7 · ASMR forest", v:"QuDA1wHFuIo" },
+    { name:"Deer & Wildlife Cam", sub:"24/7 · feeder + birds", v:"oI8R4_UG3Fs" },
+    { name:"Cajun's Deer Cam", sub:"live channel", c:"UCPTxD85Hwe7Eq2cWWoGzgkA" },
+    { name:"Brownville Pantry", sub:"famous · winter season", c:"UCdmPhiIJ-s7MJG2WtM7nbUw" },
+  ];
+  const feed = document.getElementById("feed");
+  const src = (cam) => cam.v
+    ? `https://www.youtube.com/embed/${cam.v}?autoplay=1&mute=1&rel=0`
+    : `https://www.youtube.com/embed/live_stream?channel=${cam.c}&autoplay=1&mute=1`;
+  const box = document.getElementById("cams");
+  CAMS.forEach((cam, i) => {
+    const b = document.createElement("button");
+    b.className = "cam" + (i === 0 ? " active" : "");
+    b.innerHTML = `<b>${cam.name}</b><span>${cam.sub}</span>`;
+    b.onclick = () => {
+      feed.src = src(cam);
+      document.querySelectorAll(".cam").forEach(c => c.classList.remove("active"));
+      b.classList.add("active");
+    };
+    box.appendChild(b);
+  });
+</script>
+</body>
+</html>
