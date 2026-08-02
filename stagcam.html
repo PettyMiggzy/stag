@@ -127,13 +127,9 @@
   const fcap   = document.getElementById("fcap");
   let selected = 0, live = false;
 
-  const embed = (cam) => cam.v
-    ? `https://www.youtube-nocookie.com/embed/${cam.v}?autoplay=1&mute=1&rel=0&playsinline=1`
-    : `https://www.youtube-nocookie.com/embed/live_stream?channel=${cam.c}&autoplay=1&mute=1`;
-  // fast, lightweight poster: real thumb for video cams, branded gradient for channel cams
-  const poster = (cam) => cam.v
-    ? `background-image:url(https://i.ytimg.com/vi/${cam.v}/hqdefault.jpg)`
-    : `background:linear-gradient(135deg,#123a22,#0a1c11)`;
+  const embed = (cam) => `https://www.youtube-nocookie.com/embed/${cam.v}?autoplay=1&mute=1&rel=0&playsinline=1`;
+  // fast, lightweight poster: the stream's own thumbnail
+  const poster = (cam) => `background-image:url(https://i.ytimg.com/vi/${cam.v}/hqdefault.jpg)`;
 
   function showFacade(i){
     const cam = CAMS[i];
