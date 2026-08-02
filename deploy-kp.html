@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>KP deploy</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:system-ui,sans-serif; background:#0a140d; color:#eafff0; }
+  .card { width:min(92vw,440px); background:#0f1c13; border:1px solid #1c3a24; border-radius:18px; padding:26px; text-align:center; box-shadow:0 12px 40px #0008; }
+  h1 { margin:0 0 6px; font-size:20px; }
+  .sub { color:#7fd39a; font-size:13px; margin-bottom:18px; }
+  label { display:block; text-align:left; font-size:12px; color:#9fe6b6; margin:10px 0 4px; }
+  input { width:100%; box-sizing:border-box; padding:11px; border-radius:10px; border:1px solid #2a4d32; background:#0a140d; color:#eafff0; font-size:15px; }
+  button { width:100%; margin-top:16px; padding:14px; border:0; border-radius:12px; cursor:pointer; background:#2fbd57; color:#04120a; font-weight:700; font-size:16px; }
+  button:disabled { opacity:.5; }
+  .msg { margin-top:14px; font-size:13px; color:#9fe6b6; min-height:18px; word-break:break-all; }
+  code { color:#5fe08a; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>👑 Deploy King Petty</h1>
+    <div class="sub">200 edition · signs with YOUR wallet · no key needed</div>
+    <label>Free-mint how many to you?</label>
+    <input id="qty" type="number" min="0" max="200" value="20" />
+    <label>Art URL (baked into metadata)</label>
+    <input id="img" type="text" value="https://stagwifhood.fun/assets/nft/hidden/kp.png" />
+    <button id="go">Connect wallet &amp; deploy</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script src="./kp-artifact.js"></script>
+<script>
+  const RHC = { chainId:"0x1237", chainName:"Robinhood Chain", nativeCurrency:{name:"ETH",symbol:"ETH",decimals:18},
+    rpcUrls:["https://rpc.mainnet.chain.robinhood.com"], blockExplorerUrls:["https://robinhoodchain.blockscout.com"] };
+  const $ = (id)=>document.getElementById(id);
+  const say=(t)=>$("msg").innerHTML=t;
+  $("go").onclick = async () => {
+    try {
+      if (!window.ethereum) return say("Open this page inside a wallet browser (MetaMask/Rabby).");
+      $("go").disabled=true; say("Connecting…");
+      await window.ethereum.request({method:"eth_requestAccounts"});
+      try { await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:RHC.chainId}]}); }
+      catch { await window.ethereum.request({method:"wallet_addEthereumChain",params:[RHC]}); }
+      const provider=new ethers.BrowserProvider(window.ethereum);
+      const signer=await provider.getSigner();
+      const me=await signer.getAddress();
+      const img=$("img").value.trim();
+      say("Deploying… confirm in wallet ("+me.slice(0,6)+"…"+me.slice(-4)+")");
+      const factory=new ethers.ContractFactory(KP_ABI, KP_BYTECODE, signer);
+      const c=await factory.deploy(img);
+      say("Deploying… waiting for confirmation");
+      await c.waitForDeployment();
+      const addr=await c.getAddress();
+      const qty=Math.max(0,Math.min(200,parseInt($("qty").value||"0",10)));
+      if (qty>0){ say("Deployed "+addr.slice(0,8)+"… now minting "+qty+"… confirm."); await (await c.ownerMint(me,qty)).wait(); }
+      say("✅ Done!<br>Contract: <code>"+addr+"</code><br>Minted "+qty+" to you. Save that address — paste it into kp.html. You can send the NFTs from your wallet now.");
+    } catch(e){ say("⚠️ "+(e?.shortMessage||e?.message||e)); }
+    $("go").disabled=false;
+  };
+</script>
+</body>
+</html>
