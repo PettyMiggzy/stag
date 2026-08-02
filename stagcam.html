@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>$STAG Cam — Live Stags · STAGWIFHOOD</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>🦌</text></svg>" />
 <meta name="description" content="$STAG Cam — live 24/7 stag & deer cams. The Hooded Ones, unbothered, in the wild. $STAGWIFHOOD on Robinhood Chain." />
 <!-- speed: warm up the YouTube connections only when needed (players load on tap, not on page load) -->
 <link rel="preconnect" href="https://www.youtube-nocookie.com" />
@@ -83,7 +84,7 @@
     <div class="player" id="player">
       <div class="facade" id="facade">
         <div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-        <div class="fcap" id="fcap">Forest Stag Cam<small>tap to go live · $STAG</small></div>
+        <div class="fcap" id="fcap">Whitetail Forest<small>tap to go live · $STAG</small></div>
       </div>
     </div>
 
@@ -107,19 +108,19 @@
 
     <div class="credits">
       Live feeds courtesy of their creators —
-      <a href="https://www.youtube.com/@BrownvillesFoodPantryForDeer" target="_blank" rel="noopener">Brownville's Food Pantry For Deer</a>,
-      <a href="https://www.youtube.com/channel/UCPTxD85Hwe7Eq2cWWoGzgkA" target="_blank" rel="noopener">Live Deer Cam by Cajun</a>,
-      and public 24/7 wildlife cams. Not affiliated with $STAGWIFHOOD.
+      <a href="https://www.youtube.com/@DeerStreamsLive" target="_blank" rel="noopener">Deer Streams</a>,
+      Fernwood Hills, Forest Nook, and public 24/7 wildlife cams. Not affiliated with $STAGWIFHOOD.
     </div>
   </div>
 
 <script>
   // v = video id (has a real thumbnail) · c = channel id (current live stream)
   const CAMS = [
-    { name:"Forest Stag Cam",   sub:"24/7 · ASMR forest",   v:"QuDA1wHFuIo" },
-    { name:"Deer & Wildlife Cam",sub:"24/7 · feeder + birds",v:"oI8R4_UG3Fs" },
-    { name:"Cajun's Deer Cam",  sub:"live channel",         c:"UCPTxD85Hwe7Eq2cWWoGzgkA" },
-    { name:"Brownville Pantry", sub:"famous · winter",      c:"UCdmPhiIJ-s7MJG2WtM7nbUw" },
+    { name:"Whitetail Forest",   sub:"24/7 · Canadian forest", v:"S2QW4iTA5g4" },
+    { name:"Deer & Wildlife Cam",sub:"live · feeder + birds",  v:"oI8R4_UG3Fs" },
+    { name:"Fernwood Hills",     sub:"24/7 · Ontario feeder",  v:"Wa4aWpsi2pQ" },
+    { name:"Forest Nook",        sub:"24/7 · roe deer + birds", v:"KVE-Z8qwcMg" },
+    { name:"Forest Ambience",    sub:"deer · calm forest",     v:"QuDA1wHFuIo" },
   ];
   const player = document.getElementById("player");
   const facade = document.getElementById("facade");
