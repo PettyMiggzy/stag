@@ -13,6 +13,7 @@ const { ethers } = require("hardhat");
 
 const IMG = process.env.KP_IMAGE || "https://stagwifhood.fun/assets/nft/hidden/kp.png";
 const QTY = parseInt(process.env.KP_MINT || "20", 10);
+const DEFAULT_TO = "0x51260cc90bf184a7d1c67151d178405333e4bc17"; // your wallet — free mints go here
 
 async function main() {
   const [d] = await ethers.getSigners();
@@ -24,7 +25,7 @@ async function main() {
   console.log("KingPetty deployed:", addr);
   console.log("art:", IMG);
 
-  const to = process.env.KP_TO || d.address;
+  const to = process.env.KP_TO || DEFAULT_TO || d.address;
   if (QTY > 0) {
     await (await kp.ownerMint(to, QTY)).wait();
     console.log(`✅ free-minted ${QTY} → ${to}   (total ${await kp.totalMinted()}/200)`);
