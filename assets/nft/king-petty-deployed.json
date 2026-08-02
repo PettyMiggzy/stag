@@ -7,7 +7,8 @@
   "owner": "0x51260Cc90bF184A7D1C67151d178405333e4bC17",
   "maxSupply": 200,
   "mintedAtDeploy": 20,
-  "art": "https://stagwifhood.fun/assets/nft/hidden/kp.png",
+  "art": "ipfs://bafybeieqdf5tbgpihqar7ni6ehdsuquehv4cx5ewyrijyk7xb5yryzvixa",
   "explorer": "https://robinhoodchain.blockscout.com/token/0xE9cE3119dAa292b4fC3503E1196aBC8adBdfffc9",
-  "note": "1/1-style hidden edition. Metadata fully on-chain; art at unlisted path. Mint page: kp.html"
+  "note": "1/1-style hidden edition. Metadata fully on-chain; art at unlisted path. Mint page: kp.html",
+  "artGateway": "https://gateway.pinata.cloud/ipfs/bafybeieqdf5tbgpihqar7ni6ehdsuquehv4cx5ewyrijyk7xb5yryzvixa"
 }
