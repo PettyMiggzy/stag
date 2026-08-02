@@ -1,0 +1,21 @@
+{
+  "name": "King Petty — FU Hater",
+  "description": "One of one. King Petty rides through the neon Sherwood in a vine-wrapped emerald hypercar, bow slung, hood up, middle finger raised to every orc and hater in the rearview. The stolen hood of Robin Hood, worn like a crown. FU Hater. $STAGWIFHOOD.",
+  "image": "https://stagwifhood.fun/assets/nft/king-petty.png",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    { "trait_type": "Rarity", "value": "1 of 1" },
+    { "trait_type": "Character", "value": "King Petty" },
+    { "trait_type": "Hood", "value": "Robin Hood Cap + Feather" },
+    { "trait_type": "Weapon", "value": "Compound Bow + Arrows" },
+    { "trait_type": "Ride", "value": "Vine-Wrapped Emerald Hypercar" },
+    { "trait_type": "Plate", "value": "KING PETTY" },
+    { "trait_type": "Gesture", "value": "FU Hater" },
+    { "trait_type": "Background", "value": "Cyberpunk Sherwood" },
+    { "trait_type": "Scene", "value": "Orcs & Haters in Pursuit" },
+    { "trait_type": "Eyes", "value": "Emerald Glow" },
+    { "trait_type": "Aura", "value": "Neon Green" },
+    { "trait_type": "Collection", "value": "The Hooded 20 — 1/1s" },
+    { "trait_type": "Chain", "value": "Robinhood Chain" }
+  ]
+}
