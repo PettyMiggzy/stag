@@ -1,0 +1,53 @@
+{
+  "name": "Kid & Walt Show #5 \u2014 Ringmaster Kid",
+  "description": "Legendary of The Greatest Show on Earth Crypto \u2014 the Kid & Walt Show collection on Robinhood Chain, built on the HoodXchange launchpad. Lock-in-place stakeable in StagStaking: rarer pieces carry a bigger real-yield boost (this one: +40%). Antlers of the herd, hosts of the show.",
+  "image": "https://stagwifhood.fun/assets/nft/kidwalt/img/5.jpg",
+  "attributes": [
+    {
+      "trait_type": "Host",
+      "value": "Kid"
+    },
+    {
+      "trait_type": "Pose",
+      "value": "Showman Welcome"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Magenta"
+    },
+    {
+      "trait_type": "World",
+      "value": "Aurora Forest"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    },
+    {
+      "trait_type": "Staking Boost",
+      "value": "+40%"
+    },
+    {
+      "trait_type": "Show",
+      "value": "The Greatest Show on Earth"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Kid & Walt Show"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain (4663)"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 2
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Score",
+      "value": 332.0
+    }
+  ]
+}
