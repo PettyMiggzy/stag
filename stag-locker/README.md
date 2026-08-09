@@ -11,8 +11,8 @@ Remaining: deploy + Blockscout verify, then branding/handoff. See "Self-audit" a
 ---
 
 ## Why it exists
-- NOXA Fun already locks its *own* LP permanently. **Every other project** on Robinhood Chain
-  (custom launches, team/vesting tokens, non-NOXA LPs) has no trusted locker.
+- Most launchpads only lock their *own* LP. **Every other project** on Robinhood Chain
+  (custom launches, team/vesting tokens, other LPs) has no trusted locker.
 - Locking builds buyer trust → more projects launch on the chain → more volume.
 - Revenue: a flat ETH **creation fee** per lock (set by admin, can be 0).
 
