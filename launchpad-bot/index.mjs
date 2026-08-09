@@ -1,5 +1,5 @@
 // ============================================================
-//  HOOD ✕ CHANGE — buy bot (Robinhood Chain / EVM, chainId 4663)
+//  $STAG — buy bot (Robinhood Chain / EVM, chainId 4663)
 //  ------------------------------------------------------------
 //  Watches a token's liquidity pool for BUYS and posts an alert
 //  to Telegram and/or Discord. A "buy" = the token leaving the
@@ -49,7 +49,7 @@ const CFG = {
   rpcHttp: E("RPC_HTTP", "https://rpc.mainnet.chain.robinhood.com"),
   rpcWs: E("RPC_WS"),
   explorer: E("EXPLORER", "https://robinhoodchain.blockscout.com").replace(/\/$/, ""),
-  launchpad: E("LAUNCHPAD_URL", "https://hoodxchange.com/robinhood/token").replace(/\/$/, ""),
+  launchpad: E("LAUNCHPAD_URL", "https://robinhoodchain.blockscout.com/token").replace(/\/$/, ""),
   token: E("TOKEN_ADDRESS").toLowerCase(),
   pool: E("POOL_ADDRESS").toLowerCase(),
   weth: E("WETH_ADDRESS").toLowerCase(),          // optional — measures ETH spent
@@ -157,7 +157,7 @@ function buildAlert(b) {
 
   const txUrl = `${CFG.explorer}/tx/${b.tx}`;
   const buyerUrl = `${CFG.explorer}/address/${b.buyer}`;
-  const chartUrl = `${CFG.launchpad}/${CFG.token}`;   // hoodxchange.com/robinhood/token/<CA> — buy + chart
+  const chartUrl = `${CFG.launchpad}/${CFG.token}`;   // robinhoodchain.blockscout.com/token/<CA> — buy + chart
 
   return {
     emojis,
@@ -209,11 +209,11 @@ async function sendDiscord(a) {
     description: a.emojis,
     color: 0x7db38f,
     fields,
-    footer: { text: "HOOD ✕ CHANGE · Robinhood Chain" },
+    footer: { text: "$STAG · Robinhood Chain" },
   };
   if (CFG.mediaUrl) embed.thumbnail = { url: CFG.mediaUrl };
   const body = {
-    username: "HOOD ✕ CHANGE",
+    username: "$STAG",
     embeds: [embed],
     components: [], // links go in the embed
   };

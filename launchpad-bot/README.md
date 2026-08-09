@@ -1,4 +1,4 @@
-# HOOD ✕ CHANGE — Buy Bot
+# $STAG — Buy Bot
 
 Real-time **buy alerts** for a token on **Robinhood Chain** (EVM, chainId 4663).
 Watches the token's liquidity pool and posts every buy to **Telegram**, **Discord**,
@@ -86,7 +86,7 @@ $ARROW BUY!
 ```
 
 Emoji count scales with buy size (`EMOJI_STEP_ETH`). The **Buy** link points at
-that coin's page on Hood ✕ Change (`hoodxchange.com/robinhood/token/<address>`).
+that coin's page on $STAG (`robinhoodchain.blockscout.com/token/<address>`).
 
 ## Tuning (`.env`)
 
