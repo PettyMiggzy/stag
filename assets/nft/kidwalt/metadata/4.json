@@ -1,0 +1,53 @@
+{
+  "name": "Kid & Walt Show #4 \u2014 Sherwood Kid",
+  "description": "Epic of The Greatest Show on Earth Crypto \u2014 the Kid & Walt Show collection on Robinhood Chain, built on the HoodXchange launchpad. Lock-in-place stakeable in StagStaking: rarer pieces carry a bigger real-yield boost (this one: +30%). Antlers of the herd, hosts of the show.",
+  "image": "https://stagwifhood.fun/assets/nft/kidwalt/img/4.jpg",
+  "attributes": [
+    {
+      "trait_type": "Host",
+      "value": "Kid"
+    },
+    {
+      "trait_type": "Pose",
+      "value": "Energy Archer"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Neon Green"
+    },
+    {
+      "trait_type": "World",
+      "value": "Matrix Grove"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "trait_type": "Staking Boost",
+      "value": "+30%"
+    },
+    {
+      "trait_type": "Show",
+      "value": "The Greatest Show on Earth"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Kid & Walt Show"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain (4663)"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 4
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Score",
+      "value": 224.5
+    }
+  ]
+}

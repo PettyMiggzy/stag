@@ -31,6 +31,23 @@
     window.addEventListener('resize', () => { if (window.innerWidth > 960) setOpen(false); });
   })();
 
+  /* ---- "More" dropdown: click-toggle (touch/desktop) + highlight current page ---- */
+  (function () {
+    const more = nav && nav.querySelector('.nav-more');
+    if (more) {
+      const btn = more.querySelector('.nav-more-btn');
+      const set = (o) => { more.classList.toggle('open', o); btn && btn.setAttribute('aria-expanded', o ? 'true' : 'false'); };
+      btn && btn.addEventListener('click', (e) => { e.stopPropagation(); set(!more.classList.contains('open')); });
+      document.addEventListener('click', (e) => { if (!more.contains(e.target)) set(false); });
+    }
+    // mark the link for the page we're on
+    const here = location.pathname.replace(/\/+$/, '') || '/';
+    nav && nav.querySelectorAll('.nav-links a[href^="/"]').forEach((a) => {
+      const p = a.getAttribute('href').split('#')[0].replace(/\/+$/, '');
+      if (p && p === here) a.classList.add('active');
+    });
+  })();
+
   /* ---- reveal on scroll ---- */
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => {

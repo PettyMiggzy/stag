@@ -1,0 +1,53 @@
+{
+  "name": "Kid & Walt Show #9 \u2014 Blue Chip Walt",
+  "description": "Rare of The Greatest Show on Earth Crypto \u2014 the Kid & Walt Show collection on Robinhood Chain, built on the HoodXchange launchpad. Lock-in-place stakeable in StagStaking: rarer pieces carry a bigger real-yield boost (this one: +20%). Antlers of the herd, hosts of the show.",
+  "image": "https://stagwifhood.fun/assets/nft/kidwalt/img/9.jpg",
+  "attributes": [
+    {
+      "trait_type": "Host",
+      "value": "Walt"
+    },
+    {
+      "trait_type": "Pose",
+      "value": "Coin Reveal"
+    },
+    {
+      "trait_type": "Antlers",
+      "value": "Ice Blue"
+    },
+    {
+      "trait_type": "World",
+      "value": "Candlestick Canyon"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Staking Boost",
+      "value": "+20%"
+    },
+    {
+      "trait_type": "Show",
+      "value": "The Greatest Show on Earth"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "Kid & Walt Show"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain (4663)"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Rank",
+      "value": 7
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Rarity Score",
+      "value": 117.0
+    }
+  ]
+}

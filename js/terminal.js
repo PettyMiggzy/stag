@@ -263,7 +263,7 @@
 
     const img = (pair.info || {}).imageUrl; if (img) { const lg = $('t-logo'); if (lg) lg.src = img; }
     if (chart && pair.pairAddress) {
-      chart.src = 'https://dexscreener.com/robinhood/' + pair.pairAddress + '?embed=1&theme=dark&info=0&trades=0';
+      chart.src = 'https://www.geckoterminal.com/robinhood/pools/' + pair.pairAddress + '?embed=1&info=0&swaps=0&grayscale=0&light_chart=0&chart_type=price&resolution=15m';
       if (chartPanel) chartPanel.hidden = false;
     }
     const pc = pair.priceChange || {};
@@ -284,7 +284,7 @@
       const ic = s.type === 'twitter' ? '𝕏 X' : s.type === 'telegram' ? '✈️ Telegram' : s.type === 'reddit' ? '👽 Reddit' : '🔗 Link';
       links.push([ic, s.url]);
     });
-    if (pair.pairAddress) links.push(['📊 DexScreener', 'https://dexscreener.com/robinhood/' + pair.pairAddress]);
+    if (pair.pairAddress) { links.push(['📈 GeckoTerminal', 'https://www.geckoterminal.com/robinhood/pools/' + pair.pairAddress]); links.push(['📊 DexScreener', 'https://dexscreener.com/robinhood/' + pair.pairAddress]); }
     if (socials) socials.innerHTML = links.map(([l, u]) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(l) + '</a>').join('');
   }
 

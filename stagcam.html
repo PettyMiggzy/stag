@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>$STAG Cam — Live Stags · STAGWIFHOOD</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>🦌</text></svg>" />
+<meta name="description" content="$STAG Cam — live 24/7 stag & deer cams. The Hooded Ones, unbothered, in the wild. $STAGWIFHOOD on Robinhood Chain." />
+<!-- speed: warm up the YouTube connections only when needed (players load on tap, not on page load) -->
+<link rel="preconnect" href="https://www.youtube-nocookie.com" />
+<link rel="preconnect" href="https://i.ytimg.com" />
+<link rel="dns-prefetch" href="https://www.google.com" />
+<style>
+  :root{ --bg:#08130c; --panel:#0f1d13; --line:#1d3a25; --green:#2fbd57; --neon:#5fe08a; --gold:#e9c86a; --text:#eafff0; --muted:#8fd6a6; color-scheme:dark; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+        background:radial-gradient(1200px 600px at 50% -10%, #123a22 0, transparent 60%), var(--bg); color:var(--text); }
+  .wrap{ max-width:1000px; margin:0 auto; padding:14px 16px 60px; }
+
+  /* $STAG brand bar */
+  .brand{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; }
+  .logo{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.5px; }
+  .logo .tick{ color:var(--gold); }
+  .logo .h{ font-size:18px; }
+  .buy{ background:var(--green); color:#04120a; font-weight:800; text-decoration:none; padding:9px 16px; border-radius:999px; font-size:14px; white-space:nowrap; }
+  .buy:hover{ filter:brightness(1.08); }
+
+  header{ text-align:center; padding:10px 0 6px; }
+  h1{ margin:0; font-size:clamp(26px,6.5vw,46px); letter-spacing:1px; }
+  h1 .tick{ color:var(--gold); }
+  .tag{ color:var(--muted); margin-top:6px; font-size:14px; }
+  .live{ display:inline-flex; align-items:center; gap:6px; background:#3a0f16; color:#ff6b6b; border:1px solid #5a1a22;
+         padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-top:10px; }
+  .dot{ width:8px; height:8px; border-radius:50%; background:#ff4d4d; animation:pulse 1.2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .player{ position:relative; margin-top:14px; border-radius:16px; overflow:hidden; border:1px solid var(--line);
+           box-shadow:0 16px 50px #0009; aspect-ratio:16/9; background:#04120a; }
+  .player iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  /* lite facade — just an image + play button until tapped (fast) */
+  .facade{ position:absolute; inset:0; cursor:pointer; background-size:cover; background-position:center;
+           display:flex; align-items:center; justify-content:center; }
+  .facade::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg,#0000 30%,#08130ccc); }
+  .play{ position:relative; z-index:2; width:74px; height:74px; border-radius:50%; background:var(--green);
+         display:grid; place-items:center; box-shadow:0 6px 24px #000a; transition:.15s; }
+  .facade:hover .play{ transform:scale(1.08); }
+  .play svg{ width:30px; height:30px; margin-left:4px; fill:#04120a; }
+  .fcap{ position:absolute; z-index:2; bottom:12px; left:14px; font-weight:800; font-size:15px; text-shadow:0 2px 8px #000; }
+  .fcap small{ display:block; font-weight:500; color:var(--muted); font-size:12px; }
+
+  .cams{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:14px; }
+  .cam{ text-align:left; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+        cursor:pointer; color:var(--text); transition:.15s; }
+  .cam:hover{ border-color:var(--green); transform:translateY(-2px); }
+  .cam.active{ border-color:var(--green); box-shadow:0 0 0 1px var(--green) inset; }
+  .cam b{ display:block; font-size:14px; }
+  .cam span{ font-size:11.5px; color:var(--muted); }
+
+  .ca{ margin:20px auto 0; max-width:560px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+       padding:12px 14px; display:flex; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .ca code{ color:var(--neon); font-size:12.5px; word-break:break-all; }
+  .ca button{ background:#12281a; color:var(--neon); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
+  .note{ margin-top:20px; color:var(--muted); font-size:13px; text-align:center; line-height:1.6; }
+  .note b{ color:var(--gold); }
+  .foot{ margin-top:22px; text-align:center; display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+  .foot a{ color:var(--neon); text-decoration:none; font-weight:600; font-size:14px; }
+  .credits{ margin-top:18px; font-size:11.5px; color:#5f8a6f; text-align:center; }
+  .credits a{ color:#7fb894; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo"><span class="h">🦌 <span class="tick">$STAG</span>WIFHOOD</span></div>
+      <a class="buy" href="https://hoodxchange.com/robinhood/token/0xcC142366735c882F7885d3c747db99e45E13E453" target="_blank" rel="noopener">⚡ Buy $STAG</a>
+    </div>
+
+    <header>
+      <h1><span class="tick">$STAG</span> CAM</h1>
+      <div class="tag">The Hooded Ones — live, wild, and unbothered. Touch grass with the herd. 🌲</div>
+      <div class="live"><span class="dot"></span> LIVE 24/7</div>
+    </header>
+
+    <div class="player" id="player">
+      <div class="facade" id="facade">
+        <div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+        <div class="fcap" id="fcap">Whitetail Forest<small>tap to go live · $STAG</small></div>
+      </div>
+    </div>
+
+    <div class="cams" id="cams"></div>
+
+    <div class="ca">
+      <span style="color:var(--muted);font-size:12px">$STAG CA</span>
+      <code id="ca">0xcC142366735c882F7885d3c747db99e45E13E453</code>
+      <button onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('ca').textContent).then(()=>{this.textContent='✓ Copied'})">Copy</button>
+    </div>
+
+    <div class="note">
+      Watching stags all day is officially a <b>$STAG</b> holder activity. Streams rotate / go seasonal — if one's offline, tap another. Stay hooded. 🦌
+    </div>
+
+    <div class="foot">
+      <a href="https://hoodxchange.com/robinhood/token/0xcC142366735c882F7885d3c747db99e45E13E453" target="_blank" rel="noopener">⚡ Buy</a>
+      <a href="https://dexscreener.com/robinhoodchain/0x201b25906859a5d53fb19aa50974f5e124541d0a" target="_blank" rel="noopener">📊 Chart</a>
+      <a href="/">🏠 stagwifhood.fun</a>
+    </div>
+
+    <div class="credits">
+      Live feeds courtesy of their creators —
+      <a href="https://www.youtube.com/@DeerStreamsLive" target="_blank" rel="noopener">Deer Streams</a>,
+      Fernwood Hills, Forest Nook, and public 24/7 wildlife cams. Not affiliated with $STAGWIFHOOD.
+    </div>
+  </div>
+
+<script>
+  // v = video id (has a real thumbnail) · c = channel id (current live stream)
+  const CAMS = [
+    { name:"Whitetail Forest",   sub:"24/7 · Canadian forest", v:"S2QW4iTA5g4" },
+    { name:"Deer & Wildlife Cam",sub:"live · feeder + birds",  v:"oI8R4_UG3Fs" },
+    { name:"Fernwood Hills",     sub:"24/7 · Ontario feeder",  v:"Wa4aWpsi2pQ" },
+    { name:"Forest Nook",        sub:"24/7 · roe deer + birds", v:"KVE-Z8qwcMg" },
+    { name:"Forest Ambience",    sub:"deer · calm forest",     v:"QuDA1wHFuIo" },
+  ];
+  const player = document.getElementById("player");
+  const facade = document.getElementById("facade");
+  const fcap   = document.getElementById("fcap");
+  let selected = 0, live = false;
+
+  const embed = (cam) => `https://www.youtube-nocookie.com/embed/${cam.v}?autoplay=1&mute=1&rel=0&playsinline=1`;
+  // fast, lightweight poster: the stream's own thumbnail
+  const poster = (cam) => `background-image:url(https://i.ytimg.com/vi/${cam.v}/hqdefault.jpg)`;
+
+  function showFacade(i){
+    const cam = CAMS[i];
+    facade.style.cssText = poster(cam);
+    fcap.innerHTML = `${cam.name}<small>tap to go live · $STAG</small>`;
+  }
+  function goLive(i){
+    live = true; selected = i;
+    player.innerHTML = `<iframe src="${embed(CAMS[i])}" title="$STAG Cam" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  }
+  facade.onclick = () => goLive(selected);
+
+  const box = document.getElementById("cams");
+  CAMS.forEach((cam, i) => {
+    const b = document.createElement("button");
+    b.className = "cam" + (i === 0 ? " active" : "");
+    b.innerHTML = `<b>${cam.name}</b><span>${cam.sub}</span>`;
+    b.onclick = () => {
+      selected = i;
+      document.querySelectorAll(".cam").forEach(c => c.classList.remove("active"));
+      b.classList.add("active");
+      if (live) goLive(i); else showFacade(i);   // before first play: just swap the poster (still fast)
+    };
+    box.appendChild(b);
+  });
+  showFacade(0);
+</script>
+</body>
+</html>
