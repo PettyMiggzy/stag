@@ -2,7 +2,7 @@
  *
  *   RH_RPC_URL=... DEPLOYER_KEY=0x... npx hardhat run scripts/deploy-kidwalt.js --network rhmainnet
  *
- * Kid & Walt Show is a 10-piece partner drop for the HoodXchange launchpad. It gets its OWN staking
+ * Kid & Walt Show is a 10-piece $STAG partner drop. It gets its OWN staking
  * instance + splitter because StagStaking.hood is IMMUTABLE (the deployed Hooded 20 staker can't take
  * a second NFT). Wiring order resolves the splitter <-> staking <-> NFT cycle, then per-token reward
  * boosts are set from the contract's rarity map so a staked Mythic out-earns a staked Common.

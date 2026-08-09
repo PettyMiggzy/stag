@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /*  Kid & Walt Show — "The Greatest Show on Earth Crypto" NFT collection (Robinhood Chain)
  *
- *  10-piece premium drop for the HoodXchange launchpad's partner show. Same battle-tested engine
+ *  10-piece premium drop — a $STAG partner show. Same battle-tested engine
  *  as The Hooded 20: tiered PICK + rarity-WEIGHTED GAMBLE mint, ERC-5192 lock-in-place staking,
  *  ERC-2981 royalties, proceeds routed to the RevenueSplitter (90% pool / 10% owner).
  *
