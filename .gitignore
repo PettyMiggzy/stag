@@ -42,3 +42,6 @@ growth/
 
 # HoodX splash video (intentional)
 !hx-art/promo.mp4
+
+# DBTS comic panels (small, intentional)
+!assets/dbts/panels/*.mp4
