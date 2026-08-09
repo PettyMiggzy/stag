@@ -1,7 +1,7 @@
 <title>DBTS: The Saga</title>
 <style>
 :root{
-  --ground:#07090a; --panel:#0c100b; --ink:#ece7d6; --muted:#8a9285; --green:#9ef31e;
+  --ground:#07090a; --ink:#ece7d6; --muted:#8a9285; --green:#9ef31e;
   --green-dim:#4a6b12; --red:#e23b2f; --cap:#f2e9c0;
   --disp:"Arial Black","Archivo Black",Impact,"Franklin Gothic Bold",sans-serif;
   --mono:ui-monospace,"SFMono-Regular",Menlo,"Courier New",monospace;
@@ -12,32 +12,34 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--mono);
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:20;
   background:radial-gradient(circle at 50% 42%,transparent 58%,rgba(0,0,0,.5) 100%),
     radial-gradient(rgba(158,243,30,.045) 1px,transparent 1.4px);
-  background-size:100% 100%,4px 4px;opacity:.55;mix-blend-mode:screen}
+  background-size:100% 100%,4px 4px;opacity:.5;mix-blend-mode:screen}
 .wrap{max-width:1080px;margin:0 auto;padding:0 16px 80px}
 header.top{text-align:center;padding:44px 10px 8px}
-.kick{font-family:var(--mono);color:var(--green);letter-spacing:.34em;text-transform:uppercase;font-size:.7rem;margin:0 0 12px}
+.kick{color:var(--green);letter-spacing:.34em;text-transform:uppercase;font-size:.7rem;margin:0 0 12px}
 h1{font-family:var(--disp);text-transform:uppercase;margin:0;font-size:clamp(2.2rem,8vw,4.4rem);line-height:.9;
   letter-spacing:-.01em;text-wrap:balance;text-shadow:3px 3px 0 var(--red),0 0 34px rgba(158,243,30,.32)}
 h1 .g{color:var(--green)}
 .tag{font-family:var(--disp);color:var(--green);text-transform:uppercase;letter-spacing:.05em;
   font-size:clamp(.9rem,2.4vw,1.15rem);margin:14px 0 0}
-.lede{font-family:var(--mono);color:var(--muted);max-width:60ch;margin:16px auto 0;font-size:.95rem}
+.lede{color:var(--muted);max-width:60ch;margin:16px auto 0;font-size:.95rem}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:34px}
 @media(max-width:640px){.grid{grid-template-columns:1fr}}
 .panel{position:relative;margin:0;aspect-ratio:1/1;overflow:hidden;background:#000;
   border:5px solid #000;box-shadow:0 0 0 2px rgba(158,243,30,.28),0 18px 40px rgba(0,0,0,.7)}
-.bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.05) contrast(1.05)}
-.panel::before{content:"";position:absolute;inset:0;z-index:1;
-  background:linear-gradient(to bottom,rgba(0,0,0,.35) 0%,transparent 26%,transparent 55%,rgba(0,0,0,.72) 100%)}
-.char{position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:82%;width:auto;z-index:2;
-  filter:drop-shadow(0 14px 16px rgba(0,0,0,.7))}
-.pno{position:absolute;top:8px;left:10px;z-index:3;font-family:var(--disp);font-size:1.5rem;
-  color:transparent;-webkit-text-stroke:1.4px var(--green);opacity:.85}
-.cap{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;
-  font-family:var(--mono);font-size:.82rem;line-height:1.4;color:#20240f;
-  background:var(--cap);border:2px solid #000;border-radius:2px;padding:8px 11px;
+.scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.pno{position:absolute;top:8px;left:11px;z-index:5;font-family:var(--disp);font-size:1.5rem;
+  color:transparent;-webkit-text-stroke:1.4px var(--green);opacity:.9}
+.bubble{position:absolute;top:6%;z-index:4;max-width:60%;background:#fbfbf5;color:#141414;
+  border:3px solid #000;border-radius:16px;padding:6px 13px;font-family:var(--disp);font-size:.82rem;
+  line-height:1.15;box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+.bubble.l{left:6%} .bubble.r{right:6%;text-align:right}
+.bubble::after{content:"";position:absolute;bottom:-13px;border:8px solid transparent;border-top-color:#000}
+.bubble.l::after{left:22px} .bubble.r::after{right:22px}
+.bubble::before{content:"";position:absolute;bottom:-9px;z-index:1;border:6px solid transparent;border-top-color:#fbfbf5}
+.bubble.l::before{left:24px} .bubble.r::before{right:24px}
+.cap{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;font-size:.8rem;line-height:1.4;
+  color:#20240f;background:var(--cap);border:2px solid #000;border-radius:2px;padding:8px 11px;
   box-shadow:3px 3px 0 rgba(0,0,0,.55)}
-/* closer */
 .closer{margin-top:30px;text-align:center;border:5px solid #000;padding:34px 20px;
   background:linear-gradient(180deg,#0e140c,#0a0d09);
   box-shadow:0 0 0 2px var(--green),0 20px 50px rgba(0,0,0,.7),0 0 70px rgba(158,243,30,.16)}
@@ -45,10 +47,10 @@ h1 .g{color:var(--green)}
   line-height:.95;text-shadow:3px 3px 0 var(--red)}
 .closer h2 .g{color:var(--green)}
 .badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px;
-  font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}
+  font-size:.7rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}
 .badges span{border:1px solid var(--green-dim);padding:7px 12px;border-radius:2px}
 .badges .hot{color:var(--green);border-color:var(--green)}
-.disc{font-family:var(--mono);color:#5f665b;font-size:.68rem;margin:22px auto 0;max-width:64ch;letter-spacing:.04em}
+.disc{color:#5f665b;font-size:.68rem;margin:22px auto 0;max-width:64ch;letter-spacing:.04em}
 .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
@@ -62,51 +64,51 @@ h1 .g{color:var(--green)}
 </header>
 <div class="grid">
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_buy.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/buyhigh.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_1.mp4" autoplay loop muted playsinline></video>
   <span class="pno">1</span>
+  <span class="bubble l">IT ONLY GOES UP!</span>
   <figcaption class="cap">It started with a green candle and a very bad idea. He aped the top. All of it.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_crash.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/explode.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_2.mp4" autoplay loop muted playsinline></video>
   <span class="pno">2</span>
+  <span class="bubble r">…it went down.</span>
   <figcaption class="cap">By lunch the bag was gone. Minus ninety-nine percent. No team, no utility, no future.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_broke.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/broke.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_3.mp4" autoplay loop muted playsinline></video>
   <span class="pno">3</span>
+  <span class="bubble l">still bullish tho</span>
   <figcaption class="cap">Pockets inside-out, rent overdue, dignity liquidated. And yet… he did not learn.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_dev.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/trustme.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_4.mp4" autoplay loop muted playsinline></video>
   <span class="pno">4</span>
+  <span class="bubble r">he seems legit</span>
   <figcaption class="cap">He begged the dev for answers. The dev, sweating, had exactly one.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_early.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/early.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_5.mp4" autoplay loop muted playsinline></video>
   <span class="pno">5</span>
+  <span class="bubble l">any minute now…</span>
   <figcaption class="cap">So he waited. Seasons turned. Cobwebs grew. He never sold. “Still early,” he rasped.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_stage.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/bonded.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_6.mp4" autoplay loop muted playsinline></video>
   <span class="pno">6</span>
+  <span class="bubble r">WE MADE IT?!</span>
   <figcaption class="cap">Then — against God, math, and good taste — the coin BONDED on the Robinhood Chain.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_junk.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/lambo.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_7.mp4" autoplay loop muted playsinline></video>
   <span class="pno">7</span>
+  <span class="bubble l">vroom vroom</span>
   <figcaption class="cap">“Wen lambo?” they sneered. He revved his lambo. It had a child seat and a bad wheel.</figcaption>
 </figure>
 <figure class="panel reveal">
-  <img class="bgimg" src="assets/dbts/bg/bg_club.jpg" alt="">
-  <video class="char" src="assets/dbts/clips/twerk.webm" autoplay loop muted playsinline></video>
+  <video class="scene" src="assets/dbts/panels/panel_8.mp4" autoplay loop muted playsinline></video>
   <span class="pno">8</span>
+  <span class="bubble r">NO REGRETS</span>
   <figcaption class="cap">And there, in the neon, he made peace with the shit. He shakes what the market gave him: nothing.</figcaption>
 </figure>
 </div>
