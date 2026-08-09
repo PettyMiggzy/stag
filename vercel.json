@@ -2,6 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/bridge",
+      "destination": "https://swap.hoodxchange.com/",
+      "permanent": false
+    },
+    {
+      "source": "/bridge.html",
+      "destination": "https://swap.hoodxchange.com/",
+      "permanent": false
+    }
+  ],
   "git": {
     "deploymentEnabled": {
       "claude/stand-by-7577p0": false
@@ -11,12 +23,21 @@
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     }
   ],
   "crons": [
-    { "path": "/api/market/poll", "schedule": "* * * * *" },
-    { "path": "/api/orders/keep", "schedule": "* * * * *" }
+    {
+      "path": "/api/market/poll",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/orders/keep",
+      "schedule": "* * * * *"
+    }
   ]
 }
