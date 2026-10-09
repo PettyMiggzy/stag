@@ -66,6 +66,11 @@ nav a:hover{color:var(--bone)}
 .run.stag{--h:clamp(170px,21vw,270px);bottom:calc(var(--h)*-.15)}.sp{height:100%;width:calc(var(--h)*var(--ar));background:var(--spr) 0 0/auto 100% no-repeat;animation:play var(--dur) steps(var(--n)) infinite}
 .run.crew{--h:clamp(88px,11.6vw,144px);bottom:calc(var(--h)*-.07);--ar:.81364;--n:29;--dur:2.42s;--spr:url(a/crew-sprite.webp)}
 .run.stag{--ar:.8625;--n:33;--dur:2.75s;--spr:url(a/stag-sprite.webp)}
+
+/* halloween crew (October, or ?halloween=1) */
+.chase.hw .run.crew:nth-child(1){--spr:url(a/hw-pumpkin.webp);--ar:.76818;--n:30;--dur:2.5s}
+.chase.hw .run.crew:nth-child(2){--spr:url(a/hw-scarecrow.webp);--ar:.80455;--n:33;--dur:2.75s}
+.chase.hw .run.crew:nth-child(3){--spr:url(a/hw-skeleton.webp);--ar:.81364;--n:30;--dur:2.5s}
 @keyframes play{to{background-position-x:calc(var(--h)*var(--ar)*var(--n)*-1)}}
 @keyframes across{from{transform:translateX(-520px)}to{transform:translateX(calc(100vw + 160px))}}
 @media(prefers-reduced-motion:reduce){.run{animation:none;left:60%}.run.crew{left:30%}.sp{animation:none}}
@@ -355,6 +360,9 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
   $('#crews').addEventListener('click',function(e){if(e.target.closest('a'))return;var c=e.target.closest('.crew-card');if(c){pinned=pinned===c.dataset.k?null:c.dataset.k;apply(pinned)}});
   $('#crews').addEventListener('mouseover',function(e){var c=e.target.closest('.crew-card');if(c)apply(c.dataset.k)});$('#crews').addEventListener('mouseleave',function(){apply(pinned)});
 
+
+  // halloween costumes for the chasing crew
+  (function(){var q=location.search,on=/halloween=1/.test(q)||(new Date().getMonth()===9&&!/halloween=0/.test(q));var c=document.querySelector('.chase');if(c&&on){c.classList.add('hw');var e=document.querySelector('.hero .mono.plot');if(e)e.textContent=e.textContent+' · Halloween crew'}})();
   // animated header: green sparks and tiny stags drifting up the scene
   var cv=$('#fx');if(cv&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var cx=cv.getContext('2d'),P=[],W0=0,H0=0,t0=0;
     function rs(){var r=cv.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);W0=r.width;H0=r.height;cv.width=W0*d;cv.height=H0*d;cx.setTransform(d,0,0,d,0,0)}
