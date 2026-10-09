@@ -1,6 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR: the community token of Junk Junkies Texas, four real junk removal crews with one stag."><title>STAGR</title><link rel="icon" href="a/icon.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
 /* Layout concept: a territory survey. The Texas stag logo is the mark; four crews are four claimed territories on a plotted map of their real cities. Black ground, the logos' neon green for what is live, white for type. */
 :root{
@@ -84,7 +85,6 @@ nav a:hover{color:var(--bone)}
 .pop{position:absolute;pointer-events:none;font-family:var(--display);font-weight:900;font-size:1.7rem;color:var(--neon);text-shadow:0 0 10px rgba(57,255,20,.8);animation:pop .9s ease-out forwards}
 @keyframes pop{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-70px)}}
 .gmap{border-top:1px solid var(--line);background:var(--pine)}
-.gmap svg{display:block;width:100%;height:auto}
 .gtabs{display:flex;border-bottom:1px solid var(--line)}
 .gtabs button{all:unset;cursor:pointer;flex:1;text-align:center;padding:13px 6px;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid transparent}
 .gtabs button[aria-selected=true]{color:var(--neon);border-color:var(--neon)}
@@ -123,6 +123,30 @@ nav a:hover{color:var(--bone)}
 @keyframes across{from{transform:translateX(-320px)}to{transform:translateX(calc(100vw + 120px))}}
 }
 
+/* real maps (same street + satellite tiles as the Junk Junkies Texas sites) */
+.rmap{width:100%;background:#0b110e}
+#map.rmap{height:clamp(380px,56vw,600px)}#gMapEl.rmap{height:clamp(300px,70vw,400px)}
+.leaflet-container{font-family:var(--body);background:#0b110e}
+.t-street{filter:invert(.92) hue-rotate(180deg) saturate(.8) brightness(.95)}
+.leaflet-control-layers,.leaflet-bar a,.leaflet-control-attribution{background:#111a15!important;color:var(--bone)!important;border-color:var(--line)!important}
+.leaflet-control-attribution a{color:var(--mute)!important}
+.leaflet-bar a:hover{background:#1a2a21!important}
+.mk{position:relative;width:26px;height:26px;display:grid;place-items:center}
+.mk i{display:block;width:18px;height:18px;border-radius:50%;background:var(--c);border:2.5px solid #070a08;box-shadow:0 0 0 2px var(--c),0 0 14px 4px var(--c);transition:opacity .2s}
+.mk.sq i{border-radius:3px}.mk.di i{border-radius:3px;transform:rotate(45deg)}.mk.tr i{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);width:22px;height:20px;border:0;box-shadow:none;filter:drop-shadow(0 0 6px var(--c))}
+.mk.dim{opacity:.2}
+.mk.lock i{background:#0b110e;box-shadow:none;border:2px dashed #7d8f84}
+.mk.next i{background:rgba(57,255,20,.15);border:2.5px solid #39ff14;box-shadow:0 0 16px 4px rgba(57,255,20,.7);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.35)}}
+.mk.own::after{content:"";position:absolute;inset:-6px;border-radius:50%;background:var(--c);opacity:.18}
+.lbl{background:rgba(7,10,8,.78)!important;border:1px solid var(--line)!important;color:var(--bone)!important;box-shadow:none!important;font-size:12px;padding:2px 6px!important;border-radius:6px!important}
+.lbl::before{display:none!important}
+.lbl.lk{display:none}
+@media(max-width:600px){#map .lbl{display:none}}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#111a15;color:var(--bone)}
+.leaflet-popup-content{margin:10px 14px;font-size:.88rem;line-height:1.4}
+.leaflet-popup-content b{font-family:var(--display);font-size:1.2rem;text-transform:uppercase}
+
 .belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
 .belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
 .belt img{height:92px;width:92px;object-fit:contain;display:block}
@@ -138,8 +162,7 @@ section{padding-block:clamp(52px,8vw,110px)}
 
 /* territories */
 .terr{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:22px;align-items:start}
-.mapbox{border:1px solid var(--line);border-radius:12px;background:var(--pine);overflow-x:auto}
-#map svg{display:block;min-width:700px;width:100%;height:auto}
+.mapbox{border:1px solid var(--line);border-radius:12px;background:var(--pine);overflow:hidden}
 .crews{display:grid;gap:12px}
 .crew-card{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--cc);border-radius:10px;background:var(--panel);padding:12px 14px;transition:border-color .2s,background .2s}
 .crew-card:hover,.crew-card:focus-visible,.crew-card[aria-pressed=true]{border-color:var(--cc);filter:brightness(1.15)}
@@ -220,10 +243,10 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
 <section id="territories">
   <div class="head"><div><div class="mono plot">Territories</div><h2>Four crews. <em>Sixteen cities.</em></h2></div></div>
   <div class="terr">
-    <div class="mapbox"><div id="map"></div><div class="legend" id="legend"></div></div>
+    <div class="mapbox"><div id="map" class="rmap" role="region" aria-label="Map of the sixteen cities served by the four Texas crews"></div><div class="legend" id="legend"></div></div>
     <div class="crews" id="crews"></div>
   </div>
-  <p class="note" style="margin-top:14px">Each mark is a city the crew serves. Tap a crew to light up its territory. The map is plotted from real city coordinates, not a street map.</p>
+  <p class="note" style="margin-top:14px">Each mark is a city the crew serves. Tap a crew to light up its territory. Switch between the street and satellite views at the top right of the map.</p>
 </section>
 
 <section id="game">
@@ -235,7 +258,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
       <div class="gstats"><div class="cash"><span class="mono">Cash</span><b id="gCash">0</b></div><div><span class="mono">Per second</span><b id="gPs">0</b></div><div><span class="mono">Territories</span><b id="gTer">1/16</b></div></div>
       <div class="tapzone"><button class="tap" id="gTap" aria-label="Haul: tap the stag to earn cash"><img src="a/logo-hq.webp" alt="" width="220" height="220"></button></div>
       <div class="tapnote">Tap the stag to haul. <span id="gTapv">+1</span> per tap.</div>
-      <div class="gmap"><div id="gMap"></div></div>
+      <div class="gmap"><div id="gMapEl" class="rmap" role="region" aria-label="Map of the 16 Texas territories"></div></div>
     </div>
     <div class="gcard">
       <div class="gtabs" role="tablist" aria-label="Game menu"><button role="tab" id="tabT" aria-selected="true" data-t="ter">Territories</button><button role="tab" id="tabC" aria-selected="false" data-t="crew">Crews</button><button role="tab" id="tabP" aria-selected="false" data-t="prem">STAGR perks</button></div>
@@ -316,19 +339,19 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
   $('#crews').innerHTML=CREWS.map(function(c){var cs=CITIES[c.k].cities.map(function(x){return x.n}).join(', ');return '<button class="crew-card" style="--cc:'+c.cc+';--bn:url('+c.bn+')" data-k="'+c.k+'" aria-pressed="false"><img src="'+c.logo+'" alt="" width="76" height="76" loading="lazy"><span><b>'+(c.hq?'Spring · HQ':c.name)+'</b><span>'+cs+'</span><a class="go" href="'+c.url+'" target="_blank" rel="noopener">Visit the '+c.name+' site ↗</a></span></button>'}).join('');
   function glyph(sh,col,x,y,r){return sh==='circle'?'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+col+'"':sh==='square'?'<rect x="'+(x-r)+'" y="'+(y-r)+'" width="'+2*r+'" height="'+2*r+'" fill="'+col+'"':sh==='diamond'?'<path d="M'+x+' '+(y-r-2)+'L'+(x+r+2)+' '+y+'L'+x+' '+(y+r+2)+'L'+(x-r-2)+' '+y+'Z" fill="'+col+'"':'<path d="M'+x+' '+(y-r-1)+'L'+(x+r+2)+' '+(y+r)+'L'+(x-r-2)+' '+(y+r)+'Z" fill="'+col+'"'}
   $('#legend').innerHTML=CREWS.map(function(c){return '<span><svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:-2px;margin-right:6px" aria-hidden="true">'+glyph(c.shape,c.hex,7,7,5)+'/></svg>'+c.name+'</span>'}).join('');
-  // plotted map
+  // real map: same street + satellite tiles as the Junk Junkies Texas sites
   var all=[];CREWS.forEach(function(c){CITIES[c.k].cities.forEach(function(x){all.push({c:c,n:x.n,lat:x.lat,lon:x.lon})})});
-  var lats=all.map(function(p){return p.lat}),lons=all.map(function(p){return p.lon});
-  var minLat=Math.min.apply(null,lats),maxLat=Math.max.apply(null,lats),minLon=Math.min.apply(null,lons),maxLon=Math.max.apply(null,lons);
-  var W=900,H=760,PAD=72,k=Math.cos(30.2*Math.PI/180),s=Math.min((W-2*PAD)/((maxLon-minLon)*k),(H-2*PAD)/(maxLat-minLat));
-  var ox=(W-(maxLon-minLon)*k*s)/2,oy=(H-(maxLat-minLat)*s)/2;
-  function X(lon){return ox+(lon-minLon)*k*s}function Y(lat){return oy+(maxLat-lat)*s}
-  var N={'Spring':[12,20,'start'],'Klein':[-12,18,'end'],'The Woodlands':[12,-8,'start'],'Humble':[0,24,'middle'],'Tomball':[-12,22,'end'],'Magnolia':[-12,-6,'end'],'Pinehurst':[-12,-2,'end'],'Montgomery':[12,4,'start'],'Cypress':[-12,18,'end'],'Jersey Village':[12,18,'start'],'Hockley':[-12,4,'end'],'Katy':[-12,4,'end'],'College Station':[12,16,'start'],'Bryan':[12,-4,'start'],'Navasota':[12,4,'start'],'Caldwell':[12,4,'start']};
-  var g='';for(var i=0;i<=9;i++){var gx=20+i*(W-40)/9;g+='<line x1="'+gx+'" x2="'+gx+'" y1="20" y2="'+(H-20)+'" stroke="#1f2e25"/>'}for(var j=0;j<=5;j++){var gy=20+j*(H-40)/5;g+='<line y1="'+gy+'" y2="'+gy+'" x1="20" x2="'+(W-20)+'" stroke="#1f2e25"/>'}
-  var d='';all.forEach(function(p){var x=X(p.lon),y=Y(p.lat),n=N[p.n]||[12,4,'start'];
-    d+='<g data-k="'+p.c.k+'" class="m-g"><title>'+p.n+', '+p.c.name+' crew</title>'+glyph(p.c.shape,p.c.hex,x,y,8)+' stroke="#070a08" stroke-width="2.5"/><text x="'+(x+n[0])+'" y="'+(y+n[1])+'" text-anchor="'+n[2]+'" fill="#f3f2ec" font-size="14" font-family="Figtree,system-ui,sans-serif" paint-order="stroke" stroke="#0c120f" stroke-width="3">'+p.n+'</text></g>'});
-  $('#map').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Plot of the sixteen cities served by the four Texas crews">'+g+'<text x="'+(W-26)+'" y="'+(H-28)+'" text-anchor="end" fill="#a3b2a9" font-size="11" font-family="IBM Plex Mono,monospace" letter-spacing="2">NORTH UP · PLOTTED FROM CITY COORDINATES</text>'+d+'</svg>';
-  var pinned=null;function apply(k){document.querySelectorAll('.m-g').forEach(function(g){g.classList.toggle('dim',!!k&&g.dataset.k!==k)});document.querySelectorAll('.crew-card').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.k===k))})}
+  var SH={circle:'',square:' sq',diamond:' di',triangle:' tr'};
+  var tmap=window.L.map('map',{scrollWheelZoom:false,dragging:!window.L.Browser.mobile,tap:false,zoomSnap:.25}),mks=[];
+  var street=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,className:'t-street',attribution:'Tiles &copy; Esri'}).addTo(tmap);
+  var sat=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles &copy; Esri'});
+  window.L.control.layers({'Street':street,'Satellite':sat},null,{collapsed:false,position:'topright'}).addTo(tmap);
+  all.forEach(function(p){var m=window.L.marker([p.lat,p.lon],{icon:window.L.divIcon({className:'',html:'<div class="mk'+SH[p.c.shape]+'" data-k="'+p.c.k+'" style="--c:'+p.c.hex+'"><i></i></div>',iconSize:[26,26],iconAnchor:[13,13]}),title:p.n+', '+p.c.name+' crew',keyboard:true}).addTo(tmap);
+    m.bindTooltip(p.n,{permanent:true,direction:'auto',offset:[10,0],className:'lbl'});
+    m.bindPopup('<b>'+p.n+'</b><br>'+p.c.name+' crew<br><a href="'+p.c.url+'" target="_blank" rel="noopener" style="color:#39ff14">Visit the '+p.c.name+' site ↗</a>');mks.push(m)});
+  tmap.fitBounds(window.L.latLngBounds(all.map(function(p){return [p.lat,p.lon]})),{padding:[46,46]});
+  window.__tmap=tmap;
+  var pinned=null;function apply(k){document.querySelectorAll('#map .mk').forEach(function(g){g.classList.toggle('dim',!!k&&g.dataset.k!==k)});document.querySelectorAll('.crew-card').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.k===k))})}
   $('#crews').addEventListener('click',function(e){if(e.target.closest('a'))return;var c=e.target.closest('.crew-card');if(c){pinned=pinned===c.dataset.k?null:c.dataset.k;apply(pinned)}});
   $('#crews').addEventListener('mouseover',function(e){var c=e.target.closest('.crew-card');if(c)apply(c.dataset.k)});$('#crews').addEventListener('mouseleave',function(){apply(pinned)});
 
@@ -375,19 +398,23 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
   // ---- offline earnings (capped at 8 hours)
   var away=Math.min((Date.now()-(st.t||Date.now()))/1000,8*3600);
   if(away>60&&st.own>0){var gain=ps()*away;st.cash+=gain;st.total+=gain;var w=$('#gwelcome');w.hidden=false;w.textContent='While you were away, your crews hauled '+fmt(gain)+' cash.'}
-  // ---- map
-  var lats=L.map(function(p){return p.lat}),lons=L.map(function(p){return p.lon});
-  var minLat=Math.min.apply(null,lats),maxLat=Math.max.apply(null,lats),minLon=Math.min.apply(null,lons),maxLon=Math.max.apply(null,lons);
-  var W=900,H=700,PAD=60,kk=Math.cos(30.2*Math.PI/180),sc=Math.min((W-2*PAD)/((maxLon-minLon)*kk),(H-2*PAD)/(maxLat-minLat));
-  var ox=(W-(maxLon-minLon)*kk*sc)/2,oy=(H-(maxLat-minLat)*sc)/2;
-  function X(lon){return ox+(lon-minLon)*kk*sc}function Y(lat){return oy+(maxLat-lat)*sc}
-  function drawMap(){var g='';for(var i=0;i<=9;i++){var gx=20+i*(W-40)/9;g+='<line x1="'+gx+'" x2="'+gx+'" y1="20" y2="'+(H-20)+'" stroke="#16231b"/>'}for(var j=0;j<=5;j++){var gy=20+j*(H-40)/5;g+='<line y1="'+gy+'" y2="'+gy+'" x1="20" x2="'+(W-20)+'" stroke="#16231b"/>'}
-    var d='';L.forEach(function(p){var x=X(p.lon),y=Y(p.lat),col=CREW[p.crew].c,own=p.i<st.own,next=p.i===st.own;
-      d+='<g><title>'+p.n+(own?' (claimed)':next?' (next)':' (locked)')+'</title>';
-      if(own)d+='<circle cx="'+x+'" cy="'+y+'" r="22" fill="'+col+'" opacity=".18"/><circle cx="'+x+'" cy="'+y+'" r="9" fill="'+col+'" stroke="#070a08" stroke-width="2.5"/>';
-      else d+='<circle cx="'+x+'" cy="'+y+'" r="8" fill="none" stroke="'+(next?'#39ff14':'#4a5a50')+'" stroke-width="2" '+(next?'':'stroke-dasharray="3 3"')+'>'+(next?'<animate attributeName="r" values="8;15;8" dur="1.6s" repeatCount="indefinite"/>':'')+'</circle>';
-      var le=x>W-130;d+='<text x="'+(le?x-14:x+14)+'" y="'+(y+5)+'" text-anchor="'+(le?'end':'start')+'" fill="'+(own?'#f3f2ec':'#7d8f84')+'" font-size="15" font-family="Figtree,system-ui,sans-serif" paint-order="stroke" stroke="#0c120f" stroke-width="3">'+p.n+'</text></g>'});
-    $('#gMap').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Map: '+st.own+' of 16 Texas territories claimed">'+g+d+'</svg>'}
+  // ---- map (real tiles, markers show claimed / next / locked)
+  var gmap=window.L.map('gMapEl',{scrollWheelZoom:false,dragging:!window.L.Browser.mobile,tap:false,zoomSnap:.25}),gmk=[];
+  var gstreet=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,className:'t-street',attribution:'Tiles &copy; Esri'}).addTo(gmap);
+  var gsat=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles &copy; Esri'});
+  window.L.control.layers({'Street':gstreet,'Satellite':gsat},null,{collapsed:true,position:'topright'}).addTo(gmap);
+  gmap.fitBounds(window.L.latLngBounds(L.map(function(p){return [p.lat,p.lon]})),{padding:[34,34]});
+  L.forEach(function(p){var m=window.L.marker([p.lat,p.lon],{keyboard:true,icon:window.L.divIcon({className:'',html:'',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(gmap);
+    m.bindTooltip(p.n,{permanent:true,direction:'auto',offset:[10,0],className:'lbl'});gmk.push(m);
+    m.on('click',function(){var own=p.i<st.own,next=p.i===st.own;
+      if(next){if(st.cash>=p.cost){claimNext()}else{m.bindPopup('<b>'+p.n+'</b><br>Claim cost: '+fmt(p.cost)+' cash.<br>You have '+fmt(st.cash)+'.').openPopup()}}
+      else m.bindPopup('<b>'+p.n+'</b><br>'+(own?'Claimed. Earns '+fmt(p.inc*mult(p.crew))+'/s.':'Locked. Claim '+L[p.i-1].n+' first.')).openPopup()})});
+  function drawMap(){L.forEach(function(p,i){var own=p.i<st.own,next=p.i===st.own,m=gmk[i],c=CREW[p.crew].c;
+    m.setIcon(window.L.divIcon({className:'',html:'<div class="mk '+(own?'own':next?'next':'lock')+'" style="--c:'+c+'"><i></i></div>',iconSize:[26,26],iconAnchor:[13,13]}));
+    var t=m.getTooltip();if(t&&t.getElement()){t.getElement().classList.toggle('lk',!own&&!next)}
+    m.options.title=p.n+(own?' (claimed)':next?' (next, tap to claim)':' (locked)')});}
+  setTimeout(function(){gmap.invalidateSize()},300);
+  window.__gmap=gmap;
   // ---- lists
   var tab='ter';
   function row(icon,name,desc,btn){return '<div class="gitem'+(btn.lock?' glock':'')+'">'+icon+'<div><b>'+name+'</b><small>'+desc+'</small></div>'+btn.h+'</div>'}
@@ -411,11 +438,12 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
   function stats(){$('#gCash').textContent=fmt(st.cash);$('#gPs').textContent=fmt(ps());$('#gTer').textContent=st.own+'/16';$('#gTapv').textContent='+'+fmt(tapv())}
   function redraw(){stats();drawMap();drawList()}
   // ---- actions
+  function claimNext(){var p=L[st.own];if(p&&st.cash>=p.cost){st.cash-=p.cost;st.own++;redraw();save()}}
   $('#gTap').addEventListener('click',function(e){var v=tapv();st.cash+=v;st.total+=v;stats();
     var z=$('.tapzone'),r=z.getBoundingClientRect(),p=document.createElement('span');p.className='pop';p.textContent='+'+fmt(v);
     p.style.left=((e.clientX||r.left+r.width/2)-r.left-14)+'px';p.style.top=((e.clientY||r.top+r.height/2)-r.top-30)+'px';z.appendChild(p);setTimeout(function(){p.remove()},900);afford()});
   $('#gList').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.getAttribute('aria-disabled')==='true')return;
-    if(b.dataset.claim){var p=L[st.own];if(p&&st.cash>=p.cost){st.cash-=p.cost;st.own++;redraw();save()}}
+    if(b.dataset.claim){claimNext()}
     else if(b.dataset.gl){var c=cost(15,1.45,st.gl);if(st.cash>=c){st.cash-=c;st.gl++;redraw();save()}}
     else if(b.dataset.up){var a=b.dataset.up.split(':'),u=CU.filter(function(x){return x.id===a[1]})[0],lv=st.lv[a[0]][a[1]],c2=cost(u.base,u.g,lv);if(st.cash>=c2){st.cash-=c2;st.lv[a[0]][a[1]]++;redraw();save()}}});
   document.querySelector('.gtabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;tab=b.dataset.t;document.querySelectorAll('.gtabs button').forEach(function(x){x.setAttribute('aria-selected',String(x===b))});drawList()});
