@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR: the community token of Junk Junkies Texas, four real junk removal crews with one stag."><title>STAGR</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR: the community token of Junk Junkies Texas, four real junk removal crews with one stag."><title>STAGR</title><link rel="icon" href="a/icon.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -24,7 +24,7 @@ p{margin:0;max-width:62ch}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin-inline:calc(-1*clamp(16px,4vw,48px));padding:10px clamp(16px,4vw,48px);background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .bar{max-width:1180px;margin-inline:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-.brand img{width:36px;height:36px;border-radius:8px}
+.brand img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(57,255,20,.5))}
 .brand b{font-family:var(--display);font-size:1.8rem;font-weight:900;letter-spacing:.06em}
 nav{display:flex;gap:22px}
 nav a{font-size:.92rem;color:var(--mute);text-decoration:none}
@@ -74,6 +74,45 @@ nav a:hover{color:var(--bone)}
 @keyframes bob{50%{transform:translateY(-6%)}}
 @keyframes leap{0%,100%{transform:translateY(0) rotate(-2deg)}45%{transform:translateY(-34%) rotate(5deg)}}
 @media(prefers-reduced-motion:reduce){.run{animation:none;left:60%}.run.crew{left:30%}.run .bob,.run .f1,.run .f2{animation:none}.run .f2{display:none}}
+
+/* game */
+#game .gwrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
+.gcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.gstats{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+.gstats div{padding:12px 14px;border-right:1px solid var(--line)}.gstats div:last-child{border:0}
+.gstats b{display:block;font-family:var(--display);font-size:clamp(1.4rem,3.2vw,2rem);line-height:1;color:var(--bone)}
+.gstats .cash b{color:var(--neon)}
+.tapzone{position:relative;display:grid;place-items:center;padding:20px 10px 8px;background:radial-gradient(circle at 50% 50%,rgba(57,255,20,.14),transparent 62%)}
+.tap{all:unset;cursor:pointer;display:block;width:clamp(150px,30vw,220px);border-radius:50%;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .08s}
+.tap img{display:block;width:100%;height:auto;filter:drop-shadow(0 0 26px rgba(57,255,20,.55));pointer-events:none;user-select:none}
+.tap:active{transform:scale(.93)}.tap:focus-visible{outline:2px solid var(--neon);outline-offset:6px}
+.tapnote{color:var(--mute);font-size:.84rem;margin:4px 0 14px;text-align:center}
+.pop{position:absolute;pointer-events:none;font-family:var(--display);font-weight:900;font-size:1.7rem;color:var(--neon);text-shadow:0 0 10px rgba(57,255,20,.8);animation:pop .9s ease-out forwards}
+@keyframes pop{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-70px)}}
+.gmap{border-top:1px solid var(--line);background:var(--pine)}
+.gmap svg{display:block;width:100%;height:auto}
+.gtabs{display:flex;border-bottom:1px solid var(--line)}
+.gtabs button{all:unset;cursor:pointer;flex:1;text-align:center;padding:13px 6px;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid transparent}
+.gtabs button[aria-selected=true]{color:var(--neon);border-color:var(--neon)}
+.gtabs button:focus-visible{outline:2px solid var(--neon);outline-offset:-3px}
+.glist{display:grid;gap:1px;background:var(--line);max-height:520px;overflow:auto}
+.gitem{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;background:var(--panel)}
+.gitem img{width:44px;height:44px;object-fit:contain;background:#000;border-radius:8px}
+.gitem .ic{width:44px;height:44px;border-radius:8px;background:#0b130e;display:grid;place-items:center;color:var(--neon);font-family:var(--display);font-size:1.4rem;border:1px solid var(--line)}
+.gitem b{display:block;font-family:var(--display);font-size:1.25rem;text-transform:uppercase;line-height:1.05}
+.gitem small{display:block;color:var(--mute);font-size:.82rem;line-height:1.35}
+.gbuy{all:unset;cursor:pointer;box-sizing:border-box;min-width:92px;text-align:center;padding:8px 10px;border-radius:6px;background:var(--neon);color:#031207;font-weight:700;font-size:.86rem;line-height:1.2}
+.gbuy small{color:#0b3a14;font-weight:600}
+.gbuy[disabled],.gbuy[aria-disabled=true]{background:#1a2a21;color:#7d8f84;cursor:not-allowed}
+.gbuy[aria-disabled=true] small{color:#7d8f84}
+.gbuy:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+.glock{opacity:.78}.glock .gbuy{background:transparent;border:1px dashed #3b5646;color:var(--mute)}
+.gsec{padding:10px 14px;background:#0d1511;font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.gfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;padding:12px 14px;border-top:1px solid var(--line);color:var(--mute);font-size:.8rem}
+.gfoot button{all:unset;cursor:pointer;text-decoration:underline}
+.gwelcome{margin-bottom:14px;border:1px solid var(--neon);border-radius:10px;padding:10px 14px;background:rgba(57,255,20,.07);font-size:.92rem}
+@media(max-width:900px){#game .gwrap{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.pop{animation:none;opacity:0}}
 
 .belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
 .belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
@@ -142,7 +181,7 @@ footer p{max-width:90ch}
 footer .links{display:flex;flex-wrap:wrap;gap:16px}
 </style>
 
-</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="https://junkmp.vercel.app" target="_blank" rel="noopener">Marketplace ↗</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
+</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/logo-hq.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#game">Play</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="https://junkmp.vercel.app" target="_blank" rel="noopener">Marketplace ↗</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
 
 <main id="top">
   <div class="hero">
@@ -159,9 +198,9 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
       <div class="mono plot">$STAGR · Robinhood Chain · four Texas crews</div>
       <h1 class="sr">STAGR</h1>
       <img class="wm" src="a/stagr-wordmark.webp" alt="STAGR" width="841" height="417">
-      <div class="tag">The token that <em>hauls.</em></div>
+      <div class="tag">Claim your <em>territory.</em></div>
       <p class="lead">STAGR is the community token of Junk Junkies Texas: four real crews in Spring, Tomball, Cypress and College Station, one stag on every truck.</p>
-      <div class="cta"><a class="btn main" href="#territories">Meet the crews</a><a class="btn" href="https://junkmp.vercel.app" target="_blank" rel="noopener">Junk Junkies marketplace ↗</a></div>
+      <div class="cta"><a class="btn main" href="#game">Play: claim your territory</a><a class="btn" href="#territories">Meet the crews</a><a class="btn" href="https://junkmp.vercel.app" target="_blank" rel="noopener">Junk Junkies marketplace ↗</a></div>
     </div>
   </div>
 </main>
@@ -176,6 +215,25 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
     <div class="crews" id="crews"></div>
   </div>
   <p class="note" style="margin-top:14px">Each mark is a city the crew serves. Tap a crew to light up its territory. The map is plotted from real city coordinates, not a street map.</p>
+</section>
+
+<section id="game">
+  <div class="head"><div><div class="mono plot">The game · preview</div><h2>Claim your <em>territory.</em></h2></div></div>
+  <p style="margin-bottom:22px">Start with the Spring HQ. Tap the stag to haul, put your crews to work, and claim all sixteen Texas cities one by one. Upgrade each crew's truck, trailer and helpers to earn faster. Your progress saves on this device.</p>
+  <div id="gwelcome" class="gwelcome" hidden></div>
+  <div class="gwrap">
+    <div class="gcard">
+      <div class="gstats"><div class="cash"><span class="mono">Cash</span><b id="gCash">0</b></div><div><span class="mono">Per second</span><b id="gPs">0</b></div><div><span class="mono">Territories</span><b id="gTer">1/16</b></div></div>
+      <div class="tapzone"><button class="tap" id="gTap" aria-label="Haul: tap the stag to earn cash"><img src="a/logo-hq.webp" alt="" width="220" height="220"></button></div>
+      <div class="tapnote">Tap the stag to haul. <span id="gTapv">+1</span> per tap.</div>
+      <div class="gmap"><div id="gMap"></div></div>
+    </div>
+    <div class="gcard">
+      <div class="gtabs" role="tablist" aria-label="Game menu"><button role="tab" id="tabT" aria-selected="true" data-t="ter">Territories</button><button role="tab" id="tabC" aria-selected="false" data-t="crew">Crews</button><button role="tab" id="tabP" aria-selected="false" data-t="prem">STAGR perks</button></div>
+      <div class="glist" id="gList" role="tabpanel"></div>
+      <div class="gfoot"><span>Game cash has no cash value and can't be cashed out.</span><button id="gReset">Reset game</button></div>
+    </div>
+  </div>
 </section>
 
 <section id="work">
@@ -200,7 +258,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
     <div class="card"><div class="mono">01</div><h3>Fees to the fleet</h3><p>Proposed: a share of token trading fees goes to the crews' equipment, such as trucks, trailers and signage, so the token supports the work it is named after.</p></div>
     <div class="card"><div class="mono">02</div><h3>The marketplace</h3><p>Junk Junkies is building a marketplace where customers set a ceiling price and haulers bid it down. STAGR is the community around it.</p><a class="go" href="https://junkmp.vercel.app" target="_blank" rel="noopener">Open the marketplace preview ↗</a></div>
     <div class="card"><div class="mono">03</div><h3>Herd votes</h3><p>Holders vote on community choices: which city a crew expands to next, truck names, and the crew of the month.</p></div>
-    <div class="card"><div class="mono">04</div><h3>The game</h3><p>A STAGR and Junk Junkies game is in the works: drive the truck, load the trailer, beat the clock. Details soon.</p></div>
+    <div class="card"><div class="mono">04</div><h3>Upgrades</h3><p>The territory game above is the start. Perks that can be paid for with STAGR are planned for later and are not for sale yet.</p></div>
   </div>
   <div class="tokenbox">
     <div><span class="mono">Ticker</span><b>$STAGR</b></div>
@@ -277,6 +335,89 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
         cx.globalAlpha=p.a*(.6+.4*Math.sin(t/500+p.ph));cx.shadowColor='#39ff14';cx.shadowBlur=12;cx.fillStyle='#39ff14';
         if(p.stag){cx.save();cx.translate(p.x,p.y);var k=p.r*3;cx.beginPath();cx.moveTo(0,k);cx.lineTo(-k*.5,0);cx.lineTo(-k*1.1,-k*.9);cx.moveTo(-k*.5,0);cx.lineTo(-k*.2,-k);cx.moveTo(0,k);cx.lineTo(k*.5,0);cx.lineTo(k*1.1,-k*.9);cx.moveTo(k*.5,0);cx.lineTo(k*.2,-k);cx.strokeStyle='#39ff14';cx.lineWidth=1.6;cx.stroke();cx.restore()}
         else{cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.3);cx.fill()}});cx.globalAlpha=1})(0)}
+})();
+</script>
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var KEY='stagr-claim-v1';
+  // ---- token hook: soft currency today, STAGR later. Flip STAGR.enabled and give it a wallet to switch the premium perks on.
+  window.STAGR=window.STAGR||{enabled:false,symbol:'STAGR',wallet:null,
+    // return a Promise<boolean>; must resolve true only after the on-chain payment is confirmed
+    pay:function(perk){return Promise.resolve(false)}};
+  var ORDER=['Spring','Klein','The Woodlands','Humble','Tomball','Magnolia','Pinehurst','Montgomery','Cypress','Jersey Village','Hockley','Katy','College Station','Bryan','Navasota','Caldwell'];
+  var CREW={spring:{n:'Spring',c:'#3987e5',l:'a/logo-spring.webp'},tomball:{n:'Tomball',c:'#d95926',l:'a/logo-tomball.webp'},cypress:{n:'Cypress',c:'#199e70',l:'a/logo-cypress.webp'},'college-station':{n:'College Station',c:'#d4a017',l:'a/logo-cs.webp'}};
+  var CITY={};Object.keys(CITIES).forEach(function(k){CITIES[k].cities.forEach(function(x){CITY[x.n]={n:x.n,lat:x.lat,lon:x.lon,crew:k}})});
+  var L=ORDER.map(function(n,i){var c=CITY[n];c.i=i;c.inc=0.6*Math.pow(1.9,i);c.cost=i?Math.round(50*Math.pow(2.6,i-1)):0;return c});
+  var PERKS=[
+    {id:'gloves',n:'Better gloves',d:'+1 cash per tap per level.',base:15,g:1.45,ic:'+1'},
+  ];
+  var CU=[{id:'truck',n:'Truck',d:'+30% for this crew per level.',base:100,g:1.75,add:.3,ic:'T'},{id:'trailer',n:'Trailer',d:'+30% for this crew per level.',base:250,g:1.75,add:.3,ic:'16'},{id:'help',n:'Helpers',d:'+50% for this crew per level.',base:600,g:1.8,add:.5,ic:'H'}];
+  var PREM=[{n:'Chrome wrap',d:'Doubles income for all four crews.'},{n:'Night shift',d:'Crews keep earning longer while you are away.'},{n:'Fleet slot',d:'Run a second truck in any territory.'},{n:'Stag skin',d:'Special looks for the stag and the crew.'}];
+  var st=load();
+  function fresh(){return{cash:0,total:0,own:1,gl:0,lv:{spring:{truck:0,trailer:0,help:0},tomball:{truck:0,trailer:0,help:0},cypress:{truck:0,trailer:0,help:0},'college-station':{truck:0,trailer:0,help:0}},t:Date.now()}}
+  function load(){try{var j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&typeof j.cash==='number'&&j.lv)return j}catch(e){}return fresh()}
+  function save(){st.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+  function fmt(n){if(n<1000)return n<10&&n%1?n.toFixed(1):String(Math.floor(n));var u=['K','M','B','T','Qa','Qi'],i=-1;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(2):n<100?n.toFixed(1):Math.floor(n))+u[i]}
+  function mult(k){var v=st.lv[k];return 1+.3*v.truck+.3*v.trailer+.5*v.help}
+  function ps(){var t=0;for(var i=0;i<st.own;i++)t+=L[i].inc*mult(L[i].crew);return t}
+  function tapv(){return 1+st.gl}
+  function cost(base,g,lv){return Math.ceil(base*Math.pow(g,lv))}
+  // ---- offline earnings (capped at 8 hours)
+  var away=Math.min((Date.now()-(st.t||Date.now()))/1000,8*3600);
+  if(away>60&&st.own>0){var gain=ps()*away;st.cash+=gain;st.total+=gain;var w=$('#gwelcome');w.hidden=false;w.textContent='While you were away, your crews hauled '+fmt(gain)+' cash.'}
+  // ---- map
+  var lats=L.map(function(p){return p.lat}),lons=L.map(function(p){return p.lon});
+  var minLat=Math.min.apply(null,lats),maxLat=Math.max.apply(null,lats),minLon=Math.min.apply(null,lons),maxLon=Math.max.apply(null,lons);
+  var W=900,H=700,PAD=60,kk=Math.cos(30.2*Math.PI/180),sc=Math.min((W-2*PAD)/((maxLon-minLon)*kk),(H-2*PAD)/(maxLat-minLat));
+  var ox=(W-(maxLon-minLon)*kk*sc)/2,oy=(H-(maxLat-minLat)*sc)/2;
+  function X(lon){return ox+(lon-minLon)*kk*sc}function Y(lat){return oy+(maxLat-lat)*sc}
+  function drawMap(){var g='';for(var i=0;i<=9;i++){var gx=20+i*(W-40)/9;g+='<line x1="'+gx+'" x2="'+gx+'" y1="20" y2="'+(H-20)+'" stroke="#16231b"/>'}for(var j=0;j<=5;j++){var gy=20+j*(H-40)/5;g+='<line y1="'+gy+'" y2="'+gy+'" x1="20" x2="'+(W-20)+'" stroke="#16231b"/>'}
+    var d='';L.forEach(function(p){var x=X(p.lon),y=Y(p.lat),col=CREW[p.crew].c,own=p.i<st.own,next=p.i===st.own;
+      d+='<g><title>'+p.n+(own?' (claimed)':next?' (next)':' (locked)')+'</title>';
+      if(own)d+='<circle cx="'+x+'" cy="'+y+'" r="22" fill="'+col+'" opacity=".18"/><circle cx="'+x+'" cy="'+y+'" r="9" fill="'+col+'" stroke="#070a08" stroke-width="2.5"/>';
+      else d+='<circle cx="'+x+'" cy="'+y+'" r="8" fill="none" stroke="'+(next?'#39ff14':'#4a5a50')+'" stroke-width="2" '+(next?'':'stroke-dasharray="3 3"')+'>'+(next?'<animate attributeName="r" values="8;15;8" dur="1.6s" repeatCount="indefinite"/>':'')+'</circle>';
+      var le=x>W-130;d+='<text x="'+(le?x-14:x+14)+'" y="'+(y+5)+'" text-anchor="'+(le?'end':'start')+'" fill="'+(own?'#f3f2ec':'#7d8f84')+'" font-size="15" font-family="Figtree,system-ui,sans-serif" paint-order="stroke" stroke="#0c120f" stroke-width="3">'+p.n+'</text></g>'});
+    $('#gMap').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Map: '+st.own+' of 16 Texas territories claimed">'+g+d+'</svg>'}
+  // ---- lists
+  var tab='ter';
+  function row(icon,name,desc,btn){return '<div class="gitem'+(btn.lock?' glock':'')+'">'+icon+'<div><b>'+name+'</b><small>'+desc+'</small></div>'+btn.h+'</div>'}
+  function drawList(){var h='';
+    if(tab==='ter'){
+      L.forEach(function(p){var c=CREW[p.crew],own=p.i<st.own,next=p.i===st.own,inc=fmt(p.inc*mult(p.crew))+'/s';
+        var b=own?{h:'<span class="gbuy" aria-disabled="true">Claimed<br><small>'+inc+'</small></span>'}:next?{h:'<button class="gbuy" data-claim="1"'+(st.cash<p.cost?' aria-disabled="true"':'')+'>Claim<br><small>'+fmt(p.cost)+'</small></button>'}:{h:'<span class="gbuy" aria-disabled="true">Locked<br><small>'+fmt(p.cost)+'</small></span>',lock:1};
+        h+=row('<img src="'+c.l+'" alt="" width="44" height="44">',p.n,c.n+' crew. Earns '+fmt(p.inc*mult(p.crew))+' cash per second.',b)});
+      if(st.own>=16)h='<div class="gsec">All sixteen territories claimed. Nice haul.</div>'+h;
+    }else if(tab==='crew'){
+      h+='<div class="gsec">Hands</div>';
+      var gc=cost(15,1.45,st.gl);h+=row('<div class="ic">+1</div>','Better gloves','Level '+st.gl+'. +1 cash per tap per level.',{h:'<button class="gbuy" data-gl="1"'+(st.cash<gc?' aria-disabled="true"':'')+'>Buy<br><small>'+fmt(gc)+'</small></button>'});
+      Object.keys(CREW).forEach(function(k){h+='<div class="gsec">'+CREW[k].n+' crew · x'+mult(k).toFixed(2)+'</div>';
+        CU.forEach(function(u){var lv=st.lv[k][u.id],c=cost(u.base,u.g,lv);h+=row('<img src="'+CREW[k].l+'" alt="" width="44" height="44">',u.n,'Level '+lv+'. '+u.d,{h:'<button class="gbuy" data-up="'+k+':'+u.id+'"'+(st.cash<c?' aria-disabled="true"':'')+'>Upgrade<br><small>'+fmt(c)+'</small></button>'})})});
+    }else{
+      h+='<div class="gsec">Paid with STAGR when it launches</div>';
+      PREM.forEach(function(p){h+=row('<div class="ic">★</div>',p.n,p.d+' Price set at launch.',{lock:1,h:'<button class="gbuy" data-prem="'+p.n+'" aria-disabled="true">Soon<br><small>STAGR</small></button>'})});
+      h+='<div class="gsec">Nothing here is for sale yet. Perks, prices and how they work will be announced before launch.</div>';
+    }
+    var el=$('#gList'),top=el.scrollTop;el.innerHTML=h;el.scrollTop=top}
+  function stats(){$('#gCash').textContent=fmt(st.cash);$('#gPs').textContent=fmt(ps());$('#gTer').textContent=st.own+'/16';$('#gTapv').textContent='+'+fmt(tapv())}
+  function redraw(){stats();drawMap();drawList()}
+  // ---- actions
+  $('#gTap').addEventListener('click',function(e){var v=tapv();st.cash+=v;st.total+=v;stats();
+    var z=$('.tapzone'),r=z.getBoundingClientRect(),p=document.createElement('span');p.className='pop';p.textContent='+'+fmt(v);
+    p.style.left=((e.clientX||r.left+r.width/2)-r.left-14)+'px';p.style.top=((e.clientY||r.top+r.height/2)-r.top-30)+'px';z.appendChild(p);setTimeout(function(){p.remove()},900);afford()});
+  $('#gList').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.getAttribute('aria-disabled')==='true')return;
+    if(b.dataset.claim){var p=L[st.own];if(p&&st.cash>=p.cost){st.cash-=p.cost;st.own++;redraw();save()}}
+    else if(b.dataset.gl){var c=cost(15,1.45,st.gl);if(st.cash>=c){st.cash-=c;st.gl++;redraw();save()}}
+    else if(b.dataset.up){var a=b.dataset.up.split(':'),u=CU.filter(function(x){return x.id===a[1]})[0],lv=st.lv[a[0]][a[1]],c2=cost(u.base,u.g,lv);if(st.cash>=c2){st.cash-=c2;st.lv[a[0]][a[1]]++;redraw();save()}}});
+  document.querySelector('.gtabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;tab=b.dataset.t;document.querySelectorAll('.gtabs button').forEach(function(x){x.setAttribute('aria-selected',String(x===b))});drawList()});
+  $('#gReset').addEventListener('click',function(){if(confirm('Reset the game and start over?')){st=fresh();$('#gwelcome').hidden=true;redraw();save()}});
+  // buttons enable/disable without rebuilding the list on every tick
+  function afford(){document.querySelectorAll('#gList button.gbuy').forEach(function(b){var c=null;if(b.dataset.claim)c=L[st.own].cost;else if(b.dataset.gl)c=cost(15,1.45,st.gl);else if(b.dataset.up){var a=b.dataset.up.split(':'),u=CU.filter(function(x){return x.id===a[1]})[0];c=cost(u.base,u.g,st.lv[a[0]][a[1]])}if(c!==null)b.setAttribute('aria-disabled',String(st.cash<c))})}
+  var last=performance.now(),acc=0;
+  (function tick(t){requestAnimationFrame(tick);var dt=Math.min((t-last)/1000,1);last=t;if(document.hidden)return;var g=ps()*dt;st.cash+=g;st.total+=g;acc+=dt;if(acc>=.25){acc=0;stats();afford()}})(last);
+  setInterval(save,5000);addEventListener('pagehide',save);document.addEventListener('visibilitychange',function(){if(document.hidden)save()});
+  redraw();
+  window.__stagr={state:function(){return st},ps:ps};
 })();
 </script>
 </body></html>
