@@ -60,12 +60,11 @@ nav a:hover{color:var(--bone)}
 @media(prefers-reduced-motion:reduce){.hero-bg,.hero::after,.hero .wm,.hero .stag-badge,.hero-in{animation:none}#fx{display:none}}
 
 /* the crew chasing the stag */
-.chase{position:absolute;left:0;right:0;bottom:6px;height:clamp(120px,16vw,200px);z-index:-1;pointer-events:none;overflow:hidden}
+.chase{position:absolute;left:0;right:0;bottom:6px;height:clamp(120px,16vw,200px);z-index:-1;pointer-events:none}
 .run{position:absolute;bottom:0;left:var(--o,0px);height:var(--h);animation:across 14s linear infinite;will-change:transform}
-.run.stag{--h:clamp(104px,14vw,176px)}.sp{height:100%;width:calc(var(--h)*var(--ar));background:var(--spr) 0 0/auto 100% no-repeat;animation:play var(--dur) steps(var(--n)) infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.7))}
-.run.crew{--h:clamp(72px,9.5vw,118px);--ar:.784;--n:29;--dur:2.42s;--spr:url(a/crew-sprite.webp)}
-.run.stag .sp{filter:drop-shadow(0 0 16px rgba(57,255,20,.7))}
-.run.stag{--ar:.8;--n:33;--dur:2.75s;--spr:url(a/stag-sprite.webp)}
+.run.stag{--h:clamp(170px,21vw,270px);bottom:calc(var(--h)*-.15)}.sp{height:100%;width:calc(var(--h)*var(--ar));background:var(--spr) 0 0/auto 100% no-repeat;animation:play var(--dur) steps(var(--n)) infinite}
+.run.crew{--h:clamp(88px,11.6vw,144px);bottom:calc(var(--h)*-.07);--ar:.81364;--n:29;--dur:2.42s;--spr:url(a/crew-sprite.webp)}
+.run.stag{--ar:.8625;--n:33;--dur:2.75s;--spr:url(a/stag-sprite.webp)}
 @keyframes play{to{background-position-x:calc(var(--h)*var(--ar)*var(--n)*-1)}}
 @keyframes across{from{transform:translateX(-520px)}to{transform:translateX(calc(100vw + 160px))}}
 @media(prefers-reduced-motion:reduce){.run{animation:none;left:60%}.run.crew{left:30%}.sp{animation:none}}
@@ -109,7 +108,7 @@ nav a:hover{color:var(--bone)}
 @media(max-width:900px){#game .gwrap{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.pop{animation:none;opacity:0}}
 @media(max-width:700px){
-.hero{display:block;min-height:0;padding:0 0 clamp(104px,30vw,140px);overflow:hidden}
+.hero{display:block;min-height:0;padding:0 0 clamp(124px,34vw,150px);overflow:hidden}
 .hero::before,.hero::after{display:none}
 .hero-bg{position:relative;inset:auto;z-index:0;width:100%;height:56.25vw;background-position:center;background-size:cover;animation:none;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
 #fx{height:56.25vw}
@@ -118,8 +117,8 @@ nav a:hover{color:var(--bone)}
 .hero .wm{width:min(300px,82%)}
 .cta{gap:8px}.cta .btn{flex:1 1 40%;justify-content:center;padding:11px 12px;font-size:.95rem}.cta .btn.main{flex:1 1 100%}
 .hero p.lead{font-size:1rem}
-.chase{bottom:2px;height:98px;z-index:0}
-.run.stag{--h:96px}.run.crew{--h:66px}
+.chase{bottom:2px;height:120px;z-index:0}
+.run.stag{--h:150px}.run.crew{--h:82px}
 .run.crew:nth-child(1){--o:-130px}.run.crew:nth-child(2){--o:-185px}.run.crew:nth-child(3){--o:-240px}
 @keyframes across{from{transform:translateX(-320px)}to{transform:translateX(calc(100vw + 120px))}}
 }
