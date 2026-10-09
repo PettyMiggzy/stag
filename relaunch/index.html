@@ -41,7 +41,7 @@ nav a:hover{color:var(--bone)}
 .logo-stage img{position:relative;display:block;width:100%;height:auto;max-width:520px;margin-inline:auto}
 
 /* animated header */
-.hero{position:relative;isolation:isolate;overflow:hidden;margin-inline:calc(-1*clamp(16px,4vw,48px));min-height:min(88vh,820px);display:grid;align-items:end;padding:clamp(28px,5vw,60px) max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2))}
+.hero{position:relative;isolation:isolate;overflow:hidden;margin-inline:calc(-1*clamp(16px,4vw,48px));min-height:min(84vh,780px);display:grid;align-items:end;padding:clamp(28px,5vw,60px) max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2)) clamp(120px,15vw,190px)}
 .hero-bg{position:absolute;inset:-4%;z-index:-3;background:url(a/stagr-hero.webp) 62% center/cover;animation:kb 26s ease-in-out infinite alternate;will-change:transform}
 @keyframes kb{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.12) translate3d(-2.5%,-1.5%,0)}}
 .hero::before{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(0deg,#070a08 4%,rgba(7,10,8,.35) 45%,rgba(7,10,8,.1)),linear-gradient(90deg,rgba(7,10,8,.78),rgba(7,10,8,0) 62%)}
@@ -55,10 +55,25 @@ nav a:hover{color:var(--bone)}
 .hero .tag{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:clamp(1.7rem,4.2vw,2.8rem);color:var(--bone);margin-top:6px;line-height:1}
 .hero .tag em{font-style:normal;color:var(--neon)}
 .hero p.lead{margin-top:16px;font-size:1.1rem;text-shadow:0 2px 14px #000}
-.hero .stag-badge{position:absolute;right:max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2));top:22px;width:clamp(74px,11vw,128px);border-radius:16px;border:1px solid rgba(57,255,20,.6);box-shadow:0 0 28px rgba(57,255,20,.45);animation:float 5s ease-in-out infinite}
+.hero .stag-badge{position:absolute;right:max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2));top:22px;width:clamp(74px,11vw,128px);filter:drop-shadow(0 0 22px rgba(57,255,20,.7));animation:float 5s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-8px)}}
 @media(prefers-reduced-motion:reduce){.hero-bg,.hero::after,.hero .wm,.hero .stag-badge,.hero-in{animation:none}#fx{display:none}}
-@media(max-width:700px){.hero{min-height:94vh;align-items:end}.hero-bg{background-position:30% center}.hero::before{background:linear-gradient(0deg,#070a08 12%,rgba(7,10,8,.55) 58%,rgba(7,10,8,.15))}}
+@media(max-width:700px){.hero{min-height:86vh;align-items:end}.hero-bg{background-position:30% center}.hero::before{background:linear-gradient(0deg,#070a08 12%,rgba(7,10,8,.55) 58%,rgba(7,10,8,.15))}}
+
+/* the crew chasing the stag */
+.chase{position:absolute;left:0;right:0;bottom:6px;height:clamp(120px,16vw,200px);z-index:-1;pointer-events:none;overflow:hidden}
+.run{position:absolute;bottom:0;left:0;height:var(--h);animation:across 15s linear infinite;animation-delay:var(--d);will-change:transform}
+.run .bob{height:100%;animation:bob .34s ease-in-out infinite}
+.run img{position:absolute;bottom:0;left:0;height:100%;width:auto;filter:drop-shadow(0 6px 10px rgba(0,0,0,.7))}
+.run .f1{animation:f1 .34s steps(1) infinite}.run .f2{animation:f2 .34s steps(1) infinite}
+.run.stag{--h:clamp(104px,14vw,176px)}.run.stag img{filter:drop-shadow(0 0 16px rgba(57,255,20,.65))}
+.run.stag .bob{animation:leap .9s ease-in-out infinite}
+.run.crew{--h:clamp(72px,9.5vw,118px)}
+@keyframes across{from{transform:translateX(-30vw)}to{transform:translateX(115vw)}}
+@keyframes f1{0%{opacity:1}50%{opacity:0}}@keyframes f2{0%{opacity:0}50%{opacity:1}}
+@keyframes bob{50%{transform:translateY(-6%)}}
+@keyframes leap{0%,100%{transform:translateY(0) rotate(-2deg)}45%{transform:translateY(-34%) rotate(5deg)}}
+@media(prefers-reduced-motion:reduce){.run{animation:none;left:60%}.run.crew{left:30%}.run .bob,.run .f1,.run .f2{animation:none}.run .f2{display:none}}
 
 .belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
 .belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
@@ -105,6 +120,7 @@ section{padding-block:clamp(52px,8vw,110px)}
 
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:22px;display:grid;gap:8px;align-content:start}
+.card .go{color:var(--neon);font-size:.9rem;text-decoration:none;margin-top:4px}.card .go:hover{text-decoration:underline}
 .card h3{font-size:1.7rem}.card p{color:var(--mute)}.card .mono{color:var(--neon)}
 .tokenbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px}
 .tokenbox>div{background:var(--panel);padding:16px 18px;display:grid;gap:4px}
@@ -126,12 +142,18 @@ footer p{max-width:90ch}
 footer .links{display:flex;flex-wrap:wrap;gap:16px}
 </style>
 
-</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
+</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="https://junkmp.vercel.app" target="_blank" rel="noopener">Marketplace ↗</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
 
 <main id="top">
   <div class="hero">
     <div class="hero-bg" role="img" aria-label="Junk Junkies Texas truck and trailer wrapped in STAGR graffiti, with the crew loading a couch"></div>
     <canvas id="fx" aria-hidden="true"></canvas>
+    <div class="chase" aria-hidden="true">
+      <div class="run crew" style="--d:-4.2s"><div class="bob"><img class="f1" src="a/crew-run1.webp" alt="" width="202" height="249"><img class="f2" src="a/crew-run2.webp" alt="" width="202" height="249"></div></div>
+      <div class="run crew" style="--d:-3.5s"><div class="bob" style="animation-delay:-.12s"><img class="f1" style="animation-delay:-.12s" src="a/crew-run1.webp" alt="" width="202" height="249"><img class="f2" style="animation-delay:-.12s" src="a/crew-run2.webp" alt="" width="202" height="249"></div></div>
+      <div class="run crew" style="--d:-2.9s"><div class="bob" style="animation-delay:-.2s"><img class="f1" style="animation-delay:-.2s" src="a/crew-run1.webp" alt="" width="202" height="249"><img class="f2" style="animation-delay:-.2s" src="a/crew-run2.webp" alt="" width="202" height="249"></div></div>
+      <div class="run stag" style="--d:0s"><div class="bob"><img src="a/stag-run.webp" alt="" width="340" height="420"></div></div>
+    </div>
     <img class="stag-badge" src="a/logo-hq.webp" alt="" width="128" height="128">
     <div class="hero-in">
       <div class="mono plot">$STAGR · Robinhood Chain · four Texas crews</div>
@@ -139,7 +161,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
       <img class="wm" src="a/stagr-wordmark.webp" alt="STAGR" width="841" height="417">
       <div class="tag">The token that <em>hauls.</em></div>
       <p class="lead">STAGR is the community token of Junk Junkies Texas: four real crews in Spring, Tomball, Cypress and College Station, one stag on every truck.</p>
-      <div class="cta"><a class="btn main" href="#territories">Meet the crews</a><a class="btn" href="#idea">How it ties in</a></div>
+      <div class="cta"><a class="btn main" href="#territories">Meet the crews</a><a class="btn" href="https://junkmp.vercel.app" target="_blank" rel="noopener">Junk Junkies marketplace ↗</a></div>
     </div>
   </div>
 </main>
@@ -176,7 +198,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
   <p style="margin-bottom:26px">Most tokens are a logo and a promise. STAGR is tied to four working businesses with real crews, real trailers and real customers in Texas. This is the draft concept for how the two connect.</p>
   <div class="cards">
     <div class="card"><div class="mono">01</div><h3>Fees to the fleet</h3><p>Proposed: a share of token trading fees goes to the crews' equipment, such as trucks, trailers and signage, so the token supports the work it is named after.</p></div>
-    <div class="card"><div class="mono">02</div><h3>The marketplace</h3><p>Junk Junkies is building a marketplace where customers set a ceiling price and haulers bid it down. STAGR is the community around it.</p></div>
+    <div class="card"><div class="mono">02</div><h3>The marketplace</h3><p>Junk Junkies is building a marketplace where customers set a ceiling price and haulers bid it down. STAGR is the community around it.</p><a class="go" href="https://junkmp.vercel.app" target="_blank" rel="noopener">Open the marketplace preview ↗</a></div>
     <div class="card"><div class="mono">03</div><h3>Herd votes</h3><p>Holders vote on community choices: which city a crew expands to next, truck names, and the crew of the month.</p></div>
     <div class="card"><div class="mono">04</div><h3>The game</h3><p>A STAGR and Junk Junkies game is in the works: drive the truck, load the trailer, beat the clock. Details soon.</p></div>
   </div>
@@ -206,7 +228,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
 
 <footer class="wrap">
   <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAGR</b>
-  <div class="links"><a href="https://junkjunkiestexas.com" target="_blank" rel="noopener">Junk Junkies Texas, Spring ↗</a><a href="https://junkjunkiestomball.com" target="_blank" rel="noopener">Tomball ↗</a><a href="https://junkjunkiescypress.com" target="_blank" rel="noopener">Cypress ↗</a><a href="https://junkjunkiescollegestation.com" target="_blank" rel="noopener">College Station ↗</a></div>
+  <div class="links"><a href="https://junkmp.vercel.app" target="_blank" rel="noopener">Junk Junkies Marketplace ↗</a><a href="https://junkjunkiestexas.com" target="_blank" rel="noopener">Junk Junkies Texas, Spring ↗</a><a href="https://junkjunkiestomball.com" target="_blank" rel="noopener">Tomball ↗</a><a href="https://junkjunkiescypress.com" target="_blank" rel="noopener">Cypress ↗</a><a href="https://junkjunkiescollegestation.com" target="_blank" rel="noopener">College Station ↗</a></div>
   <p>STAGR is a community token project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
   <p>Business phone for all four Texas crews: (346) 413-9644.</p>
 </footer>
