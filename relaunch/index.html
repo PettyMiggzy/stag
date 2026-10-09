@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAG: four Texas junk removal crews, one stag, and the software that runs them."><title>STAG</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAG: four Texas junk removal crews, one stag, and the community token behind them."><title>STAG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -84,22 +84,14 @@ section{padding-block:clamp(52px,8vw,110px)}
 .fact span{color:var(--mute);font-size:.9rem}
 @media(max-width:640px){.work{grid-template-columns:1fr}}
 
-/* software */
-.prod{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,4vw,56px);align-items:start}
-.feat{list-style:none;padding:0;margin:26px 0 0}
-.feat li{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:15px 0;border-top:1px solid var(--line)}
-.feat li:last-child{border-bottom:1px solid var(--line)}
-.feat svg{width:24px;height:24px;color:var(--neon);margin-top:2px}
-.feat b{display:block;font-weight:600}
-.feat span{color:var(--mute);font-size:.95rem}
-.shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--pine)}
-.shot-tabs{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--line)}
-.shot-tabs button{font:inherit;font-size:.85rem;color:var(--mute);background:none;border:1px solid transparent;border-radius:999px;padding:6px 14px;cursor:pointer}
-.shot-tabs button[aria-pressed=true]{color:#031207;background:var(--neon);font-weight:600}
-.shot img{display:block;width:100%;height:auto}
-.note{margin-top:10px;color:var(--mute);font-size:.85rem}
-@media(max-width:900px){.prod{grid-template-columns:1fr}}
 
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:22px;display:grid;gap:8px;align-content:start}
+.card h3{font-size:1.7rem}.card p{color:var(--mute)}.card .mono{color:var(--neon)}
+.tokenbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px}
+.tokenbox>div{background:var(--panel);padding:16px 18px;display:grid;gap:4px}
+.tokenbox b{font-family:var(--display);font-size:1.5rem;letter-spacing:.04em;color:var(--bone)}
 /* herd */
 .herd{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:clamp(22px,4vw,44px);display:grid;gap:14px}
 .herd h3{font-size:clamp(2rem,5vw,3.2rem)}
@@ -117,16 +109,16 @@ footer p{max-width:90ch}
 footer .links{display:flex;flex-wrap:wrap;gap:16px}
 </style>
 
-</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAG</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#software">Software</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
+</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAG</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
 
 <main id="top" class="wrap">
   <div class="hero">
     <div>
-      <div class="mono plot">Four crews · one stag</div>
+      <div class="mono plot">$STAG · Robinhood Chain · four Texas crews</div>
       <h1>STAG</h1>
       <div class="tag">Claim your territory.</div>
-      <p class="lead">Four Texas junk removal crews wear the same stag. Spring, Tomball, Cypress and College Station each hold their own territory, and STAG is the name, the software and the community that ties them together.</p>
-      <div class="cta"><a class="btn main" href="#territories">Find your crew</a><a class="btn" href="#software">See the software</a></div>
+      <p class="lead">Four Texas junk removal crews wear the same stag. Spring, Tomball, Cypress and College Station each hold their own territory, and STAG is the community token that ties them together: one herd, backing four real businesses.</p>
+      <div class="cta"><a class="btn main" href="#territories">Find your crew</a><a class="btn" href="#idea">How it ties in</a></div>
     </div>
     <div class="logo-stage"><img src="a/logo-hq.webp" alt="Junk Junkies Texas logo: a white stag head in front of a green Texas outline" width="560" height="560"></div>
   </div>
@@ -159,38 +151,35 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
   </div>
 </section>
 
-<section id="software">
-  <div class="prod">
-    <div>
-      <div class="mono plot">Crew software</div>
-      <div class="head" style="margin-bottom:0"><h2>One list for <em>every job.</em></h2></div>
-      <p style="margin-top:18px">The same software runs all four crews. It started as a CRM for one truck and grew from what the crews needed in the field and in the office.</p>
-      <ul class="feat">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><div><b>Every request in one place</b><span>Quote requests from all four crew websites land in one list, with the customer's photos.</span></div></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/></svg><div><b>Quotes customers approve from a text</b><span>Itemized lines, tax and deposit. The customer taps Approve on their phone.</span></div></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg><div><b>Invoices and payments in a tap</b><span>Record cash, check, Zelle or card, including partial payments.</span></div></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><div><b>Crew photos pin the map</b><span>Before and after photos with GPS go to the right city page when a job is done.</span></div></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><b>A Today list that says who to call first</b><span>Leads waiting too long turn red, because the fastest reply wins the job.</span></div></li>
-      </ul>
-    </div>
-    <div>
-      <div class="shot"><div class="shot-tabs" role="group" aria-label="Screens"><button id="tToday" aria-pressed="true">Today</button><button id="tIns" aria-pressed="false">Insights</button></div><img id="shot" src="a/crm-today.webp" alt="Today screen showing leads to call, follow-ups and jobs" width="1256" height="702"></div>
-      <p class="note">Screens show sample data.</p>
-    </div>
+<section id="idea">
+  <div class="head"><div><div class="mono plot">The idea · draft</div><h2>A token with <em>trucks behind it.</em></h2></div></div>
+  <p style="margin-bottom:26px">Most tokens are a logo and a promise. STAG is tied to four working businesses with real crews, real trailers and real customers in Texas. This is the draft concept for how the two connect.</p>
+  <div class="cards">
+    <div class="card"><div class="mono">01</div><h3>Territories</h3><p>Each crew's territory is a community banner. Holders pick a crew to rally behind, and the map above shows where every crew works.</p></div>
+    <div class="card"><div class="mono">02</div><h3>Fees to the fleet</h3><p>Proposed: a share of token trading fees goes to the crews' equipment, such as trucks, trailers and signage, so the token supports the work it is named after.</p></div>
+    <div class="card"><div class="mono">03</div><h3>Herd votes</h3><p>Holders vote on community choices: which city a crew expands to next, truck names, and the crew of the month.</p></div>
+    <div class="card"><div class="mono">04</div><h3>Proof of work</h3><p>Real job photos from the crews are pinned to city pages, so the herd can see the business behind the token.</p></div>
   </div>
+  <div class="tokenbox">
+    <div><span class="mono">Ticker</span><b>$STAG</b></div>
+    <div><span class="mono">Network</span><b>Robinhood Chain</b></div>
+    <div><span class="mono">Contract</span><b>Announced at launch</b></div>
+    <div><span class="mono">Supply</span><b>To be announced</b></div>
+  </div>
+  <p class="note">Draft for review. Details, fee share and voting rules are not final.</p>
 </section>
 
 <section id="herd">
   <div class="herd">
     <div class="mono">The herd</div>
-    <h3>The relaunch is in progress.</h3>
-    <p>STAG is being rebuilt around the four Texas crews. How the community and the token connect to the businesses will be published here once it is final and has been reviewed. Until then, this page is a preview and nothing on it is an offer.</p>
+    <h3>One herd. Four territories.</h3>
+    <p>STAG is being relaunched around the four Texas crews. This page is a preview of the concept and nothing on it is an offer.</p>
   </div>
   <div class="road">
-    <div class="step"><span class="st live">Live now</span><div><h3>The four crew websites</h3><p>Spring, Tomball, Cypress and College Station, each with its own quote form, map and reviews.</p></div></div>
-    <div class="step"><span class="st live">Live now</span><div><h3>Crew software</h3><p>Requests, quotes, invoices, scheduling and crew photos, shared by all four crews.</p></div></div>
-    <div class="step"><span class="st next">In progress</span><div><h3>This STAG site</h3><p>One home for the brand, the territories and the community.</p></div></div>
-    <div class="step"><span class="st tba">To be announced</span><div><h3>Community and token details</h3><p>Nothing is promised here until it is ready.</p></div></div>
+    <div class="step"><span class="st live">Live now</span><div><h3>The four crew businesses</h3><p>Spring, Tomball, Cypress and College Station, each with its own website, crew and territory.</p></div></div>
+    <div class="step"><span class="st next">In progress</span><div><h3>The STAG relaunch</h3><p>A fresh start under one brand and the Texas logo family.</p></div></div>
+    <div class="step"><span class="st next">In progress</span><div><h3>Fee share and herd votes</h3><p>Being designed. Nothing is final until it is announced here.</p></div></div>
+    <div class="step"><span class="st tba">To be announced</span><div><h3>Launch details</h3><p>Contract, supply and launch date.</p></div></div>
   </div>
 </section>
 </main>
@@ -198,8 +187,8 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
 <footer class="wrap">
   <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAG</b>
   <div class="links"><a href="https://junkjunkiestexas.com" target="_blank" rel="noopener">Junk Junkies Texas, Spring ↗</a><a href="https://junkjunkiestomball.com" target="_blank" rel="noopener">Tomball ↗</a><a href="https://junkjunkiescypress.com" target="_blank" rel="noopener">Cypress ↗</a><a href="https://junkjunkiescollegestation.com" target="_blank" rel="noopener">College Station ↗</a></div>
-  <p>STAG is a brand, software and community project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
-  <p>Screens of the software show sample data. Business phone for all four Texas crews: (346) 413-9644.</p>
+  <p>STAG is a community token project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
+  <p>Business phone for all four Texas crews: (346) 413-9644.</p>
 </footer>
 
 <script>
@@ -233,10 +222,6 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
   var pinned=null;function apply(k){document.querySelectorAll('.m-g').forEach(function(g){g.classList.toggle('dim',!!k&&g.dataset.k!==k)});document.querySelectorAll('.crew-card').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.k===k))})}
   $('#crews').addEventListener('click',function(e){if(e.target.closest('a'))return;var c=e.target.closest('.crew-card');if(c){pinned=pinned===c.dataset.k?null:c.dataset.k;apply(pinned)}});
   $('#crews').addEventListener('mouseover',function(e){var c=e.target.closest('.crew-card');if(c)apply(c.dataset.k)});$('#crews').addEventListener('mouseleave',function(){apply(pinned)});
-  // software screens
-  var shot=$('#shot'),tT=$('#tToday'),tI=$('#tIns');
-  function pick(w){var ins=w==='ins';shot.src=ins?'a/crm-insights.webp':'a/crm-today.webp';shot.alt=ins?'Insights screen with leads per day, funnel and revenue charts':'Today screen showing leads to call, follow-ups and jobs';tT.setAttribute('aria-pressed',!ins);tI.setAttribute('aria-pressed',ins)}
-  tT.onclick=function(){pick('today')};tI.onclick=function(){pick('ins')};
 })();
 </script>
 </body></html>
