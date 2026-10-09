@@ -12,8 +12,8 @@ Fonts load from Google Fonts. Nothing here touches the existing site at the repo
 
 ## Game and the token hook
 
-`#game` is an idle game: tap the stag, claim the 16 cities in order, upgrade each crew's truck, trailer and helpers.
-Progress is saved in `localStorage` (key `stagr-claim-v1`) with up to 8 hours of offline earnings.
+`#game` is an idle game with no tapping: trucks drive on a real map between claimed cities. Claim the 16 cities in order and upgrade each crew's truck, trailer and helpers.
+Progress is saved in `localStorage` (key `stagr-claim-v2`) with up to 8 hours of offline earnings.
 
 Premium perks are listed but locked. When STAGR launches, set `window.STAGR.enabled = true` and implement
 `window.STAGR.pay(perk)` so it resolves `true` only after the on-chain payment is confirmed, then replace the
