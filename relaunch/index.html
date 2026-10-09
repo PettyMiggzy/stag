@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAG: four Texas junk removal crews, one stag, and the community token behind them."><title>STAG</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR: the community token of Junk Junkies Texas, four real junk removal crews with one stag."><title>STAGR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -14,6 +14,7 @@
 html{scroll-behavior:smooth}
 body{background:var(--ink);color:var(--bone);font-family:var(--body);font-size:17px;line-height:1.6;padding-inline:clamp(16px,4vw,48px);padding-block:0;overflow-x:hidden}
 a{color:inherit}
+h1.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 h1,h2,h3{font-family:var(--display);font-weight:800;line-height:.95;margin:0;text-wrap:balance;text-transform:uppercase;letter-spacing:.005em}
 p{margin:0;max-width:62ch}
 .wrap{max-width:1180px;margin-inline:auto}
@@ -31,10 +32,6 @@ nav a:hover{color:var(--bone)}
 .pill{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--neon);color:var(--neon);padding:5px 10px;border-radius:999px;white-space:nowrap}
 @media(max-width:760px){nav{display:none}}
 
-.hero{position:relative;isolation:isolate;margin-inline:calc(-1*clamp(16px,4vw,48px));padding-inline:max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2));background:linear-gradient(90deg,#070a08 8%,rgba(7,10,8,.55) 55%,rgba(7,10,8,.2)),url(a/hero-bg.webp) center/cover;border-radius:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(24px,5vw,64px);align-items:center;padding-block:clamp(36px,7vw,84px)}
-.hero h1{font-size:clamp(6rem,19vw,14rem);font-weight:900;line-height:.8;letter-spacing:.02em}
-.hero .tag{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:clamp(1.8rem,4.6vw,3rem);color:var(--neon);margin-top:12px;line-height:1}
-.hero p.lead{margin-top:22px;font-size:1.12rem}
 .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:6px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--panel);transition:border-color .2s,transform .2s}
 .btn:hover{border-color:var(--neon);transform:translateY(-1px)}
@@ -42,7 +39,26 @@ nav a:hover{color:var(--bone)}
 .logo-stage{position:relative;border:1px solid var(--line);border-radius:12px;background:#000;padding:clamp(14px,3vw,30px);overflow:hidden}
 .logo-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,rgba(39,240,90,.16),transparent 62%)}
 .logo-stage img{position:relative;display:block;width:100%;height:auto;max-width:520px;margin-inline:auto}
-@media(max-width:860px){.hero{grid-template-columns:1fr;background:linear-gradient(180deg,rgba(7,10,8,.85),rgba(7,10,8,.55)),url(a/hero-bg.webp) center/cover}}
+
+/* animated header */
+.hero{position:relative;isolation:isolate;overflow:hidden;margin-inline:calc(-1*clamp(16px,4vw,48px));min-height:min(88vh,820px);display:grid;align-items:end;padding:clamp(28px,5vw,60px) max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2))}
+.hero-bg{position:absolute;inset:-4%;z-index:-3;background:url(a/stagr-hero.webp) 62% center/cover;animation:kb 26s ease-in-out infinite alternate;will-change:transform}
+@keyframes kb{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.12) translate3d(-2.5%,-1.5%,0)}}
+.hero::before{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(0deg,#070a08 4%,rgba(7,10,8,.35) 45%,rgba(7,10,8,.1)),linear-gradient(90deg,rgba(7,10,8,.78),rgba(7,10,8,0) 62%)}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(57,255,20,.16) 50%,transparent 60%);background-size:260% 100%;animation:sweep 7s linear infinite;mix-blend-mode:screen}
+@keyframes sweep{from{background-position:130% 0}to{background-position:-130% 0}}
+#fx{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none}
+.hero-in{max-width:620px;animation:rise 1s .1s both cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.hero .wm{display:block;width:min(560px,92%);height:auto;filter:drop-shadow(0 0 28px rgba(57,255,20,.55));animation:glow 3.4s ease-in-out infinite}
+@keyframes glow{50%{filter:drop-shadow(0 0 46px rgba(57,255,20,.9))}}
+.hero .tag{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:clamp(1.7rem,4.2vw,2.8rem);color:var(--bone);margin-top:6px;line-height:1}
+.hero .tag em{font-style:normal;color:var(--neon)}
+.hero p.lead{margin-top:16px;font-size:1.1rem;text-shadow:0 2px 14px #000}
+.hero .stag-badge{position:absolute;right:max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2));top:22px;width:clamp(74px,11vw,128px);border-radius:16px;border:1px solid rgba(57,255,20,.6);box-shadow:0 0 28px rgba(57,255,20,.45);animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+@media(prefers-reduced-motion:reduce){.hero-bg,.hero::after,.hero .wm,.hero .stag-badge,.hero-in{animation:none}#fx{display:none}}
+@media(max-width:700px){.hero{min-height:94vh;align-items:end}.hero-bg{background-position:30% center}.hero::before{background:linear-gradient(0deg,#070a08 12%,rgba(7,10,8,.55) 58%,rgba(7,10,8,.15))}}
 
 .belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
 .belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
@@ -110,18 +126,21 @@ footer p{max-width:90ch}
 footer .links{display:flex;flex-wrap:wrap;gap:16px}
 </style>
 
-</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAG</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
+</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
 
 <main id="top">
   <div class="hero">
-    <div>
-      <div class="mono plot">$STAG · Robinhood Chain · four Texas crews</div>
-      <h1>STAG</h1>
-      <div class="tag">Claim your territory.</div>
-      <p class="lead">Four Texas junk removal crews wear the same stag. Spring, Tomball, Cypress and College Station each hold their own territory, and STAG is the community token that ties them together: one herd, backing four real businesses.</p>
-      <div class="cta"><a class="btn main" href="#territories">Find your crew</a><a class="btn" href="#idea">How it ties in</a></div>
+    <div class="hero-bg" role="img" aria-label="Junk Junkies Texas truck and trailer wrapped in STAGR graffiti, with the crew loading a couch"></div>
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <img class="stag-badge" src="a/logo-hq.webp" alt="" width="128" height="128">
+    <div class="hero-in">
+      <div class="mono plot">$STAGR · Robinhood Chain · four Texas crews</div>
+      <h1 class="sr">STAGR</h1>
+      <img class="wm" src="a/stagr-wordmark.webp" alt="STAGR" width="841" height="417">
+      <div class="tag">The token that <em>hauls.</em></div>
+      <p class="lead">STAGR is the community token of Junk Junkies Texas: four real crews in Spring, Tomball, Cypress and College Station, one stag on every truck.</p>
+      <div class="cta"><a class="btn main" href="#territories">Meet the crews</a><a class="btn" href="#idea">How it ties in</a></div>
     </div>
-    <div class="logo-stage"><img src="a/logo-hq.webp" alt="Junk Junkies Texas logo: a white stag head in front of a green Texas outline" width="560" height="560"></div>
   </div>
 </main>
 
@@ -154,15 +173,15 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
 
 <section id="idea">
   <div class="head"><div><div class="mono plot">The idea · draft</div><h2>A token with <em>trucks behind it.</em></h2></div></div>
-  <p style="margin-bottom:26px">Most tokens are a logo and a promise. STAG is tied to four working businesses with real crews, real trailers and real customers in Texas. This is the draft concept for how the two connect.</p>
+  <p style="margin-bottom:26px">Most tokens are a logo and a promise. STAGR is tied to four working businesses with real crews, real trailers and real customers in Texas. This is the draft concept for how the two connect.</p>
   <div class="cards">
-    <div class="card"><div class="mono">01</div><h3>Territories</h3><p>Each crew's territory is a community banner. Holders pick a crew to rally behind, and the map above shows where every crew works.</p></div>
-    <div class="card"><div class="mono">02</div><h3>Fees to the fleet</h3><p>Proposed: a share of token trading fees goes to the crews' equipment, such as trucks, trailers and signage, so the token supports the work it is named after.</p></div>
+    <div class="card"><div class="mono">01</div><h3>Fees to the fleet</h3><p>Proposed: a share of token trading fees goes to the crews' equipment, such as trucks, trailers and signage, so the token supports the work it is named after.</p></div>
+    <div class="card"><div class="mono">02</div><h3>The marketplace</h3><p>Junk Junkies is building a marketplace where customers set a ceiling price and haulers bid it down. STAGR is the community around it.</p></div>
     <div class="card"><div class="mono">03</div><h3>Herd votes</h3><p>Holders vote on community choices: which city a crew expands to next, truck names, and the crew of the month.</p></div>
-    <div class="card"><div class="mono">04</div><h3>Proof of work</h3><p>Real job photos from the crews are pinned to city pages, so the herd can see the business behind the token.</p></div>
+    <div class="card"><div class="mono">04</div><h3>The game</h3><p>A STAGR and Junk Junkies game is in the works: drive the truck, load the trailer, beat the clock. Details soon.</p></div>
   </div>
   <div class="tokenbox">
-    <div><span class="mono">Ticker</span><b>$STAG</b></div>
+    <div><span class="mono">Ticker</span><b>$STAGR</b></div>
     <div><span class="mono">Network</span><b>Robinhood Chain</b></div>
     <div><span class="mono">Contract</span><b>Announced at launch</b></div>
     <div><span class="mono">Supply</span><b>To be announced</b></div>
@@ -174,11 +193,11 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
   <div class="herd">
     <div class="mono">The herd</div>
     <h3>One herd. Four territories.</h3>
-    <p>STAG is being relaunched around the four Texas crews. This page is a preview of the concept and nothing on it is an offer.</p>
+    <p>STAGR is being relaunched around the four Texas crews. This page is a preview of the concept and nothing on it is an offer.</p>
   </div>
   <div class="road">
     <div class="step"><span class="st live">Live now</span><div><h3>The four crew businesses</h3><p>Spring, Tomball, Cypress and College Station, each with its own website, crew and territory.</p></div></div>
-    <div class="step"><span class="st next">In progress</span><div><h3>The STAG relaunch</h3><p>A fresh start under one brand and the Texas logo family.</p></div></div>
+    <div class="step"><span class="st next">In progress</span><div><h3>The STAGR relaunch</h3><p>A fresh start under one brand and the Texas logo family.</p></div></div>
     <div class="step"><span class="st next">In progress</span><div><h3>Fee share and herd votes</h3><p>Being designed. Nothing is final until it is announced here.</p></div></div>
     <div class="step"><span class="st tba">To be announced</span><div><h3>Launch details</h3><p>Contract, supply and launch date.</p></div></div>
   </div>
@@ -186,9 +205,9 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
 </main>
 
 <footer class="wrap">
-  <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAG</b>
+  <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAGR</b>
   <div class="links"><a href="https://junkjunkiestexas.com" target="_blank" rel="noopener">Junk Junkies Texas, Spring ↗</a><a href="https://junkjunkiestomball.com" target="_blank" rel="noopener">Tomball ↗</a><a href="https://junkjunkiescypress.com" target="_blank" rel="noopener">Cypress ↗</a><a href="https://junkjunkiescollegestation.com" target="_blank" rel="noopener">College Station ↗</a></div>
-  <p>STAG is a community token project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
+  <p>STAGR is a community token project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
   <p>Business phone for all four Texas crews: (346) 413-9644.</p>
 </footer>
 
@@ -223,6 +242,19 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
   var pinned=null;function apply(k){document.querySelectorAll('.m-g').forEach(function(g){g.classList.toggle('dim',!!k&&g.dataset.k!==k)});document.querySelectorAll('.crew-card').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.k===k))})}
   $('#crews').addEventListener('click',function(e){if(e.target.closest('a'))return;var c=e.target.closest('.crew-card');if(c){pinned=pinned===c.dataset.k?null:c.dataset.k;apply(pinned)}});
   $('#crews').addEventListener('mouseover',function(e){var c=e.target.closest('.crew-card');if(c)apply(c.dataset.k)});$('#crews').addEventListener('mouseleave',function(){apply(pinned)});
+
+  // animated header: green sparks and tiny stags drifting up the scene
+  var cv=$('#fx');if(cv&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var cx=cv.getContext('2d'),P=[],W0=0,H0=0,t0=0;
+    function rs(){var r=cv.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);W0=r.width;H0=r.height;cv.width=W0*d;cv.height=H0*d;cx.setTransform(d,0,0,d,0,0)}
+    rs();addEventListener('resize',rs);
+    var N=W0<700?26:48;function mk(init){return{x:Math.random()*W0,y:init?Math.random()*H0:H0+10,r:1+Math.random()*2.6,v:.25+Math.random()*.9,dx:(Math.random()-.5)*.35,a:.25+Math.random()*.6,stag:Math.random()<.12,ph:Math.random()*6}}
+    for(var i=0;i<N;i++)P.push(mk(true));
+    var vis=true;new IntersectionObserver(function(e){vis=e[0].isIntersecting}).observe(cv);
+    (function loop(t){requestAnimationFrame(loop);if(!vis)return;cx.clearRect(0,0,W0,H0);
+      P.forEach(function(p,i){p.y-=p.v;p.x+=p.dx+Math.sin(t/900+p.ph)*.25;if(p.y<-20)P[i]=mk(false);
+        cx.globalAlpha=p.a*(.6+.4*Math.sin(t/500+p.ph));cx.shadowColor='#39ff14';cx.shadowBlur=12;cx.fillStyle='#39ff14';
+        if(p.stag){cx.save();cx.translate(p.x,p.y);var k=p.r*3;cx.beginPath();cx.moveTo(0,k);cx.lineTo(-k*.5,0);cx.lineTo(-k*1.1,-k*.9);cx.moveTo(-k*.5,0);cx.lineTo(-k*.2,-k);cx.moveTo(0,k);cx.lineTo(k*.5,0);cx.lineTo(k*1.1,-k*.9);cx.moveTo(k*.5,0);cx.lineTo(k*.2,-k);cx.strokeStyle='#39ff14';cx.lineWidth=1.6;cx.stroke();cx.restore()}
+        else{cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.3);cx.fill()}});cx.globalAlpha=1})(0)}
 })();
 </script>
 </body></html>
