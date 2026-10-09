@@ -1,0 +1,242 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="STAG: four Texas junk removal crews, one stag, and the software that runs them."><title>STAG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a territory survey. The Texas stag logo is the mark; four crews are four claimed territories on a plotted map of their real cities. Black ground, the logos' neon green for what is live, white for type. */
+:root{
+  color-scheme:dark;
+  --ink:#070a08; --pine:#0c120f; --panel:#111a15; --line:#1f2e25; --bone:#f3f2ec; --mute:#a3b2a9;
+  --neon:#27f05a; --warn:#e5604a;
+  --c-spring:#3987e5; --c-tomball:#d95926; --c-cypress:#199e70; --c-cs:#d4a017;
+  --display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif; --body:'Figtree',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--bone);font-family:var(--body);font-size:17px;line-height:1.6;padding-inline:clamp(16px,4vw,48px);padding-block:0;overflow-x:hidden}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:.95;margin:0;text-wrap:balance;text-transform:uppercase;letter-spacing:.005em}
+p{margin:0;max-width:62ch}
+.wrap{max-width:1180px;margin-inline:auto}
+.mono{font-family:var(--mono);font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+:focus-visible{outline:2px solid var(--neon);outline-offset:3px;border-radius:4px}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin-inline:calc(-1*clamp(16px,4vw,48px));padding:10px clamp(16px,4vw,48px);background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1180px;margin-inline:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand img{width:36px;height:36px;border-radius:8px}
+.brand b{font-family:var(--display);font-size:1.8rem;font-weight:900;letter-spacing:.06em}
+nav{display:flex;gap:22px}
+nav a{font-size:.92rem;color:var(--mute);text-decoration:none}
+nav a:hover{color:var(--bone)}
+.pill{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--neon);color:var(--neon);padding:5px 10px;border-radius:999px;white-space:nowrap}
+@media(max-width:760px){nav{display:none}}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(24px,5vw,64px);align-items:center;padding-block:clamp(36px,7vw,84px)}
+.hero h1{font-size:clamp(6rem,19vw,14rem);font-weight:900;line-height:.8;letter-spacing:.02em}
+.hero .tag{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:clamp(1.8rem,4.6vw,3rem);color:var(--neon);margin-top:12px;line-height:1}
+.hero p.lead{margin-top:22px;font-size:1.12rem}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:6px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--panel);transition:border-color .2s,transform .2s}
+.btn:hover{border-color:var(--neon);transform:translateY(-1px)}
+.btn.main{background:var(--neon);border-color:var(--neon);color:#031207}
+.logo-stage{position:relative;border:1px solid var(--line);border-radius:12px;background:#000;padding:clamp(14px,3vw,30px);overflow:hidden}
+.logo-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,rgba(39,240,90,.16),transparent 62%)}
+.logo-stage img{position:relative;display:block;width:100%;height:auto;max-width:520px;margin-inline:auto}
+@media(max-width:860px){.hero{grid-template-columns:1fr}}
+
+.belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
+.belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
+.belt img{height:92px;width:92px;object-fit:contain;display:block}
+.belt span{font-family:var(--display);font-weight:800;font-size:1.5rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+@keyframes belt{to{transform:translateX(-33.333%)}}
+@media(prefers-reduced-motion:reduce){.belt-track{animation:none}html{scroll-behavior:auto}}
+
+section{padding-block:clamp(52px,8vw,110px)}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:34px}
+.head h2{font-size:clamp(2.6rem,7vw,5rem)}
+.head h2 em{font-style:normal;color:var(--neon)}
+.plot{display:inline-block;margin-bottom:12px}
+
+/* territories */
+.terr{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:22px;align-items:start}
+.mapbox{border:1px solid var(--line);border-radius:12px;background:var(--pine);overflow-x:auto}
+#map svg{display:block;min-width:700px;width:100%;height:auto}
+.crews{display:grid;gap:12px}
+.crew-card{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--cc);border-radius:10px;background:var(--panel);padding:12px 14px;transition:border-color .2s,background .2s}
+.crew-card:hover,.crew-card:focus-visible,.crew-card[aria-pressed=true]{background:#16231b;border-color:var(--cc)}
+.crew-card img{width:76px;height:76px;object-fit:contain;background:#000;border-radius:8px}
+.crew-card b{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:1.45rem;line-height:1;display:block}
+.crew-card span{display:block;color:var(--mute);font-size:.86rem;line-height:1.4;margin-top:4px}
+.crew-card .go{margin-top:6px;color:var(--bone);font-size:.84rem}
+.legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 14px;border-top:1px solid var(--line);font-size:.84rem;color:var(--mute)}
+@media(max-width:940px){.terr{grid-template-columns:1fr}}
+.dim{opacity:.18}
+.m-g{transition:opacity .2s}
+
+/* work */
+.work{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.work .rig{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000}
+.work img{display:block;width:100%;height:auto}
+.work .ph{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:30px}
+.fact{border-top:2px solid var(--neon);padding-top:10px}
+.fact b{display:block;font-family:var(--display);font-size:2.8rem;font-weight:900;line-height:1}
+.fact span{color:var(--mute);font-size:.9rem}
+@media(max-width:640px){.work{grid-template-columns:1fr}}
+
+/* software */
+.prod{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,4vw,56px);align-items:start}
+.feat{list-style:none;padding:0;margin:26px 0 0}
+.feat li{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:15px 0;border-top:1px solid var(--line)}
+.feat li:last-child{border-bottom:1px solid var(--line)}
+.feat svg{width:24px;height:24px;color:var(--neon);margin-top:2px}
+.feat b{display:block;font-weight:600}
+.feat span{color:var(--mute);font-size:.95rem}
+.shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--pine)}
+.shot-tabs{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--line)}
+.shot-tabs button{font:inherit;font-size:.85rem;color:var(--mute);background:none;border:1px solid transparent;border-radius:999px;padding:6px 14px;cursor:pointer}
+.shot-tabs button[aria-pressed=true]{color:#031207;background:var(--neon);font-weight:600}
+.shot img{display:block;width:100%;height:auto}
+.note{margin-top:10px;color:var(--mute);font-size:.85rem}
+@media(max-width:900px){.prod{grid-template-columns:1fr}}
+
+/* herd */
+.herd{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:clamp(22px,4vw,44px);display:grid;gap:14px}
+.herd h3{font-size:clamp(2rem,5vw,3.2rem)}
+.herd p{color:var(--mute)}
+.road{display:grid;border-top:1px solid var(--line);margin-top:34px}
+.step{display:grid;grid-template-columns:150px 1fr;gap:20px;padding:20px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.step h3{font-size:1.8rem}
+.step p{color:var(--mute);margin-top:6px}
+.st{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+.st.live{color:var(--neon)}.st.next{color:var(--bone)}.st.tba{color:var(--mute)}
+@media(max-width:640px){.step{grid-template-columns:1fr;gap:6px}}
+
+footer{border-top:1px solid var(--line);padding-block:34px 56px;color:var(--mute);font-size:.84rem;display:grid;gap:12px}
+footer p{max-width:90ch}
+footer .links{display:flex;flex-wrap:wrap;gap:16px}
+</style>
+
+</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/icon.webp" alt=""><b>STAG</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="#work">The work</a><a href="#software">Software</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
+
+<main id="top" class="wrap">
+  <div class="hero">
+    <div>
+      <div class="mono plot">Four crews · one stag</div>
+      <h1>STAG</h1>
+      <div class="tag">Claim your territory.</div>
+      <p class="lead">Four Texas junk removal crews wear the same stag. Spring, Tomball, Cypress and College Station each hold their own territory, and STAG is the name, the software and the community that ties them together.</p>
+      <div class="cta"><a class="btn main" href="#territories">Find your crew</a><a class="btn" href="#software">See the software</a></div>
+    </div>
+    <div class="logo-stage"><img src="a/logo-hq.webp" alt="Junk Junkies Texas logo: a white stag head in front of a green Texas outline" width="560" height="560"></div>
+  </div>
+</main>
+
+<div class="belt" aria-hidden="true"><div class="belt-track" id="belt"></div></div>
+
+<main class="wrap">
+<section id="territories">
+  <div class="head"><div><div class="mono plot">Territories</div><h2>Four crews. <em>Sixteen cities.</em></h2></div></div>
+  <div class="terr">
+    <div class="mapbox"><div id="map"></div><div class="legend" id="legend"></div></div>
+    <div class="crews" id="crews"></div>
+  </div>
+  <p class="note" style="margin-top:14px">Each mark is a city the crew serves. Tap a crew to light up its territory. The map is plotted from real city coordinates, not a street map.</p>
+</section>
+
+<section id="work">
+  <div class="head"><div><div class="mono plot">The work</div><h2>Built on <em>real trucks.</em></h2></div></div>
+  <p style="margin-bottom:26px">These are working crews, not a mockup. Every job starts with a free quote from photos, and every price is based on how much room your stuff takes up in a 16-foot trailer.</p>
+  <div class="work">
+    <div class="rig"><img src="a/rig.webp" alt="Junk Junkies pickup truck pulling a 16-foot trailer" width="1100" height="300" loading="lazy"></div>
+    <div class="ph"><img src="a/crew1.webp" alt="A crew member with the trailer at a storage unit" width="900" height="471" loading="lazy"></div>
+    <div class="ph"><img src="a/crew2.webp" alt="A curbside pile ready for pickup" width="900" height="471" loading="lazy"></div>
+  </div>
+  <div class="facts">
+    <div class="fact"><b>4</b><span>Texas crews, one logo family</span></div>
+    <div class="fact"><b>16 ft</b><span>trailer, priced by space used</span></div>
+    <div class="fact"><b>21</b><span>kinds of junk and debris hauled</span></div>
+  </div>
+</section>
+
+<section id="software">
+  <div class="prod">
+    <div>
+      <div class="mono plot">Crew software</div>
+      <div class="head" style="margin-bottom:0"><h2>One list for <em>every job.</em></h2></div>
+      <p style="margin-top:18px">The same software runs all four crews. It started as a CRM for one truck and grew from what the crews needed in the field and in the office.</p>
+      <ul class="feat">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><div><b>Every request in one place</b><span>Quote requests from all four crew websites land in one list, with the customer's photos.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/></svg><div><b>Quotes customers approve from a text</b><span>Itemized lines, tax and deposit. The customer taps Approve on their phone.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg><div><b>Invoices and payments in a tap</b><span>Record cash, check, Zelle or card, including partial payments.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><div><b>Crew photos pin the map</b><span>Before and after photos with GPS go to the right city page when a job is done.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><b>A Today list that says who to call first</b><span>Leads waiting too long turn red, because the fastest reply wins the job.</span></div></li>
+      </ul>
+    </div>
+    <div>
+      <div class="shot"><div class="shot-tabs" role="group" aria-label="Screens"><button id="tToday" aria-pressed="true">Today</button><button id="tIns" aria-pressed="false">Insights</button></div><img id="shot" src="a/crm-today.webp" alt="Today screen showing leads to call, follow-ups and jobs" width="1256" height="702"></div>
+      <p class="note">Screens show sample data.</p>
+    </div>
+  </div>
+</section>
+
+<section id="herd">
+  <div class="herd">
+    <div class="mono">The herd</div>
+    <h3>The relaunch is in progress.</h3>
+    <p>STAG is being rebuilt around the four Texas crews. How the community and the token connect to the businesses will be published here once it is final and has been reviewed. Until then, this page is a preview and nothing on it is an offer.</p>
+  </div>
+  <div class="road">
+    <div class="step"><span class="st live">Live now</span><div><h3>The four crew websites</h3><p>Spring, Tomball, Cypress and College Station, each with its own quote form, map and reviews.</p></div></div>
+    <div class="step"><span class="st live">Live now</span><div><h3>Crew software</h3><p>Requests, quotes, invoices, scheduling and crew photos, shared by all four crews.</p></div></div>
+    <div class="step"><span class="st next">In progress</span><div><h3>This STAG site</h3><p>One home for the brand, the territories and the community.</p></div></div>
+    <div class="step"><span class="st tba">To be announced</span><div><h3>Community and token details</h3><p>Nothing is promised here until it is ready.</p></div></div>
+  </div>
+</section>
+</main>
+
+<footer class="wrap">
+  <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAG</b>
+  <div class="links"><a href="https://junkjunkiestexas.com" target="_blank" rel="noopener">Junk Junkies Texas, Spring ↗</a><a href="https://junkjunkiestomball.com" target="_blank" rel="noopener">Tomball ↗</a><a href="https://junkjunkiescypress.com" target="_blank" rel="noopener">Cypress ↗</a><a href="https://junkjunkiescollegestation.com" target="_blank" rel="noopener">College Station ↗</a></div>
+  <p>STAG is a brand, software and community project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
+  <p>Screens of the software show sample data. Business phone for all four Texas crews: (346) 413-9644.</p>
+</footer>
+
+<script>
+var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[{"n":"Spring","lat":30.0799,"lon":-95.4172},{"n":"Klein","lat":30.0316,"lon":-95.5272},{"n":"The Woodlands","lat":30.1658,"lon":-95.4613},{"n":"Humble","lat":29.9988,"lon":-95.2622}]},"tomball":{"name":"Junk Junkies Texas Junk Removal Tomball","cities":[{"n":"Tomball","lat":30.0972,"lon":-95.6161},{"n":"Magnolia","lat":30.2091,"lon":-95.7508},{"n":"Pinehurst","lat":30.1527,"lon":-95.6958},{"n":"Montgomery","lat":30.3883,"lon":-95.6961}]},"cypress":{"name":"Junk Junkies Texas Junk Removal Cypress","cities":[{"n":"Cypress","lat":29.9691,"lon":-95.6972},{"n":"Jersey Village","lat":29.8897,"lon":-95.5699},{"n":"Hockley","lat":30.0291,"lon":-95.8508},{"n":"Katy","lat":29.7858,"lon":-95.8244}]},"college-station":{"name":"Junk Junkies Texas Junk Removal College Station","cities":[{"n":"College Station","lat":30.628,"lon":-96.3344},{"n":"Bryan","lat":30.6744,"lon":-96.3699},{"n":"Navasota","lat":30.388,"lon":-96.0877},{"n":"Caldwell","lat":30.5316,"lon":-96.6933}]}};
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var CREWS=[
+    {k:'spring',name:'Spring',cc:'var(--c-spring)',hex:'#3987e5',logo:'a/logo-spring.webp',url:'https://junkjunkiestexas.com',shape:'circle',hq:true},
+    {k:'tomball',name:'Tomball',cc:'var(--c-tomball)',hex:'#d95926',logo:'a/logo-tomball.webp',url:'https://junkjunkiestomball.com',shape:'square'},
+    {k:'cypress',name:'Cypress',cc:'var(--c-cypress)',hex:'#199e70',logo:'a/logo-cypress.webp',url:'https://junkjunkiescypress.com',shape:'diamond'},
+    {k:'college-station',name:'College Station',cc:'var(--c-cs)',hex:'#d4a017',logo:'a/logo-cs.webp',url:'https://junkjunkiescollegestation.com',shape:'triangle'}
+  ];
+  // belt of the logos, repeated three times so the loop is seamless
+  var b='';for(var r=0;r<3;r++)CREWS.concat([{logo:'a/logo-hq.webp'}]).forEach(function(c){b+='<img src="'+c.logo+'" alt="" width="92" height="92" loading="lazy"><span>'+(c.name?c.name:'Texas')+'</span>'});$('#belt').innerHTML=b;
+  // crew cards
+  $('#crews').innerHTML=CREWS.map(function(c){var cs=CITIES[c.k].cities.map(function(x){return x.n}).join(', ');return '<button class="crew-card" style="--cc:'+c.cc+'" data-k="'+c.k+'" aria-pressed="false"><img src="'+c.logo+'" alt="" width="76" height="76" loading="lazy"><span><b>'+(c.hq?'Spring · HQ':c.name)+'</b><span>'+cs+'</span><a class="go" href="'+c.url+'" target="_blank" rel="noopener">Visit the '+c.name+' site ↗</a></span></button>'}).join('');
+  function glyph(sh,col,x,y,r){return sh==='circle'?'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+col+'"':sh==='square'?'<rect x="'+(x-r)+'" y="'+(y-r)+'" width="'+2*r+'" height="'+2*r+'" fill="'+col+'"':sh==='diamond'?'<path d="M'+x+' '+(y-r-2)+'L'+(x+r+2)+' '+y+'L'+x+' '+(y+r+2)+'L'+(x-r-2)+' '+y+'Z" fill="'+col+'"':'<path d="M'+x+' '+(y-r-1)+'L'+(x+r+2)+' '+(y+r)+'L'+(x-r-2)+' '+(y+r)+'Z" fill="'+col+'"'}
+  $('#legend').innerHTML=CREWS.map(function(c){return '<span><svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:-2px;margin-right:6px" aria-hidden="true">'+glyph(c.shape,c.hex,7,7,5)+'/></svg>'+c.name+'</span>'}).join('');
+  // plotted map
+  var all=[];CREWS.forEach(function(c){CITIES[c.k].cities.forEach(function(x){all.push({c:c,n:x.n,lat:x.lat,lon:x.lon})})});
+  var lats=all.map(function(p){return p.lat}),lons=all.map(function(p){return p.lon});
+  var minLat=Math.min.apply(null,lats),maxLat=Math.max.apply(null,lats),minLon=Math.min.apply(null,lons),maxLon=Math.max.apply(null,lons);
+  var W=900,H=760,PAD=72,k=Math.cos(30.2*Math.PI/180),s=Math.min((W-2*PAD)/((maxLon-minLon)*k),(H-2*PAD)/(maxLat-minLat));
+  var ox=(W-(maxLon-minLon)*k*s)/2,oy=(H-(maxLat-minLat)*s)/2;
+  function X(lon){return ox+(lon-minLon)*k*s}function Y(lat){return oy+(maxLat-lat)*s}
+  var N={'Spring':[12,20,'start'],'Klein':[-12,18,'end'],'The Woodlands':[12,-8,'start'],'Humble':[0,24,'middle'],'Tomball':[-12,22,'end'],'Magnolia':[-12,-6,'end'],'Pinehurst':[-12,-2,'end'],'Montgomery':[12,4,'start'],'Cypress':[-12,18,'end'],'Jersey Village':[12,18,'start'],'Hockley':[-12,4,'end'],'Katy':[-12,4,'end'],'College Station':[12,16,'start'],'Bryan':[12,-4,'start'],'Navasota':[12,4,'start'],'Caldwell':[12,4,'start']};
+  var g='';for(var i=0;i<=9;i++){var gx=20+i*(W-40)/9;g+='<line x1="'+gx+'" x2="'+gx+'" y1="20" y2="'+(H-20)+'" stroke="#1f2e25"/>'}for(var j=0;j<=5;j++){var gy=20+j*(H-40)/5;g+='<line y1="'+gy+'" y2="'+gy+'" x1="20" x2="'+(W-20)+'" stroke="#1f2e25"/>'}
+  var d='';all.forEach(function(p){var x=X(p.lon),y=Y(p.lat),n=N[p.n]||[12,4,'start'];
+    d+='<g data-k="'+p.c.k+'" class="m-g"><title>'+p.n+', '+p.c.name+' crew</title>'+glyph(p.c.shape,p.c.hex,x,y,8)+' stroke="#070a08" stroke-width="2.5"/><text x="'+(x+n[0])+'" y="'+(y+n[1])+'" text-anchor="'+n[2]+'" fill="#f3f2ec" font-size="14" font-family="Figtree,system-ui,sans-serif" paint-order="stroke" stroke="#0c120f" stroke-width="3">'+p.n+'</text></g>'});
+  $('#map').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Plot of the sixteen cities served by the four Texas crews">'+g+'<text x="'+(W-26)+'" y="'+(H-28)+'" text-anchor="end" fill="#a3b2a9" font-size="11" font-family="IBM Plex Mono,monospace" letter-spacing="2">NORTH UP · PLOTTED FROM CITY COORDINATES</text>'+d+'</svg>';
+  var pinned=null;function apply(k){document.querySelectorAll('.m-g').forEach(function(g){g.classList.toggle('dim',!!k&&g.dataset.k!==k)});document.querySelectorAll('.crew-card').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.k===k))})}
+  $('#crews').addEventListener('click',function(e){if(e.target.closest('a'))return;var c=e.target.closest('.crew-card');if(c){pinned=pinned===c.dataset.k?null:c.dataset.k;apply(pinned)}});
+  $('#crews').addEventListener('mouseover',function(e){var c=e.target.closest('.crew-card');if(c)apply(c.dataset.k)});$('#crews').addEventListener('mouseleave',function(){apply(pinned)});
+  // software screens
+  var shot=$('#shot'),tT=$('#tToday'),tI=$('#tIns');
+  function pick(w){var ins=w==='ins';shot.src=ins?'a/crm-insights.webp':'a/crm-today.webp';shot.alt=ins?'Insights screen with leads per day, funnel and revenue charts':'Today screen showing leads to call, follow-ups and jobs';tT.setAttribute('aria-pressed',!ins);tI.setAttribute('aria-pressed',ins)}
+  tT.onclick=function(){pick('today')};tI.onclick=function(){pick('ins')};
+})();
+</script>
+</body></html>
