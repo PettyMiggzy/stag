@@ -165,6 +165,49 @@ r = await anon.get('/api/public/b/nope'); ok('unknown booking page 404', r.s ===
 for (let i = 0; i < 8; i++) await anon.post('/api/public/b/alpha-hauling/request', { name: 'Spam', phone: '7135559001' });
 r = await anon.post('/api/public/b/alpha-hauling/request', { name: 'Spam', phone: '7135559001' }); ok('booking spam is rate limited', r.s === 429, r);
 
+// ---------- Jobber-style quote features: optional add-ons, text sections, percent deposit, rating, salesperson ----------
+{
+  const cq = (await A.post('/api/customers', { name: 'Quote Tester', phone: '2815557000', email: 'qt@x.test' })).j.customer;
+  const wallyId = (await A.get('/api/team')).j.team.find(m => m.email === 'wally@alpha.test').id;
+  r = await A.post('/api/quotes', { customer_id: cq.id, title: 'Weekly cleaning', rating: 4, salesperson_id: wallyId, reminder_date: '2026-11-05', deposit_pct: 25, tax_pct: 0,
+    items: [{ name: 'Weekly service', description: 'Dust, vacuum, mop', qty: 1, price: 100 }, { name: 'Window wash', qty: 1, price: 50, optional: true, selected: false }, { name: 'Oven clean', qty: 1, price: 30, optional: true, selected: true }, { kind: 'text', name: 'Terms', description: 'Access to the home is required.' }] });
+  ok('quote with optional lines, text section, percent deposit', r.s === 200 && r.j.quote.title === 'Weekly cleaning' && r.j.quote.rating === 4 && r.j.quote.salesperson_id === wallyId, r);
+  ok('only ticked optional lines count: 100 + 30 = 130, deposit 25% = 32.50', r.j.quote.total === 130 && r.j.quote.deposit_due === 32.5, [r.j.quote.total, r.j.quote.deposit_due]);
+  const oq = r.j.quote;
+  r = await A.post('/api/quotes', { customer_id: cq.id, salesperson_id: (await A.get('/api/auth/me')).j.user.id, items: [{ name: 'x', price: 1 }] }); ok('owner can be the salesperson', r.s === 200, r);
+  r = await B.post('/api/team', { name: 'Bee Worker', email: 'bee@bravo.test', password: 'worker-pass1', role: 'worker' }); const beeId = r.j.member.id;
+  r = await A.post('/api/quotes', { customer_id: cq.id, salesperson_id: beeId, items: [{ name: 'x', price: 1 }] }); ok('another business\'s person cannot be salesperson', r.s === 400, r);
+  await A.post(`/api/quotes/${oq.id}/send`, {});
+  r = await anon.get('/api/public/q/' + oq.token); ok('customer sees optional lines, text, deposit', r.j.quote.items.length === 4 && r.j.quote.items[1].optional === true && r.j.quote.deposit_due === 32.5 && r.j.quote.title === 'Weekly cleaning' && !JSON.stringify(r.j).includes('salesperson'), r.j.quote);
+  r = await anon.post(`/api/public/q/${oq.token}/decide`, { decision: 'approve', name: 'Quote Tester', selected: [1, 2] }); ok('customer ticks both add-ons and approves', r.s === 200, r);
+  r = await A.get('/api/quotes/' + oq.id); ok('approved total includes both add-ons: 180, deposit 45', r.j.quote.total === 180 && r.j.quote.deposit_due === 45 && r.j.quote.items[1].selected === true, [r.j.quote.total, r.j.quote.deposit_due]);
+  r = await A.post(`/api/quotes/${oq.id}/deposit-paid`, { method: 'zelle' }); ok('mark deposit received', r.s === 200 && r.j.quote.deposit_paid_at, r);
+  r = await B.post(`/api/quotes/${oq.id}/deposit-paid`, {}); ok('B cannot mark A deposit', r.s === 404, r);
+  r = await A.post('/api/invoices', { customer_id: cq.id, quote_id: oq.id }); ok('invoice from quote copies chosen lines only (no text section)', r.s === 200 && r.j.invoice.items.length === 3 && r.j.invoice.items.every(i => i.kind !== 'text') && r.j.invoice.total === 180, r.j.invoice?.items);
+  // a customer cannot approve with nothing selected: make a quote that is all optional
+  const aq = (await A.post('/api/quotes', { customer_id: cq.id, items: [{ name: 'Only add-on', price: 20, optional: true, selected: false }] })).j.quote; await A.post(`/api/quotes/${aq.id}/send`, {});
+  r = await anon.post(`/api/public/q/${aq.token}/decide`, { decision: 'approve', name: 'Quote Tester', selected: [] }); ok('cannot approve a quote with nothing picked', r.s === 400, r);
+}
+// ---------- request detail, notes, consent, Convert to Quote ----------
+{
+  await sql`DELETE FROM login_fails WHERE key LIKE 'booking:%'`; // the spam test above used up this IP's hourly limit
+  r = await anon.post('/api/public/b/alpha-hauling/request', { name: 'Consent Yes', company: 'Yes LLC', phone: '(713) 555-7001', email: 'yes@x.test', service: 'Service call', address: '9 Pine', message: 'Need help', sms_ok: true, email_ok: true, availability: { dates: ['2026-11-03', '2026-11-06', 'junk'], arrival: ['morning', 'bogus'] } });
+  ok('request with availability and consent', r.s === 200, r);
+  const rq = (await A.get('/api/requests')).j.requests.find(x => x.name === 'Consent Yes');
+  ok('availability stored and cleaned', JSON.stringify(rq.availability) === JSON.stringify({ dates: ['2026-11-03', '2026-11-06'], arrival: ['morning'] }) && rq.sms_ok === true && rq.email_ok === true, rq);
+  r = await A.put('/api/requests/' + rq.id, { notes: 'Called, will visit Tuesday', status: 'contacted' }); ok('internal notes saved', r.s === 200 && r.j.request.notes.includes('Tuesday') && r.j.request.status === 'contacted', r);
+  r = await A.get('/api/requests/' + rq.id); ok('request detail', r.s === 200 && r.j.request.company === 'Yes LLC', r);
+  r = await B.get('/api/requests/' + rq.id); ok('B cannot open A request', r.s === 404, r);
+  r = await B.put('/api/requests/' + rq.id, { notes: 'x' }); ok('B cannot edit A request', r.s === 404, r);
+  r = await B.post(`/api/requests/${rq.id}/convert-quote`, {}); ok('B cannot convert A request', r.s === 404, r);
+  r = await A.post(`/api/requests/${rq.id}/convert-quote`, {}); ok('Convert to Quote makes customer and a draft quote', r.s === 200 && r.j.customer.name === 'Consent Yes' && r.j.quote.id, r);
+  ok('consent copied to the customer with a timestamp', r.j.customer.sms_opt_in === true && r.j.customer.email_opt_in === true && r.j.customer.sms_opt_in_at && r.j.customer.company === 'Yes LLC', r.j.customer);
+  const nq = (await A.get('/api/quotes/' + r.j.quote.id)).j.quote; ok('draft quote starts with the requested service and the request link', nq.status === 'draft' && nq.request_id === rq.id && nq.items[0].name === 'Service call' && nq.items[0].price === 95, nq);
+  r = await anon.post('/api/public/b/alpha-hauling/request', { name: 'Consent No', phone: '(713) 555-7002', email: 'no@x.test', service: 'Other', message: 'hi' });
+  const rn = (await A.get('/api/requests')).j.requests.find(x => x.name === 'Consent No'); r = await A.post(`/api/requests/${rn.id}/convert-quote`, {});
+  ok('no consent ticked means no consent recorded', r.j.customer.sms_opt_in === false && r.j.customer.email_opt_in === false && !r.j.customer.sms_opt_in_at, r.j.customer);
+}
+
 // ---------- dashboard, reports, exports, expenses ----------
 r = await A.post('/api/expenses', { job_id: job.id, description: 'Dump fee', amount: 45.5 }); ok('add expense', r.s === 200, r);
 r = await B.post('/api/expenses', { job_id: job.id, description: 'x', amount: 5 }); ok('B cannot add expense to A job', r.s === 404, r);

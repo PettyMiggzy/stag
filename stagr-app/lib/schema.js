@@ -82,6 +82,21 @@ const STATEMENTS = [
   incurred_on DATE NOT NULL DEFAULT current_date, user_id INT)`,
 `CREATE INDEX IF NOT EXISTS expenses_tenant ON expenses(tenant_id, incurred_on DESC)`
 ];
+STATEMENTS.push(
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT ''`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS rating INT NOT NULL DEFAULT 0`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS salesperson_id INT`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS reminder_date DATE`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS deposit_pct NUMERIC(5,2) NOT NULL DEFAULT 0`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS deposit_paid_at TIMESTAMPTZ`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS deposit_paid_method TEXT NOT NULL DEFAULT ''`,
+`ALTER TABLE requests ADD COLUMN IF NOT EXISTS company TEXT NOT NULL DEFAULT ''`,
+`ALTER TABLE requests ADD COLUMN IF NOT EXISTS availability JSONB NOT NULL DEFAULT '{}'::jsonb`,
+`ALTER TABLE requests ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT ''`,
+`ALTER TABLE requests ADD COLUMN IF NOT EXISTS email_ok BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE requests ADD COLUMN IF NOT EXISTS sms_ok BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE customers ADD COLUMN IF NOT EXISTS email_opt_in BOOLEAN NOT NULL DEFAULT false`
+);
 let done = null;
 export function ensureSchema() {
   if (!done) done = (async () => { for (const s of STATEMENTS) await query(s); })().catch(e => { done = null; throw e; });

@@ -1,4 +1,4 @@
-import { S, esc, get, put, post, money, money0, phoneFmt, fmtDT, ago, statusChip, empty, toast, hooks, modal, $, $$ } from './core.js';
+import { S, esc, get, put, post, money, money0, phoneFmt, fmtDT, fmtDate, ago, statusChip, chip, empty, toast, hooks, modal, $, $$ } from './core.js';
 import { newCustomerModal } from './people.js';
 import { newQuoteModal } from './sales.js';
 import { newJobModal, visitModal } from './work.js';
@@ -40,8 +40,8 @@ export async function requestsView() {
     $('#addReq', main)?.addEventListener('click', () => requestModal());
   }, 0);
   return `<div class="top"><h1>Requests</h1><button class="btn main" id="addReq">+ Add request</button></div><p class="mute small" style="margin-top:-8px">Every time someone asks for work, from your booking page or a phone call you type in, it shows up here.</p>
-  <div class="list">${requests.length ? requests.map(q => `<div class="card"><div class="row between wrap"><div><b>${esc(q.name)}</b> ${statusChip(q.status)}<div class="small mute">${esc(q.service || 'Request')} · ${esc(q.source)} · ${esc(ago(q.created_at))}</div></div>
-      <div class="row wrap">${q.phone ? `<a class="btn small" href="tel:${esc(q.phone)}">Call ${esc(phoneFmt(q.phone))}</a>` : ''}${q.status !== 'converted' ? `<button class="btn small main" data-convert="${q.id}">Make customer</button>` : ''}${q.status === 'new' ? `<button class="btn small" data-st="contacted" data-id="${q.id}">Contacted</button>` : ''}${q.status !== 'lost' && q.status !== 'converted' ? `<button class="btn small warn" data-st="lost" data-id="${q.id}">Lost</button>` : ''}</div></div>
+  <div class="list">${requests.length ? requests.map(q => `<div class="card"><div class="row between wrap"><div><a href="#/requests/${q.id}" style="text-decoration:none"><b>${esc(q.name)}</b></a> ${statusChip(q.status)}<div class="small mute">${esc(q.service || 'Request')} · ${esc(q.source)} · ${esc(ago(q.created_at))}</div></div>
+      <div class="row wrap">${q.phone ? `<a class="btn small" href="tel:${esc(q.phone)}">Call ${esc(phoneFmt(q.phone))}</a>` : ''}<a class="btn small main" href="#/requests/${q.id}">Open</a>${q.status === 'new' ? `<button class="btn small" data-st="contacted" data-id="${q.id}">Contacted</button>` : ''}${q.status !== 'lost' && q.status !== 'converted' ? `<button class="btn small warn" data-st="lost" data-id="${q.id}">Lost</button>` : ''}</div></div>
       ${q.address ? `<p class="small" style="margin:8px 0 0">📍 ${esc(q.address)}</p>` : ''}${q.message ? `<p style="margin:8px 0 0;white-space:pre-wrap">${esc(q.message)}</p>` : ''}
       ${(q.photos || []).length ? `<div class="photos" style="margin-top:10px">${q.photos.map(p => `<img class="thumb" src="${esc(p)}" alt="Customer photo" loading="lazy" style="cursor:pointer">`).join('')}</div>` : ''}</div>`).join('') : empty('No requests yet.')}</div>`;
 }
@@ -51,4 +51,30 @@ function requestModal() {
     <div class="row"><button class="btn main" type="submit">Save</button><button class="btn" type="button" data-close>Cancel</button></div></form>`, (el, close) => {
     $('#rf', el).addEventListener('submit', async e => { e.preventDefault(); try { await post('/requests', Object.fromEntries(new FormData(e.target))); close(); hooks.refresh(); } catch (err) { toast(err.message, true); } });
   });
+}
+
+// A single request, laid out like Jobber's: contact card, what they asked for, when they are free, photos, internal notes.
+export async function requestView(id) {
+  const d = await get('/requests/' + id), r = d.request, main = document.getElementById('main'), av = r.availability || {};
+  const arrival = { any: 'Any time', morning: 'Morning', afternoon: 'Afternoon' };
+  const ensureCustomer = async () => (await post('/requests/' + r.id + '/convert')).customer;
+  setTimeout(() => {
+    $('#toQuote', main).addEventListener('click', async () => { try { const x = await post('/requests/' + r.id + '/convert-quote'); toast('Quote started'); location.hash = '#/quotes/' + x.quote.id; } catch (e) { toast(e.message, true); } });
+    $('#toJob', main).addEventListener('click', async () => { try { const c = await ensureCustomer(); newJobModal(c.id, { title: r.service || 'New job' }); } catch (e) { toast(e.message, true); } });
+    $('#assess', main).addEventListener('click', async () => { try { const c = await ensureCustomer(); newJobModal(c.id, { title: 'Assessment' + (r.service ? ': ' + r.service : '') }); } catch (e) { toast(e.message, true); } });
+    $('#lost', main)?.addEventListener('click', async () => { await put('/requests/' + r.id, { status: 'lost' }); hooks.refresh(); });
+    $('#contacted', main)?.addEventListener('click', async () => { await put('/requests/' + r.id, { status: 'contacted' }); hooks.refresh(); });
+    $('#notes', main).addEventListener('change', async e => { try { await put('/requests/' + r.id, { notes: e.target.value }); toast('Note saved'); } catch (err) { toast(err.message, true); } });
+    $$('.thumb', main).forEach(i => i.addEventListener('click', () => window.open(i.src, '_blank')));
+  }, 0);
+  return `<div class="top"><div><a class="small mute" href="#/requests">← Requests</a></div><div class="row wrap"><button class="btn main" id="assess">Schedule assessment</button>
+    <details style="position:relative"><summary class="btn" style="list-style:none">⋯ More</summary><div class="card" style="position:absolute;right:0;top:46px;z-index:20;min-width:210px;display:grid;gap:6px;padding:10px"><button class="btn small" id="toQuote" style="justify-content:flex-start">Convert to Quote</button><button class="btn small" id="toJob" style="justify-content:flex-start">Convert to Job</button>${r.status === 'new' ? '<button class="btn small" id="contacted" style="justify-content:flex-start">Mark contacted</button>' : ''}${r.status !== 'lost' && r.status !== 'converted' ? '<button class="btn small warn" id="lost" style="justify-content:flex-start">Mark lost</button>' : ''}<button class="btn small" onclick="window.print()" style="justify-content:flex-start">Print</button></div></details></div></div>
+  <div class="grid g2" style="align-items:start"><div class="col"><div class="card"><div class="row between"><div>${statusChip(r.status)}</div><span class="mute small">${esc(fmtDT(r.created_at))} · ${esc(r.source)}</span></div><h1 style="font-size:2.4rem;margin:10px 0 4px">Request for ${esc(r.name)}</h1>
+      <div class="grid g2" style="margin-top:8px"><div><b class="small">${esc(r.name)}${r.company ? ' · ' + esc(r.company) : ''}</b><div class="mute small">${esc(r.address) || 'No address'}<br>${r.phone ? `<a href="tel:${esc(r.phone)}" style="color:inherit">${esc(phoneFmt(r.phone))}</a>` : ''}<br>${esc(r.email)}</div></div>
+        <div class="small"><b>Marketing consent</b><div class="mute">Texts: ${r.sms_ok ? chip('agreed', 'ok') : chip('no')}<br>Email: ${r.email_ok ? chip('agreed', 'ok') : chip('no')}</div></div></div>
+      ${d.customer ? `<p class="small" style="margin:10px 0 0">Customer: <a href="#/customers/${d.customer.id}">${esc(d.customer.name)}</a>${d.quotes.length ? ' · ' + d.quotes.map(x => `<a href="#/quotes/${x.id}">Q-${x.number}</a>`).join(', ') : ''}</p>` : ''}</div>
+    <div class="card"><h3>Overview</h3><div class="col" style="gap:12px"><div><b class="small">Service details</b><p style="margin:2px 0 0;white-space:pre-wrap">${esc(r.service) ? '<b>' + esc(r.service) + '</b><br>' : ''}${esc(r.message) || '<span class="mute">—</span>'}</p></div>
+      <div><b class="small">Your availability</b><div class="mute small">Preferred days: ${(av.dates || []).length ? av.dates.map(x => esc(fmtDate(x + 'T12:00:00Z'))).join(' · ') : '—'}<br>Arrival times: ${(av.arrival || []).length ? av.arrival.map(x => esc(arrival[x])).join(', ') : '—'}</div></div>
+      <div><b class="small">Photos</b>${(r.photos || []).length ? `<div class="photos" style="margin-top:6px">${r.photos.map(p => `<img class="thumb" src="${esc(p)}" alt="Customer photo" loading="lazy" style="cursor:pointer">`).join('')}</div>` : '<div class="mute small">None sent</div>'}</div></div></div></div>
+  <div class="card"><h3>Notes</h3><p class="small mute" style="margin:-4px 0 8px">Internal notes. The customer never sees these.</p><textarea id="notes" style="min-height:180px" placeholder="Leave an internal note for yourself or a team member">${esc(r.notes)}</textarea></div></div>`;
 }

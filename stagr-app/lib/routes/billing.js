@@ -2,7 +2,7 @@ import { route } from '../router.js';
 import { sql } from '../db.js';
 import { bad, missing } from '../http.js';
 import { need } from '../auth.js';
-import { clean, amt, cleanItems, token, totals, paidSum, r2 } from '../util.js';
+import { clean, amt, cleanItems, billable, token, totals, paidSum, r2 } from '../util.js';
 import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { nextNumber } from './sales.js';
@@ -19,11 +19,11 @@ route('GET', '/api/invoices', async ctx => {
 route('POST', '/api/invoices', async ctx => {
   need(ctx, 'admin'); const b = ctx.body, c = await getCustomer(ctx.tid, b.customer_id);
   let items = cleanItems(b.items), jid = null, qid = null, tax = null, disc = null;
-  if (b.job_id) { const [j] = await sql`SELECT * FROM jobs WHERE id = ${Number(b.job_id) || 0} AND tenant_id = ${ctx.tid} AND customer_id = ${c.id}`; if (!j) throw bad('Job not found'); jid = j.id; if (!items.length) items = j.items; qid = j.quote_id; }
+  if (b.job_id) { const [j] = await sql`SELECT * FROM jobs WHERE id = ${Number(b.job_id) || 0} AND tenant_id = ${ctx.tid} AND customer_id = ${c.id}`; if (!j) throw bad('Job not found'); jid = j.id; if (!items.length) items = billable(j.items); qid = j.quote_id; }
   if (b.quote_id) qid = Number(b.quote_id) || null;
   if (qid) { // take tax and discount from the quote this invoice comes from (items too, when none were given)
     const [q] = await sql`SELECT * FROM quotes WHERE id = ${qid} AND tenant_id = ${ctx.tid} AND customer_id = ${c.id}`; if (!q) throw bad('Quote not found');
-    if (!items.length) items = q.items; tax = q.tax_pct; disc = q.discount_pct;
+    if (!items.length) items = billable(q.items); tax = q.tax_pct; disc = q.discount_pct;
   }
   if (!items.length) throw bad('Add at least one line item');
   const [t] = await sql`SELECT tax_pct FROM tenants WHERE id = ${ctx.tid}`, n = await nextNumber(ctx.tid, 'invoice');

@@ -1,7 +1,7 @@
 import { S, $, $$, esc, get, post, icon, toast, ApiError, hooks } from './core.js';
-import { homeView, requestsView } from './home.js';
+import { homeView, requestsView, requestView } from './home.js';
 import { customersView, customerView } from './people.js';
-import { quotesView, invoicesView, invoiceView } from './sales.js';
+import { quotesView, quoteView, invoicesView, invoiceView } from './sales.js';
 import { scheduleView, jobsView, jobView } from './work.js';
 import { reportsView, messagesView, settingsView, moreView } from './more.js';
 
@@ -11,8 +11,8 @@ const NAV = [['home', '/', 'Home', 'home', 'worker'], ['requests', '/requests', 
 const TABS = ['home', 'schedule', 'customers', 'invoices', 'more'];
 const RANK = { worker: 1, admin: 2, owner: 3 };
 const ROUTES = [
-  [/^\/?$/, homeView], [/^\/requests$/, requestsView], [/^\/customers$/, customersView], [/^\/customers\/(\d+)$/, customerView], [/^\/schedule$/, scheduleView],
-  [/^\/quotes$/, quotesView], [/^\/jobs$/, jobsView], [/^\/jobs\/(\d+)$/, jobView], [/^\/invoices$/, invoicesView], [/^\/invoices\/(\d+)$/, invoiceView],
+  [/^\/?$/, homeView], [/^\/requests$/, requestsView], [/^\/requests\/(\d+)$/, requestView], [/^\/customers$/, customersView], [/^\/customers\/(\d+)$/, customerView], [/^\/schedule$/, scheduleView],
+  [/^\/quotes$/, quotesView], [/^\/quotes\/(\d+)$/, quoteView], [/^\/jobs$/, jobsView], [/^\/jobs\/(\d+)$/, jobView], [/^\/invoices$/, invoicesView], [/^\/invoices\/(\d+)$/, invoiceView],
   [/^\/reports$/, reportsView], [/^\/messages$/, messagesView], [/^\/settings$/, settingsView], [/^\/more$/, moreView]];
 const root = $('#root');
 

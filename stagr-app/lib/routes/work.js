@@ -2,7 +2,7 @@ import { route } from '../router.js';
 import { sql } from '../db.js';
 import { bad, missing, HttpError } from '../http.js';
 import { need } from '../auth.js';
-import { clean, cleanItems, totals, r2 } from '../util.js';
+import { clean, cleanItems, billable, totals, r2 } from '../util.js';
 import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { nextNumber } from './sales.js';
@@ -64,7 +64,7 @@ route('POST', '/api/jobs', async ctx => {
   need(ctx, 'admin'); const b = ctx.body, c = await getCustomer(ctx.tid, b.customer_id);
   let pid = null; if (b.property_id) { const [p] = await sql`SELECT id FROM properties WHERE id = ${Number(b.property_id) || 0} AND tenant_id = ${ctx.tid} AND customer_id = ${c.id}`; if (!p) throw bad('That property does not belong to this customer'); pid = p.id; }
   let items = cleanItems(b.items), qid = null, title = clean(b.title, 120);
-  if (b.quote_id) { const [q] = await sql`SELECT * FROM quotes WHERE id = ${Number(b.quote_id) || 0} AND tenant_id = ${ctx.tid} AND customer_id = ${c.id}`; if (!q) throw bad('Quote not found'); qid = q.id; if (!items.length) items = q.items; if (!pid) pid = q.property_id; if (!title) title = 'Job from quote Q-' + q.number; }
+  if (b.quote_id) { const [q] = await sql`SELECT * FROM quotes WHERE id = ${Number(b.quote_id) || 0} AND tenant_id = ${ctx.tid} AND customer_id = ${c.id}`; if (!q) throw bad('Quote not found'); qid = q.id; if (!items.length) items = billable(q.items); if (!pid) pid = q.property_id; if (!title) title = 'Job from quote Q-' + q.number; }
   if (!title) throw bad('Give the job a title');
   const rec = cleanRec(b.recurrence), n = await nextNumber(ctx.tid, 'job');
   const [job] = await sql`INSERT INTO jobs (tenant_id, number, customer_id, property_id, quote_id, title, description, items, recurrence) VALUES (${ctx.tid}, ${n}, ${c.id}, ${pid}, ${qid}, ${title}, ${clean(b.description, 4000)}, ${JSON.stringify(items)}::jsonb, ${rec ? JSON.stringify(rec) : null}::jsonb) RETURNING *`;

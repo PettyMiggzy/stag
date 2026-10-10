@@ -4,6 +4,7 @@ import { bad, missing, HttpError } from '../http.js';
 import { need } from '../auth.js';
 import { clean, email as cleanEmail, phone as cleanPhone, amt, token } from '../util.js';
 import { logActivity } from './activity.js';
+import { nextNumber } from './sales.js';
 import { shapeQuote, shapeInvoice } from './shapes.js';
 
 const cust = (b, old = {}) => ({
@@ -91,23 +92,40 @@ route('POST', '/api/requests', async ctx => {
   const [r] = await sql`INSERT INTO requests (tenant_id, source, name, phone, email, service, address, message) VALUES (${ctx.tid}, ${clean(b.source || 'manual', 30)}, ${clean(b.name, 120)}, ${cleanPhone(b.phone)}, ${cleanEmail(b.email)}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}) RETURNING *`;
   return { request: r };
 });
-route('PUT', '/api/requests/:id', async ctx => {
-  const [o] = await sql`SELECT * FROM requests WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; if (!o) throw missing();
-  const st = ['new', 'contacted', 'converted', 'lost'].includes(ctx.body.status) ? ctx.body.status : o.status;
-  const [r] = await sql`UPDATE requests SET status = ${st}, contacted_at = ${st !== 'new' && !o.contacted_at ? new Date() : o.contacted_at} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`; return { request: r };
-});
 // Turn a request into a customer (and property). Reuses an existing customer with the same phone or email.
-route('POST', '/api/requests/:id/convert', async ctx => {
-  const [r] = await sql`SELECT * FROM requests WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; if (!r) throw missing();
+// Text and email marketing consent chosen on the booking form is recorded on the customer, with the time.
+async function customerFromRequest(ctx, r) {
   let [c] = r.customer_id ? await sql`SELECT * FROM customers WHERE id = ${r.customer_id} AND tenant_id = ${ctx.tid}` : [];
   if (!c && (r.phone || r.email)) [c] = await sql`SELECT * FROM customers WHERE tenant_id = ${ctx.tid} AND ((${r.phone} <> '' AND phone = ${r.phone}) OR (${r.email} <> '' AND email = ${r.email})) LIMIT 1`;
   if (!c) {
-    [c] = await sql`INSERT INTO customers (tenant_id, name, phone, email, source, notes) VALUES (${ctx.tid}, ${r.name}, ${r.phone}, ${r.email}, ${r.source}, ${r.message}) RETURNING *`;
+    const sms = !!(r.sms_ok && r.phone), em = !!(r.email_ok && r.email);
+    [c] = await sql`INSERT INTO customers (tenant_id, name, company, phone, email, source, notes, sms_opt_in, sms_opt_in_at, email_opt_in) VALUES (${ctx.tid}, ${r.name}, ${r.company || ''}, ${r.phone}, ${r.email}, ${r.source}, ${r.message}, ${sms}, ${sms ? r.created_at : null}, ${em}) RETURNING *`;
     if (r.address) await sql`INSERT INTO properties (tenant_id, customer_id, address) VALUES (${ctx.tid}, ${c.id}, ${r.address})`;
   }
   await sql`UPDATE requests SET status = 'converted', customer_id = ${c.id}, contacted_at = COALESCE(contacted_at, now()) WHERE id = ${r.id} AND tenant_id = ${ctx.tid}`;
   await logActivity(ctx.tid, c.id, 'request', 'Request converted to a customer', ctx.user.id);
-  return { customer: c };
+  return c;
+}
+const getRequest = async ctx => { const [r] = await sql`SELECT * FROM requests WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; if (!r) throw missing(); return r; };
+route('GET', '/api/requests/:id', async ctx => {
+  const r = await getRequest(ctx); let customer = null, quotes = [];
+  if (r.customer_id) { [customer] = await sql`SELECT id, name FROM customers WHERE id = ${r.customer_id} AND tenant_id = ${ctx.tid}`; quotes = await sql`SELECT id, number, status FROM quotes WHERE request_id = ${r.id} AND tenant_id = ${ctx.tid} ORDER BY id`; }
+  return { request: r, customer, quotes };
+});
+route('PUT', '/api/requests/:id', async ctx => {
+  const o = await getRequest(ctx), b = ctx.body, st = ['new', 'contacted', 'converted', 'lost'].includes(b.status) ? b.status : o.status;
+  const [r] = await sql`UPDATE requests SET status = ${st}, contacted_at = ${st !== 'new' && !o.contacted_at ? new Date() : o.contacted_at}, notes = ${clean(b.notes ?? o.notes, 4000)}, service = ${clean(b.service ?? o.service, 120)} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`; return { request: r };
+});
+route('POST', '/api/requests/:id/convert', async ctx => ({ customer: await customerFromRequest(ctx, await getRequest(ctx)) }));
+// Jobber-style "Convert to Quote": makes the customer and a draft quote that already points back at this request.
+route('POST', '/api/requests/:id/convert-quote', async ctx => {
+  const r = await getRequest(ctx), c = await customerFromRequest(ctx, r), [p] = await sql`SELECT id FROM properties WHERE customer_id = ${c.id} AND tenant_id = ${ctx.tid} ORDER BY id LIMIT 1`;
+  const [t] = await sql`SELECT tax_pct FROM tenants WHERE id = ${ctx.tid}`, [sv] = r.service ? await sql`SELECT name, description, unit_price FROM services WHERE tenant_id = ${ctx.tid} AND active AND lower(name) = lower(${r.service}) LIMIT 1` : [];
+  const n = await nextNumber(ctx.tid, 'quote');
+  const items = [sv ? { kind: 'item', name: sv.name, description: sv.description, qty: 1, price: Number(sv.unit_price), optional: false, selected: true, image: '' } : { kind: 'item', name: r.service || 'Service', description: '', qty: 1, price: 0, optional: false, selected: true, image: '' }];
+  const [q] = await sql`INSERT INTO quotes (tenant_id, number, customer_id, property_id, request_id, items, tax_pct, token, title) VALUES (${ctx.tid}, ${n}, ${c.id}, ${p ? p.id : null}, ${r.id}, ${JSON.stringify(items)}::jsonb, ${t.tax_pct}, ${token()}, ${clean(r.service, 120)}) RETURNING id, number`;
+  await logActivity(ctx.tid, c.id, 'quote', `Quote Q-${n} started from a request`, ctx.user.id);
+  return { customer: c, quote: q };
 });
 
 // ---- public booking page: anyone can send a request to a business by its slug ----
@@ -126,9 +144,10 @@ route('POST', '/api/public/b/:slug/request', { public: true }, async ctx => {
   if (n.n >= 8) throw new HttpError(429, 'Too many requests. Please call us instead.');
   await sql`INSERT INTO login_fails (key) VALUES (${key})`;
   const photos = (Array.isArray(b.photos) ? b.photos : []).filter(p => typeof p === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(p) && p.length < 900000).slice(0, 6);
-  const [r] = await sql`INSERT INTO requests (tenant_id, source, name, phone, email, service, address, message, photos) VALUES (${t.id}, 'booking page', ${name}, ${ph}, ${em}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}, ${JSON.stringify(photos)}::jsonb) RETURNING id`;
-  if (b.sms_ok === true && ph) { // consent is recorded on the customer when the request is converted; remember the choice in a note
-    await sql`UPDATE requests SET message = message || ${'\n[Agreed to receive texts]'} WHERE id = ${r.id} AND tenant_id = ${t.id}`;
-  }
+  const av = b.availability && typeof b.availability === 'object' ? b.availability : {};
+  const dates = (Array.isArray(av.dates) ? av.dates : []).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(0, 2), arrival = (Array.isArray(av.arrival) ? av.arrival : []).filter(a => ['any', 'morning', 'afternoon'].includes(a));
+  // Consent is stored with the request and copied to the customer when the request is converted.
+  await sql`INSERT INTO requests (tenant_id, source, name, company, phone, email, service, address, message, photos, availability, sms_ok, email_ok)
+    VALUES (${t.id}, 'booking page', ${name}, ${clean(b.company, 120)}, ${ph}, ${em}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}, ${JSON.stringify(photos)}::jsonb, ${JSON.stringify({ dates, arrival })}::jsonb, ${b.sms_ok === true && !!ph}, ${b.email_ok === true && !!em})`;
   return { ok: true };
 });

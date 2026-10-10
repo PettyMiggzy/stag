@@ -1,7 +1,7 @@
 import { route } from '../router.js';
 import { sql } from '../db.js';
 import { bad, missing, HttpError } from '../http.js';
-import { clean, amt, cleanItems, token, totals } from '../util.js';
+import { clean, amt, cleanItems, billable, token, totals } from '../util.js';
 import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { shapeQuote } from './shapes.js';
@@ -19,6 +19,11 @@ async function ownProperty(tid, customerId, propertyId) {
   const [p] = await sql`SELECT id FROM properties WHERE id = ${Number(propertyId) || 0} AND tenant_id = ${tid} AND customer_id = ${customerId}`;
   if (!p) throw bad('That property does not belong to this customer'); return p.id;
 }
+async function salesperson(tid, id) {
+  if (!id) return null; const [u] = await sql`SELECT id FROM users WHERE id = ${Number(id) || 0} AND tenant_id = ${tid} AND active`; if (!u) throw bad('That salesperson is not on your team'); return u.id;
+}
+const dateOrNull = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null;
+const rating = v => Math.max(0, Math.min(5, Math.round(Number(v) || 0)));
 const getQuote = async (tid, id) => { const [q] = await sql`SELECT * FROM quotes WHERE id = ${Number(id) || 0} AND tenant_id = ${tid}`; if (!q) throw missing('Quote not found'); return q; };
 
 route('GET', '/api/quotes', async ctx => {
@@ -31,8 +36,9 @@ route('POST', '/api/quotes', async ctx => {
   const [t] = await sql`SELECT tax_pct FROM tenants WHERE id = ${ctx.tid}`;
   const [req] = b.request_id ? await sql`SELECT id FROM requests WHERE id = ${Number(b.request_id) || 0} AND tenant_id = ${ctx.tid}` : [];
   const n = await nextNumber(ctx.tid, 'quote');
-  const [q] = await sql`INSERT INTO quotes (tenant_id, number, customer_id, property_id, request_id, items, discount_pct, tax_pct, deposit, message, token)
-    VALUES (${ctx.tid}, ${n}, ${c.id}, ${pid}, ${req ? req.id : null}, ${JSON.stringify(items)}::jsonb, ${Math.min(100, amt(b.discount_pct) ?? 0)}, ${b.tax_pct !== undefined ? Math.min(30, amt(b.tax_pct) ?? 0) : t.tax_pct}, ${amt(b.deposit) ?? 0}, ${clean(b.message, 1000)}, ${token()}) RETURNING *`;
+  const [q] = await sql`INSERT INTO quotes (tenant_id, number, customer_id, property_id, request_id, items, discount_pct, tax_pct, deposit, deposit_pct, message, token, title, rating, salesperson_id, reminder_date)
+    VALUES (${ctx.tid}, ${n}, ${c.id}, ${pid}, ${req ? req.id : null}, ${JSON.stringify(items)}::jsonb, ${Math.min(100, amt(b.discount_pct) ?? 0)}, ${b.tax_pct !== undefined ? Math.min(30, amt(b.tax_pct) ?? 0) : t.tax_pct}, ${amt(b.deposit) ?? 0}, ${Math.min(100, amt(b.deposit_pct) ?? 0)}, ${clean(b.message, 1000)}, ${token()},
+      ${clean(b.title, 120)}, ${rating(b.rating)}, ${await salesperson(ctx.tid, b.salesperson_id)}, ${dateOrNull(b.reminder_date)}) RETURNING *`;
   await logActivity(ctx.tid, c.id, 'quote', `Quote Q-${n} created`, ctx.user.id);
   return { quote: shapeQuote(q) };
 });
@@ -42,7 +48,8 @@ route('PUT', '/api/quotes/:id', async ctx => {
   const b = ctx.body, items = b.items !== undefined ? cleanItems(b.items) : o.items; if (!items.length) throw bad('Add at least one line item');
   const pid = b.property_id !== undefined ? await ownProperty(ctx.tid, o.customer_id, b.property_id) : o.property_id;
   const [q] = await sql`UPDATE quotes SET items = ${JSON.stringify(items)}::jsonb, discount_pct = ${b.discount_pct !== undefined ? Math.min(100, amt(b.discount_pct) ?? 0) : o.discount_pct}, tax_pct = ${b.tax_pct !== undefined ? Math.min(30, amt(b.tax_pct) ?? 0) : o.tax_pct},
-    deposit = ${b.deposit !== undefined ? amt(b.deposit) ?? 0 : o.deposit}, message = ${clean(b.message ?? o.message, 1000)}, property_id = ${pid}, status = ${o.status === 'declined' ? 'draft' : o.status}
+    deposit = ${b.deposit !== undefined ? amt(b.deposit) ?? 0 : o.deposit}, deposit_pct = ${b.deposit_pct !== undefined ? Math.min(100, amt(b.deposit_pct) ?? 0) : o.deposit_pct}, message = ${clean(b.message ?? o.message, 1000)}, property_id = ${pid}, status = ${o.status === 'declined' ? 'draft' : o.status},
+    title = ${clean(b.title ?? o.title, 120)}, rating = ${b.rating !== undefined ? rating(b.rating) : o.rating}, salesperson_id = ${b.salesperson_id !== undefined ? await salesperson(ctx.tid, b.salesperson_id) : o.salesperson_id}, reminder_date = ${b.reminder_date !== undefined ? dateOrNull(b.reminder_date) : o.reminder_date}
     WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`;
   return { quote: shapeQuote(q) };
 });
@@ -72,14 +79,26 @@ route('GET', '/api/public/q/:token', { public: true }, async ctx => {
   const [p] = q.property_id ? await sql`SELECT address, city, state, zip FROM properties WHERE id = ${q.property_id} AND tenant_id = ${q.tenant_id}` : [];
   if (!q.viewed_at) await sql`UPDATE quotes SET viewed_at = now() WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
   const s = shapeQuote(q);
-  return { business: t, customer: c.name, property: p || null, quote: { label: s.label, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, discount_pct: s.discount_pct, tax: s.tax, tax_pct: s.tax_pct, total: s.total, deposit: s.deposit, message: s.message, sent_at: s.sent_at, decided_at: s.decided_at, signed_name: s.signed_name } };
+  return { business: t, customer: c.name, property: p || null, quote: { label: s.label, title: s.title, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, discount_pct: s.discount_pct, tax: s.tax, tax_pct: s.tax_pct, total: s.total, deposit: s.deposit, deposit_pct: Number(s.deposit_pct) || 0, deposit_due: s.deposit_due, deposit_paid: !!s.deposit_paid_at, message: s.message, sent_at: s.sent_at, decided_at: s.decided_at, signed_name: s.signed_name } };
 });
 route('POST', '/api/public/q/:token/decide', { public: true }, async ctx => {
   const [q] = await sql`SELECT * FROM quotes WHERE token = ${clean(ctx.params.token, 80)}`; if (!q || q.status === 'draft') throw missing('Quote not found');
   if (q.status === 'approved' || q.status === 'declined') throw bad('This quote has already been ' + q.status);
   const decision = ctx.body.decision === 'approve' ? 'approved' : ctx.body.decision === 'decline' ? 'declined' : ''; if (!decision) throw bad('Choose approve or decline');
   const name = clean(ctx.body.name, 120); if (decision === 'approved' && name.length < 2) throw bad('Type your name to approve');
-  await sql`UPDATE quotes SET status = ${decision}, decided_at = now(), signed_name = ${name}, client_note = ${clean(ctx.body.note, 500)} WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
+  let items = q.items;
+  if (decision === 'approved' && Array.isArray(ctx.body.selected)) { // indexes of the optional lines the customer ticked
+    const pick = new Set(ctx.body.selected.map(Number)); items = q.items.map((it, idx) => it.optional ? { ...it, selected: pick.has(idx) } : it);
+  }
+  if (decision === 'approved' && !billable(items).length) throw bad('Pick at least one item');
+  await sql`UPDATE quotes SET status = ${decision}, decided_at = now(), signed_name = ${name}, client_note = ${clean(ctx.body.note, 500)}, items = ${JSON.stringify(items)}::jsonb WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
   await logActivity(q.tenant_id, q.customer_id, 'quote', `Quote Q-${q.number} ${decision} by customer`);
   return { ok: true, status: decision };
+});
+
+// Record that the required deposit was received (cash, check, Zelle...). Online card payment is added later.
+route('POST', '/api/quotes/:id/deposit-paid', async ctx => {
+  const o = await getQuote(ctx.tid, ctx.params.id), s = shapeQuote(o); if (!(s.deposit_due > 0)) throw bad('This quote has no deposit');
+  const paid = ctx.body.paid !== false, [q] = await sql`UPDATE quotes SET deposit_paid_at = ${paid ? new Date() : null}, deposit_paid_method = ${paid ? clean(ctx.body.method, 30) || 'other' : ''} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`;
+  await logActivity(ctx.tid, o.customer_id, 'quote', `Deposit of $${s.deposit_due.toFixed(2)} ${paid ? 'received' : 'unmarked'} on Q-${o.number}`, ctx.user.id); return { quote: shapeQuote(q) };
 });

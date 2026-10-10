@@ -9,7 +9,7 @@ export function newJobModal(customerId, opts = {}) {
   const q = opts.quote, tomorrow = dayKey(new Date(Date.now() + 864e5)) + 'T09:00'; // 9:00 AM tomorrow, business time
   modal(`<h2>${q ? 'Schedule ' + esc(q.label) : 'New job'}</h2><form id="jf" class="col">
     <div class="grid g2"><label class="field"><span>Customer</span><select id="cust"></select></label><label class="field"><span>Property</span><select id="prop"></select></label></div>
-    <label class="field"><span>Job title</span><input id="title" required placeholder="Haul-away, lawn care, cleaning…" value="${esc(q ? 'Job from quote ' + q.label : '')}"></label>
+    <label class="field"><span>Job title</span><input id="title" required placeholder="Haul-away, lawn care, cleaning…" value="${esc(q ? (q.title || 'Job from quote ' + q.label) : opts.title || '')}"></label>
     <div class="grid g2"><label class="field"><span>Starts</span><input id="start" type="datetime-local" value="${esc(tomorrow)}"></label><label class="field"><span>Ends (optional)</span><input id="end" type="datetime-local"></label></div>
     <div><span class="mono">Crew</span><div class="row wrap" style="margin-top:6px">${crewBoxes()}</div></div>
     <div class="grid g3"><label class="field"><span>Repeat</span><select id="rep"><option value="">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label><label class="field"><span>Every</span><input id="every" inputmode="numeric" value="1"></label><label class="field"><span>Ends after (visits)</span><input id="count" inputmode="numeric" placeholder="No end"></label></div>

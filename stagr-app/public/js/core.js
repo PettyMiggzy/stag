@@ -24,6 +24,8 @@ export const tz = () => (S.business && S.business.timezone) || 'America/Chicago'
 const fmtCache = {};
 const F = (key, opts) => (fmtCache[key + tz()] ||= new Intl.DateTimeFormat('en-US', { timeZone: tz(), ...opts }));
 export const fmtDate = d => d ? F('d', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d)) : '';
+// Date-only values (like a reminder date) must not shift with the time zone, so format them at midday UTC.
+export const fmtDateOnly = d => d ? new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(String(d).slice(0, 10) + 'T12:00:00Z')) : '';
 export const fmtDay = d => F('dd', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(d));
 export const fmtTime = d => d ? F('t', { hour: 'numeric', minute: '2-digit' }).format(new Date(d)) : '';
 export const fmtDT = d => d ? `${fmtDay(d)} · ${fmtTime(d)}` : '';
