@@ -1,0 +1,15 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/icon.webp"><title>Your invoice</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Figtree:wght@400;500;600;700&display=swap"><link rel="stylesheet" href="/pub.css"></head><body><div class="wrap" id="root"><p class="mute">Loading…</p></div>
+<script type="module">
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const money=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const tok=location.pathname.split('/').pop(),root=document.getElementById('root'),ph=p=>String(p||'').length===10?'('+p.slice(0,3)+') '+p.slice(3,6)+'-'+p.slice(6):p||'';
+const r=await fetch('/api/public/i/'+encodeURIComponent(tok));
+if(!r.ok){root.innerHTML='<div class="card">This invoice link is not valid. Please contact the business that sent it.</div>'}else{
+ const d=await r.json(),i=d.invoice,b=d.business;document.title='Invoice '+i.label+' · '+b.name;document.documentElement.style.setProperty('--accent',b.brand_color||'#39ff14');
+ root.innerHTML='<div class="top"><b>'+esc(b.name)+'</b><span class="mute small">'+(b.phone?'<a href="tel:'+esc(b.phone)+'" style="color:inherit">'+esc(ph(b.phone))+'</a>':'')+'</span></div>'
+ +'<div class="row"><h1 style="font-size:2.6rem">Invoice '+esc(i.label)+'</h1>'+(i.status==='paid'?'<span class="chip">Paid</span>':'')+'</div><p class="mute">For '+esc(d.customer)+(i.due_date?' · due '+esc(String(i.due_date).slice(0,10)):'')+'</p>'
+ +'<div class="card">'+i.items.map(x=>'<div class="line"><div><b>'+esc(x.name)+'</b>'+(x.description?'<div class="mute small">'+esc(x.description)+'</div>':'')+'<div class="mute small">'+esc(x.qty)+' × '+money(x.price)+'</div></div><b>'+money(x.qty*x.price)+'</b></div>').join('')
+ +'<div class="tot"><div class="mute"><span>Subtotal</span><span>'+money(i.subtotal)+'</span></div>'+(i.discount?'<div class="mute"><span>Discount</span><span>−'+money(i.discount)+'</span></div>':'')+(i.tax?'<div class="mute"><span>Tax</span><span>'+money(i.tax)+'</span></div>':'')+(i.paid?'<div class="mute"><span>Paid</span><span>'+money(i.paid)+'</span></div>':'')+'<div class="big"><span>'+(i.balance>0?'Balance due':'Balance')+'</span><span>'+money(i.balance)+'</span></div></div></div>'
+ +(i.message?'<div class="card"><p style="margin:0;white-space:pre-wrap">'+esc(i.message)+'</p></div>':'')
+ +(i.balance>0?'<div class="card"><h3 style="margin-bottom:8px">How to pay</h3><p style="margin:0">'+(b.payment_note?esc(b.payment_note):'Please contact '+esc(b.name)+(b.phone?' at '+esc(ph(b.phone)):'')+' to arrange payment.')+'</p></div>':'<div class="card ok"><b>Paid in full. Thank you!</b></div>')
+ +'<p class="foot">Powered by <a href="/">STAGR</a></p>'}
+</script></body></html>

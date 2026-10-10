@@ -94,6 +94,8 @@ r = await W.post('/api/invoices', { customer_id: cA.id, items: [{ name: 'x', pri
 r = await W.put('/api/visits/' + vs[0].id, { starts_at: '2026-12-01T10:00:00Z' }); ok('worker cannot reschedule', r.s === 403, r);
 r = await W.put('/api/visits/' + vs[0].id, { checklist: [{ text: 'Photos before', done: true }], notes: 'Gate code 1234', status: 'in_progress' }); ok('worker can update checklist and notes', r.s === 200 && r.j.visit.checklist[0].done === true, r);
 r = await W.post('/api/time/start', { visit_id: vs[0].id }); ok('worker clocks in', r.s === 200, r); r = await W.post('/api/time/stop', {}); ok('worker clocks out', r.s === 200, r);
+r = await W.get('/api/visits/' + vs[0].id); ok('worker can open their own visit', r.s === 200 && r.j.visit.customer_name === 'Sam Rivera', r);
+r = await W.get('/api/visits/' + vs[0].id); r = await B.get('/api/visits/' + vs[0].id); ok('B cannot open A visit', r.s === 404, r);
 r = await W.get('/api/customers'); ok('worker can read customers', r.s === 200, r.s);
 r = await W.post('/api/visits/' + vs[0].id + '/photos', { data: 'data:image/png;base64,iVBORw0KGgo=' }); ok('worker adds a photo', r.s === 200 && r.j.photos.length === 1, r);
 r = await W.post('/api/visits/' + vs[0].id + '/photos', { data: 'javascript:alert(1)' }); ok('non-image photo rejected', r.s === 400, r);

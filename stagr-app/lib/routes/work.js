@@ -125,6 +125,14 @@ route('GET', '/api/visits', async ctx => {
     WHERE v.tenant_id = ${ctx.tid} AND v.starts_at >= ${from} AND v.starts_at < ${to} AND (${mineOnly}::int IS NULL OR ${mineOnly} = ANY(v.assigned)) ORDER BY v.starts_at LIMIT 1000`;
   return { visits: rows };
 });
+route('GET', '/api/visits/:id', async ctx => {
+  const [v] = await sql`SELECT v.*, j.title, j.number AS job_number, j.customer_id, c.name AS customer_name, c.phone AS customer_phone, p.address, p.city
+    FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id JOIN customers c ON c.id = j.customer_id AND c.tenant_id = j.tenant_id LEFT JOIN properties p ON p.id = j.property_id AND p.tenant_id = j.tenant_id
+    WHERE v.id = ${Number(ctx.params.id) || 0} AND v.tenant_id = ${ctx.tid}`;
+  if (!v) throw missing('Visit not found');
+  if (ctx.user.role === 'worker' && !v.assigned.includes(ctx.user.id)) throw new HttpError(403, 'This visit is not assigned to you');
+  return { visit: v };
+});
 async function getVisit(ctx) {
   const [v] = await sql`SELECT v.*, j.customer_id, j.status AS job_status FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id WHERE v.id = ${Number(ctx.params.id) || 0} AND v.tenant_id = ${ctx.tid}`;
   if (!v) throw missing('Visit not found');
