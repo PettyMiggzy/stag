@@ -107,6 +107,7 @@ section{padding-block:clamp(54px,8vw,104px)}
 .step h3{font-size:1.35rem;margin-top:8px}.step p{color:var(--mute);font-size:.94rem;margin-top:6px}
 
 /* pricing */
+.ads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.ads img{width:100%;height:auto;border-radius:14px;border:1px solid var(--line);display:block}@media(max-width:700px){.ads{grid-template-columns:1fr}}
 .plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 @media(max-width:900px){.plans{grid-template-columns:1fr}}
 .plan{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:24px;display:grid;gap:12px;align-content:start}
@@ -159,6 +160,7 @@ footer p{max-width:90ch}
 
 <div class="strip"><div class="wrap strip-in"><span>Built for, and tested by, a real service company:</span><img src="a/logo-spring.webp" alt="Junk Junkies Texas Spring" width="54" height="54"><img src="a/logo-tomball.webp" alt="Junk Junkies Texas Tomball" width="54" height="54"><img src="a/logo-cypress.webp" alt="Junk Junkies Texas Cypress" width="54" height="54"><img src="a/logo-cs.webp" alt="Junk Junkies Texas College Station" width="54" height="54"></div></div>
 
+<section id="ads" style="padding-block:28px"><div class="wrap ads"><a href="#features"><img src="a/stagr-ad-quotes.webp" alt="STAGR: quotes in minutes. Quick estimates, upfront pricing, fast haul away." width="820" height="1025" loading="lazy"></a><a href="#followups"><img src="a/stagr-ad-followup.webp" alt="STAGR: follow up, get reviews, grow your business." width="820" height="1025" loading="lazy"></a></div></section>
 <section id="features"><div class="wrap">
   <div class="head"><div class="mono">Features</div><h2>Everything a service business <em>runs on.</em></h2><p>One customer record from the first call to the final payment. Features marked Live are working in the beta today. Features marked Coming soon are on the way.</p></div>
   <div class="grid" id="grid"></div>
@@ -197,16 +199,16 @@ footer p{max-width:90ch}
 </div></section>
 
 <section id="pricing" style="background:var(--pine);border-block:1px solid var(--line)"><div class="wrap">
-  <div class="head"><div class="mono">Pricing · draft</div><h2>Priced below <em>the big guys.</em></h2><p>Simple monthly plans, priced under comparable Jobber plans while STAGR gets established. These are draft launch prices and may change before launch.</p></div>
+  <div class="head"><div class="mono">Pricing · launch plans</div><h2>Priced below <em>the big guys.</em></h2><p>Simple monthly plans, priced under comparable Jobber plans. Launch prices may change before launch.</p></div>
   <div class="plans">
-    <div class="plan"><h3>Starter</h3><div class="price">$29<small> /month</small></div><div class="vs">1 user. Jobber Core is <s>$49</s>, so you save <b>$20 a month</b>.</div>
-      <ul><li>Customer and lead database</li><li>Estimates with customer approval</li><li>Invoices and payment tracking</li><li>Job scheduling</li></ul></div>
-    <div class="plan pop"><span class="chip live" style="justify-self:start">Recommended</span><h3>Pro</h3><div class="price">$79<small> /month</small></div><div class="vs">1 user. Jobber Connect is <s>$139</s>, so you save <b>$60 a month</b>.</div>
-      <ul><li>Everything in Starter</li><li>Crew assignments and dispatching</li><li>Job notes and photos</li><li>Dashboard and reports</li><li class="soon">Automatic reminders and follow-up texts</li><li class="soon">Online card payments</li></ul></div>
-    <div class="plan"><h3>Business</h3><div class="price">$129<small> /month</small></div><div class="vs">1 user. Jobber Grow is <s>$199</s>, so you save <b>$70 a month</b>.</div>
-      <ul><li>Everything in Pro</li><li>Priority support</li><li class="soon">Recurring jobs</li><li class="soon">Monthly promotion texts to past customers</li><li class="soon">Payouts to your bank account</li></ul></div>
+    <div class="plan"><h3>StagR Starter</h3><div class="price">$29<small> /month</small></div><div class="vs">Solo operators. Jobber Core is <s>$49</s>, so you save <b>$20 a month</b>.</div>
+      <ul><li>CRM, customers and leads</li><li>Estimates customers approve from their phone</li><li>Invoices and payment tracking</li><li>Scheduling and job tracking</li><li>Google review requests</li></ul></div>
+    <div class="plan pop"><span class="chip live" style="justify-self:start">Recommended</span><h3>StagR Growth</h3><div class="price">$59<small> /month</small></div><div class="vs">Growing businesses, up to 3 users. Jobber Connect is <s>$139</s>, so you save <b>$80 a month</b>.</div>
+      <ul><li>Everything in Starter</li><li>Automated follow-ups</li><li>Recurring customer texts</li><li>Job reminders</li><li>Basic reporting</li><li class="soon">Online card payments</li></ul></div>
+    <div class="plan"><h3>StagR Pro</h3><div class="price">$99<small> /month</small></div><div class="vs">Teams. Jobber Grow is <s>$199</s>, so you save <b>$100 a month</b>.</div>
+      <ul><li>Everything in Growth</li><li>Unlimited users</li><li>Crew dispatching</li><li>Priority support</li><li class="soon">Advanced automations</li><li class="soon">Route planning</li><li class="soon">Advanced reports</li></ul></div>
   </div>
-  <p class="fine">Extra users: $15 a month each on every plan (Jobber charges $29). Jobber prices are its month-to-month rates for one user, from <a href="https://getjobber.com/pricing/" target="_blank" rel="noopener">getjobber.com/pricing</a>, checked October 10, 2026. Jobber plans are not identical to STAGR plans, and prices change. ○ marks a feature that is coming soon.</p>
+  <p class="fine">Jobber prices are its month-to-month rates for one user, from <a href="https://getjobber.com/pricing/" target="_blank" rel="noopener">getjobber.com/pricing</a>, checked October 10, 2026. Jobber plans are not identical to STAGR plans, and prices change. ○ marks a feature that is coming soon. Texting needs a connected texting service.</p>
 </div></section>
 
 <section id="story"><div class="wrap story">
@@ -261,15 +263,15 @@ footer p{max-width:90ch}
     ['users','Customer database','Every customer in one place, with their history, notes and whether they are a repeat customer.',1],
     ['funnel','Leads and pipeline','Requests from your website, calls and ads land in one list, worked as a pipeline.',1],
     ['doc','Estimates and approvals','Itemized quotes with tax and deposit. The customer approves from a link on their phone.',1],
-    ['cal','Job scheduling and dispatching','Pick a date and time, see the whole week, and know what is booked.',1],
-    ['crew','Employee job assignments','Assign each job to a crew member. Jobs with no crew are flagged.',1],
+    ['cal','Job scheduling and dispatching','Pick a date and time, assign each job to a crew member, and see the whole week. Jobs with no crew are flagged.',1],
     ['inv','Invoicing','Turn an approved quote into an invoice in one tap and send it by link.',1],
     ['cash','Payment tracking','Record cash, check, Zelle and card payments, including partial payments and balances.',1],
     ['cam','Job notes and photos','Customers send photos with their request, and your crew adds notes to every job.',1],
     ['chart','Dashboard','Upcoming work, revenue, win rate, reply time and unpaid invoices at a glance.',1],
-    ['bell','Automated reminders and follow-ups','Reminders for customers and for you, plus monthly offers to bring past customers back.',0],
-    ['repeat','Recurring jobs','Set up weekly, monthly or yearly jobs once and let them schedule themselves.',0],
-    ['sms','Text alerts and online payments','New lead texts to your phone, and card payments paid out to your bank account.',0]];
+    ['bell','Automated reminders and follow-ups','Appointment and invoice reminders, quote follow-ups, and monthly offers to bring past customers back. Needs a connected texting service.',1],
+    ['repeat','Recurring jobs','Set up weekly, monthly or yearly jobs once and let them schedule themselves.',1],
+    ['sms','Google review requests','Text customers your Google review link after a job, automatically or with one tap, and see when it was delivered.',1],
+    ['cash','Online card payments','Customers pay invoices by card from a link, paid out to your bank account.',0]];
   $('#grid').innerHTML=F.map(function(f){return '<article class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[f[0]]+'</svg><span class="chip '+(f[3]?'live':'soon')+'">'+(f[3]?'Live in beta':'Coming soon')+'</span><h3>'+f[1]+'</h3><p>'+f[2]+'</p></article>'}).join('');
   // ---- follow-up text preview
   var fB=$('#fBiz'),fC=$('#fCity'),fO=$('#fOff'),fP=$('#fPhone');
