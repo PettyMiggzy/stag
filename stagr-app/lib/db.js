@@ -29,7 +29,8 @@ export async function sql(strings, ...vals) {
 export async function query(text, params = []) {
   if (!impl) impl = make();
   const f = await impl;
-  if (typeof f.query === 'function') return f.query(text, params);
-  return f.__query(text, params);
+  if (typeof f.__query === 'function') return f.__query(text, params);   // local pg
+  if (typeof f.query === 'function') return f.query(text, params);       // neon http driver 1.x
+  return f(text, params);                                               // neon http driver 0.x (function-call form)
 }
 export const closeDb = async () => {};
