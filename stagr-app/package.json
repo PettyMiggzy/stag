@@ -1,0 +1,9 @@
+{
+  "name": "stagr-app",
+  "private": true,
+  "type": "module",
+  "description": "STAGR: field-service CRM for service businesses (multi-tenant).",
+  "scripts": { "test": "node test/run.mjs", "dev": "node dev/server.mjs" },
+  "dependencies": { "@neondatabase/serverless": "^0.10.4", "pg": "^8.13.1" },
+  "engines": { "node": ">=20" }
+}
