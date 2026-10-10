@@ -27,6 +27,7 @@ function authScreen(mode = 'login') {
     <label class="field"><span>Password${signup ? ' (8+ characters)' : ''}</span><input name="password" type="password" required autocomplete="${signup ? 'new-password' : 'current-password'}" minlength="8"></label>
     <p class="small" id="authErr" style="color:var(--bad);margin:0" role="alert"></p>
     <button class="btn main" type="submit">${signup ? 'Create my account' : 'Sign in'}</button>
+    <p class="small mute" style="margin:0;text-align:center;display:flex;gap:8px;align-items:center;justify-content:center"><img src="/logo.webp" alt="" width="22" height="22" style="object-fit:contain"> Created by $STAG, the junk removal mascot</p>
     <p class="small mute" style="margin:0;text-align:center">${signup ? 'Already have an account? <a href="#" data-mode="login">Sign in</a>' : 'New to STAGR? <a href="#" data-mode="signup">Create an account</a>'}</p></form></div></div>`;
   $('[data-mode]').addEventListener('click', e => { e.preventDefault(); authScreen(e.target.dataset.mode); });
   $('#authForm').addEventListener('submit', async e => {
