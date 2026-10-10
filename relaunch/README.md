@@ -12,8 +12,10 @@ Fonts load from Google Fonts. Nothing here touches the existing site at the repo
 
 ## Game and the token hook
 
-`#game` is an idle game with no tapping: trucks drive on a real map between claimed cities. Claim the 16 cities in order and upgrade each crew's truck, trailer and helpers.
-Progress is saved in `localStorage` (key `stagr-claim-v2`) with up to 8 hours of offline earnings.
+`#game` is an idle moving company. The crew carries junk from the garage to the truck, the truck drives it to the dump and back,
+and you pay for a bigger vehicle, more crew, faster crew, bigger loads, better quotes, and the 16 Texas cities (each city adds +12% to every job).
+A stag runs across the scene now and then; catching it gives 2x income for 30 seconds.
+Progress is saved in `localStorage` (key `stagr-claim-v3`) with up to 8 hours of offline earnings. In October the first three crew wear Halloween costumes.
 
 Premium perks are listed but locked. When STAGR launches, set `window.STAGR.enabled = true` and implement
 `window.STAGR.pay(perk)` so it resolves `true` only after the on-chain payment is confirmed, then replace the

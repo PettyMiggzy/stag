@@ -122,7 +122,7 @@ nav a:hover{color:var(--bone)}
 
 /* real maps (same street + satellite tiles as the Junk Junkies Texas sites) */
 .rmap{width:100%;background:#0b110e}
-#map.rmap{height:clamp(380px,56vw,600px)}#gMapEl.rmap{height:clamp(340px,78vw,520px)}
+#map.rmap{height:clamp(380px,56vw,600px)}#gMapEl.rmap{height:clamp(320px,60vw,460px)}
 .leaflet-container{font-family:var(--body);background:#0b110e}
 .t-street{filter:invert(.92) hue-rotate(180deg) saturate(.8) brightness(.95)}
 .leaflet-control-layers,.leaflet-bar a,.leaflet-control-attribution{background:#111a15!important;color:var(--bone)!important;border-color:var(--line)!important}
@@ -153,6 +153,16 @@ nav a:hover{color:var(--bone)}
 .gnext{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line);font-size:.9rem;color:var(--mute)}
 .gnext b{color:var(--bone)}
 @media(prefers-reduced-motion:reduce){.plus{animation:none;opacity:0}}
+
+.ggrid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
+.gpanel .glist{max-height:min(520px,70vh)}
+@media(max-width:900px){.ggrid{grid-template-columns:1fr}.gpanel .glist{max-height:none}}
+.gscene{margin-bottom:0}
+.scenebox{position:relative;background:#050806;line-height:0}
+#gScene{display:block;width:100%;height:auto;cursor:default;touch-action:manipulation}
+.sbadge{position:absolute;left:10px;top:10px;line-height:1.3;background:rgba(7,10,8,.78);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);pointer-events:none}
+.sboost{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;line-height:1.3;background:var(--neon);color:#031207;border-radius:999px;padding:6px 14px;font-weight:700;font-size:.85rem;pointer-events:none}
+@media(max-width:600px){.sbadge{font-size:.6rem;padding:4px 7px}}
 
 .belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
 .belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
@@ -258,19 +268,23 @@ footer .links{display:flex;flex-wrap:wrap;gap:16px}
 
 <section id="game">
   <div class="head"><div><div class="mono plot">The game · preview</div><h2>Claim your <em>territory.</em></h2></div></div>
-  <p style="margin-bottom:22px">An idle game: no tapping. Your trucks roll on their own across the real map of Texas, hauling for every city you claim. Claim the sixteen cities one by one, and upgrade each crew's truck, trailer and helpers to grow the fleet. Progress saves on this device.</p>
+  <p style="margin-bottom:22px">An idle moving company. Your crew carries the junk out of the garage, loads the truck, and the truck runs it to the dump and back, all on its own. Buy a bigger vehicle, hire more crew, speed everybody up, and claim all sixteen Texas cities. When the stag runs by, catch it for a bonus. Progress saves on this device.</p>
   <div id="gwelcome" class="gwelcome" hidden></div>
-  <div class="gwrap">
-    <div class="gcard">
+  <div class="ggrid">
+    <div class="gcard gscene">
       <div class="gstats"><div class="cash"><span class="mono">Cash</span><b id="gCash">0</b></div><div><span class="mono">Per second</span><b id="gPs">0</b></div><div><span class="mono">Territories</span><b id="gTer">1/16</b></div></div>
-      <div class="gmap"><div id="gMapEl" class="rmap" role="region" aria-label="Map of the 16 Texas territories with trucks driving between claimed cities"></div></div>
-      <div class="gnext" id="gNext"></div>
+      <div class="scenebox"><canvas id="gScene" width="960" height="621" aria-label="Animated scene: the crew carries junk from the garage to the STAGR truck, which drives off to the dump and back" role="img"></canvas><div class="sbadge" id="gBadge"></div><div class="sboost" id="gBoost" hidden></div></div>
     </div>
-    <div class="gcard">
-      <div class="gtabs" role="tablist" aria-label="Game menu"><button role="tab" id="tabT" aria-selected="true" data-t="ter">Territories</button><button role="tab" id="tabC" aria-selected="false" data-t="crew">Crews</button><button role="tab" id="tabP" aria-selected="false" data-t="prem">STAGR perks</button></div>
+    <div class="gcard gpanel">
+      <div class="gtabs" role="tablist" aria-label="Game menu"><button role="tab" id="tabF" aria-selected="true" data-t="fleet">Fleet and crew</button><button role="tab" id="tabT" aria-selected="false" data-t="ter">Territories</button><button role="tab" id="tabP" aria-selected="false" data-t="prem">STAGR perks</button></div>
       <div class="glist" id="gList" role="tabpanel"></div>
       <div class="gfoot"><span>Game cash has no cash value and can't be cashed out.</span><button id="gReset">Reset game</button></div>
     </div>
+  </div>
+  <div class="gcard" style="margin-top:18px">
+    <div class="gsec">Your territory</div>
+    <div class="gmap"><div id="gMapEl" class="rmap" role="region" aria-label="Map of the 16 Texas territories"></div></div>
+    <div class="gnext" id="gNext"></div>
   </div>
 </section>
 
@@ -381,101 +395,157 @@ var CITIES={"spring":{"name":"Junk Junkies Texas Junk Removal Spring","cities":[
 <script>
 (function(){
   var $=function(s){return document.querySelector(s)};
-  var KEY='stagr-claim-v2';
+  var KEY='stagr-claim-v3';
   // ---- token hook: soft currency today, STAGR later. Flip STAGR.enabled and give it a wallet to switch the premium perks on.
   window.STAGR=window.STAGR||{enabled:false,symbol:'STAGR',wallet:null,
     // return a Promise<boolean>; must resolve true only after the on-chain payment is confirmed
     pay:function(perk){return Promise.resolve(false)}};
+  // ---- content
+  var VEH=[{n:'Pickup and trailer',cap:6,vs:1,cost:0,w:380,img:'v0'},{n:'Box truck',cap:12,vs:1.15,cost:400,w:330,img:'v1'},{n:'Dump truck',cap:24,vs:1.3,cost:4000,w:320,img:'v2'},{n:'STAGR semi',cap:48,vs:1.5,cost:40000,w:470,img:'v3'}];
+  var ITEMS=[{k:'couch',v:28},{k:'mattress',v:20},{k:'fridge',v:38},{k:'tv',v:16},{k:'boxes',v:12}];
+  var MAXW=8,MAXCAP=10;
+  var PREM=[{n:'Chrome wrap',d:'Doubles income for the whole fleet.'},{n:'Night shift',d:'Crews keep earning longer while you are away.'},{n:'Fleet slot',d:'Run a second truck on the road.'},{n:'Stag skin',d:'Special looks for the stag and the trucks.'}];
   var ORDER=['Spring','Klein','The Woodlands','Humble','Tomball','Magnolia','Pinehurst','Montgomery','Cypress','Jersey Village','Hockley','Katy','College Station','Bryan','Navasota','Caldwell'];
   var CREW={spring:{n:'Spring',c:'#3987e5',l:'a/logo-spring.webp'},tomball:{n:'Tomball',c:'#d95926',l:'a/logo-tomball.webp'},cypress:{n:'Cypress',c:'#199e70',l:'a/logo-cypress.webp'},'college-station':{n:'College Station',c:'#d4a017',l:'a/logo-cs.webp'}};
   var CITY={};Object.keys(CITIES).forEach(function(k){CITIES[k].cities.forEach(function(x){CITY[x.n]={n:x.n,lat:x.lat,lon:x.lon,crew:k}})});
-  var L=ORDER.map(function(n,i){var c=CITY[n];c.i=i;c.inc=1.0*Math.pow(1.9,i);c.cost=i?Math.round(50*Math.pow(2.6,i-1)):0;return c});
+  var L=ORDER.map(function(n,i){var c=CITY[n];c.i=i;c.cost=i?Math.round(500*Math.pow(2.5,i-1)):0;return c});
   var HUB={};L.forEach(function(p){if(HUB[p.crew]===undefined)HUB[p.crew]=p.i});
-  var CU=[{id:'truck',n:'Truck',d:'+30% for this crew per level. More trucks hit the road as it levels up.',base:100,g:1.75},{id:'trailer',n:'Trailer',d:'+30% for this crew per level.',base:250,g:1.75},{id:'help',n:'Helpers',d:'+50% for this crew per level.',base:600,g:1.8}];
-  var PREM=[{n:'Chrome wrap',d:'Doubles income for all four crews.'},{n:'Night shift',d:'Crews keep earning longer while you are away.'},{n:'Fleet slot',d:'Run an extra truck on any route.'},{n:'Stag skin',d:'Special looks for the stag and the trucks.'}];
+  // ---- state
   var st=load();
-  function fresh(){return{cash:30,total:30,own:1,lv:{spring:{truck:0,trailer:0,help:0},tomball:{truck:0,trailer:0,help:0},cypress:{truck:0,trailer:0,help:0},'college-station':{truck:0,trailer:0,help:0}},t:Date.now()}}
-  function load(){try{var j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&typeof j.cash==='number'&&j.lv)return j}catch(e){}return fresh()}
+  function fresh(){return{cash:0,total:0,own:1,veh:0,wk:1,sp:0,cp:0,pr:0,t:Date.now()}}
+  function load(){try{var j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&typeof j.cash==='number'&&typeof j.veh==='number')return j}catch(e){}return fresh()}
   function save(){st.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
   function fmt(n){if(n<1000)return n<10&&n%1?n.toFixed(1):String(Math.floor(n));var u=['K','M','B','T','Qa','Qi'],i=-1;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(2):n<100?n.toFixed(1):Math.floor(n))+u[i]}
-  function mult(k){var v=st.lv[k];return 1+.3*v.truck+.3*v.trailer+.5*v.help}
-  function ps(){var t=0;for(var i=0;i<st.own;i++)t+=L[i].inc*mult(L[i].crew);return t}
-  function cost(base,g,lv){return Math.ceil(base*Math.pow(g,lv))}
-  // ---- offline earnings (capped at 8 hours)
-  var away=Math.min((Date.now()-(st.t||Date.now()))/1000,8*3600);
-  if(away>60&&st.own>0){var gain=ps()*away;st.cash+=gain;st.total+=gain;var w=$('#gwelcome');w.hidden=false;w.textContent='While you were away, your trucks hauled '+fmt(gain)+' cash.'}
-  // ---- real map
-  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // ---- economy (one place, used by the scene and by the offline estimate)
+  var DX=255,DY=345,PX=470,TX=PX-34,TY=548,LANE=606,DIST=Math.hypot(TX-DX,TY-DY);
+  function speedMult(){return 1+.15*st.sp}
+  function cap(){return VEH[st.veh].cap+2*st.cp}
+  function tripT(){return 11/VEH[st.veh].vs}
+  function priceMult(){return (1+.25*st.pr)*(1+.12*(st.own-1))}
+  var boostUntil=0;function boostMult(){return Date.now()<boostUntil?2:1}
+  function rate(noBoost){var cyc=2*DIST/(110*speedMult())+.95,ir=st.wk/cyc,tr=cap()/(tripT()+4.7);return Math.min(ir,tr)*22.8*priceMult()*(noBoost?1:boostMult())}
+  // ---- assets
+  var IMG={},need=['bg','it-couch','it-mattress','it-fridge','it-tv','it-boxes','v0','v1','v2','v3'],ready=false,loaded=0;
+  function ld(key,src){var i=new Image();i.onload=i.onerror=function(){loaded++;if(loaded>=need.length+SPR.length)ready=true};i.src=src;IMG[key]=i}
+  var SPR=[{k:'crew',src:'a/crew-sprite.webp',n:29,ar:.81364},{k:'pumpkin',src:'a/hw-pumpkin.webp',n:30,ar:.76818},{k:'scarecrow',src:'a/hw-scarecrow.webp',n:33,ar:.80455},{k:'skeleton',src:'a/hw-skeleton.webp',n:30,ar:.81364},{k:'stag',src:'a/stag-sprite.webp',n:33,ar:.8625}];
+  need.forEach(function(k){ld(k,k.indexOf('it-')===0||k==='bg'?'a/g/'+k+'.webp':'a/g/'+k+'.webp')});
+  var SP={};SPR.forEach(function(d){SP[d.k]=d;ld('s-'+d.k,d.src)});
+  var hw=/halloween=1/.test(location.search)||(new Date().getMonth()===9&&!/halloween=0/.test(location.search));
+  var COSTUME=hw?['pumpkin','scarecrow','skeleton']:[];
+  // ---- simulation
+  var W=960,H=621,time=0,workers=[],pile=[],load_=[],texts=[],tr={ph:'parked',x:PX,t:0,pay:0},stag=null,nextStag=18,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function pick(){var r=ITEMS[Math.floor(Math.random()*ITEMS.length)];return r}
+  function syncWorkers(){while(workers.length<st.wk)workers.push({ph:'idle',t:workers.length*.9,x:DX,y:DY,item:null,seed:Math.random()*5,skin:COSTUME.length&&workers.length<3?COSTUME[workers.length]:'crew'})}
+  function say(x,y,txt,col){texts.push({x:x,y:y,t:0,txt:txt,col:col||'#39ff14'})}
+  function deposit(it){if(tr.ph==='parked'&&load_.length<cap()){load_.push(it);if(load_.length>=cap()){tr.ph='wait';tr.t=.5}}else if(pile.length<60)pile.push(it)}
+  function update(dt){time+=dt;syncWorkers();var sp=110*speedMult();
+    workers.forEach(function(w){
+      if(w.ph==='idle'){w.t-=dt;if(w.t<=0){w.item=pick();w.ph='carry';w.x=DX;w.y=DY}}
+      else if(w.ph==='carry'||w.ph==='back'){var tx=w.ph==='carry'?TX:DX,ty=w.ph==='carry'?TY:DY,dx=tx-w.x,dy=ty-w.y,d=Math.hypot(dx,dy),step=sp*dt;
+        if(d<=step){w.x=tx;w.y=ty;if(w.ph==='carry'){w.ph='drop';w.t=.35}else{w.ph='idle';w.t=.3}}else{w.x+=dx/d*step;w.y+=dy/d*step}}
+      else if(w.ph==='drop'){w.t-=dt;if(w.t<=0){deposit(w.item);w.item=null;w.ph='back'}}});
+    // truck
+    if(tr.ph==='wait'){tr.t-=dt;if(tr.t<=0){tr.ph='leave';tr.sum=load_.reduce(function(a,b){return a+b.v},0);load_=[]}}
+    else if(tr.ph==='leave'){tr.x+=(160+Math.max(0,tr.x-PX)*1.4)*dt*VEH[st.veh].vs;if(tr.x>W+20){tr.ph='away';tr.t=tripT()}}
+    else if(tr.ph==='away'){tr.t-=dt;if(tr.t<=0){var pay=tr.sum*priceMult()*boostMult();st.cash+=pay;st.total+=pay;tr.pay=pay;tr.ph='enter';tr.x=-VEH[st.veh].w-20;say(120,LANE-60,'+'+fmt(pay),'#39ff14')}}
+    else if(tr.ph==='enter'){var rem=PX-tr.x;tr.x+=Math.max(60,Math.min(300,rem*1.6))*dt*VEH[st.veh].vs;if(tr.x>=PX){tr.x=PX;tr.ph='parked';while(pile.length&&load_.length<cap())load_.push(pile.shift());if(load_.length>=cap()){tr.ph='wait';tr.t=.6}}}
+    // stag bonus
+    nextStag-=dt;if(!stag&&nextStag<=0){stag={x:-120,y:300,f:0};nextStag=55+Math.random()*30}
+    if(stag){stag.x+=150*dt;if(stag.x>W+140)stag=null}
+    for(var i=texts.length-1;i>=0;i--){texts[i].t+=dt;if(texts[i].t>1.5)texts.splice(i,1)}}
+  // ---- drawing
+  var cv=$('#gScene'),cx=cv.getContext('2d'),vis=true;
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting}).observe(cv);
+  function frame(sheet,t,rate_){var d=SP[sheet];return Math.floor(t*12*(rate_||1))%d.n}
+  function drawSprite(sheet,fr,x,footY,h,flip){var d=SP[sheet],im=IMG['s-'+sheet];if(!im||!im.naturalWidth)return;var fw=im.naturalWidth/d.n,w=h*d.ar;cx.save();cx.translate(x,footY-h*.9);if(flip){cx.scale(-1,1)}cx.drawImage(im,fr*fw,0,fw,im.naturalHeight,-w/2,0,w,h);cx.restore()}
+  function itemImg(k){return IMG['it-'+k]}
+  function drawItem(k,x,y,h,center){var im=itemImg(k);if(!im||!im.naturalWidth)return;var w=h*im.naturalWidth/im.naturalHeight;cx.drawImage(im,x-w/2,center?y-h/2:y-h,w,h)}
+  function draw(){if(!ready){return}cx.clearRect(0,0,W,H);var bg=IMG.bg;cx.drawImage(bg,0,0,W,H);
+    var ents=[];
+    // pile at the curb
+    pile.slice(-10).forEach(function(it,i){var px=TX-26+(i%3)*22-Math.floor(i/3)*4,py=TY+12-Math.floor(i/3)*12;ents.push({y:py+2,f:function(){drawItem(it.k,px,py,44)}})});
+    // truck
+    var v=VEH[st.veh],vi=IMG[v.img];if(vi&&vi.naturalWidth&&tr.ph!=='away'){var vw=v.w,vh=vw*vi.naturalHeight/vi.naturalWidth;ents.push({y:LANE+30,f:function(){cx.save();cx.shadowColor='rgba(0,0,0,.5)';cx.shadowBlur=14;cx.drawImage(vi,tr.x,LANE-vh,vw,vh);cx.restore();
+      if(tr.ph==='parked'||tr.ph==='wait'){var bx=tr.x+vw/2-40,by=LANE-vh-14;cx.fillStyle='rgba(7,10,8,.8)';cx.fillRect(bx,by,80,12);cx.fillStyle='#39ff14';cx.fillRect(bx+2,by+2,76*Math.min(1,load_.length/cap()),8)}}})}
+    // workers
+    workers.forEach(function(w){var carrying=w.ph==='carry'||w.ph==='drop',moving=w.ph==='carry'||w.ph==='back';var yy=Math.max(DY,Math.min(TY+30,w.y)),s=.62+.4*Math.max(0,Math.min(1,(yy-DY)/(TY-DY))),h=150*s,flip=w.ph==='back';
+      ents.push({y:w.y,f:function(){cx.save();cx.globalAlpha=.35;cx.fillStyle='#000';cx.beginPath();cx.ellipse(w.x,w.y+2,h*.2,h*.05,0,0,6.3);cx.fill();cx.restore();
+        drawSprite(w.skin,moving?frame(w.skin,time+w.seed,1):0,w.x,w.y,h,flip);
+        if(carrying&&w.item)drawItem(w.item.k,w.x+(flip?-1:1)*h*.12,w.y-h*.62,h*.5,true)}})});
+    ents.sort(function(a,b){return a.y-b.y}).forEach(function(e){e.f()});
+    // stag
+    if(stag){var sh=130;cx.save();cx.shadowColor='#39ff14';cx.shadowBlur=24;drawSprite('stag',frame('stag',time),stag.x,stag.y+sh*.9,sh,false);cx.restore();cx.fillStyle='#39ff14';cx.font='900 22px Big Shoulders Display,Impact,sans-serif';cx.textAlign='center';cx.fillText('CATCH THE STAG!',stag.x,stag.y-14)}
+    // texts
+    texts.forEach(function(t){cx.globalAlpha=Math.max(0,1-t.t/1.5);cx.fillStyle=t.col;cx.strokeStyle='#000';cx.lineWidth=4;cx.font='900 38px Big Shoulders Display,Impact,sans-serif';cx.textAlign='center';cx.strokeText(t.txt,t.x,t.y-t.t*40);cx.fillText(t.txt,t.x,t.y-t.t*40);cx.globalAlpha=1});
+    // badge text
+    var b=tr.ph==='away'?'Truck at the dump · '+Math.ceil(tr.t)+'s':tr.ph==='leave'?'Truck heading out':tr.ph==='enter'?'Truck coming back':'Loading '+load_.length+'/'+cap();var bd=$('#gBadge');if(bd.textContent!==b)bd.textContent=b}
+  // stag click
+  function stagHit(e){if(!stag)return false;var r=cv.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*W,py=(e.clientY-r.top)/r.height*H;return px>stag.x-100&&px<stag.x+100&&py>stag.y-40&&py<stag.y+140}
+  cv.addEventListener('click',function(e){if(stagHit(e)){boostUntil=Date.now()+30000;stag=null;say(W/2,200,'2X FOR 30s','#39ff14')}});
+  cv.addEventListener('mousemove',function(e){cv.style.cursor=stagHit(e)?'pointer':'default'});
+  // ---- map (real tiles; shows claimed / next / locked)
   var gmap=window.L.map('gMapEl',{scrollWheelZoom:false,dragging:!window.L.Browser.mobile,tap:false,zoomSnap:.25}),gmk=[];
   var gstreet=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,className:'t-street',attribution:'Tiles &copy; Esri'}).addTo(gmap);
   var gsat=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles &copy; Esri'});
   window.L.control.layers({'Street':gstreet,'Satellite':gsat},null,{collapsed:true,position:'topright'}).addTo(gmap);
   gmap.fitBounds(window.L.latLngBounds(L.map(function(p){return [p.lat,p.lon]})),{padding:[34,34]});
-  var truckPane=gmap.createPane('trucks');truckPane.style.zIndex=650;
   L.forEach(function(p){var m=window.L.marker([p.lat,p.lon],{keyboard:true,icon:window.L.divIcon({className:'',html:'',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(gmap);
     m.bindTooltip(p.n,{permanent:true,direction:'auto',offset:[10,0],className:'lbl'});gmk.push(m);
     m.on('click',function(){var own=p.i<st.own,next=p.i===st.own;
       if(next){if(st.cash>=p.cost){claimNext()}else{m.bindPopup('<b>'+p.n+'</b><br>Claim cost: '+fmt(p.cost)+' cash.<br>You have '+fmt(st.cash)+'.').openPopup()}}
-      else m.bindPopup('<b>'+p.n+'</b><br>'+(own?'Claimed. Earns '+fmt(p.inc*mult(p.crew))+'/s.':'Locked. Claim '+L[p.i-1].n+' first.')).openPopup()})});
+      else m.bindPopup('<b>'+p.n+'</b><br>'+(own?'Claimed. Adds +12% to every job.':'Locked. Claim '+L[p.i-1].n+' first.')).openPopup()})});
   function drawMap(){L.forEach(function(p,i){var own=p.i<st.own,next=p.i===st.own,m=gmk[i],c=CREW[p.crew].c,hub=HUB[p.crew]===p.i&&own;
     m.setIcon(window.L.divIcon({className:'',html:hub?'<img class="hq" src="a/logo-hq.webp" alt="">':'<div class="mk '+(own?'own':next?'next':'lock')+'" style="--c:'+c+'"><i></i></div>',iconSize:hub?[44,44]:[26,26],iconAnchor:hub?[22,22]:[13,13]}));
     m.setZIndexOffset(next?1000:own?200:0);var t=m.getTooltip();if(t&&t.getElement()){t.getElement().classList.toggle('lk',!own&&!next)}
-    m.options.title=p.n+(own?' (claimed)':next?' (next, tap to claim)':' (locked)')});syncTrucks()}
-  // ---- trucks: every claimed city has a local truck circling it, and every spoke city has trucks running to and from its crew's HQ
-  var trucks=[];
-  function truckCount(crew){return 1+Math.min(2,Math.floor(st.lv[crew].truck/3))}
-  function mkTruck(kind,p,hub,idx,n){var el=window.L.divIcon({className:'',html:'<img class="tk" src="a/truck.webp" alt="" width="78" height="19">',iconSize:[78,19],iconAnchor:[39,14]});
-    var m=window.L.marker([p.lat,p.lon],{icon:el,interactive:false,keyboard:false,pane:'trucks'}).addTo(gmap);
-    return {m:m,kind:kind,p:p,hub:hub,off:idx/n*100+p.i*3.7,dur:kind==='spoke'?16+((p.i*7)%5):9+((p.i*3)%4),img:null,last:0}}
-  function syncTrucks(){var want={};
-    for(var i=0;i<st.own;i++){var p=L[i],h=L[HUB[p.crew]],n=truckCount(p.crew);
-      want['L'+i]=1;for(var k=0;k<n;k++){if(i!==HUB[p.crew])want['S'+i+'.'+k]=[p,h,k,n]}}
-    trucks=trucks.filter(function(t){if(want[t.key]){delete want[t.key];return true}gmap.removeLayer(t.m);return false});
-    Object.keys(want).forEach(function(key){var t;if(key.charAt(0)==='L'){var p=L[+key.slice(1)];t=mkTruck('loop',p,p,0,1)}else{var w=want[key];t=mkTruck('spoke',w[0],w[1],w[2],w[3])}t.key=key;trucks.push(t)});}
-  function plus(p,txt){var m=window.L.marker([p.lat,p.lon],{icon:window.L.divIcon({className:'',html:'<span class="plus">+'+txt+'</span>',iconSize:[60,24],iconAnchor:[30,34]}),interactive:false,keyboard:false,pane:'trucks'}).addTo(gmap);setTimeout(function(){gmap.removeLayer(m)},1400)}
-  function place(t,now){var sec=now/1000+t.off,pos,dx;
-    if(t.kind==='loop'){var a=sec/t.dur*6.283,r=.045;pos=[t.p.lat+Math.sin(a)*r*.7,t.p.lon+Math.cos(a)*r];dx=-Math.sin(a)}
-    else{var ph=(sec/t.dur)%2,f=ph<1?ph:2-ph,e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;pos=[t.hub.lat+(t.p.lat-t.hub.lat)*e,t.hub.lon+(t.p.lon-t.hub.lon)*e];dx=(t.p.lon-t.hub.lon)*(ph<1?1:-1);
-      var cyc=Math.floor(sec/t.dur);if(t.last!==cyc){if(t.last!==0&&!reduce){plus(ph<1?t.hub:t.p,fmt(t.p.inc*mult(t.p.crew)*t.dur/2))}t.last=cyc}}
-    t.m.setLatLng(pos);
-    var img=t.img||(t.img=t.m.getElement()&&t.m.getElement().querySelector('img'));if(img){var flip=dx>0;if(t.flipped!==flip){t.flipped=flip;img.classList.toggle('flip',flip)}}}
-  // ---- lists
-  var tab='ter';
+    m.options.title=p.n+(own?' (claimed)':next?' (next, tap to claim)':' (locked)')})}
+  var fitOwn=-1;function fitMap(){if(fitOwn===st.own)return;fitOwn=st.own;var pts=L.slice(0,Math.min(st.own+1,16)).map(function(p){return [p.lat,p.lon]});if(pts.length<2)return;gmap.fitBounds(window.L.latLngBounds(pts),{padding:[56,56],maxZoom:11,animate:!reduce})}
+  // ---- upgrade rows
+  var tab='fleet';
+  function costs(){return{veh:VEH[st.veh+1]?VEH[st.veh+1].cost:null,wk:st.wk<MAXW?Math.ceil(60*Math.pow(1.55,st.wk-1)):null,sp:Math.ceil(80*Math.pow(1.6,st.sp)),cp:st.cp<MAXCAP?Math.ceil(150*Math.pow(1.7,st.cp)):null,pr:Math.ceil(120*Math.pow(1.7,st.pr))}}
   function row(icon,name,desc,btn){return '<div class="gitem'+(btn.lock?' glock':'')+'">'+icon+'<div><b>'+name+'</b><small>'+desc+'</small></div>'+btn.h+'</div>'}
-  function drawList(){var h='';
-    if(tab==='ter'){
-      L.forEach(function(p){var c=CREW[p.crew],own=p.i<st.own,next=p.i===st.own,inc=fmt(p.inc*mult(p.crew))+'/s';
-        var b=own?{h:'<span class="gbuy" aria-disabled="true">Claimed<br><small>'+inc+'</small></span>'}:next?{h:'<button class="gbuy" data-claim="1"'+(st.cash<p.cost?' aria-disabled="true"':'')+'>Claim<br><small>'+fmt(p.cost)+'</small></button>'}:{h:'<span class="gbuy" aria-disabled="true">Locked<br><small>'+fmt(p.cost)+'</small></span>',lock:1};
-        h+=row('<img src="'+c.l+'" alt="" width="44" height="44">',p.n,c.n+' crew. Earns '+fmt(p.inc*mult(p.crew))+' cash per second.',b)});
+  function buy(id,c,label){return c===null?{h:'<span class="gbuy" aria-disabled="true">Maxed<br><small>&nbsp;</small></span>'}:{h:'<button class="gbuy" data-buy="'+id+'"'+(st.cash<c?' aria-disabled="true"':'')+'>'+label+'<br><small>'+fmt(c)+'</small></button>'}}
+  function drawList(){var h='',c=costs();
+    if(tab==='fleet'){
+      var nv=VEH[st.veh+1];
+      h+=row('<img src="a/g/'+VEH[st.veh].img+'.webp" alt="" style="object-fit:contain">','Vehicle: '+VEH[st.veh].n,nv?'Next: '+nv.n+', carries '+(nv.cap+2*st.cp)+' per load and drives '+Math.round((nv.vs/VEH[st.veh].vs-1)*100)+'% faster.':'Your best vehicle. It carries '+cap()+' per load.',buy('veh',c.veh,'Upgrade'));
+      h+=row('<img src="a/logo-hq.webp" alt="" style="object-fit:contain">','Hire crew','Crew: '+st.wk+' of '+MAXW+'. Every hire carries more junk to the truck.',buy('wk',c.wk,'Hire'));
+      h+=row('<div class="ic">⚡</div>','Hustle','Level '+st.sp+'. The whole crew walks '+(15*st.sp)+'% faster than at the start, and 15% more with each level.',buy('sp',c.sp,'Train'));
+      h+=row('<div class="ic">▣</div>','Bigger loads','Level '+st.cp+' of '+MAXCAP+'. +2 items per truck load.',buy('cp',c.cp,'Upgrade'));
+      h+=row('<div class="ic">$</div>','Better quotes','Level '+st.pr+'. Every item pays '+(25*st.pr)+'% more than at the start, and 25% more with each level.',buy('pr',c.pr,'Upgrade'));
+    }else if(tab==='ter'){
+      L.forEach(function(p){var cc=CREW[p.crew],own=p.i<st.own,next=p.i===st.own;
+        var b=own?{h:'<span class="gbuy" aria-disabled="true">Claimed<br><small>+12%</small></span>'}:next?{h:'<button class="gbuy" data-claim="1"'+(st.cash<p.cost?' aria-disabled="true"':'')+'>Claim<br><small>'+fmt(p.cost)+'</small></button>'}:{h:'<span class="gbuy" aria-disabled="true">Locked<br><small>'+fmt(p.cost)+'</small></span>',lock:1};
+        h+=row('<img src="'+cc.l+'" alt="" width="44" height="44">',p.n,cc.n+' crew. Every city you claim adds +12% to every job.',b)});
       if(st.own>=16)h='<div class="gsec">All sixteen territories claimed. Nice haul.</div>'+h;
-    }else if(tab==='crew'){
-      Object.keys(CREW).forEach(function(k){h+='<div class="gsec">'+CREW[k].n+' crew · x'+mult(k).toFixed(2)+' · '+truckCount(k)+' truck'+(truckCount(k)>1?'s':'')+' per route</div>';
-        CU.forEach(function(u){var lv=st.lv[k][u.id],c=cost(u.base,u.g,lv);h+=row('<img src="'+CREW[k].l+'" alt="" width="44" height="44">',u.n,'Level '+lv+'. '+u.d,{h:'<button class="gbuy" data-up="'+k+':'+u.id+'"'+(st.cash<c?' aria-disabled="true"':'')+'>Upgrade<br><small>'+fmt(c)+'</small></button>'})})});
     }else{
       h+='<div class="gsec">Paid with STAGR when it launches</div>';
       PREM.forEach(function(p){h+=row('<div class="ic">★</div>',p.n,p.d+' Price set at launch.',{lock:1,h:'<button class="gbuy" data-prem="'+p.n+'" aria-disabled="true">Soon<br><small>STAGR</small></button>'})});
       h+='<div class="gsec">Nothing here is for sale yet. Perks, prices and how they work will be announced before launch.</div>';
     }
     var el=$('#gList'),top=el.scrollTop;el.innerHTML=h;el.scrollTop=top}
-  function drawNext(){var p=L[st.own],el=$('#gNext');el.innerHTML=p?'<span>Next territory: <b>'+p.n+'</b> · '+CREW[p.crew].n+' crew · earns '+fmt(p.inc*mult(p.crew))+'/s</span><button class="gbuy" data-claim="1" style="min-width:0;padding:8px 14px"'+(st.cash<p.cost?' aria-disabled="true"':'')+'>Claim '+fmt(p.cost)+'</button>':'<span><b>All 16 territories claimed.</b></span>'}
-  function stats(){$('#gCash').textContent=fmt(st.cash);$('#gPs').textContent=fmt(ps());$('#gTer').textContent=st.own+'/16'}
-  var fitOwn=-1;function fitMap(){if(fitOwn===st.own)return;fitOwn=st.own;var pts=L.slice(0,Math.min(st.own+1,16)).map(function(p){return [p.lat,p.lon]});if(pts.length<2)return;gmap.fitBounds(window.L.latLngBounds(pts),{padding:[56,56],maxZoom:11,animate:!reduce})}
+  function drawNext(){var p=L[st.own],el=$('#gNext');el.innerHTML=p?'<span>Next territory: <b>'+p.n+'</b> · '+CREW[p.crew].n+' crew · +12% to every job</span><button class="gbuy" data-claim="1" style="min-width:0;padding:8px 14px"'+(st.cash<p.cost?' aria-disabled="true"':'')+'>Claim '+fmt(p.cost)+'</button>':'<span><b>All 16 territories claimed.</b></span>'}
+  function stats(){$('#gCash').textContent=fmt(st.cash);$('#gPs').textContent=fmt(rate());$('#gTer').textContent=st.own+'/16';var bo=$('#gBoost'),left=boostUntil-Date.now();if(left>0){bo.hidden=false;bo.textContent='Stag bonus 2x · '+Math.ceil(left/1000)+'s'}else bo.hidden=true}
   function redraw(){stats();drawMap();drawList();drawNext();fitMap()}
   // ---- actions
-  function claimNext(){var p=L[st.own];if(p&&st.cash>=p.cost){st.cash-=p.cost;st.own++;redraw();save();if(!reduce)plus(p,'claimed')}}
+  function claimNext(){var p=L[st.own];if(p&&st.cash>=p.cost){st.cash-=p.cost;st.own++;redraw();save()}}
+  function doBuy(id){var c=costs(),cost=c[id];if(cost===null||st.cash<cost)return;st.cash-=cost;
+    if(id==='veh'){st.veh++;load_=[];if(tr.ph!=='away'&&tr.ph!=='leave'){tr.ph='parked';tr.x=PX}}else if(id==='wk')st.wk++;else if(id==='sp')st.sp++;else if(id==='cp')st.cp++;else if(id==='pr')st.pr++;
+    redraw();save()}
   document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#game button.gbuy');if(!b||b.getAttribute('aria-disabled')==='true')return;
-    if(b.dataset.claim){claimNext()}
-    else if(b.dataset.up){var a=b.dataset.up.split(':'),u=CU.filter(function(x){return x.id===a[1]})[0],lv=st.lv[a[0]][a[1]],c2=cost(u.base,u.g,lv);if(st.cash>=c2){st.cash-=c2;st.lv[a[0]][a[1]]++;redraw();save()}}});
+    if(b.dataset.claim)claimNext();else if(b.dataset.buy)doBuy(b.dataset.buy)});
   document.querySelector('.gtabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;tab=b.dataset.t;document.querySelectorAll('.gtabs button').forEach(function(x){x.setAttribute('aria-selected',String(x===b))});drawList()});
-  $('#gReset').addEventListener('click',function(){if(confirm('Reset the game and start over?')){st=fresh();$('#gwelcome').hidden=true;redraw();save()}});
-  function afford(){document.querySelectorAll('#game button.gbuy').forEach(function(b){var c=null;if(b.dataset.claim)c=L[st.own]?L[st.own].cost:null;else if(b.dataset.up){var a=b.dataset.up.split(':'),u=CU.filter(function(x){return x.id===a[1]})[0];c=cost(u.base,u.g,st.lv[a[0]][a[1]])}if(c!==null)b.setAttribute('aria-disabled',String(st.cash<c))})}
-  var last=performance.now(),acc=0,vis=true;new IntersectionObserver(function(e){vis=e[0].isIntersecting}).observe($('#gMapEl'));
-  (function tick(t){requestAnimationFrame(tick);var dt=Math.min((t-last)/1000,1);last=t;if(document.hidden)return;var g=ps()*dt;st.cash+=g;st.total+=g;acc+=dt;if(acc>=.25){acc=0;stats();afford()}
-    if(vis&&!reduce){var now=Date.now();for(var i=0;i<trucks.length;i++)place(trucks[i],now)}})(last);
-  if(reduce){setTimeout(function(){trucks.forEach(function(t){place(t,Date.now())})},400)}
-  setInterval(save,5000);addEventListener('pagehide',save);document.addEventListener('visibilitychange',function(){if(document.hidden)save()});
+  $('#gReset').addEventListener('click',function(){if(confirm('Reset the game and start over?')){st=fresh();workers=[];pile=[];load_=[];tr={ph:'parked',x:PX,t:0,pay:0};$('#gwelcome').hidden=true;redraw();save()}});
+  function afford(){var c=costs();document.querySelectorAll('#game button.gbuy').forEach(function(b){var x=null;if(b.dataset.claim)x=L[st.own]?L[st.own].cost:null;else if(b.dataset.buy)x=c[b.dataset.buy];if(x!==null)b.setAttribute('aria-disabled',String(st.cash<x))})}
+  // ---- offline earnings (capped at 8 hours; uses the same rate the scene produces)
+  function away(sec){sec=Math.min(sec,8*3600);if(sec>20){var g=rate(true)*sec;st.cash+=g;st.total+=g;var w=$('#gwelcome');w.hidden=false;w.textContent='While you were away, your crew hauled '+fmt(g)+' cash.';redraw();save()}}
+  away((Date.now()-(st.t||Date.now()))/1000);
+  var hiddenAt=0;document.addEventListener('visibilitychange',function(){if(document.hidden){hiddenAt=Date.now();save()}else if(hiddenAt){away((Date.now()-hiddenAt)/1000);hiddenAt=0}});
+  // ---- loop
+  var last=performance.now(),acc=0;
+  (function tick(t){requestAnimationFrame(tick);var dt=Math.min((t-last)/1000,.1);last=t;if(document.hidden)return;update(dt);if(vis)draw();acc+=dt;if(acc>=.25){acc=0;stats();afford()}})(last);
+  setInterval(save,5000);addEventListener('pagehide',save);
   redraw();setTimeout(function(){gmap.invalidateSize();fitOwn=-1;fitMap()},300);
-  window.__stagr={state:function(){return st},ps:ps,trucks:function(){return trucks.length}};window.__gmap=gmap;
+  window.__stagr={state:function(){return st},rate:rate,step:function(sec){for(var i=0;i<sec*20;i++)update(.05)},phase:function(){return tr.ph},load:function(){return load_.length},pile:function(){return pile.length},workers:function(){return workers.length},cap:cap,stag:function(){return !!stag},spawnStag:function(){stag={x:W/2,y:300,f:0}},boost:function(){return boostUntil-Date.now()}};window.__gmap=gmap;
 })();
 </script>
 </body></html>
