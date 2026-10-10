@@ -1,393 +1,280 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR: the community token of Junk Junkies Texas, four real junk removal crews with one stag."><title>STAGR</title><link rel="icon" href="a/icon.webp">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR helps service businesses manage customers, leads, estimates, jobs, scheduling, invoices, payments and follow-ups, all in one place."><title>STAGR | Field-service software for service businesses</title><link rel="icon" href="a/icon.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout concept: a territory survey. The Texas stag logo is the mark; four crews are four claimed territories on a plotted map of their real cities. Black ground, the logos' neon green for what is live, white for type. */
 :root{
   color-scheme:dark;
-  --ink:#070a08; --pine:#0c120f; --panel:#111a15; --line:#1f2e25; --bone:#f3f2ec; --mute:#a3b2a9;
-  --neon:#27f05a; --warn:#e5604a;
-  --c-spring:#3987e5; --c-tomball:#d95926; --c-cypress:#199e70; --c-cs:#d4a017;
+  --ink:#070a08; --pine:#0c120f; --panel:#111a15; --panel2:#16231b; --line:#1f2e25; --bone:#f3f2ec; --mute:#a3b2a9;
+  --neon:#39ff14; --neon-d:#031207; --warn:#f0b429;
   --display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif; --body:'Figtree',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{background:var(--ink);color:var(--bone);font-family:var(--body);font-size:17px;line-height:1.6;padding-inline:clamp(16px,4vw,48px);padding-block:0;overflow-x:hidden}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--body);font-size:17px;line-height:1.6;overflow-x:hidden}
 a{color:inherit}
-h1.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-h1,h2,h3{font-family:var(--display);font-weight:800;line-height:.95;margin:0;text-wrap:balance;text-transform:uppercase;letter-spacing:.005em}
-p{margin:0;max-width:62ch}
-.wrap{max-width:1180px;margin-inline:auto}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:.96;margin:0;text-wrap:balance;text-transform:uppercase;letter-spacing:.005em}
+p{margin:0}
+img{max-width:100%}
+.wrap{max-width:1180px;margin-inline:auto;padding-inline:clamp(16px,4vw,32px)}
 .mono{font-family:var(--mono);font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 :focus-visible{outline:2px solid var(--neon);outline-offset:3px;border-radius:4px}
 
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin-inline:calc(-1*clamp(16px,4vw,48px));padding:10px clamp(16px,4vw,48px);background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.bar{max-width:1180px;margin-inline:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:10px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-.brand img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(57,255,20,.5))}
-.brand b{font-family:var(--display);font-size:1.8rem;font-weight:900;letter-spacing:.06em}
-nav{display:flex;gap:22px}
+.brand img{width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(57,255,20,.5))}
+.brand b{font-family:var(--display);font-size:1.9rem;font-weight:900;letter-spacing:.06em}
+nav{display:flex;gap:24px}
 nav a{font-size:.92rem;color:var(--mute);text-decoration:none}
 nav a:hover{color:var(--bone)}
 .pill{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--neon);color:var(--neon);padding:5px 10px;border-radius:999px;white-space:nowrap}
-@media(max-width:760px){nav{display:none}}
+@media(max-width:820px){nav{display:none}}
 
-.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:6px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--panel);transition:border-color .2s,transform .2s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:8px;font-weight:700;text-decoration:none;border:1px solid var(--line);background:var(--panel);transition:border-color .2s,transform .2s;cursor:pointer;font-size:1rem;font-family:inherit;color:var(--bone)}
 .btn:hover{border-color:var(--neon);transform:translateY(-1px)}
-.btn.main{background:var(--neon);border-color:var(--neon);color:#031207}
-.logo-stage{position:relative;border:1px solid var(--line);border-radius:12px;background:#000;padding:clamp(14px,3vw,30px);overflow:hidden}
-.logo-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,rgba(39,240,90,.16),transparent 62%)}
-.logo-stage img{position:relative;display:block;width:100%;height:auto;max-width:520px;margin-inline:auto}
+.btn.main{background:var(--neon);border-color:var(--neon);color:var(--neon-d)}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
 
-/* animated header */
-.hero{position:relative;isolation:isolate;overflow:hidden;margin-inline:calc(-1*clamp(16px,4vw,48px));min-height:min(86vh,760px);display:grid;align-items:end;padding:clamp(28px,5vw,60px) max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2)) clamp(110px,13vw,170px)}
-.hero-bg{position:absolute;inset:-4%;z-index:-3;background:url(a/stagr-hero.webp) 62% center/cover;animation:kb 26s ease-in-out infinite alternate;will-change:transform}
-@keyframes kb{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.12) translate3d(-2.5%,-1.5%,0)}}
-.hero::before{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(0deg,#070a08 4%,rgba(7,10,8,.35) 45%,rgba(7,10,8,.1)),linear-gradient(90deg,rgba(7,10,8,.78),rgba(7,10,8,0) 62%)}
-.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(57,255,20,.16) 50%,transparent 60%);background-size:260% 100%;animation:sweep 7s linear infinite;mix-blend-mode:screen}
-@keyframes sweep{from{background-position:130% 0}to{background-position:-130% 0}}
-#fx{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none}
-.hero-in{max-width:620px;animation:rise 1s .1s both cubic-bezier(.2,.8,.2,1)}
-@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-.hero .wm{display:block;width:min(430px,92%);height:auto;filter:drop-shadow(0 0 28px rgba(57,255,20,.55));animation:glow 3.4s ease-in-out infinite}
-@keyframes glow{50%{filter:drop-shadow(0 0 46px rgba(57,255,20,.9))}}
-.hero .tag{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:clamp(1.7rem,4.2vw,2.8rem);color:var(--bone);margin-top:6px;line-height:1}
-.hero .tag em{font-style:normal;color:var(--neon)}
-.hero p.lead{margin-top:12px;font-size:1.05rem;text-shadow:0 2px 14px #000}
-.hero .stag-badge{position:absolute;right:max(clamp(16px,4vw,48px),calc((100vw - 1180px)/2));top:22px;width:clamp(74px,11vw,128px);filter:drop-shadow(0 0 22px rgba(57,255,20,.7));animation:float 5s ease-in-out infinite}
-@keyframes float{50%{transform:translateY(-8px)}}
-@media(prefers-reduced-motion:reduce){.hero-bg,.hero::after,.hero .wm,.hero .stag-badge,.hero-in{animation:none}#fx{display:none}}
+/* hero */
+.hero{position:relative;isolation:isolate;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero-bg{position:absolute;inset:0;z-index:-2;background:url(a/stagr-hero.webp) 70% center/cover;opacity:.32;animation:kb 30s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.1) translate(-1.5%,-1%)}}
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(900px 500px at 78% 40%,rgba(57,255,20,.14),transparent 60%),linear-gradient(90deg,var(--ink) 18%,rgba(7,10,8,.7) 60%,rgba(7,10,8,.9)),linear-gradient(0deg,var(--ink),transparent 40%)}
+.hero-in{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,4vw,56px);align-items:center;padding-block:clamp(40px,6vw,84px)}
+.hero h1{font-size:clamp(2.8rem,6.4vw,5.2rem)}
+.hero h1 em{font-style:normal;color:var(--neon)}
+.hero .wm{display:block;width:min(230px,50%);height:auto;margin-bottom:16px;filter:drop-shadow(0 0 22px rgba(57,255,20,.5))}
+.hero .lead{margin-top:18px;font-size:1.14rem;color:#dfe5e1;max-width:52ch}
+.checks{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;color:var(--mute);font-size:.95rem}
+.checks li{display:flex;gap:8px;align-items:flex-start}.checks li::before{content:"";flex:none;width:16px;height:16px;margin-top:5px;border-radius:50%;background:var(--neon) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%23031207' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px}
+@media(max-width:560px){.checks{grid-template-columns:1fr}}
+.frame{border:1px solid #2a4033;border-radius:14px;background:#0a0f0c;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(57,255,20,.12)}
+.frame-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#0f1713;border-bottom:1px solid var(--line)}
+.frame-bar i{width:10px;height:10px;border-radius:50%;background:#2a3a31}
+.frame-bar span{margin-left:10px;flex:1;text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--mute);letter-spacing:.06em}
+.frame img{display:block;width:100%;height:auto;transition:opacity .35s}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tabs button{all:unset;cursor:pointer;padding:8px 16px;border-radius:999px;border:1px solid var(--line);color:var(--mute);font-size:.88rem;font-weight:600}
+.tabs button[aria-pressed=true]{background:var(--neon);color:var(--neon-d);border-color:var(--neon)}
+.tabs button:focus-visible{outline:2px solid var(--neon);outline-offset:2px}
+.cap{margin-top:12px;color:var(--mute);font-size:.92rem;min-height:3.2em}
+@media(max-width:900px){.hero-in{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hero-bg{animation:none}html{scroll-behavior:auto}}
 
-/* the crew chasing the stag */
-.chase{position:absolute;left:0;right:0;bottom:6px;height:clamp(120px,16vw,200px);z-index:-1;pointer-events:none}
-.run{position:absolute;bottom:0;left:var(--o,0px);height:var(--h);animation:across 14s linear infinite;will-change:transform}
-.run.stag{--h:clamp(170px,21vw,270px);bottom:calc(var(--h)*-.15)}.sp{height:100%;width:calc(var(--h)*var(--ar));background:var(--spr) 0 0/auto 100% no-repeat;animation:play var(--dur) steps(var(--n)) infinite}
-.run.crew{--h:clamp(88px,11.6vw,144px);bottom:calc(var(--h)*-.07);--ar:.81364;--n:29;--dur:2.42s;--spr:url(a/crew-sprite.webp)}
-.run.stag{--ar:.8625;--n:33;--dur:2.75s;--spr:url(a/stag-sprite.webp)}
+.strip{border-bottom:1px solid var(--line);background:#0a0f0c}
+.strip-in{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:18px 34px;padding-block:18px}
+.strip-in img{width:54px;height:54px;object-fit:contain;background:#000;border-radius:10px}
+.strip-in span{color:var(--mute);font-size:.92rem}
 
-/* halloween crew (October, or ?halloween=1) */
-.chase.hw .run.crew:nth-child(1){--spr:url(a/hw-pumpkin.webp);--ar:.76818;--n:30;--dur:2.5s}
-.chase.hw .run.crew:nth-child(2){--spr:url(a/hw-scarecrow.webp);--ar:.80455;--n:33;--dur:2.75s}
-.chase.hw .run.crew:nth-child(3){--spr:url(a/hw-skeleton.webp);--ar:.81364;--n:30;--dur:2.5s}
-@keyframes play{to{background-position-x:calc(var(--h)*var(--ar)*var(--n)*-1)}}
-@keyframes across{from{transform:translateX(-520px)}to{transform:translateX(calc(100vw + 160px))}}
-@media(prefers-reduced-motion:reduce){.run{animation:none;left:60%}.run.crew{left:30%}.sp{animation:none}}
-
-/* game */
-#game .gwrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
-.gcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
-.gstats{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
-.gstats div{padding:12px 14px;border-right:1px solid var(--line)}.gstats div:last-child{border:0}
-.gstats b{display:block;font-family:var(--display);font-size:clamp(1.4rem,3.2vw,2rem);line-height:1;color:var(--bone)}
-.gstats .cash b{color:var(--neon)}
-.gmap{border-top:1px solid var(--line);background:var(--pine)}
-.gtabs{display:flex;border-bottom:1px solid var(--line)}
-.gtabs button{all:unset;cursor:pointer;flex:1;text-align:center;padding:13px 6px;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid transparent}
-.gtabs button[aria-selected=true]{color:var(--neon);border-color:var(--neon)}
-.gtabs button:focus-visible{outline:2px solid var(--neon);outline-offset:-3px}
-.glist{display:grid;gap:1px;background:var(--line);max-height:520px;overflow:auto}
-.gitem{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;background:var(--panel)}
-.gitem img{width:44px;height:44px;object-fit:contain;background:#000;border-radius:8px}
-.gitem .ic{width:44px;height:44px;border-radius:8px;background:#0b130e;display:grid;place-items:center;color:var(--neon);font-family:var(--display);font-size:1.4rem;border:1px solid var(--line)}
-.gitem b{display:block;font-family:var(--display);font-size:1.25rem;text-transform:uppercase;line-height:1.05}
-.gitem small{display:block;color:var(--mute);font-size:.82rem;line-height:1.35}
-.gbuy{all:unset;cursor:pointer;box-sizing:border-box;min-width:92px;text-align:center;padding:8px 10px;border-radius:6px;background:var(--neon);color:#031207;font-weight:700;font-size:.86rem;line-height:1.2}
-.gbuy small{color:#0b3a14;font-weight:600}
-.gbuy[disabled],.gbuy[aria-disabled=true]{background:#1a2a21;color:#7d8f84;cursor:not-allowed}
-.gbuy[aria-disabled=true] small{color:#7d8f84}
-.gbuy:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
-.glock{opacity:.78}.glock .gbuy{background:transparent;border:1px dashed #3b5646;color:var(--mute)}
-.gsec{padding:10px 14px;background:#0d1511;font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
-.gfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;padding:12px 14px;border-top:1px solid var(--line);color:var(--mute);font-size:.8rem}
-.gfoot button{all:unset;cursor:pointer;text-decoration:underline}
-.gwelcome{margin-bottom:14px;border:1px solid var(--neon);border-radius:10px;padding:10px 14px;background:rgba(57,255,20,.07);font-size:.92rem}
-@media(max-width:900px){#game .gwrap{grid-template-columns:1fr}}
-@media(max-width:700px){
-.hero{display:block;min-height:0;padding:0 0 clamp(124px,34vw,150px);overflow:hidden}
-.hero::before,.hero::after{display:none}
-.hero-bg{position:relative;inset:auto;z-index:0;width:100%;height:56.25vw;background-position:center;background-size:cover;animation:none;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
-#fx{height:56.25vw}
-.hero-in{position:relative;padding:0 16px;margin-top:-6px}.hero .mono.plot{margin-bottom:2px}
-.hero .stag-badge{top:10px;right:12px;width:62px}
-.hero .wm{width:min(300px,82%)}
-.cta{gap:8px}.cta .btn{flex:1 1 40%;justify-content:center;padding:11px 12px;font-size:.95rem}.cta .btn.main{flex:1 1 100%}
-.hero p.lead{font-size:1rem}
-.chase{bottom:2px;height:120px;z-index:0}
-.run.stag{--h:150px}.run.crew{--h:82px}
-.run.crew:nth-child(1){--o:-130px}.run.crew:nth-child(2){--o:-185px}.run.crew:nth-child(3){--o:-240px}
-@keyframes across{from{transform:translateX(-320px)}to{transform:translateX(calc(100vw + 120px))}}
-}
-
-/* real maps (same street + satellite tiles as the Junk Junkies Texas sites) */
-.rmap{width:100%;background:#0b110e}
-#map.rmap{height:clamp(380px,56vw,600px)}#gMapEl.rmap{height:clamp(320px,60vw,460px)}
-.leaflet-container{font-family:var(--body);background:#0b110e}
-.t-street{filter:invert(.92) hue-rotate(180deg) saturate(.8) brightness(.95)}
-.leaflet-control-layers,.leaflet-bar a,.leaflet-control-attribution{background:#111a15!important;color:var(--bone)!important;border-color:var(--line)!important}
-.leaflet-control-attribution a{color:var(--mute)!important}
-.leaflet-bar a:hover{background:#1a2a21!important}
-.mk{position:relative;width:26px;height:26px;display:grid;place-items:center}
-.mk i{display:block;width:18px;height:18px;border-radius:50%;background:var(--c);border:2.5px solid #070a08;box-shadow:0 0 0 2px var(--c),0 0 14px 4px var(--c);transition:opacity .2s}
-.mk.sq i{border-radius:3px}.mk.di i{border-radius:3px;transform:rotate(45deg)}.mk.tr i{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);width:22px;height:20px;border:0;box-shadow:none;filter:drop-shadow(0 0 6px var(--c))}
-.mk.dim{opacity:.2}
-.mk.lock i{background:#0b110e;box-shadow:none;border:2px dashed #7d8f84}
-.mk.next i{background:rgba(57,255,20,.15);border:2.5px solid #39ff14;box-shadow:0 0 16px 4px rgba(57,255,20,.7);animation:pulse 1.4s ease-in-out infinite}
-@keyframes pulse{50%{transform:scale(1.35)}}
-.mk.own::after{content:"";position:absolute;inset:-6px;border-radius:50%;background:var(--c);opacity:.18}
-.lbl{background:rgba(7,10,8,.78)!important;border:1px solid var(--line)!important;color:var(--bone)!important;box-shadow:none!important;font-size:12px;padding:2px 6px!important;border-radius:6px!important}
-.lbl::before{display:none!important}
-.lbl.lk{display:none}
-@media(max-width:600px){#map .lbl{display:none}}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#111a15;color:var(--bone)}
-.leaflet-popup-content{margin:10px 14px;font-size:.88rem;line-height:1.4}
-.leaflet-popup-content b{font-family:var(--display);font-size:1.2rem;text-transform:uppercase}
-
-.tk{display:block;width:70px;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.65))}
-.tk.flip{transform:scaleX(-1)}
-@media(max-width:600px){.tk{width:56px}}
-.hq{display:block;width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(57,255,20,.8))}
-.plus{font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--neon);text-shadow:0 0 8px #000,0 0 12px rgba(57,255,20,.8);white-space:nowrap;animation:plus 1.4s ease-out forwards;pointer-events:none}
-@keyframes plus{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-46px)}}
-.gnext{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line);font-size:.9rem;color:var(--mute)}
-.gnext b{color:var(--bone)}
-@media(prefers-reduced-motion:reduce){.plus{animation:none;opacity:0}}
-
-.ggrid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
-.gpanel .glist{max-height:min(520px,70vh)}
-@media(max-width:900px){.ggrid{grid-template-columns:1fr}.gpanel .glist{max-height:none}}
-.gscene{margin-bottom:0}
-.scenebox{position:relative;background:#050806;line-height:0}
-#gScene{display:block;width:100%;height:auto;cursor:default;touch-action:manipulation}
-.sbadge{position:absolute;left:10px;top:10px;line-height:1.3;background:rgba(7,10,8,.78);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);pointer-events:none}
-.sboost{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;line-height:1.3;background:var(--neon);color:#031207;border-radius:999px;padding:6px 14px;font-weight:700;font-size:.85rem;pointer-events:none}
-@media(max-width:600px){.sbadge{font-size:.6rem;padding:4px 7px}}
-.teaser{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(18px,3vw,36px);align-items:center}
-.tshot{position:relative;display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;line-height:0}
-.tshot img{width:100%;height:auto;transition:transform .6s}.tshot:hover img{transform:scale(1.03)}
-.tplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);line-height:1;background:var(--neon);color:#031207;font-family:var(--display);font-weight:900;font-size:1.8rem;text-transform:uppercase;letter-spacing:.04em;padding:14px 26px;border-radius:999px;box-shadow:0 0 30px rgba(57,255,20,.6)}
-.tcopy{display:grid;gap:14px}.tlist{margin:0;padding-left:1.1rem;color:var(--mute);display:grid;gap:6px}
-@media(max-width:860px){.teaser{grid-template-columns:1fr}}
-
-.belt{margin-inline:calc(-1*clamp(16px,4vw,48px));border-block:1px solid var(--line);background:#000;overflow:hidden}
-.belt-track{display:flex;gap:44px;width:max-content;padding:14px 22px;align-items:center;animation:belt 48s linear infinite}
-.belt img{height:92px;width:92px;object-fit:contain;display:block}
-.belt span{font-family:var(--display);font-weight:800;font-size:1.5rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
-@keyframes belt{to{transform:translateX(-33.333%)}}
-@media(prefers-reduced-motion:reduce){.belt-track{animation:none}html{scroll-behavior:auto}}
-
-section{padding-block:clamp(52px,8vw,110px)}
-.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:34px}
-.head h2{font-size:clamp(2.6rem,7vw,5rem)}
+section{padding-block:clamp(54px,8vw,104px)}
+.head{margin-bottom:34px}
+.head h2{font-size:clamp(2.2rem,5.4vw,4rem);margin-top:10px}
 .head h2 em{font-style:normal;color:var(--neon)}
-.plot{display:inline-block;margin-bottom:12px}
+.head p{margin-top:14px;color:var(--mute);max-width:62ch;font-size:1.05rem}
 
-/* territories */
-.terr{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:22px;align-items:start}
-.mapbox{border:1px solid var(--line);border-radius:12px;background:var(--pine);overflow:hidden}
-.crews{display:grid;gap:12px}
-.crew-card{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--cc);border-radius:10px;background:var(--panel);padding:12px 14px;transition:border-color .2s,background .2s}
-.crew-card:hover,.crew-card:focus-visible,.crew-card[aria-pressed=true]{border-color:var(--cc);filter:brightness(1.15)}
-.crew-card{background:linear-gradient(90deg,rgba(17,26,21,.94) 30%,rgba(17,26,21,.15)),var(--bn) center/cover}
-.crew-card img{width:76px;height:76px;object-fit:contain;background:#000;border-radius:8px}
-.crew-card b{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:1.45rem;line-height:1;display:block}
-.crew-card span{display:block;color:var(--mute);font-size:.86rem;line-height:1.4;margin-top:4px}
-.crew-card .go{margin-top:6px;color:var(--bone);font-size:.84rem}
-.legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 14px;border-top:1px solid var(--line);font-size:.84rem;color:var(--mute)}
-@media(max-width:940px){.terr{grid-template-columns:1fr}}
-.dim{opacity:.18}
-.m-g{transition:opacity .2s}
+/* features */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:20px;display:grid;gap:10px;align-content:start;transition:border-color .2s,transform .2s}
+.card:hover{border-color:#2f4a3a;transform:translateY(-2px)}
+.card svg{width:30px;height:30px;color:var(--neon)}
+.card h3{font-size:1.5rem}
+.card p{color:var(--mute);font-size:.96rem}
+.chip{display:inline-block;justify-self:start;font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid}
+.chip.live{color:var(--neon);border-color:rgba(57,255,20,.5)}
+.chip.soon{color:var(--warn);border-color:rgba(240,180,41,.5)}
 
-/* work */
-.work{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.work .rig{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000}
-.work img{display:block;width:100%;height:auto}
-.work .ph{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:30px}
-.fact{border-top:2px solid var(--neon);padding-top:10px}
-.fact b{display:block;font-family:var(--display);font-size:2.8rem;font-weight:900;line-height:1}
-.fact span{color:var(--mute);font-size:.9rem}
-@media(max-width:640px){.work{grid-template-columns:1fr}}
+/* follow ups */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(22px,4vw,56px);align-items:center}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.form label{display:grid;gap:5px;font-size:.78rem;color:var(--mute);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.form input,.form select{font:inherit;font-size:1rem;color:var(--bone);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 12px;width:100%;text-transform:none;letter-spacing:0;font-family:var(--body)}
+.form input:focus,.form select:focus{outline:2px solid var(--neon);outline-offset:0;border-color:var(--neon)}
+@media(max-width:520px){.form{grid-template-columns:1fr}}
+.phone{max-width:340px;margin-inline:auto;border:1px solid #2a4033;border-radius:34px;background:#0a0f0c;padding:16px 14px 22px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(57,255,20,.1)}
+.phone-top{text-align:center;color:var(--mute);font-size:.8rem;padding:6px 0 12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.phone-top b{display:block;color:var(--bone);font-size:.95rem}
+.bubble{background:#1d2b23;border-radius:18px 18px 18px 4px;padding:12px 14px;font-size:.98rem;line-height:1.45;max-width:92%;white-space:pre-wrap;word-break:break-word}
+.meta{margin-top:8px;color:var(--mute);font-size:.76rem}
+.reply{margin:16px 0 0 auto;width:fit-content;background:var(--neon);color:var(--neon-d);border-radius:18px 18px 4px 18px;padding:10px 14px;font-weight:600;font-size:.95rem}
+.note{margin-top:14px;color:var(--mute);font-size:.86rem;border-left:2px solid var(--warn);padding-left:12px}
 
+/* payments */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;counter-reset:s}
+.step{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:20px;position:relative}
+.step::before{counter-increment:s;content:counter(s);font-family:var(--display);font-weight:900;font-size:2.2rem;color:var(--neon);line-height:1}
+.step h3{font-size:1.35rem;margin-top:8px}.step p{color:var(--mute);font-size:.94rem;margin-top:6px}
 
+/* pricing */
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.plans{grid-template-columns:1fr}}
+.plan{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:24px;display:grid;gap:12px;align-content:start}
+.plan.pop{border-color:var(--neon);box-shadow:0 0 0 1px var(--neon),0 0 40px rgba(57,255,20,.15)}
+.plan h3{font-size:1.8rem}
+.price{font-family:var(--display);font-weight:900;font-size:3.4rem;line-height:1}
+.price small{font-family:var(--body);font-weight:500;font-size:.95rem;color:var(--mute)}
+.vs{font-size:.88rem;color:var(--mute)}.vs b{color:var(--bone)}.vs s{color:#7d8f84}
+.plan ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;color:#d3dbd6;font-size:.95rem}
+.plan li{display:flex;gap:8px}.plan li::before{content:"✓";color:var(--neon);font-weight:700}
+.plan li.soon{color:var(--mute)}.plan li.soon::before{content:"○";color:var(--warn)}
+.fine{margin-top:18px;color:var(--mute);font-size:.86rem}
+.fine a{color:var(--neon)}
 
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-.card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:22px;display:grid;gap:8px;align-content:start}
-.card .go{color:var(--neon);font-size:.9rem;text-decoration:none;margin-top:4px}.card .go:hover{text-decoration:underline}
-.card h3{font-size:1.7rem}.card p{color:var(--mute)}.card .mono{color:var(--neon)}
-.tokenbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px}
-.tokenbox>div{background:var(--panel);padding:16px 18px;display:grid;gap:4px}
-.tokenbox b{font-family:var(--display);font-size:1.5rem;letter-spacing:.04em;color:var(--bone)}
-/* herd */
-.herd{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:clamp(22px,4vw,44px);display:grid;gap:14px}
-.herd h3{font-size:clamp(2rem,5vw,3.2rem)}
-.herd p{color:var(--mute)}
-.road{display:grid;border-top:1px solid var(--line);margin-top:34px}
-.step{display:grid;grid-template-columns:150px 1fr;gap:20px;padding:20px 0;border-bottom:1px solid var(--line);align-items:baseline}
-.step h3{font-size:1.8rem}
-.step p{color:var(--mute);margin-top:6px}
-.st{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
-.st.live{color:var(--neon)}.st.next{color:var(--bone)}.st.tba{color:var(--mute)}
-@media(max-width:640px){.step{grid-template-columns:1fr;gap:6px}}
+/* story */
+.story{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:clamp(22px,4vw,48px);align-items:center}
+@media(max-width:900px){.story{grid-template-columns:1fr}}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.photos img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.photos .wide{grid-column:1/-1}
+.crews{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.crews span{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 14px 6px 6px;font-size:.9rem;color:var(--mute)}
+.crews img{width:42px;height:42px;object-fit:contain;background:#000;border-radius:8px}
 
 footer{border-top:1px solid var(--line);padding-block:34px 56px;color:var(--mute);font-size:.84rem;display:grid;gap:12px}
 footer p{max-width:90ch}
-footer .links{display:flex;flex-wrap:wrap;gap:16px}
 </style>
-
-</head><body><header><div class="bar"><a class="brand" href="#top"><img src="a/logo-hq.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#territories">Territories</a><a href="play/">Play</a><a href="#work">The work</a><a href="#idea">The idea</a><a href="https://junkjunkiesmarket.online" target="_blank" rel="noopener">Marketplace ↗</a><a href="#herd">The herd</a></nav><span class="pill">Preview</span></div></header>
+</head><body>
+<header><div class="wrap bar"><a class="brand" href="#top"><img src="a/logo-hq.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#features">Features</a><a href="#followups">Follow-ups</a><a href="#payments">Payments</a><a href="#pricing">Pricing</a><a href="#story">Our story</a></nav><span class="pill">Preview</span></div></header>
 
 <main id="top">
-  <div class="hero">
-    <div class="hero-bg" role="img" aria-label="Junk Junkies Texas truck and trailer wrapped in STAGR graffiti, with the crew loading a couch"></div>
-    <canvas id="fx" aria-hidden="true"></canvas>
-    <div class="chase" aria-hidden="true">
-      <div class="run crew" style="--o:-250px"><div class="sp" style="animation-delay:-.9s"></div></div>
-      <div class="run crew" style="--o:-340px"><div class="sp" style="animation-delay:-1.7s"></div></div>
-      <div class="run crew" style="--o:-430px"><div class="sp" style="animation-delay:-.3s"></div></div>
-      <div class="run stag" style="--o:0px"><div class="sp"></div></div>
-    </div>
-    <img class="stag-badge" src="a/logo-hq.webp" alt="" width="128" height="128">
-    <div class="hero-in">
-      <div class="mono plot">$STAGR · Robinhood Chain · four Texas crews</div>
-      <h1 class="sr">STAGR</h1>
+<div class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="wrap hero-in">
+    <div>
       <img class="wm" src="a/stagr-wordmark.webp" alt="STAGR" width="841" height="417">
-      <div class="tag">Claim your <em>territory.</em></div>
-      <p class="lead">STAGR is the community token of Junk Junkies Texas: four real crews in Spring, Tomball, Cypress and College Station, one stag on every truck.</p>
-      <div class="cta"><a class="btn main" href="play/">Play: claim your territory</a><a class="btn" href="#territories">Meet the crews</a><a class="btn" href="https://junkjunkiesmarket.online" target="_blank" rel="noopener">Marketplace ↗</a></div>
+      <h1>Run your whole service business <em>from one place.</em></h1>
+      <p class="lead">STAGR helps service businesses manage customers, leads, estimates, jobs, scheduling, invoices, payments and follow-ups all in one place.</p>
+      <ul class="checks"><li>Answer every lead fast</li><li>Estimates customers approve from their phone</li><li>Schedule and assign your crew</li><li>Invoice and track every payment</li></ul>
+      <div class="cta"><a class="btn main" href="#features">See the features</a><a class="btn" href="#pricing">See pricing</a></div>
+    </div>
+    <div>
+      <div class="frame"><div class="frame-bar"><i></i><i></i><i></i><span>STAGR · sample data</span></div><img id="shot" src="a/crm/today.webp" alt="STAGR Today screen: leads to call, follow-ups due, jobs today and quotes going cold" width="1400" height="875"></div>
+      <div class="tabs" id="tabs" role="group" aria-label="Screens"></div>
+      <p class="cap" id="cap" aria-live="polite"></p>
     </div>
   </div>
-</main>
+</div>
 
-<div class="belt" aria-hidden="true"><div class="belt-track" id="belt"></div></div>
+<div class="strip"><div class="wrap strip-in"><span>Built for, and tested by, a real service company:</span><img src="a/logo-spring.webp" alt="Junk Junkies Texas Spring" width="54" height="54"><img src="a/logo-tomball.webp" alt="Junk Junkies Texas Tomball" width="54" height="54"><img src="a/logo-cypress.webp" alt="Junk Junkies Texas Cypress" width="54" height="54"><img src="a/logo-cs.webp" alt="Junk Junkies Texas College Station" width="54" height="54"></div></div>
 
-<main class="wrap">
-<section id="territories">
-  <div class="head"><div><div class="mono plot">Territories</div><h2>Four crews. <em>Sixteen cities.</em></h2></div></div>
-  <div class="terr">
-    <div class="mapbox"><div id="map" class="rmap" role="region" aria-label="Map of the sixteen cities served by the four Texas crews"></div><div class="legend" id="legend"></div></div>
-    <div class="crews" id="crews"></div>
-  </div>
-  <p class="note" style="margin-top:14px">Each mark is a city the crew serves. Tap a crew to light up its territory. Switch between the street and satellite views at the top right of the map.</p>
-</section>
+<section id="features"><div class="wrap">
+  <div class="head"><div class="mono">Features</div><h2>Everything a service business <em>runs on.</em></h2><p>One customer record from the first call to the final payment. Features marked Live are working in the beta today. Features marked Coming soon are on the way.</p></div>
+  <div class="grid" id="grid"></div>
+</div></section>
 
-<section id="game">
-  <div class="head"><div><div class="mono plot">The game</div><h2>Claim your <em>territory.</em></h2></div></div>
-  <div class="teaser">
-    <a class="tshot" href="play/" aria-label="Play the STAGR moving company game"><img src="a/g/preview.webp" alt="The STAGR game: the crew carries a couch out of the garage to the STAGR truck" width="1000" height="647" loading="lazy"><span class="tplay">Play now</span></a>
-    <div class="tcopy">
-      <p>An idle moving company. Your crew carries the junk out of the garage, loads the truck, and the truck runs it to the dump and back, all on its own.</p>
-      <ul class="tlist"><li>Buy a bigger vehicle: pickup, box truck, dump truck, STAGR semi.</li><li>Hire more crew and train them to move faster.</li><li>Claim all sixteen Texas cities on the real map.</li><li>Catch the stag when it runs by for a bonus.</li></ul>
-      <div class="cta"><a class="btn main" href="play/">Play the game</a></div>
-      <p class="note">Game cash has no cash value. Perks you can pay for with STAGR are planned for later and are not for sale yet.</p>
+<section id="followups" style="background:var(--pine);border-block:1px solid var(--line)"><div class="wrap two">
+  <div>
+    <div class="mono">Automatic follow-ups</div>
+    <div class="head" style="margin:10px 0 0"><h2>Bring customers <em>back.</em></h2></div>
+    <p style="margin-top:14px;color:var(--mute);max-width:54ch;font-size:1.05rem">STAGR can text past customers every month with an offer and a reason to book again. Each business fills in its own name, city, discount and phone number, and STAGR does the rest. <span class="chip soon" style="vertical-align:middle">Coming soon</span></p>
+    <div class="form">
+      <label>Business name<input id="fBiz" value="Junk Junkies Texas" maxlength="40"></label>
+      <label>City<input id="fCity" value="Spring" maxlength="30"></label>
+      <label>Discount<input id="fOff" value="$50" maxlength="10"></label>
+      <label>Business phone<input id="fPhone" value="(346) 413-9644" maxlength="20" inputmode="tel"></label>
+      <label style="grid-column:1/-1">Send<select id="fWhen"><option>Every month to customers from the last 12 months</option><option>Every 3 months to past customers</option><option>Once, 30 days after a finished job</option></select></label>
     </div>
+    <p class="note">Texts go only to customers who agreed to get them, and every message includes a way to opt out.</p>
   </div>
-</section>
+  <div class="phone" aria-label="Preview of the text message customers receive">
+    <div class="phone-top"><b id="pBiz">Junk Junkies Texas</b>Text message</div>
+    <div class="bubble" id="bubble"></div>
+    <div class="meta" id="meta"></div>
+    <div class="reply">Yes, can you come Friday?</div>
+  </div>
+</div></section>
 
-<section id="work">
-  <div class="head"><div><div class="mono plot">The work</div><h2>Built on <em>real trucks.</em></h2></div></div>
-  <p style="margin-bottom:26px">These are working crews, not a mockup. Every job starts with a free quote from photos, and every price is based on how much room your stuff takes up in a 16-foot trailer.</p>
-  <div class="work">
-    <div class="rig"><img src="a/rig.webp" alt="Junk Junkies pickup truck pulling a 16-foot trailer" width="1100" height="300" loading="lazy"></div>
-    <div class="ph"><img src="a/crew1.webp" alt="A crew member with the trailer at a storage unit" width="900" height="471" loading="lazy"></div>
-    <div class="ph"><img src="a/crew2.webp" alt="A curbside pile ready for pickup" width="900" height="471" loading="lazy"></div>
+<section id="payments"><div class="wrap">
+  <div class="head"><div class="mono">Get paid</div><h2>From quote to <em>money in the bank.</em></h2><p>Today STAGR tracks every payment: cash, check, Zelle and card, partial payments and balances. Taking card payments online and sending the money straight to your bank account is the next big step. <span class="chip soon" style="vertical-align:middle">Coming soon</span></p></div>
+  <div class="steps">
+    <div class="step"><h3>Send the quote</h3><p>Build an itemized estimate and text the customer a link.</p></div>
+    <div class="step"><h3>They approve it</h3><p>The customer taps Approve on their phone. You see it right away.</p></div>
+    <div class="step"><h3>Do the job, send the invoice</h3><p>One tap turns the approved quote into an invoice.</p></div>
+    <div class="step"><h3>Get paid</h3><p>Record the payment today. Card payments paid out to your bank are coming.</p></div>
   </div>
-  <div class="facts">
-    <div class="fact"><b>4</b><span>Texas crews, one logo family</span></div>
-    <div class="fact"><b>16 ft</b><span>trailer, priced by space used</span></div>
-    <div class="fact"><b>21</b><span>kinds of junk and debris hauled</span></div>
-  </div>
-</section>
+</div></section>
 
-<section id="idea">
-  <div class="head"><div><div class="mono plot">The idea · draft</div><h2>A token with <em>trucks behind it.</em></h2></div></div>
-  <p style="margin-bottom:26px">Most tokens are a logo and a promise. STAGR is tied to four working businesses with real crews, real trailers and real customers in Texas. This is the draft concept for how the two connect.</p>
-  <div class="cards">
-    <div class="card"><div class="mono">01</div><h3>Fees to the fleet</h3><p>Proposed: a share of token trading fees goes to the crews' equipment, such as trucks, trailers and signage, so the token supports the work it is named after.</p></div>
-    <div class="card"><div class="mono">02</div><h3>The marketplace</h3><p>Junk Junkies is building a marketplace where customers set a ceiling price and haulers bid it down. STAGR is the community around it.</p><a class="go" href="https://junkjunkiesmarket.online" target="_blank" rel="noopener">Open the marketplace preview ↗</a></div>
-    <div class="card"><div class="mono">03</div><h3>Herd votes</h3><p>Holders vote on community choices: which city a crew expands to next, truck names, and the crew of the month.</p></div>
-    <div class="card"><div class="mono">04</div><h3>Upgrades</h3><p>The idle territory game above is the start. Perks that can be paid for with STAGR are planned for later and are not for sale yet.</p></div>
+<section id="pricing" style="background:var(--pine);border-block:1px solid var(--line)"><div class="wrap">
+  <div class="head"><div class="mono">Pricing · draft</div><h2>Priced below <em>the big guys.</em></h2><p>Simple monthly plans, priced under comparable Jobber plans while STAGR gets established. These are draft launch prices and may change before launch.</p></div>
+  <div class="plans">
+    <div class="plan"><h3>Starter</h3><div class="price">$29<small> /month</small></div><div class="vs">1 user. Jobber Core is <s>$49</s>, so you save <b>$20 a month</b>.</div>
+      <ul><li>Customer and lead database</li><li>Estimates with customer approval</li><li>Invoices and payment tracking</li><li>Job scheduling</li></ul></div>
+    <div class="plan pop"><span class="chip live" style="justify-self:start">Recommended</span><h3>Pro</h3><div class="price">$79<small> /month</small></div><div class="vs">1 user. Jobber Connect is <s>$139</s>, so you save <b>$60 a month</b>.</div>
+      <ul><li>Everything in Starter</li><li>Crew assignments and dispatching</li><li>Job notes and photos</li><li>Dashboard and reports</li><li class="soon">Automatic reminders and follow-up texts</li><li class="soon">Online card payments</li></ul></div>
+    <div class="plan"><h3>Business</h3><div class="price">$129<small> /month</small></div><div class="vs">1 user. Jobber Grow is <s>$199</s>, so you save <b>$70 a month</b>.</div>
+      <ul><li>Everything in Pro</li><li>Priority support</li><li class="soon">Recurring jobs</li><li class="soon">Monthly promotion texts to past customers</li><li class="soon">Payouts to your bank account</li></ul></div>
   </div>
-  <div class="tokenbox">
-    <div><span class="mono">Ticker</span><b>$STAGR</b></div>
-    <div><span class="mono">Network</span><b>Robinhood Chain</b></div>
-    <div><span class="mono">Contract</span><b>Announced at launch</b></div>
-    <div><span class="mono">Supply</span><b>To be announced</b></div>
-  </div>
-  <p class="note">Draft for review. Details, fee share and voting rules are not final.</p>
-</section>
+  <p class="fine">Extra users: $15 a month each on every plan (Jobber charges $29). Jobber prices are its month-to-month rates for one user, from <a href="https://getjobber.com/pricing/" target="_blank" rel="noopener">getjobber.com/pricing</a>, checked October 10, 2026. Jobber plans are not identical to STAGR plans, and prices change. ○ marks a feature that is coming soon.</p>
+</div></section>
 
-<section id="herd">
-  <div class="herd">
-    <div class="mono">The herd</div>
-    <h3>One herd. Four territories.</h3>
-    <p>STAGR is being relaunched around the four Texas crews. This page is a preview of the concept and nothing on it is an offer.</p>
+<section id="story"><div class="wrap story">
+  <div>
+    <div class="mono">Our story</div>
+    <div class="head" style="margin:10px 0 0"><h2>Built by a <em>real service company.</em></h2></div>
+    <p style="margin-top:16px;color:#dfe5e1">STAGR started inside Junk Junkies Texas, a junk removal company with four crews in Spring, Tomball, Cypress and College Station. We needed one place to answer every lead fast, send quotes customers can approve from their phone, schedule the crews and get paid. So we built our own.</p>
+    <p style="margin-top:12px;color:var(--mute)">Every feature here came from something our crews ran into on the job.</p>
+    <div class="crews"><span><img src="a/logo-spring.webp" alt="" width="42" height="42">Spring</span><span><img src="a/logo-tomball.webp" alt="" width="42" height="42">Tomball</span><span><img src="a/logo-cypress.webp" alt="" width="42" height="42">Cypress</span><span><img src="a/logo-cs.webp" alt="" width="42" height="42">College Station</span></div>
   </div>
-  <div class="road">
-    <div class="step"><span class="st live">Live now</span><div><h3>The four crew businesses</h3><p>Spring, Tomball, Cypress and College Station, each with its own website, crew and territory.</p></div></div>
-    <div class="step"><span class="st next">In progress</span><div><h3>The STAGR relaunch</h3><p>A fresh start under one brand and the Texas logo family.</p></div></div>
-    <div class="step"><span class="st next">In progress</span><div><h3>Fee share and herd votes</h3><p>Being designed. Nothing is final until it is announced here.</p></div></div>
-    <div class="step"><span class="st tba">To be announced</span><div><h3>Launch details</h3><p>Contract, supply and launch date.</p></div></div>
-  </div>
-</section>
+  <div class="photos"><img class="wide" src="a/rig.webp" alt="Junk Junkies pickup truck pulling a 16-foot trailer" width="1100" height="300" loading="lazy"><img src="a/crew1.webp" alt="A crew member with the trailer at a storage unit" width="900" height="471" loading="lazy"><img src="a/crew2.webp" alt="A curbside pile ready for pickup" width="900" height="471" loading="lazy"></div>
+</div></section>
 </main>
 
 <footer class="wrap">
   <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAGR</b>
-  <div class="links"><a href="https://junkjunkiesmarket.online" target="_blank" rel="noopener">Junk Junkies Marketplace ↗</a><a href="https://junkjunkiestexas.com" target="_blank" rel="noopener">Junk Junkies Texas, Spring ↗</a><a href="https://junkjunkiestomball.com" target="_blank" rel="noopener">Tomball ↗</a><a href="https://junkjunkiescypress.com" target="_blank" rel="noopener">Cypress ↗</a><a href="https://junkjunkiescollegestation.com" target="_blank" rel="noopener">College Station ↗</a></div>
-  <p>STAGR is a community token project. Nothing on this page is financial advice, an investment offer, or an offer to sell any security or digital asset. Digital assets are risky and can lose all of their value. No returns, prizes, discounts or profits are promised or implied.</p>
-  <p>Business phone for all four Texas crews: (346) 413-9644.</p>
+  <p>STAGR is in preview. Screens show sample data. Features marked Coming soon are not available yet, and pricing is a draft that may change.</p>
 </footer>
 
-<script src="a/cities.js"></script>
 <script>
 (function(){
   var $=function(s){return document.querySelector(s)};
-  var CREWS=[
-    {k:'spring',name:'Spring',cc:'var(--c-spring)',hex:'#3987e5',logo:'a/logo-spring.webp',bn:'a/banner-spring.webp',url:'https://junkjunkiestexas.com',shape:'circle',hq:true},
-    {k:'tomball',name:'Tomball',cc:'var(--c-tomball)',hex:'#d95926',logo:'a/logo-tomball.webp',bn:'a/banner-tomball.webp',url:'https://junkjunkiestomball.com',shape:'square'},
-    {k:'cypress',name:'Cypress',cc:'var(--c-cypress)',hex:'#199e70',logo:'a/logo-cypress.webp',bn:'a/banner-cypress.webp',url:'https://junkjunkiescypress.com',shape:'diamond'},
-    {k:'college-station',name:'College Station',cc:'var(--c-cs)',hex:'#d4a017',logo:'a/logo-cs.webp',bn:'a/banner-cs.webp',url:'https://junkjunkiescollegestation.com',shape:'triangle'}
-  ];
-  // belt of the logos, repeated three times so the loop is seamless
-  var b='';for(var r=0;r<3;r++)CREWS.concat([{logo:'a/logo-hq.webp'}]).forEach(function(c){b+='<img src="'+c.logo+'" alt="" width="92" height="92" loading="lazy"><span>'+(c.name?c.name:'Texas')+'</span>'});$('#belt').innerHTML=b;
-  // crew cards
-  $('#crews').innerHTML=CREWS.map(function(c){var cs=CITIES[c.k].cities.map(function(x){return x.n}).join(', ');return '<button class="crew-card" style="--cc:'+c.cc+';--bn:url('+c.bn+')" data-k="'+c.k+'" aria-pressed="false"><img src="'+c.logo+'" alt="" width="76" height="76" loading="lazy"><span><b>'+(c.hq?'Spring · HQ':c.name)+'</b><span>'+cs+'</span><a class="go" href="'+c.url+'" target="_blank" rel="noopener">Visit the '+c.name+' site ↗</a></span></button>'}).join('');
-  function glyph(sh,col,x,y,r){return sh==='circle'?'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+col+'"':sh==='square'?'<rect x="'+(x-r)+'" y="'+(y-r)+'" width="'+2*r+'" height="'+2*r+'" fill="'+col+'"':sh==='diamond'?'<path d="M'+x+' '+(y-r-2)+'L'+(x+r+2)+' '+y+'L'+x+' '+(y+r+2)+'L'+(x-r-2)+' '+y+'Z" fill="'+col+'"':'<path d="M'+x+' '+(y-r-1)+'L'+(x+r+2)+' '+(y+r)+'L'+(x-r-2)+' '+(y+r)+'Z" fill="'+col+'"'}
-  $('#legend').innerHTML=CREWS.map(function(c){return '<span><svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:-2px;margin-right:6px" aria-hidden="true">'+glyph(c.shape,c.hex,7,7,5)+'/></svg>'+c.name+'</span>'}).join('');
-  // real map: same street + satellite tiles as the Junk Junkies Texas sites
-  var all=[];CREWS.forEach(function(c){CITIES[c.k].cities.forEach(function(x){all.push({c:c,n:x.n,lat:x.lat,lon:x.lon})})});
-  var SH={circle:'',square:' sq',diamond:' di',triangle:' tr'};
-  var tmap=window.L.map('map',{scrollWheelZoom:false,dragging:!window.L.Browser.mobile,tap:false,zoomSnap:.25}),mks=[];
-  var street=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,className:'t-street',attribution:'Tiles &copy; Esri'}).addTo(tmap);
-  var sat=window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles &copy; Esri'});
-  window.L.control.layers({'Street':street,'Satellite':sat},null,{collapsed:false,position:'topright'}).addTo(tmap);
-  all.forEach(function(p){var m=window.L.marker([p.lat,p.lon],{icon:window.L.divIcon({className:'',html:'<div class="mk'+SH[p.c.shape]+'" data-k="'+p.c.k+'" style="--c:'+p.c.hex+'"><i></i></div>',iconSize:[26,26],iconAnchor:[13,13]}),title:p.n+', '+p.c.name+' crew',keyboard:true}).addTo(tmap);
-    m.bindTooltip(p.n,{permanent:true,direction:'auto',offset:[10,0],className:'lbl'});
-    m.bindPopup('<b>'+p.n+'</b><br>'+p.c.name+' crew<br><a href="'+p.c.url+'" target="_blank" rel="noopener" style="color:#39ff14">Visit the '+p.c.name+' site ↗</a>');mks.push(m)});
-  tmap.fitBounds(window.L.latLngBounds(all.map(function(p){return [p.lat,p.lon]})),{padding:[46,46]});
-  window.__tmap=tmap;
-  var pinned=null;function apply(k){document.querySelectorAll('#map .mk').forEach(function(g){g.classList.toggle('dim',!!k&&g.dataset.k!==k)});document.querySelectorAll('.crew-card').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.k===k))})}
-  $('#crews').addEventListener('click',function(e){if(e.target.closest('a'))return;var c=e.target.closest('.crew-card');if(c){pinned=pinned===c.dataset.k?null:c.dataset.k;apply(pinned)}});
-  $('#crews').addEventListener('mouseover',function(e){var c=e.target.closest('.crew-card');if(c)apply(c.dataset.k)});$('#crews').addEventListener('mouseleave',function(){apply(pinned)});
-
-
-  // halloween costumes for the chasing crew
-  (function(){var q=location.search,on=/halloween=1/.test(q)||(new Date().getMonth()===9&&!/halloween=0/.test(q));var c=document.querySelector('.chase');if(c&&on){c.classList.add('hw');var e=document.querySelector('.hero .mono.plot');if(e)e.textContent=e.textContent+' · Halloween crew'}})();
-  // animated header: green sparks and tiny stags drifting up the scene
-  var cv=$('#fx');if(cv&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var cx=cv.getContext('2d'),P=[],W0=0,H0=0,t0=0;
-    function rs(){var r=cv.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);W0=r.width;H0=r.height;cv.width=W0*d;cv.height=H0*d;cx.setTransform(d,0,0,d,0,0)}
-    rs();addEventListener('resize',rs);
-    var N=W0<700?26:48;function mk(init){return{x:Math.random()*W0,y:init?Math.random()*H0:H0+10,r:1+Math.random()*2.6,v:.25+Math.random()*.9,dx:(Math.random()-.5)*.35,a:.25+Math.random()*.6,stag:Math.random()<.12,ph:Math.random()*6}}
-    for(var i=0;i<N;i++)P.push(mk(true));
-    var vis=true;new IntersectionObserver(function(e){vis=e[0].isIntersecting}).observe(cv);
-    (function loop(t){requestAnimationFrame(loop);if(!vis)return;cx.clearRect(0,0,W0,H0);
-      P.forEach(function(p,i){p.y-=p.v;p.x+=p.dx+Math.sin(t/900+p.ph)*.25;if(p.y<-20)P[i]=mk(false);
-        cx.globalAlpha=p.a*(.6+.4*Math.sin(t/500+p.ph));cx.shadowColor='#39ff14';cx.shadowBlur=12;cx.fillStyle='#39ff14';
-        if(p.stag){cx.save();cx.translate(p.x,p.y);var k=p.r*3;cx.beginPath();cx.moveTo(0,k);cx.lineTo(-k*.5,0);cx.lineTo(-k*1.1,-k*.9);cx.moveTo(-k*.5,0);cx.lineTo(-k*.2,-k);cx.moveTo(0,k);cx.lineTo(k*.5,0);cx.lineTo(k*1.1,-k*.9);cx.moveTo(k*.5,0);cx.lineTo(k*.2,-k);cx.strokeStyle='#39ff14';cx.lineWidth=1.6;cx.stroke();cx.restore()}
-        else{cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.3);cx.fill()}});cx.globalAlpha=1})(0)}
+  // ---- screens
+  var SH=[{k:'today',n:'Today',c:'Who to call first, follow-ups due, jobs today and quotes going cold.',a:'STAGR Today screen: leads to call, follow-ups due, jobs today and quotes going cold'},
+    {k:'pipeline',n:'Pipeline',c:'Every lead as a card. Drag it from New to Contacted, Quoted, Booked and Done.',a:'STAGR pipeline board with leads in columns from New to Done'},
+    {k:'lead',n:'Customer',c:'One record with calls, texts, notes, quotes, invoices and the schedule.',a:'STAGR customer record with call and text buttons, stages, notes, quotes and invoices'},
+    {k:'schedule',n:'Schedule',c:'Booked jobs by day, with the crew on each one. A warning shows when no crew is assigned.',a:'STAGR schedule of booked jobs by day with the crew assigned'},
+    {k:'insights',n:'Dashboard',c:'Revenue, win rate, reply time, collected payments and a pipeline funnel.',a:'STAGR dashboard with revenue, win rate, reply time and collected payments'}];
+  var cur=0,timer=null,shot=$('#shot'),cap=$('#cap'),tabs=$('#tabs');
+  tabs.innerHTML=SH.map(function(s,i){return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+s.n+'</button>'}).join('');
+  function show(i,user){cur=i;var s=SH[i];shot.style.opacity=.15;setTimeout(function(){shot.src='a/crm/'+s.k+'.webp';shot.alt=s.a;shot.style.opacity=1},150);cap.textContent=s.c;tabs.querySelectorAll('button').forEach(function(b,j){b.setAttribute('aria-pressed',String(j===i))});if(user)stop()}
+  function stop(){clearInterval(timer);timer=null}
+  function start(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;stop();timer=setInterval(function(){show((cur+1)%SH.length,false)},5500)}
+  tabs.addEventListener('click',function(e){var b=e.target.closest('button');if(b)show(+b.dataset.i,true)});
+  cap.textContent=SH[0].c;start();
+  // ---- features
+  var IC={
+    users:'<path d="M8 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 11a2.5 2.5 0 100-5M17 14.2c2.6.5 4.5 2.7 4.5 5.8"/>',
+    funnel:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+    doc:'<path d="M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6"/>',
+    cal:'<path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/>',
+    crew:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7M9 5l3-2 3 2"/>',
+    inv:'<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6"/>',
+    cash:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+    bell:'<path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/>',
+    cam:'<path d="M4 8h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    repeat:'<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>',
+    chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    sms:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'};
+  var F=[
+    ['users','Customer database','Every customer in one place, with their history, notes and whether they are a repeat customer.',1],
+    ['funnel','Leads and pipeline','Requests from your website, calls and ads land in one list, worked as a pipeline.',1],
+    ['doc','Estimates and approvals','Itemized quotes with tax and deposit. The customer approves from a link on their phone.',1],
+    ['cal','Job scheduling and dispatching','Pick a date and time, see the whole week, and know what is booked.',1],
+    ['crew','Employee job assignments','Assign each job to a crew member. Jobs with no crew are flagged.',1],
+    ['inv','Invoicing','Turn an approved quote into an invoice in one tap and send it by link.',1],
+    ['cash','Payment tracking','Record cash, check, Zelle and card payments, including partial payments and balances.',1],
+    ['cam','Job notes and photos','Customers send photos with their request, and your crew adds notes to every job.',1],
+    ['chart','Dashboard','Upcoming work, revenue, win rate, reply time and unpaid invoices at a glance.',1],
+    ['bell','Automated reminders and follow-ups','Reminders for customers and for you, plus monthly offers to bring past customers back.',0],
+    ['repeat','Recurring jobs','Set up weekly, monthly or yearly jobs once and let them schedule themselves.',0],
+    ['sms','Text alerts and online payments','New lead texts to your phone, and card payments paid out to your bank account.',0]];
+  $('#grid').innerHTML=F.map(function(f){return '<article class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[f[0]]+'</svg><span class="chip '+(f[3]?'live':'soon')+'">'+(f[3]?'Live in beta':'Coming soon')+'</span><h3>'+f[1]+'</h3><p>'+f[2]+'</p></article>'}).join('');
+  // ---- follow-up text preview
+  var fB=$('#fBiz'),fC=$('#fCity'),fO=$('#fOff'),fP=$('#fPhone');
+  function msg(){var biz=fB.value.trim()||'Your Business',city=fC.value.trim(),off=fO.value.trim()||'$50',ph=fP.value.trim();
+    var t=biz+' is back'+(city?' in '+city:' in your area')+'! Book today and get '+off+' off your next service. Reply to this text'+(ph?' or call '+ph:'')+' to schedule.\n\nReply STOP to opt out.';
+    $('#bubble').textContent=t;$('#pBiz').textContent=biz;$('#meta').textContent=t.length+' characters · sent automatically'}
+  [fB,fC,fO,fP].forEach(function(e){e.addEventListener('input',msg)});$('#fWhen').addEventListener('change',function(){$('#meta').textContent=$('#bubble').textContent.length+' characters · '+this.value.toLowerCase()});msg();
 })();
 </script>
-
 </body></html>
