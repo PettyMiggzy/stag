@@ -18,7 +18,7 @@ const root = $('#root');
 
 function authScreen(mode = 'login') {
   const signup = mode === 'signup';
-  root.innerHTML = `<div class="auth"><div class="box"><a class="brand" href="/"><img src="/logo.webp" alt=""><b>STAGR</b></a>
+  root.innerHTML = `<div class="auth"><div class="box"><a class="brand" href="/" style="flex-direction:column"><img src="/logo-full.webp" alt="STAGR" style="width:200px;height:200px;filter:none"></a>
     <form class="card col" id="authForm" novalidate><h2 style="font-size:2rem">${signup ? 'Start your business' : 'Sign in'}</h2>
     ${signup ? `<label class="field"><span>Business name</span><input name="business" required autocomplete="organization" maxlength="80"></label>
       <div class="grid g2"><label class="field"><span>Your name</span><input name="name" required autocomplete="name" maxlength="80"></label><label class="field"><span>Business phone</span><input name="phone" inputmode="tel" autocomplete="tel"></label></div>
