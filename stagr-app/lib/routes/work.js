@@ -7,6 +7,8 @@ import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { nextNumber } from './sales.js';
 import { shapeInvoice } from './shapes.js';
+import { runReviewRequests } from './reviews.js';
+import { baseUrl } from './comms.js';
 
 // ---- time zone aware date math, so a 9:00 visit stays at 9:00 across daylight saving changes ----
 const dtf = {};
@@ -147,7 +149,10 @@ route('PUT', '/api/visits/:id', async ctx => {
     assigned = ${b.assigned !== undefined ? await validAssigned(ctx.tid, b.assigned) : o.assigned}, status = ${st}, notes = ${clean(b.notes ?? o.notes, 2000)},
     checklist = ${JSON.stringify(b.checklist !== undefined ? cleanChecklist(b.checklist) : o.checklist)}::jsonb, completed_at = ${st === 'completed' ? (o.completed_at || new Date()) : null},
     reminder_sent_at = ${b.starts_at !== undefined ? null : o.reminder_sent_at} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`;
-  if (st === 'completed' && o.status !== 'completed') await logActivity(ctx.tid, o.customer_id, 'visit', 'Visit completed', ctx.user.id);
+  if (st === 'completed' && o.status !== 'completed') {
+    await logActivity(ctx.tid, o.customer_id, 'visit', 'Visit completed', ctx.user.id);
+    try { await runReviewRequests(ctx.tid, baseUrl(ctx.req)); } catch (e) { console.error('review request check failed', e && e.message); } // never block completing the visit
+  }
   return { visit: v };
 });
 route('DELETE', '/api/visits/:id', async ctx => { need(ctx, 'admin'); await sql`DELETE FROM visits WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; return { ok: true }; });

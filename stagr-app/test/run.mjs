@@ -220,6 +220,67 @@ r = await A.get('/api/export/invoices.csv'); ok('invoices csv', r.s === 200 && r
 r = await A.get('/api/export/payments.csv'); ok('payments csv', r.s === 200 && r.text.includes('zelle'), r.text.slice(0, 120));
 r = await B.get('/api/export/invoices.csv'); ok('B csv has none of A data', r.s === 200 && !r.text.includes('Sam Rivera') && r.text.split('\r\n').length === 1, r.text);
 
+// ---------- review requests ----------
+const rc = (await A.post('/api/customers', { name: 'Rita Review', phone: '2815557001', email: 'rita@x.test' })).j.customer;
+r = await A.get('/api/reviews'); ok('reviews settings default off', r.s === 200 && r.j.enabled === false && r.j.link === '' && r.j.stats.total === 0 && r.j.delays.length > 3, r);
+r = await A.post(`/api/customers/${rc.id}/review-request`, {}); ok('review request needs a link', r.s === 400 && /link/i.test(r.j.error), r);
+for (const bad of ['http://g.page/r/abc', 'https://evil.com/g.page', 'javascript:alert(1)', 'https://google.com.evil.com/x', 'not a url']) { r = await A.put('/api/reviews', { link: bad }); ok('bad review link rejected: ' + bad, r.s === 400, r); }
+r = await A.put('/api/reviews', { enabled: true }); ok('cannot turn on auto without link', r.s === 400, r);
+r = await A.put('/api/reviews', { link: 'https://g.page/r/CaseyAlpha/review', template: 'Thanks for choosing us, no link here' }); ok('template must contain {review_link}', r.s === 400, r);
+r = await A.put('/api/reviews', { link: 'https://g.page/r/CaseyAlpha/review' }); ok('review link saved', r.s === 200 && r.j.link === 'https://g.page/r/CaseyAlpha/review', r);
+r = await W.put('/api/reviews', { link: 'https://g.page/r/Hack/review' }); ok('worker cannot change review settings', r.s === 403, r);
+r = await B.get('/api/reviews'); ok('B does not see A review link', r.s === 200 && r.j.link === '', r);
+r = await A.get(`/api/customers/${rc.id}/review-request/preview`); ok('preview has link, STOP line', r.s === 200 && r.j.has_link && r.j.has_phone && r.j.text.includes('https://g.page/r/CaseyAlpha/review') && /Reply STOP/.test(r.j.text), r);
+r = await A.post(`/api/customers/${rc.id}/review-request`, {}); ok('manual review request (preview mode)', r.s === 200 && r.j.message.status === 'preview' && r.j.message.kind === 'review_request' && r.j.message.body.includes('g.page/r/CaseyAlpha') && /Reply STOP/.test(r.j.message.body), r);
+r = await A.post(`/api/customers/${rc.id}/review-request`, {}); ok('recent request needs confirmation (409)', r.s === 409 && r.j.recent, r);
+r = await A.post(`/api/customers/${rc.id}/review-request`, { force: true, body: 'Hey Rita, mind leaving us a review?' }); ok('force send with custom text appends link', r.s === 200 && r.j.message.body.includes('Hey Rita') && r.j.message.body.includes('g.page/r/CaseyAlpha'), r);
+r = await A.get('/api/customers/' + rc.id); ok('customer profile keeps review history', r.s === 200 && r.j.review_requests.length === 2 && r.j.review_requests[0].status === 'preview', r.j.review_requests);
+const rnp = (await A.post('/api/customers', { name: 'No Phone' })).j.customer; r = await A.post(`/api/customers/${rnp.id}/review-request`, {}); ok('no phone is refused', r.s === 400, r);
+r = await B.post(`/api/customers/${rc.id}/review-request`, {}); ok('B cannot send to A customer', r.s === 404 || r.s === 400, r);
+r = await B.get(`/api/customers/${rc.id}/review-request/preview`); ok('B cannot preview A customer', r.s === 404, r);
+const rout = (await A.post('/api/customers', { name: 'Opted Out', phone: '2815557002', sms_opt_in: true })).j.customer; await sql`UPDATE customers SET sms_opt_in = false, sms_opt_out_at = now() WHERE id = ${rout.id}`;
+r = await A.post(`/api/customers/${rout.id}/review-request`, {}); ok('opted-out customer is blocked', r.s === 200 && r.j.message.status === 'blocked', r);
+// delivery tracking via Twilio callback
+const midm = r = (await A.post(`/api/customers/${rc.id}/review-request`, { force: true })).j.message; await sql`UPDATE messages SET provider_id = 'SMtest1', status = 'sent', delivery_status = 'sent' WHERE id = ${midm.id}`;
+const hook = async (params, sig) => { const p = new URLSearchParams(params).toString(); return (await fetch(BASE + '/api/webhooks/twilio', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-twilio-signature': sig ?? twilioSignature('tok123', BASE + '/api/webhooks/twilio', params) }, body: p })).status; };
+const { twilioSignature } = await import('../lib/routes/reviews.js');
+ok('webhook is off without Twilio token', await hook({ MessageSid: 'SMtest1', MessageStatus: 'delivered' }) === 404);
+process.env.TWILIO_AUTH_TOKEN = 'tok123';
+ok('webhook rejects bad signature', await hook({ MessageSid: 'SMtest1', MessageStatus: 'delivered' }, 'nope') === 403);
+ok('webhook accepts valid signature', await hook({ MessageSid: 'SMtest1', MessageStatus: 'delivered' }) === 200);
+let [mm] = await sql`SELECT status, delivery_status, delivered_at FROM messages WHERE id = ${midm.id}`; ok('delivered status and time saved', mm.status === 'delivered' && mm.delivery_status === 'delivered' && mm.delivered_at, mm);
+ok('late "sent" update does not downgrade', await hook({ MessageSid: 'SMtest1', MessageStatus: 'sent' }) === 200 && (await sql`SELECT status FROM messages WHERE id = ${midm.id}`)[0].status === 'delivered');
+await sql`UPDATE messages SET provider_id = 'SMtest2', status = 'sent', delivery_status = 'sent' WHERE id = ${r.j ? midm.id : 0} AND false`;
+const m2 = (await A.post(`/api/customers/${rc.id}/review-request`, { force: true })).j.message; await sql`UPDATE messages SET provider_id = 'SMtest2', status = 'sent', delivery_status = 'sent' WHERE id = ${m2.id}`;
+ok('failed callback marks failed', await hook({ MessageSid: 'SMtest2', MessageStatus: 'undelivered', ErrorCode: '30003' }) === 200 && (await sql`SELECT status, error FROM messages WHERE id = ${m2.id}`)[0].status === 'failed');
+delete process.env.TWILIO_AUTH_TOKEN;
+r = await A.get('/api/reviews'); ok('stats count delivered and failed', r.j.stats.delivered === 1 && r.j.stats.failed === 1, r.j.stats);
+// auto-send after a job is completed
+const ac = (await A.post('/api/customers', { name: 'Auto Annie', phone: '2815557003' })).j.customer;
+const mkDone = async (cust, title) => { const jb = (await A.post('/api/jobs', { customer_id: cust.id, title, visit: { starts_at: new Date(Date.now() - 3 * 3600e3).toISOString() } })).j.job; const [v] = await sql`SELECT id FROM visits WHERE job_id = ${jb.id}`; return { jb, v }; };
+const done1 = await mkDone(ac, 'Auto job 1');
+r = await A.put('/api/visits/' + done1.v.id, { status: 'completed' }); ok('complete visit with auto off', r.s === 200, r);
+ok('auto off sends nothing', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${ac.id} AND kind = 'review_request'`)[0].n === 0);
+r = await A.put('/api/reviews', { enabled: true, delay_mode: 'hours', delay_hours: 24 }); ok('turn on auto, 1 day later', r.s === 200 && r.j.enabled, r);
+await A.put('/api/visits/' + done1.v.id, { status: 'scheduled' }); r = await A.put('/api/visits/' + done1.v.id, { status: 'completed' });
+ok('1-day delay: nothing yet', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${ac.id} AND kind = 'review_request'`)[0].n === 0);
+r = await A.put('/api/reviews', { delay_hours: 0 }); ok('set right away', r.s === 200 && r.j.config.delay_hours === 0, r);
+r = await A.post('/api/automations/run', {}); ok('run engine', r.s === 200, r);
+let rm = await sql`SELECT * FROM messages WHERE customer_id = ${ac.id} AND kind = 'review_request'`; ok('auto review request created once', rm.length === 1 && rm[0].visit_id === done1.v.id && rm[0].ref === 'review:' + done1.v.id && rm[0].body.includes('g.page/r/CaseyAlpha'), rm);
+await A.post('/api/automations/run', {}); ok('re-run does not duplicate', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${ac.id} AND kind = 'review_request'`)[0].n === 1);
+const done2 = await mkDone(ac, 'Auto job 2'); await A.put('/api/visits/' + done2.v.id, { status: 'completed' });
+ok('min gap: same customer not asked again', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${ac.id} AND kind = 'review_request'`)[0].n === 1);
+const mc = (await A.post('/api/customers', { name: 'Morning Mo', phone: '2815557004' })).j.customer; const done3 = await mkDone(mc, 'Morning job');
+await A.put('/api/reviews', { delay_mode: 'next_morning' }); await A.put('/api/visits/' + done3.v.id, { status: 'completed' });
+ok('next-morning mode waits for 9:00', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${mc.id} AND kind = 'review_request'`)[0].n === 0);
+const { runReviewRequests } = await import('../lib/routes/reviews.js'); const tid = (await sql`SELECT tenant_id FROM customers WHERE id = ${mc.id}`)[0].tenant_id;
+await runReviewRequests(tid, BASE, new Date(Date.now() + 30 * 3600e3));
+ok('next-morning request goes out the next day', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${mc.id} AND kind = 'review_request'`)[0].n === 1);
+const bc = (await B.post('/api/customers', { name: 'Bravo Bo', phone: '2815557005' })).j.customer; const bj = (await B.post('/api/jobs', { customer_id: bc.id, title: 'B job', visit: { starts_at: new Date(Date.now() - 3 * 3600e3).toISOString() } })).j.job; const [bv] = await sql`SELECT id FROM visits WHERE job_id = ${bj.id}`;
+await B.put('/api/visits/' + bv.id, { status: 'completed' }); await B.post('/api/automations/run', {});
+ok('B without a link gets no auto review request', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${bc.id} AND kind = 'review_request'`)[0].n === 0);
+r = await A.post(`/api/customers/${rc.id}/review-request`, { force: true, visit_id: bv.id }); ok('visit from another business is refused', r.s === 400, r);
+
 // ---------- team rules ----------
 r = await A.put('/api/team/' + wally.id, { role: 'admin' }); ok('owner can promote', r.s === 200 && r.j.member.role === 'admin', r); await A.put('/api/team/' + wally.id, { role: 'worker' });
 r = await B.put('/api/team/' + wally.id, { role: 'admin' }); ok('B cannot edit A team', r.s === 404, r);

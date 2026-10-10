@@ -60,7 +60,7 @@ export function modal(html, onMount) {
   if (onMount) onMount(m, close); return { el: m, close };
 }
 export const chip = (text, kind = '') => `<span class="chip ${kind}">${esc(text)}</span>`;
-export const statusChip = s => chip(String(s).replace('_', ' '), { paid: 'ok', approved: 'ok', completed: 'ok', converted: 'ok', sent: 'blue', partial: 'warn', scheduled: 'blue', in_progress: 'warn', new: 'warn', draft: '', declined: 'bad', void: 'bad', cancelled: 'bad', lost: 'bad', blocked: 'bad', preview: 'warn', failed: 'bad', active: 'blue' }[s] || '');
+export const statusChip = s => chip(String(s).replace('_', ' '), { paid: 'ok', approved: 'ok', completed: 'ok', converted: 'ok', sent: 'blue', partial: 'warn', scheduled: 'blue', in_progress: 'warn', new: 'warn', draft: '', declined: 'bad', void: 'bad', cancelled: 'bad', lost: 'bad', blocked: 'bad', delivered: 'ok', preview: 'warn', failed: 'bad', active: 'blue' }[s] || '');
 export function empty(text, action = '') { return `<div class="empty"><p>${esc(text)}</p>${action}</div>`; }
 // Shrink a photo in the browser before upload (keeps requests small).
 export function shrinkImage(file, max = 1100, q = 0.72) {

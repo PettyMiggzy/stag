@@ -97,6 +97,13 @@ STATEMENTS.push(
 `ALTER TABLE requests ADD COLUMN IF NOT EXISTS sms_ok BOOLEAN NOT NULL DEFAULT false`,
 `ALTER TABLE customers ADD COLUMN IF NOT EXISTS email_opt_in BOOLEAN NOT NULL DEFAULT false`
 );
+STATEMENTS.push(
+`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivery_status TEXT NOT NULL DEFAULT ''`,
+`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`,
+`ALTER TABLE messages ADD COLUMN IF NOT EXISTS visit_id INT`,
+`ALTER TABLE messages ADD COLUMN IF NOT EXISTS job_id INT`,
+`CREATE INDEX IF NOT EXISTS messages_provider ON messages(provider_id) WHERE provider_id <> ''`
+);
 let done = null;
 export function ensureSchema() {
   if (!done) done = (async () => { for (const s of STATEMENTS) await query(s); })().catch(e => { done = null; throw e; });

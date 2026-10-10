@@ -61,9 +61,10 @@ route('POST', '/api/auth/password', async ctx => {
 route('PUT', '/api/business', async ctx => {
   need(ctx, 'admin'); const b = ctx.body;
   const [c] = await sql`SELECT * FROM tenants WHERE id = ${ctx.tid}`;
-  const settings = { ...(c.settings || {}), ...(b.settings && typeof b.settings === 'object' ? {
-    booking_enabled: b.settings.booking_enabled !== false, booking_intro: clean(b.settings.booking_intro, 300),
-    review_link: clean(b.settings.review_link, 300), payment_note: clean(b.settings.payment_note, 300) } : {}) };
+  const bs = b.settings && typeof b.settings === 'object' ? b.settings : {}, settings = { ...(c.settings || {}) };
+  if ('booking_enabled' in bs) settings.booking_enabled = bs.booking_enabled !== false;
+  if ('booking_intro' in bs) settings.booking_intro = clean(bs.booking_intro, 300);
+  if ('payment_note' in bs) settings.payment_note = clean(bs.payment_note, 300);   // the Google review link is saved on its own screen, with checks (see reviews.js)
   const [t] = await sql`UPDATE tenants SET name = ${clean(b.name ?? c.name, 80) || c.name}, phone = ${b.phone !== undefined ? cleanPhone(b.phone) : c.phone}, email = ${b.email !== undefined ? cleanEmail(b.email) : c.email},
     city = ${clean(b.city ?? c.city, 60)}, state = ${clean(b.state ?? c.state, 2).toUpperCase()}, timezone = ${clean(b.timezone ?? c.timezone, 60) || c.timezone},
     tax_pct = ${b.tax_pct !== undefined ? Math.min(30, amt(b.tax_pct) ?? 0) : c.tax_pct}, brand_color = ${/^#[0-9a-f]{6}$/i.test(b.brand_color || '') ? b.brand_color : c.brand_color}, settings = ${settings}

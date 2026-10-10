@@ -38,15 +38,16 @@ route('POST', '/api/customers', async ctx => {
 });
 route('GET', '/api/customers/:id', async ctx => {
   const c = await getCustomer(ctx.tid, ctx.params.id), tid = ctx.tid;
-  const [properties, requests, quotes, jobs, invoices, messages, activity] = await Promise.all([
+  const [properties, requests, quotes, jobs, invoices, messages, activity, reviewRequests] = await Promise.all([
     sql`SELECT * FROM properties WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY id`,
     sql`SELECT * FROM requests WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY created_at DESC LIMIT 50`,
     sql`SELECT * FROM quotes WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY created_at DESC LIMIT 50`,
     sql`SELECT j.*, (SELECT count(*)::int FROM visits v WHERE v.job_id = j.id AND v.tenant_id = j.tenant_id) AS visit_count, (SELECT min(starts_at) FROM visits v WHERE v.job_id = j.id AND v.tenant_id = j.tenant_id AND v.status = 'scheduled' AND v.starts_at > now()) AS next_visit FROM jobs j WHERE j.tenant_id = ${tid} AND j.customer_id = ${c.id} ORDER BY j.created_at DESC LIMIT 50`,
     sql`SELECT * FROM invoices WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY created_at DESC LIMIT 50`,
-    sql`SELECT id, channel, direction, kind, body, status, created_at FROM messages WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY created_at DESC LIMIT 50`,
-    sql`SELECT * FROM activity WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY at DESC LIMIT 60`]);
-  return { customer: c, properties, requests, quotes: quotes.map(shapeQuote), jobs, invoices: invoices.map(shapeInvoice), messages, activity };
+    sql`SELECT id, channel, direction, kind, body, status, delivery_status, delivered_at, error, created_at FROM messages WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY created_at DESC LIMIT 50`,
+    sql`SELECT * FROM activity WHERE tenant_id = ${tid} AND customer_id = ${c.id} ORDER BY at DESC LIMIT 60`,
+    sql`SELECT m.id, m.body, m.status, m.delivery_status, m.delivered_at, m.error, m.sent_at, m.created_at, m.ref, m.job_id, j.title AS job_title FROM messages m LEFT JOIN jobs j ON j.id = m.job_id AND j.tenant_id = m.tenant_id WHERE m.tenant_id = ${tid} AND m.customer_id = ${c.id} AND m.kind = 'review_request' ORDER BY m.created_at DESC LIMIT 50`]);
+  return { customer: c, properties, requests, quotes: quotes.map(shapeQuote), jobs, invoices: invoices.map(shapeInvoice), messages, activity, review_requests: reviewRequests };
 });
 route('PUT', '/api/customers/:id', async ctx => {
   const old = await getCustomer(ctx.tid, ctx.params.id), v = cust(ctx.body, old); if (!v.name) throw bad('Enter the customer name');

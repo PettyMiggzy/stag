@@ -23,6 +23,7 @@ Create a Vercel project with this folder (`stagr-app`) as the root. Set these en
 | `CRON_SECRET` | yes | Random string. Vercel Cron sends it to `/api/cron/run` every 15 minutes to send due reminders. |
 | `PUBLIC_URL` | recommended | e.g. `https://app.stagr.example`. Used for links in texts and emails. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | for texting | Without these, texts are saved as **preview** and not sent. |
+| `PUBLIC_URL` | for delivery status | Your app's address, e.g. `https://stagr-app.vercel.app`. Texts then carry a status callback to `/api/webhooks/twilio` so "delivered" and "failed" show up on review requests. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | for email | Without these, emails are saved as **preview** and not sent. |
 
 ## How it is built
@@ -40,3 +41,6 @@ Request (booking page: separate email and text consent, availability dates, arri
 - Two-way texting (replies and STOP handling need a Twilio webhook).
 - QuickBooks sync (CSV export of invoices and payments is available).
 - Subscription billing for STAGR itself, and a password reset email.
+
+## Google review requests
+Messages → Google reviews: paste the business's Google review link, choose auto-send on/off and when (right away, hours/days later, or next morning 9:00 AM local), edit the text (must keep `{review_link}`), and set how many days before the same customer is asked again. "Ask for review" buttons are on the customer, completed job and completed visit. Every request is saved on the customer profile with sent / delivered / failed status. Texts always end with "Reply STOP to opt out".

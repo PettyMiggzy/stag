@@ -31,3 +31,13 @@ export function totals(items, discountPct = 0, taxPct = 0) {
 export const paidSum = payments => r2((payments || []).reduce((a, p) => a + Number(p.amount || 0), 0));
 export const pad = (n, w = 4) => String(n).padStart(w, '0');
 export const isoDate = d => new Date(d).toISOString().slice(0, 10);
+
+// The next moment at or after `after` when the clock in `tz` reads `hour`:00. Used for "send the next morning".
+export function nextLocalHour(after, tz, hour = 9) {
+  const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const wall = d => { const p = {}; f.formatToParts(d).forEach(x => { p[x.type] = x.value; }); return { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour, mi: +p.minute, s: +p.second }; };
+  const at = (y, mo, d) => { const want = Date.UTC(y, mo - 1, d, hour, 0, 0); let g = want; for (let i = 0; i < 3; i++) { const w = wall(new Date(g)); g += want - Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s); } return new Date(g); };
+  const w = wall(new Date(after)); let t = at(w.y, w.mo, w.d);
+  if (t < new Date(after)) { const n = new Date(Date.UTC(w.y, w.mo - 1, w.d + 1)); t = at(n.getUTCFullYear(), n.getUTCMonth() + 1, n.getUTCDate()); }
+  return t;
+}

@@ -51,6 +51,12 @@ for (const [w, h, t] of [[1280, 860, 'd'], [390, 844, 'm']]) {
   await p.screenshot({ path: `/tmp/pw/stagr-${t}-quote-detail.png` });
   for (const r of ['reports', 'messages', 'settings', 'invoices', 'quotes']) { await p.goto(BASE + '/app#/' + r); await p.waitForSelector('#main h1'); }
   await p.goto(BASE + '/app#/messages'); await p.waitForSelector('[data-tog]'); await p.screenshot({ path: `/tmp/pw/stagr-${t}-messages.png` });
+  await p.goto(BASE + '/app#/messages'); await p.waitForSelector('#rvEdit'); await p.click('#rvEdit'); await p.waitForSelector('#rs'); await p.fill('#rs [name=link]', 'https://g.page/r/E2E/review'); await p.check('#rs [name=enabled]'); await p.selectOption('#rs [name=when]', 'morning'); await p.click('#rs button[type=submit]'); await p.waitForTimeout(700);
+  ok(t + ' review settings saved', (await p.textContent('#main')).includes('auto-send on') && (await p.textContent('#main')).includes('next morning'));
+  await p.screenshot({ path: `/tmp/pw/stagr-${t}-reviews.png` });
+  await p.goto(BASE + '/app#/customers'); await p.waitForSelector('#main .item'); await p.click('#main .item >> nth=0'); await p.waitForSelector('#rvw'); await p.click('#rvw'); await p.waitForSelector('#rf');
+  ok(t + ' review text has the link', (await p.inputValue('#rt')).includes('g.page/r/E2E/review')); await p.click('#rf button[type=submit]'); await p.waitForTimeout(800);
+  ok(t + ' review request shows in customer history', (await p.textContent('#main')).includes('Review requests') && (await p.textContent('#main')).includes('preview'));
   await p.goto(BASE + '/app#/reports'); await p.waitForSelector('.stat'); await p.screenshot({ path: `/tmp/pw/stagr-${t}-reports.png` });
   ok(t + ' no horizontal overflow', await p.evaluate(() => document.documentElement.scrollWidth) <= w + 1, await p.evaluate(() => document.documentElement.scrollWidth));
   ok(t + ' no JS errors', errs.length === 0, errs.join(' | '));

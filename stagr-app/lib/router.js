@@ -39,7 +39,7 @@ export async function handle(req, res) {
     if (out && out.__raw) { res.statusCode = out.status || 200; for (const [k, v] of Object.entries(out.headers || {})) res.setHeader(k, v); return res.end(out.body); }
     json(res, 200, out);
   } catch (e) {
-    if (e instanceof HttpError) return json(res, e.status, { error: e.message });
+    if (e instanceof HttpError) return json(res, e.status, { error: e.message, ...(e.recent ? { recent: e.recent } : {}) });
     console.error('stagr error', e && e.stack || e);
     json(res, 500, { error: 'Something went wrong. Please try again.' });
   }

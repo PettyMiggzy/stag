@@ -13,23 +13,23 @@ export const T = {
   quote_followup: 'Hi {first}, just checking in on the quote from {business}. You can look it over and approve it here: {link}',
   invoice_reminder: 'Hi {first}, a friendly reminder that invoice {number} from {business} ({balance} due) is waiting: {link}',
   monthly_followup: '{business} is back in {city}! Book today and get {discount} off your next service. Reply to this text or call {phone} to schedule.',
-  job_followup: 'Thanks for choosing {business}, {first}! If we did a good job, a quick review helps a lot: {review_link}'
+  review_request: 'Hi {first}, thanks for choosing {business}! If you have a minute, we would really appreciate a Google review: {review_link}'
 };
 export const DEFAULT_AUTOMATIONS = [
   ['appointment_reminder', true, { hours_before: 24, template: T.appointment_reminder }],
   ['quote_followup', true, { days_after: 2, max_sends: 2, template: T.quote_followup }],
   ['invoice_reminder', true, { days_between: 7, max_sends: 4, template: T.invoice_reminder }],
   ['monthly_followup', false, { discount: '$50', days_since_last_job: 30, min_gap_days: 30, template: T.monthly_followup }],
-  ['job_followup', false, { days_after: 1, template: T.job_followup }]
+  ['review_request', false, { delay_mode: 'hours', delay_hours: 2, min_gap_days: 60, template: T.review_request }]
 ];
-const MARKETING = new Set(['monthly_followup', 'job_followup']);
+const MARKETING = new Set(['monthly_followup']);
 export const fill = (tpl, v) => String(tpl).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '').replace(/\s+([.,!?])/g, '$1').replace(/ {2,}/g, ' ').trim();
 
 // ---- delivery. Without a provider connected, messages are saved as "preview" and nothing is sent. ----
 async function deliver(m, tenant) {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN, from = process.env.TWILIO_FROM;
   if (m.channel === 'sms' && sid && tok && from) {
-    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, { method: 'POST', headers: { authorization: 'Basic ' + Buffer.from(sid + ':' + tok).toString('base64'), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ To: '+1' + m.to_addr, From: from, Body: m.body }) });
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, { method: 'POST', headers: { authorization: 'Basic ' + Buffer.from(sid + ':' + tok).toString('base64'), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ To: '+1' + m.to_addr, From: from, Body: m.body, ...(process.env.PUBLIC_URL ? { StatusCallback: process.env.PUBLIC_URL.replace(/\/$/, '') + '/api/webhooks/twilio' } : {}) }) });
     const j = await r.json().catch(() => ({}));
     return r.ok ? { status: 'sent', provider_id: j.sid || '' } : { status: 'failed', error: String(j.message || r.status).slice(0, 200) };
   }
@@ -41,23 +41,23 @@ async function deliver(m, tenant) {
   return { status: 'preview', provider_id: '' };
 }
 // Save a message and try to send it. Marketing texts need the customer's recorded opt-in and always carry an opt-out line.
-export async function queueMessage({ tid, customer, channel, kind, body, ref = '', subject = '', scheduled_for = null }) {
+export async function queueMessage({ tid, customer, channel, kind, body, ref = '', subject = '', scheduled_for = null, visit_id = null, job_id = null }) {
   const marketing = MARKETING.has(kind) || kind === 'manual_marketing';
   const to = channel === 'sms' ? customer.phone : customer.email;
   let text = String(body).slice(0, 1000);
-  if (channel === 'sms' && marketing && !/reply stop/i.test(text)) text += ' Reply STOP to opt out.';
+  if (channel === 'sms' && (marketing || kind === 'review_request') && !/reply stop/i.test(text)) text += ' Reply STOP to opt out.';
   let status = 'queued', error = '';
   if (!to) { status = 'blocked'; error = channel === 'sms' ? 'No phone number' : 'No email address'; }
   else if (channel === 'sms' && customer.sms_opt_out_at && !customer.sms_opt_in) { status = 'blocked'; error = 'Customer opted out of texts'; }
   else if (channel === 'sms' && marketing && !customer.sms_opt_in) { status = 'blocked'; error = 'No text consent on file'; }
   else if (channel === 'email' && customer.email_opt_out && marketing) { status = 'blocked'; error = 'Customer opted out of email'; }
   let row;
-  try { [row] = await sql`INSERT INTO messages (tenant_id, customer_id, channel, direction, kind, body, to_addr, status, error, ref, scheduled_for) VALUES (${tid}, ${customer.id}, ${channel}, 'out', ${kind}, ${text}, ${to || ''}, ${status}, ${error}, ${ref}, ${scheduled_for || new Date()}) RETURNING *`; }
+  try { [row] = await sql`INSERT INTO messages (tenant_id, customer_id, channel, direction, kind, body, to_addr, status, error, ref, scheduled_for, visit_id, job_id) VALUES (${tid}, ${customer.id}, ${channel}, 'out', ${kind}, ${text}, ${to || ''}, ${status}, ${error}, ${ref}, ${scheduled_for || new Date()}, ${visit_id}, ${job_id}) RETURNING *`; }
   catch (e) { if (/messages_ref/.test(String(e.message))) return null; throw e; } // already queued for this ref
   if (status === 'queued' && !scheduled_for) {
     const [t] = await sql`SELECT name, email FROM tenants WHERE id = ${tid}`;
     const r = await deliver({ ...row, subject }, t);
-    [row] = await sql`UPDATE messages SET status = ${r.status}, error = ${r.error || ''}, provider_id = ${r.provider_id || ''}, sent_at = ${r.status === 'sent' ? new Date() : null} WHERE id = ${row.id} AND tenant_id = ${tid} RETURNING *`;
+    [row] = await sql`UPDATE messages SET status = ${r.status}, error = ${r.error || ''}, provider_id = ${r.provider_id || ''}, sent_at = ${r.status === 'sent' ? new Date() : null}, delivery_status = ${r.status === 'sent' ? 'sent' : ''} WHERE id = ${row.id} AND tenant_id = ${tid} RETURNING *`;
   }
   return row;
 }

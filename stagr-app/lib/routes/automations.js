@@ -4,6 +4,7 @@ import { HttpError } from '../http.js';
 import { need } from '../auth.js';
 import { queueMessage, baseUrl, fill, fmtPhone } from './comms.js';
 import { shapeInvoice } from './shapes.js';
+import { runReviewRequests } from './reviews.js';
 
 const DAY = 864e5;
 // Creates the messages that are due for ONE business. Every message has a unique "ref", so running this
@@ -36,11 +37,6 @@ export async function runAutomations(tid, base = '', now = new Date()) {
     for (const i of rows) { const s = shapeInvoice(i); if (s.balance <= 0) continue; const n = Math.min(max, Math.floor((now - new Date(i.sent_at)) / step)); if (n < 1) continue; const c = await getC(i.customer_id);
       await push(c, 'invoice_reminder', `inv:${i.id}:${n}`, fill(c0.template, { ...biz, first: (c?.name || '').split(' ')[0], number: 'INV-' + i.number, balance: '$' + s.balance.toFixed(2), link: (base || '') + '/i/' + i.token })); }
   }
-  if (on('job_followup')) {
-    const c0 = cfg('job_followup'), lo = new Date(now.getTime() - (c0.days_after + 3) * DAY), hi = new Date(now.getTime() - (c0.days_after || 0) * DAY);
-    const rows = await sql`SELECT v.id, j.customer_id FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id WHERE v.tenant_id = ${tid} AND v.status = 'completed' AND v.completed_at >= ${lo} AND v.completed_at <= ${hi}`;
-    if (biz.review_link) for (const r of rows) { const c = await getC(r.customer_id); await push(c, 'job_followup', `thanks:${r.id}`, fill(c0.template, { ...biz, first: (c?.name || '').split(' ')[0] })); }
-  }
   if (on('monthly_followup')) {
     const c0 = cfg('monthly_followup'), since = new Date(now.getTime() - (c0.days_since_last_job || 30) * DAY), gap = new Date(now.getTime() - (c0.min_gap_days || 30) * DAY);
     const rows = await sql`SELECT c.* FROM customers c WHERE c.tenant_id = ${tid} AND c.sms_opt_in AND NOT c.archived AND c.phone <> ''
@@ -49,6 +45,7 @@ export async function runAutomations(tid, base = '', now = new Date()) {
       AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.tenant_id = c.tenant_id AND m.customer_id = c.id AND m.kind = 'monthly_followup' AND m.created_at > ${gap}) LIMIT 200`;
     for (const c of rows) await push(c, 'monthly_followup', `monthly:${c.id}:${now.toISOString().slice(0, 7)}`, fill(c0.template, { ...biz, first: c.name.split(' ')[0], discount: c0.discount || '$50' }));
   }
+  made += (await runReviewRequests(tid, base, now)).made;
   await sql`UPDATE automations SET last_run_at = ${now} WHERE tenant_id = ${tid}`;
   return { made };
 }
