@@ -6,6 +6,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 export function start(port = Number(process.env.PORT) || 8790) {
   const srv = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
+    const lg = u.pathname.match(/^\/(privacy|sms-terms)\/([^/]+)$/); if (lg) { req.url = `/api/legal/${lg[2]}/${lg[1]}`; return handle(req, res); }
     if (u.pathname.startsWith('/api/')) return handle(req, res);
     const route = [[/^\/q\/[^/]+$/, 'q.html'], [/^\/i\/[^/]+$/, 'i.html'], [/^\/b\/[^/]+$/, 'b.html'], [/^\/app\/?$/, 'app.html']].find(([re]) => re.test(u.pathname));
     let f = path.join(ROOT, route ? route[1] : u.pathname === '/' ? 'index.html' : u.pathname);

@@ -281,6 +281,13 @@ await B.put('/api/visits/' + bv.id, { status: 'completed' }); await B.post('/api
 ok('B without a link gets no auto review request', (await sql`SELECT count(*)::int n FROM messages WHERE customer_id = ${bc.id} AND kind = 'review_request'`)[0].n === 0);
 r = await A.post(`/api/customers/${rc.id}/review-request`, { force: true, visit_id: bv.id }); ok('visit from another business is refused', r.s === 400, r);
 
+// legal pages for carrier registration
+r = await anon.get('/api/legal/alpha-hauling/privacy'); ok('privacy page is public', r.s === 200 && r.text.includes('Alpha Hauling') && /do not sell/i.test(r.text) && /STOP/.test(r.text), r.s);
+r = await anon.get('/api/legal/alpha-hauling/sms-terms'); ok('sms terms page is public', r.s === 200 && /Message and data rates may apply/.test(r.text) && /HELP/.test(r.text), r.s);
+r = await anon.get('/api/legal/nope-nope/privacy'); ok('unknown business has no legal page', r.s === 404, r.s);
+r = await anon.get('/api/legal/alpha-hauling/evil'); ok('unknown legal doc 404', r.s === 404, r.s);
+{ const x = await (await fetch(BASE + '/privacy/alpha-hauling')).text(); ok('short privacy URL works', x.includes('Privacy Policy')); }
+
 // ---------- team rules ----------
 r = await A.put('/api/team/' + wally.id, { role: 'admin' }); ok('owner can promote', r.s === 200 && r.j.member.role === 'admin', r); await A.put('/api/team/' + wally.id, { role: 'worker' });
 r = await B.put('/api/team/' + wally.id, { role: 'admin' }); ok('B cannot edit A team', r.s === 404, r);
