@@ -6,11 +6,11 @@
     },
     {
       "source": "/privacy/:s",
-      "destination": "/api/legal/:s/privacy"
+      "destination": "/api/index.js"
     },
     {
       "source": "/sms-terms/:s",
-      "destination": "/api/legal/:s/sms-terms"
+      "destination": "/api/index.js"
     },
     {
       "source": "/q/:t",

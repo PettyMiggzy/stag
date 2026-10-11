@@ -28,8 +28,11 @@ const terms = t => page(t, 'Text Message Terms', `<h1>Text Message Terms</h1><p 
 <h2>Privacy</h2><p>We do not sell or share your mobile number or opt-in data with third parties for marketing. See our <a href="/privacy/${h(t.slug)}">Privacy Policy</a>.</p>
 <h2>Contact</h2>${contact(t)}`);
 
-route('GET', '/api/legal/:slug/:doc', { public: true }, async ctx => {
+const serve = async ctx => {
   const [t] = await sql`SELECT name, slug, phone, email, city, state FROM tenants WHERE slug = ${clean(ctx.params.slug, 80)}`;
-  const doc = ctx.params.doc; if (!t || (doc !== 'privacy' && doc !== 'sms-terms')) throw missing('Page not found');
+  const doc = ctx.params.doc || ctx.doc; if (!t || (doc !== 'privacy' && doc !== 'sms-terms')) throw missing('Page not found');
   return { __raw: true, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300' }, body: doc === 'privacy' ? privacy(t) : terms(t) };
-});
+};
+route('GET', '/api/legal/:slug/:doc', { public: true }, serve);
+route('GET', '/privacy/:slug', { public: true }, ctx => serve({ ...ctx, doc: 'privacy' }));
+route('GET', '/sms-terms/:slug', { public: true }, ctx => serve({ ...ctx, doc: 'sms-terms' }));
