@@ -1,0 +1,13 @@
+{
+  "name": "stag-pad-sdk",
+  "version": "1.0.0",
+  "description": "Trade and snipe $STAG Pad launches on Robinhood Chain: buy and sell with ETH or USDG in one transaction.",
+  "type": "module",
+  "main": "dist/index.js",
+  
+  "files": ["dist", "src"],
+  "scripts": { "build": "tsc", "example:sniper": "tsx examples/sniper.ts" },
+  "dependencies": { "viem": "^2.21.0" },
+  "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.5.0" },
+  "license": "MIT"
+}

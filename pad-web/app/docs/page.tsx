@@ -87,6 +87,28 @@ export default function Docs() {
         </p>
       </Section>
 
+      <Section id="sdk" title="Bots, snipers and the SDK">
+        <p className="text-sm text-muted">
+          Bots are welcome. The <code className="font-mono">stag-pad-sdk</code> package (repo folder{' '}
+          <code className="font-mono">pad-sdk</code>) wraps everything on this page: watch new launches the block they
+          land, quote, and buy or sell with ETH or USDG in one transaction.
+        </p>
+        <Code>{`import { createPad, chain } from 'stag-pad-sdk';
+const pad = createPad();                                   // free public RPC; createPad({ rpcUrl }) for your own
+pad.watchLaunches(async (l) => {                           // fires the block a launch is mined
+  if (l.buyTaxBps > 1000) return;
+  await pad.buyWithEth(wallet, l.token, parseEther('0.005'), { slippageBps: 500 });
+});
+await pad.sellForEth(wallet, token, amount);               // ETH straight to your wallet
+const q = await pad.quoteBuyWithEth(token, parseEther('0.01'));   // exact, tax and fees included`}</Code>
+        <p className="text-xs text-dim">
+          The creator&apos;s tax is enforced by the pool&apos;s hook on every swap, whoever sends it: this site, the SDK,
+          or your own contract calling the PoolManager. Read <code className="font-mono">buyTaxBps</code> and{' '}
+          <code className="font-mono">sellTaxBps</code> from the launch event. You can also read launches as JSON from{' '}
+          <code className="font-mono">/api/launches</code>. Selling needs USDG in the pool, so quotes read 0 until someone has bought.
+        </p>
+      </Section>
+
       <Section id="api" title="Public JSON API">
         <p className="text-sm text-muted">
           This site serves the pad&apos;s data as JSON. No key, no sign-up, and any website or bot can call it (CORS is
