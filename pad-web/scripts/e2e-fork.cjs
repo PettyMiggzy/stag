@@ -6,7 +6,7 @@
 //
 // The site must be built with its RPC pointed at the fork, so the server's
 // launch list and the browser both read the fork. With the current stack
-// deployed on the fork (usdg-pad/script/DeployRobinhood.s.sol, as the owner,
+// deployed on the fork (pad-contracts/script/DeployRobinhood.s.sol, as the owner,
 // EXISTING_TREASURY set), point the build at it too:
 //
 //   anvil --fork-url https://rpc.mainnet.chain.robinhood.com --port 8547 --chain-id 4663
@@ -27,15 +27,15 @@ const S = process.env.OUT_DIR || '.';
 const FORK = process.env.FORK_RPC || 'http://127.0.0.1:8548';
 const SITE = process.env.SITE || 'http://localhost:3100';
 // Defaults: the STAG Pad deployment (pad-contracts/DEPLOYED.md).
-const PORTAL = process.env.PORTAL || '0xAA34Fc6CD722344B61592E07369634BD72e8226d';
-const HOOK = process.env.HOOK || '0x319Fdb13053C5CFf7F610bd05AAE891D870dA8Cc';
-const FEE_DESK = process.env.FEE_DESK || '0xF24FB67f3e43dE6b23284C504E1831EC74F11215'; // set when the portal has one
-const HOUSE_PAD = process.env.HOUSE || '0xE078f4C3818eC6a87FE6DA08e0c1706dC479ff81';
+const PORTAL = process.env.PORTAL || '0x53403484Fa8c01fD60C91a88C05138C3b0068502';
+const HOOK = process.env.HOOK || '0x3523741dD9c66870C04a7A7e409470f1Fd4F68Cc';
+const FEE_DESK = process.env.FEE_DESK || '0xd991Be3882d4ACf61F8ADb8b2c4A8A865A4f5886'; // set when the portal has one
+const HOUSE_PAD = process.env.HOUSE || '0x5B91a07eD3421980aed3c423b311a8d42E914F64';
 // A coin from an older portal, which the site would keep listing and trading (none for STAG yet).
 const LEGACY_TOKEN = process.env.LEGACY_TOKEN || '';
 const LEGACY_HOOK = process.env.LEGACY_HOOK || '0x0000000000000000000000000000000000000000';
 const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
-const TREASURY = process.env.TREASURY || '0x32E53bc783F1FB0432A06225350EB65c85E949e8';
+const TREASURY = process.env.TREASURY || '0x6E71373E6F0823d664a51E6476152aFD0208A325';
 const OWNER = process.env.OWNER || '0x7696Cd99d1EbC0F3A5a4A8525377ec35C6Ca196D';
 const TRADER = '0x4444444444444444444444444444444444444444';
 const MC_USD = Number(process.env.MC_USD || 8_000); // not a preset: typed into the box

@@ -45,14 +45,14 @@ export const CONFIG = {
   // STAG Pad on Robinhood Chain (pad-contracts/DEPLOYED.md): the main portal
   // (opening market cap $100 and up) and its shared hook. 20% of the tax, every
   // LP fee, and the fee desk, as in the V4 relaunch stack it was deployed from.
-  portal: addr(process.env.NEXT_PUBLIC_PORTAL, 'NEXT_PUBLIC_PORTAL', '0xAA34Fc6CD722344B61592E07369634BD72e8226d'),
-  hook: addr(process.env.NEXT_PUBLIC_HOOK, 'NEXT_PUBLIC_HOOK', '0x319Fdb13053C5CFf7F610bd05AAE891D870dA8Cc'),
-  treasury: addr(process.env.NEXT_PUBLIC_TREASURY, 'NEXT_PUBLIC_TREASURY', '0x32E53bc783F1FB0432A06225350EB65c85E949e8'),
-  // RobinFeeDesk: the platform takes every LP fee (the USDG side to the treasury,
+  portal: addr(process.env.NEXT_PUBLIC_PORTAL, 'NEXT_PUBLIC_PORTAL', '0x53403484Fa8c01fD60C91a88C05138C3b0068502'),
+  hook: addr(process.env.NEXT_PUBLIC_HOOK, 'NEXT_PUBLIC_HOOK', '0x3523741dD9c66870C04a7A7e409470f1Fd4F68Cc'),
+  treasury: addr(process.env.NEXT_PUBLIC_TREASURY, 'NEXT_PUBLIC_TREASURY', '0x6E71373E6F0823d664a51E6476152aFD0208A325'),
+  // StagFeeDesk: the platform takes every LP fee (the USDG side to the treasury,
   // the token side to this desk, which sells it at 10% off) and 20% of the tax.
-  feeDesk: optAddr(process.env.NEXT_PUBLIC_FEE_DESK, 'NEXT_PUBLIC_FEE_DESK', '0xF24FB67f3e43dE6b23284C504E1831EC74F11215'),
+  feeDesk: optAddr(process.env.NEXT_PUBLIC_FEE_DESK, 'NEXT_PUBLIC_FEE_DESK', '0xd991Be3882d4ACf61F8ADb8b2c4A8A865A4f5886'),
   // White-label pad factory: its pads (the house pad included) also pay the treasury.
-  factory: addr(process.env.NEXT_PUBLIC_FACTORY, 'NEXT_PUBLIC_FACTORY', '0xA856E63Ae02856A668a00A7fE7bAf7Ce337Fd3Cf'),
+  factory: addr(process.env.NEXT_PUBLIC_FACTORY, 'NEXT_PUBLIC_FACTORY', '0xCdC800FbDC88c3ac1C4133Ca4d7Af48d8B968181'),
   // Uniswap v4's PoolManager and UniversalRouter (v2.1.1) on Robinhood Chain.
   poolManager: addr(process.env.NEXT_PUBLIC_POOL_MANAGER, 'NEXT_PUBLIC_POOL_MANAGER', '0x8366a39CC670B4001A1121B8F6A443A643e40951'),
   router: addr(process.env.NEXT_PUBLIC_ROUTER, 'NEXT_PUBLIC_ROUTER', '0x8876789976decbfcbbbe364623c63652db8c0904'),
@@ -66,10 +66,10 @@ export const CONFIG = {
   v3Quoter: addr(undefined, 'V3_QUOTER', '0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7'),
   ethPoolFee: 100,
   // FALSE, not true (see the comment in .env.example):
-  // RobinHook/RobinPortal explicitly revert on quoteAsset == address(0)
+  // StagHook/StagPortal explicitly revert on quoteAsset == address(0)
   // (NativeQuoteUnsupported / ZeroAddress). There is no native-currency
   // code path in these contracts at all — confirmed directly against
-  // RobinLocker's unconditional IERC20.safeTransfer usage on both pool
+  // StagLocker's unconditional IERC20.safeTransfer usage on both pool
   // currencies. The quote leg is always a real ERC-20 transfer, never
   // msg.value.
   quoteIsNative: (process.env.NEXT_PUBLIC_QUOTE_IS_NATIVE ?? 'false') === 'true',
@@ -83,7 +83,7 @@ export const CONFIG = {
   // lib/launches.ts — it avoids an unbounded fromBlock:0 eth_getLogs call,
   // which public RPC providers (Alchemy included) reject past a ~10k block
   // range on any chain with real age.
-  portalGenesisBlock: BigInt(process.env.NEXT_PUBLIC_PORTAL_GENESIS_BLOCK || 87453000),
+  portalGenesisBlock: BigInt(process.env.NEXT_PUBLIC_PORTAL_GENESIS_BLOCK || 87533000),
   poolFee: 10_000,
   tickSpacing: 200,
   totalSupply: 1_000_000_000n * 10n ** 18n,

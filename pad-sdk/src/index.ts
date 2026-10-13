@@ -15,11 +15,11 @@ import {
 export const ADDRESSES = {
   chainId: 4663,
   rpcUrl: 'https://rpc.mainnet.chain.robinhood.com',
-  portal: '0xAA34Fc6CD722344B61592E07369634BD72e8226d' as Address, // main pad: LaunchCreated events come from here
-  hook: '0x319Fdb13053C5CFf7F610bd05AAE891D870dA8Cc' as Address,
-  feeDesk: '0xF24FB67f3e43dE6b23284C504E1831EC74F11215' as Address,
-  housePad: '0xE078f4C3818eC6a87FE6DA08e0c1706dC479ff81' as Address, // "STAG Pad by Jarvis" holder pad
-  factory: '0xA856E63Ae02856A668a00A7fE7bAf7Ce337Fd3Cf' as Address,
+  portal: '0x53403484Fa8c01fD60C91a88C05138C3b0068502' as Address, // main pad: LaunchCreated events come from here
+  hook: '0x3523741dD9c66870C04a7A7e409470f1Fd4F68Cc' as Address,
+  feeDesk: '0xd991Be3882d4ACf61F8ADb8b2c4A8A865A4f5886' as Address,
+  housePad: '0x5B91a07eD3421980aed3c423b311a8d42E914F64' as Address, // "STAG Pad by Jarvis" holder pad
+  factory: '0xCdC800FbDC88c3ac1C4133Ca4d7Af48d8B968181' as Address,
   poolManager: '0x8366a39CC670B4001A1121B8F6A443A643e40951' as Address,
   universalRouter: '0x8876789976decbfcbbbe364623c63652db8c0904' as Address,
   permit2: '0x000000000022D473030F116dDEE9F6B43aC78BA3' as Address,
@@ -29,7 +29,7 @@ export const ADDRESSES = {
   ethPoolFee: 100, // Uniswap v3 WETH/USDG 0.01% pool
   poolFee: 10_000, // every launch pool: 1%
   tickSpacing: 200,
-  genesisBlock: 87_453_000n,
+  genesisBlock: 87_533_000n,
 } as const;
 
 export const chain = defineChain({

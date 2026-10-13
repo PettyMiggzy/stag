@@ -7,7 +7,7 @@ import {
 // ERC-20 code they call into, can revert with. Merged into a write's ABI so
 // viem names a nested revert instead of printing "unknown signature 0x…".
 export const knownErrorsAbi = parseAbi([
-  // RobinPortal, RobinHook, RobinLocker, RobinRevenueSplitter
+  // StagPortal, StagHook, StagLocker, StagRevenueSplitter
   'error TaxTooHigh()',
   'error StartingMcOutOfRange()',
   'error ZeroAddress()',
@@ -24,7 +24,7 @@ export const knownErrorsAbi = parseAbi([
   'error NotAuthorized()',
   'error NothingToClaim()',
   'error InvalidRecipient()',
-  // RobinFeeDesk
+  // StagFeeDesk
   'error UnknownLaunch()',
   'error NothingForSale()',
   'error ZeroAmount()',

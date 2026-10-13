@@ -1,7 +1,7 @@
 import { keccak256, sha256, toBytes, type Hex } from 'viem';
 
 // Token-page metadata (description, split, links, image) is written only by
-// the token's current creator — RobinRevenueSplitter.creator() on-chain — who
+// the token's current creator — StagRevenueSplitter.creator() on-chain — who
 // signs exactly what is being saved. Shared by the create page (builds and
 // signs) and /api/metadata (rebuilds and verifies), so both sides hash the
 // same canonical bytes.

@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/explore" className="hover:text-brand-hi">Explore</Link>
               <Link href="/docs" className="hover:text-brand-hi">Docs &amp; API</Link>
               <Link href="/about" className="hover:text-brand-hi">About</Link>
-              <a href="https://robinhoodchain.blockscout.com/address/0xAA34Fc6CD722344B61592E07369634BD72e8226d?tab=contract" target="_blank" rel="noreferrer" className="hover:text-brand-hi">Contracts</a>
+              <a href="https://robinhoodchain.blockscout.com/address/0x53403484Fa8c01fD60C91a88C05138C3b0068502?tab=contract" target="_blank" rel="noreferrer" className="hover:text-brand-hi">Contracts</a>
               {CONFIG.homeUrl && <a href={CONFIG.homeUrl} className="hover:text-brand-hi">$STAG</a>}
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">

@@ -1,8 +1,8 @@
 import 'server-only';
 import { CONFIG } from './config';
-import stdJsonInput from './verify/robin-launch-token.std.json';
+import stdJsonInput from './verify/stag-launch-token.std.json';
 
-// Every launch token is the same contract (RobinLaunchToken: a plain ERC-20
+// Every launch token is the same contract (StagLaunchToken: a plain ERC-20
 // with no immutables), so every one has identical runtime bytecode, and this
 // one compiler input (generated from usdg-pad with
 // `forge verify-contract --show-standard-json-input`, then checked byte for
@@ -16,7 +16,7 @@ import stdJsonInput from './verify/robin-launch-token.std.json';
 
 const API = 'https://sourcify.dev/server';
 const COMPILER = '0.8.26+commit.8a97fa7a';
-const CONTRACT = 'src/RobinLaunchToken.sol:RobinLaunchToken';
+const CONTRACT = 'src/StagLaunchToken.sol:StagLaunchToken';
 const TIMEOUT_MS = 20_000;
 
 // Per server instance: tokens already confirmed or submitted, so a warm

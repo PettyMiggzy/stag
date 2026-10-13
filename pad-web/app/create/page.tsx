@@ -50,7 +50,7 @@ export default function Create() {
   const [mcUsd, setMcUsd] = useState(10_000);
   const [buyTax, setBuyTax] = useState(3);
   const [sellTax, setSellTax] = useState(3);
-  // Off-chain display info only: RobinRevenueSplitter is a flat 90/10 and
+  // Off-chain display info only: StagRevenueSplitter is a flat 90/10 and
   // splits nothing further. Saved with the token's other details.
   const [split, setSplit] = useState({ creator: 80, buyback: 10, dividends: 5, liquidity: 5 });
   const [busy, setBusy] = useState<string | null>(null);
@@ -157,7 +157,7 @@ export default function Create() {
         address: CONFIG.portal,
         abi: [...portalAbi, ...knownErrorsAbi],
         functionName: 'createLaunch',
-        // CreateLaunchParams has no quoteAsset: RobinPortal fixes its quote
+        // CreateLaunchParams has no quoteAsset: StagPortal fixes its quote
         // asset (USDG) at construction. portalAbi in lib/abi.ts matches the
         // struct exactly.
         args: [{

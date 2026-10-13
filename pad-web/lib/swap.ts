@@ -23,7 +23,7 @@ const POOL_KEY_TUPLE = {
 } as const;
 
 const routerErrorsAbi = parseAbi(['error V4TooLittleReceived(uint256 minAmountOutReceived, uint256 amountReceived)']);
-const NO_LIQUIDITY_SELECTOR = '43d335e6'; // RobinHook.NoLiquidityToFill()
+const NO_LIQUIDITY_SELECTOR = '43d335e6'; // StagHook.NoLiquidityToFill()
 const WRAPPED_ERROR_SELECTOR = '0x90bfb865'; // PoolManager's WrappedError(address,bytes4,bytes,bytes) around a hook revert
 
 export type SwapSide = { key: PoolKey; zeroForOne: boolean; amountIn: bigint; currencyIn: Address; currencyOut: Address };
@@ -79,7 +79,7 @@ export async function quoteExactIn(client: PublicClient, p: SwapSide): Promise<b
     for (let i = 0; i < 8 && err; i++) {
       const raw = (err as { data?: unknown }).data;
       const hex = typeof raw === 'string' ? raw : (raw as { data?: unknown } | undefined)?.data;
-      // RobinHook reverts a swap that would fill nothing (NoLiquidityToFill,
+      // StagHook reverts a swap that would fill nothing (NoLiquidityToFill,
       // wrapped by the PoolManager) instead of letting it move the price for
       // free. For a quote that means there is nothing to fill against: 0.
       if (typeof hex === 'string' && hex.startsWith('0x')) {

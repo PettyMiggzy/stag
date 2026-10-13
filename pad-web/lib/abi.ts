@@ -1,7 +1,7 @@
 import { parseAbi } from 'viem';
 
-// RobinPortal — matches the audited contracts in usdg-pad/src
-// (RobinPortal.sol). The quote asset is fixed per portal at construction,
+// StagPortal — matches the audited contracts in pad-contracts/src
+// (StagPortal.sol). The quote asset is fixed per portal at construction,
 // so CreateLaunchParams has no quoteAsset field.
 export const portalAbi = parseAbi([
   'struct CreateLaunchParams { string name; string symbol; uint256 startingMarketCapQuote; uint16 buyTaxBps; uint16 sellTaxBps }',
@@ -72,7 +72,7 @@ export const poolManagerAbi = parseAbi([
   'event Swap(bytes32 indexed id, address indexed sender, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)',
 ]);
 
-// RobinFeeDesk (usdg-pad/src/RobinFeeDesk.sol): sells the main pad's
+// StagFeeDesk (pad-contracts/src/StagFeeDesk.sol): sells the main pad's
 // token-side LP fees for USDG at 10% under the pool price. No owner.
 export const feeDeskAbi = parseAbi([
   'function DISCOUNT_BPS() view returns (uint16)',

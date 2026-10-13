@@ -1,26 +1,27 @@
-# STAG Pad by Jarvis - deployed on Robinhood Chain (chain 4663)
+# STAG Pad - deployed on Robinhood Chain (chain 4663)
 
-Built and deployed by Jarvis the Dev, King Petty's AI assistant. The code is the STAG Pad V4 relaunch
-stack, unchanged (the compiled bytecode matches it exactly); only comments and the Jarvis header differ.
-Quote asset: USDG. Platform share on the house pad: 20%.
+Built and deployed by Jarvis the Dev, King Petty's AI assistant (the Jarvis header is at the top of every source file).
+Quote asset: USDG. Platform share on the house pad: 20%. Buying and selling with ETH is routed by the site/SDK
+through Uniswap's router; no contract here is involved in that leg.
 
-Deployed in blocks 87453016 - 87453138 (13 transactions). All ten contracts show a Sourcify match.
+Deployed 2026-10-13 in blocks around 87533000 (13 transactions). All ten contracts are an exact match on Sourcify,
+built with the metadata hash on so the bytecode is unique to this source.
 
 | contract | address |
 |---|---|
-| StagTreasury (owner: the STAG owner wallet) | 0x32E53bc783F1FB0432A06225350EB65c85E949e8 |
-| StagHook | 0x319Fdb13053C5CFf7F610bd05AAE891D870dA8Cc |
-| StagFeeDesk | 0xF24FB67f3e43dE6b23284C504E1831EC74F11215 |
-| StagPortal (main portal) | 0xAA34Fc6CD722344B61592E07369634BD72e8226d |
-| PadRevenueSplitter implementation | 0x6C084EC17cf2C7956F9f6614803BC33d4289e51A |
-| StagPadFactory (ownership offered to the owner wallet; call acceptOwnership()) | 0xA856E63Ae02856A668a00A7fE7bAf7Ce337Fd3Cf |
-| PadPortalTemplate (#1) | 0x35ce2C68bFf8F4e06375e8a8B39a139b0cfBA52D |
-| HolderTokenDeployer | 0x5C36F449F51D37525D0386e6F4C0Ea34A7B45FB9 |
-| HolderPadTemplate (#2, approved) | 0xAEe8da7E1D0a62D79Dd25d47015ca8CD6f3B58cE |
-| House pad "STAG Pad by Jarvis" (HolderPadPortal) - point the site at this | 0xE078f4C3818eC6a87FE6DA08e0c1706dC479ff81 |
+| StagTreasury (owner: the STAG owner wallet) | 0x6E71373E6F0823d664a51E6476152aFD0208A325 |
+| StagHook | 0x3523741dD9c66870C04a7A7e409470f1Fd4F68Cc |
+| StagFeeDesk | 0xd991Be3882d4ACf61F8ADb8b2c4A8A865A4f5886 |
+| StagPortal (main portal) | 0x53403484Fa8c01fD60C91a88C05138C3b0068502 |
+| PadRevenueSplitter implementation | 0x4a64de2191d95E9401Bd5810525A3de8Be61fe35 |
+| StagPadFactory (ownership offered to the owner wallet; call acceptOwnership()) | 0xCdC800FbDC88c3ac1C4133Ca4d7Af48d8B968181 |
+| PadPortalTemplate (#1) | 0x2C7c144cDDBF9C3b0C4aA3E9E7E01d6af6d1B883 |
+| HolderTokenDeployer | 0xCb9Df568038bEF945d800b9b57f288F161Dca60E |
+| HolderPadTemplate (#2, approved) | 0xADa5fCEdC6b2d67560fD250abE951eD9021618D3 |
+| House pad "STAG Pad" (HolderPadPortal) - point the site at this | 0x5B91a07eD3421980aed3c423b311a8d42E914F64 |
 
-Owner wallet: 0x7696Cd99d1EbC0F3A5a4A8525377ec35C6Ca196D (owns the treasury and the house pad now).
-Deployer wallet (holds no funds): 0xdB4F6fa0A30df7e093CeA5d1a9509c5Cddde4777.
+Owner wallet: 0x7696Cd99d1EbC0F3A5a4A8525377ec35C6Ca196D (owns the treasury and the house pad; the factory is offered to it, call acceptOwnership()).
+Deployer wallet (holds no funds beyond dust): 0xdB4F6fa0A30df7e093CeA5d1a9509c5Cddde4777.
 
 Rebuild: `bash script/setup-deps.sh && forge build` (solc 0.8.26, cancun, pinned in foundry.toml).
 
