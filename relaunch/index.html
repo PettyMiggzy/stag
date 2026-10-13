@@ -22,12 +22,25 @@ nav{display:flex;gap:24px}nav a{font-size:.92rem;color:var(--mute);text-decorati
 .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 22px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-weight:700;text-decoration:none;transition:.15s}
 .btn:hover{border-color:var(--neon);transform:translateY(-1px)}.btn.main{background:var(--neon);border-color:var(--neon);color:var(--neon-d)}.btn.gold{border-color:var(--gold);color:var(--gold)}
 .cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:24px}
-.hero{text-align:center;padding:36px 0 54px;background:radial-gradient(60% 50% at 50% 28%,rgba(57,255,20,.16),transparent 70%)}
-.hero img.logo{width:min(560px,86vw);height:auto;aspect-ratio:1;border-radius:50%;box-shadow:0 0 70px rgba(57,255,20,.28)}
+.hero{overflow:hidden;text-align:center;padding:36px 0 54px;background:radial-gradient(60% 50% at 50% 28%,rgba(57,255,20,.16),transparent 70%)}
+.hero img.logo{border-radius:50%;box-shadow:0 0 70px rgba(57,255,20,.28)}
+.logo-wrap{position:relative;width:min(560px,86vw);margin-inline:auto;aspect-ratio:1}
+.logo-wrap img.logo{position:relative;z-index:2;width:100%;height:100%;animation:breathe 5s ease-in-out infinite}
+.logo-wrap::before,.logo-wrap::after{content:"";position:absolute;inset:-4%;border-radius:50%;z-index:1;pointer-events:none}
+.logo-wrap::before{background:conic-gradient(from 0deg,transparent 0 55%,rgba(57,255,20,.55) 70%,rgba(232,195,90,.6) 82%,transparent 95%);-webkit-mask:radial-gradient(circle,transparent 62%,#000 63%,#000 67%,transparent 68%);mask:radial-gradient(circle,transparent 62%,#000 63%,#000 67%,transparent 68%);animation:spin 9s linear infinite}
+.logo-wrap::after{inset:-10%;background:radial-gradient(circle,rgba(57,255,20,.18),transparent 62%);animation:pulse 5s ease-in-out infinite}
+.eq{display:flex;gap:5px;align-items:flex-end;justify-content:center;height:34px;margin-top:18px}
+.eq i{width:6px;border-radius:3px;background:linear-gradient(var(--neon),var(--gold));height:30%;animation:eq 1.1s ease-in-out infinite}
+.eq i:nth-child(2n){animation-duration:.8s}.eq i:nth-child(3n){animation-duration:1.4s}.eq i:nth-child(4n){animation-delay:-.4s}.eq i:nth-child(5n){animation-delay:-.7s}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.018);filter:brightness(1.12) saturate(1.1)}}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes eq{0%,100%{height:18%}50%{height:100%}}
+@media(prefers-reduced-motion:reduce){.logo-wrap img.logo,.logo-wrap::before,.logo-wrap::after,.eq i{animation:none}.eq i{height:55%}}
 .hero h1{font-size:clamp(2.6rem,8vw,5.2rem);margin-top:22px}.hero h1 em{font-style:normal;color:var(--gold)}
 .lead{max-width:60ch;margin:16px auto 0;color:var(--mute);font-size:1.1rem}
-.count{display:inline-flex;gap:10px;align-items:baseline;margin-top:20px;padding:8px 18px;border:1px solid var(--gold-d);border-radius:999px;background:rgba(232,195,90,.06)}
-.count b{font-family:var(--display);font-size:2rem;color:var(--gold)}
+.count{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:2px 10px;align-items:baseline;margin-top:20px;padding:8px 18px;border:1px solid var(--gold-d);border-radius:999px;background:rgba(232,195,90,.06)}
+.count b{white-space:nowrap;font-family:var(--display);font-size:2rem;color:var(--gold)}
 section{padding:70px 0;border-top:1px solid var(--line)}.alt{background:var(--pine)}
 .head{margin-bottom:30px}.head h2{font-size:clamp(2rem,5vw,3.2rem);margin-top:8px}.head h2 em{font-style:normal;color:var(--neon)}.head p{margin-top:12px;color:var(--mute);max-width:62ch}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:800px){.two{grid-template-columns:1fr}}
@@ -46,7 +59,8 @@ footer img{width:72px;height:72px;border-radius:50%;margin-inline:auto}
 
 <main id="top">
 <div class="hero"><div class="wrap">
-  <img class="logo" src="/a/stag-ecosystem.webp" alt="$STAG Ecosystem: StagR CRM and StagHouse Records" width="1000" height="1000" fetchpriority="high">
+  <div class="logo-wrap"><img class="logo" src="/a/stag-ecosystem.webp" alt="$STAG Ecosystem: StagR CRM and StagHouse Records" width="1000" height="1000" fetchpriority="high"></div>
+  <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <h1>The <em>$STAG</em> ecosystem</h1>
   <p class="lead">Real businesses. Real music. One community. $STAG ties together StagR CRM, built for service businesses, and StagHouse Records, built for music.</p>
   <div class="count"><span class="mono">Relaunch · Oct 22</span><b id="days">2026</b></div>
