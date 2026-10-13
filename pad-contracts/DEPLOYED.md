@@ -23,3 +23,7 @@ Owner wallet: 0x7696Cd99d1EbC0F3A5a4A8525377ec35C6Ca196D (owns the treasury and 
 Deployer wallet (holds no funds): 0xdB4F6fa0A30df7e093CeA5d1a9509c5Cddde4777.
 
 Rebuild: `bash script/setup-deps.sh && forge build` (solc 0.8.26, cancun, pinned in foundry.toml).
+
+## Site
+
+https://stag-pad.vercel.app (source: ../pad-web). Reads this deployment by default; see pad-web/.env.example.
