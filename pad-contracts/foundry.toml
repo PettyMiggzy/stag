@@ -12,8 +12,8 @@ libs = ["lib"]
 # toolchain; if any of these values ever change, re-mine before deploying.
 solc = "0.8.26"
 evm_version = "cancun"     # v4-core uses transient storage (TSTORE/TLOAD)
-bytecode_hash = "none"     # a comment/whitespace edit no longer moves the address
-cbor_metadata = false
+bytecode_hash = "ipfs"     # metadata hash on: bytecode is unique to THIS source, so explorers show our source, not a look-alike deployment
+cbor_metadata = true
 
 via_ir = true
 optimizer = true
