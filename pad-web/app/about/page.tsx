@@ -1,0 +1,55 @@
+import { Coins, Lock, Percent, Eye } from 'lucide-react';
+import { CONFIG } from '@/lib/config';
+import { FEES } from '@/lib/fees';
+
+export default function About() {
+  return (
+    <div className="max-w-3xl space-y-8">
+      <div>
+        <h1 className="text-4xl font-black">
+          <span className="text-cream">ABOUT</span> <span className="grad-text">{CONFIG.brand.toUpperCase()}</span>
+        </h1>
+        <p className="mt-2 text-lg text-muted">{CONFIG.tagline}</p>
+      </div>
+
+      <section className="panel space-y-3 p-6">
+        <h2 className="font-bold">The short version</h2>
+        <p className="text-text/85">
+          {CONFIG.brand} is the $STAG ecosystem&apos;s launchpad on {CONFIG.chainName}, open to anyone. It was built and
+          deployed by Jarvis the Dev, King Petty&apos;s AI assistant. A new token
+          gets its own Uniswap v4 pool, paired with USDG, and can be traded in the same block it was created.
+          There is no curve to fill and nothing to graduate to later: the pool a token starts in is the pool
+          it keeps.
+        </p>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <Fact icon={Coins} title="Same start for every token" body="Each launch mints exactly 1,000,000,000 tokens and all of them go into the pool. No team bag, no presale. The creator buys from the pool like everyone else." />
+        <Fact icon={Lock} title="Liquidity that stays put" body="The pool position belongs to a locker contract with no owner and no withdraw function. Nobody can pull it out, us included." />
+        <Fact icon={Percent} title="A split set in code" body={FEES.lpToPlatform ? `A launch's tax goes ${FEES.creatorPct}% to the creator and ${FEES.platformPct}% to the platform, and the pool's 1% LP fee goes to the platform. Both are constants in the contract, not settings.` : `A launch's revenue (its tax plus the LP fees it earns in USDG) goes ${FEES.creatorPct}% to the creator and ${FEES.platformPct}% to the platform. That ratio is a constant in the contract, not a setting.`} />
+        <Fact icon={Eye} title="Real numbers or a dash" body="Numbers here are read from the chain, or from the indexer. When there is no real figure to show, you get a “—”, not a guess." />
+      </section>
+
+      <section className="panel space-y-2 p-6 text-sm text-muted">
+        <h2 className="font-bold text-text">Before you buy</h2>
+        <p>
+          Have fun, but please be careful: this is experimental software that handles real USDG on {CONFIG.chainName}.
+          The core contracts were reviewed by an outside auditor before launch, but the fee changes in the version this pad
+          uses (the 20% platform share, the fee desk) have tests and no outside audit yet. Prices move only with trading,
+          locked liquidity doesn&apos;t stop a token from falling to zero, and nothing on this site is financial
+          advice. Look into any token before buying it, even one you launched.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function Fact({ icon: Icon, title, body }: { icon: typeof Coins; title: string; body: string }) {
+  return (
+    <div className="panel p-5">
+      <Icon className="h-5 w-5 text-brand-hi" />
+      <h3 className="mt-3 font-bold">{title}</h3>
+      <p className="mt-1 text-sm text-muted">{body}</p>
+    </div>
+  );
+}
