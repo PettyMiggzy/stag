@@ -11,12 +11,6 @@ import { shortAddr } from '@/lib/format';
 import { browserProvider, isPhone, walletAppLinks } from '@/lib/browserWallet';
 import { useEnsureChain, useWalletChainId } from '@/lib/ensureChain';
 
-// With a WalletConnect project ID, RainbowKit's own list reaches phone
-// wallets (see lib/wallets.ts). Without one, a phone browser with no wallet
-// built in (plain Safari or Chrome) has nothing it can connect to, so the
-// button offers to reopen the page inside a wallet app instead.
-const hasWalletConnect = !!CONFIG.walletConnectProjectId;
-
 export function ConnectButton() {
   const ensureChain = useEnsureChain();
   // The wallet's own network, which can differ from wagmi's record (see
@@ -31,7 +25,9 @@ export function ConnectButton() {
           // render agree and the header doesn't shift when wallet state loads.
           if (!mounted) return <div aria-hidden className="pointer-events-none opacity-0"><button className="btn-brand px-6 py-3 text-[15px]">Connect Wallet</button></div>;
           if (!account) {
-            const connect = () => (!hasWalletConnect && isPhone() && !browserProvider() ? setAppsOpen(true) : openConnectModal());
+            // A phone browser with no wallet inside it always gets the "open in your wallet app" sheet: the page reopens in the
+            // wallet's own browser, where connecting is one tap and needs no WalletConnect session.
+            const connect = () => (isPhone() && !browserProvider() ? setAppsOpen(true) : openConnectModal());
             return <button className="btn-brand px-6 py-3 text-[15px]" onClick={connect}>Connect Wallet</button>;
           }
           if (chain?.unsupported || (walletChain !== undefined && walletChain !== robinhood.id)) {
