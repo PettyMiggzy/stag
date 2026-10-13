@@ -13,12 +13,12 @@
  "redirects": [
   {
    "source": "/pad",
-   "destination": "https://stag-pad-oversize-escort-hub.vercel.app",
+   "destination": "https://stag-pad.vercel.app",
    "permanent": false
   },
   {
    "source": "/pad/:path*",
-   "destination": "https://stag-pad-oversize-escort-hub.vercel.app",
+   "destination": "https://stag-pad.vercel.app",
    "permanent": false
   }
  ]
