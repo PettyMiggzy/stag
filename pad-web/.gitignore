@@ -6,3 +6,4 @@ node_modules/
 .env*.local
 *.tsbuildinfo
 design/out/
+e2e-*.png
