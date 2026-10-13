@@ -30,7 +30,7 @@ export const CONFIG = {
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 4663),
   chainName: process.env.NEXT_PUBLIC_CHAIN_NAME ?? 'Robinhood Chain',
   explorerUrl: process.env.NEXT_PUBLIC_EXPLORER_URL ?? 'https://robinhoodchain.blockscout.com',
-  brand: process.env.NEXT_PUBLIC_BRAND ?? 'STAG Pad by Jarvis',
+  brand: process.env.NEXT_PUBLIC_BRAND ?? 'STAG Pad',
   tagline: process.env.NEXT_PUBLIC_TAGLINE ?? 'Pick your price. Launch in one transaction.',
   // The site's public URL, for absolute social-preview links.
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stag-pad.vercel.app',
@@ -38,7 +38,7 @@ export const CONFIG = {
   // Rabby, Coinbase Wallet extension) work without one; phone wallets need it.
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? '',
   // Optional: a separate main site, linked as "Home" in the nav.
-  homeUrl: process.env.NEXT_PUBLIC_HOME_URL ?? 'https://stag-preview-oversize-escort-hub.vercel.app',
+  homeUrl: process.env.NEXT_PUBLIC_HOME_URL ?? 'https://stag-preview.vercel.app',
   // The pad admin wallet (owns the treasury, the factory and the house pad), shown on the /admin page.
   padAdmin: process.env.NEXT_PUBLIC_PAD_ADMIN ?? '0x7696Cd99d1EbC0F3A5a4A8525377ec35C6Ca196D',
   milestoneUsd: Number(process.env.NEXT_PUBLIC_MILESTONE_USD ?? 30000),

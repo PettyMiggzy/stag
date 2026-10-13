@@ -21,7 +21,7 @@ export function Hero() {
         <div className="max-w-[600px]">
           <h1 className="font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white drop-shadow-[0_10px_30px_rgba(0,0,0,.7)]">
             <span className="block text-[64px] sm:text-[88px] lg:text-[104px]"><span className="text-gold">$</span>STAG <span className="text-brand-hi">Pad</span></span>
-            <span className="flex items-center gap-4 text-[34px] tracking-[0.16em] text-text/90 sm:text-[46px] lg:text-[54px]">by Jarvis<span className="rounded-lg bg-stag-grad px-2.5 py-1 text-[0.45em] tracking-normal text-ink shadow-btn">V4</span></span>
+            <span className="flex items-center gap-4 text-[34px] tracking-[0.16em] text-text/90 sm:text-[46px] lg:text-[54px]"><span className="rounded-lg bg-stag-grad px-2.5 py-1 text-[0.45em] tracking-normal text-ink shadow-btn">V4</span></span>
           </h1>
           <div className="mt-4 flex items-center gap-3 font-display text-xl font-bold uppercase text-muted sm:text-2xl">
             <span>On</span><ChainBadge className="text-xl sm:text-2xl" />
@@ -66,7 +66,7 @@ export function StatsBar({ items }: { items: Stat[] }) {
 export const STAT_ICONS = { Rocket, BarChart3, Trophy, Users };
 
 export function LaunchPromo() {
-  const points = ['Your starting market cap: $100 to $1M', 'A Uniswap v4 pool, live at once. Buy and sell with ETH', 'Your own tax, 0 to 10% each way', `${FEES.creatorPct}% of your tax paid to you`];
+  const points = ['Your starting market cap: $100 to $10K', 'A Uniswap v4 pool, live at once. Buy and sell with ETH', 'Your own tax, 0 to 10% each way', `${FEES.creatorPct}% of your tax paid to you`];
   return (
     <div className="panel relative overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -88,7 +88,7 @@ export function LaunchPromo() {
 
 export function WhyPanel() {
   const rows: [Icon, string, string][] = [
-    [Gem, 'You set the price', 'Open anywhere from $100 to $1M market cap.'],
+    [Gem, 'You set the price', 'Open anywhere from $100 to $10K market cap.'],
     [Zap, 'Real pool, block one', 'A Uniswap v4 pool, liquidity locked forever.'],
     [ShieldCheck, 'Nothing hidden', 'All 1B tokens go in the pool. No team bag.'],
     [Users, 'Creators get paid', FEES.lpToPlatform ? `${FEES.creatorPct}% of the tax, in USDG.` : `${FEES.creatorPct}% of the tax and LP fees, in USDG.`],

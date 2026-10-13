@@ -20,11 +20,11 @@ import { TokenIcon } from '@/components/TokenIcon';
 
 // The opening market cap is also the pool's starting liquidity: the whole
 // supply goes into the pool, so what DexScreener shows as liquidity starts at
-// this number. The contract accepts $100 to $1T; this site offers up to $1M.
-const PRESETS = [5_000, 10_000, 50_000, 100_000, 500_000, 1_000_000];
+// this number. The contract accepts $100 to $1T; this site offers up to $10K.
+const PRESETS = [500, 1_000, 2_500, 5_000, 10_000];
 const MIN_MC_USD = 100;
-const presetLabel = (v: number) => (v >= 1_000_000 ? `$${v / 1_000_000}M` : `$${v / 1_000}K`);
-const MAX_MC_USD = 1_000_000;
+const presetLabel = (v: number) => (v >= 1_000 ? `$${v / 1_000}K` : `$${v}`);
+const MAX_MC_USD = 10_000;
 const TOTAL_SUPPLY = 1_000_000_000;
 // Every launch opens with the creator's own buy: DexScreener (and most
 // scanners) only list a pair once it has traded. It goes through the same
@@ -264,7 +264,7 @@ export default function Create() {
                 </div>
                 <p className="mt-1.5 text-xs text-dim">
                   Opens at about {fmtUsd(openingPrice)} per token, with {fmtUsd(mcUsd)} of starting liquidity: the whole
-                  supply goes into the pool, so the liquidity DexScreener shows starts at your market cap. From $100 up to $1M.
+                  supply goes into the pool, so the liquidity DexScreener shows starts at your market cap. From $100 up to $10K.
                 </p>
               </div>
               <div>

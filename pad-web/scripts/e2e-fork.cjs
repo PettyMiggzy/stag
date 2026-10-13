@@ -38,7 +38,7 @@ const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
 const TREASURY = process.env.TREASURY || '0x32E53bc783F1FB0432A06225350EB65c85E949e8';
 const OWNER = process.env.OWNER || '0x7696Cd99d1EbC0F3A5a4A8525377ec35C6Ca196D';
 const TRADER = '0x4444444444444444444444444444444444444444';
-const MC_USD = Number(process.env.MC_USD || 25_000); // not a preset: typed into the box
+const MC_USD = Number(process.env.MC_USD || 8_000); // not a preset: typed into the box
 const SYMBOL = process.env.SYMBOL || 'ANTLR';
 
 async function rpc(method, params = []) {

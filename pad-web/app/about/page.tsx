@@ -15,8 +15,7 @@ export default function About() {
       <section className="panel space-y-3 p-6">
         <h2 className="font-bold">The short version</h2>
         <p className="text-text/85">
-          {CONFIG.brand} is the $STAG ecosystem&apos;s launchpad on {CONFIG.chainName}, open to anyone. It was built and
-          deployed by Jarvis the Dev, King Petty&apos;s AI assistant. A new token
+          {CONFIG.brand} is the $STAG ecosystem&apos;s launchpad on {CONFIG.chainName}, open to anyone. A new token
           gets its own Uniswap v4 pool, paired with USDG, and can be traded in the same block it was created.
           There is no curve to fill and nothing to graduate to later: the pool a token starts in is the pool
           it keeps.

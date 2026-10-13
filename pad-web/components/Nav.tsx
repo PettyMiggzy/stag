@@ -12,7 +12,7 @@ type Item = { label: string; href: string; external?: boolean };
 // The main $STAG site links in as "Home", next to the pad's own pages.
 const home = CONFIG.homeUrl.replace(/\/+$/, '');
 const ITEMS: Item[] = [
-  ...(home ? [{ label: 'Home', href: home, external: true }] : []),
+  ...(home ? [{ label: '$STAG', href: home, external: true }] : []),
   { label: 'Launchpad', href: '/' },
   { label: 'Create', href: '/create' },
   { label: 'Explore', href: '/explore' },
@@ -30,7 +30,7 @@ export function Logo() {
         <span className="font-display text-[26px] font-extrabold uppercase tracking-wide text-white">
           <span className="text-gold">$</span>STAG <span className="text-brand-hi">Pad</span>
         </span>
-        <span className="mt-0.5 text-[9px] font-bold tracking-[0.5em] text-muted">BY <span className="text-brand-hi">JARVIS</span> · V4</span>
+        <span className="mt-0.5 text-[9px] font-bold tracking-[0.5em] text-muted"><span className="text-brand-hi">V4</span> · ROBINHOOD CHAIN</span>
       </span>
     </Link>
   );

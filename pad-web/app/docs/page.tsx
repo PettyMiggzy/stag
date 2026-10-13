@@ -183,7 +183,7 @@ router.execute(commands, inputs, deadline)
         <Code>{`portal.createLaunch({
   name: "Antler Coin",
   symbol: "ANTLR",
-  startingMarketCapQuote: 10_000_000000n, // $10,000 in USDG's 6 decimals ($100 to $1T on-chain; the site offers up to $1M)
+  startingMarketCapQuote: 10_000_000000n, // $10,000 in USDG's 6 decimals ($100 to $1T on-chain; the site offers up to $10K)
   buyTaxBps: 200,  // 2%, up to 1000 (10%)
   sellTaxBps: 400, // 4%
 })

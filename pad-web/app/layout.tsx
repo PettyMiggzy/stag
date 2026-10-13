@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {CONFIG.homeUrl && <a href={CONFIG.homeUrl} className="hover:text-brand-hi">$STAG</a>}
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <span>{CONFIG.brand} · every launch trades against USDG on {CONFIG.chainName} · built by Jarvis the Dev, King Petty&apos;s AI assistant · not affiliated with Robinhood</span>
+              <span>{CONFIG.brand} · every launch trades against USDG on {CONFIG.chainName} · not affiliated with Robinhood</span>
             </div>
           </footer>
         </Providers>
