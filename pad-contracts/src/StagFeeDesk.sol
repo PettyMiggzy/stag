@@ -28,7 +28,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-interface IRobinHookView {
+interface IStagHookView {
     function poolConfigs(bytes32 poolId)
         external
         view
@@ -48,16 +48,16 @@ interface IRobinHookView {
 ///
 /// The price is the pool's own. To stop someone pushing it down and buying
 /// cheap in the same transaction, a sale uses the HIGHER of the live price
-/// and the price the pool opened the block at (RobinHook.blockOpenSqrtPrice),
+/// and the price the pool opened the block at (StagHook.blockOpenSqrtPrice),
 /// so moving the price down within a block never lowers what the desk charges.
-contract RobinFeeDesk is ReentrancyGuard {
+contract StagFeeDesk is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
 
     uint16 public constant DISCOUNT_BPS = 1_000; // 10% under the pool's price
     uint16 internal constant BPS = 10_000;
-    // Every launch pool's fee and spacing (RobinPortal / PadPortal).
+    // Every launch pool's fee and spacing (StagPortal / PadPortal).
     uint24 public constant POOL_FEE = 10_000;
     int24 public constant TICK_SPACING = 200;
 
@@ -146,10 +146,10 @@ contract RobinFeeDesk is ReentrancyGuard {
             hooks: IHooks(hook)
         });
         bytes32 id = PoolId.unwrap(key.toId());
-        (,,,,, bool active,) = IRobinHookView(hook).poolConfigs(id);
+        (,,,,, bool active,) = IStagHookView(hook).poolConfigs(id);
         if (!active) revert UnknownLaunch();
         (uint160 live,,,) = IPoolManager(poolManager).getSlot0(PoolId.wrap(id));
-        uint160 open = IRobinHookView(hook).blockOpenSqrtPrice(id);
+        uint160 open = IStagHookView(hook).blockOpenSqrtPrice(id);
         // token0: price of the token = (sqrtP)^2, higher sqrtP is dearer.
         // token1: price of the token = 1/(sqrtP)^2, lower sqrtP is dearer.
         if (tokenIsToken0) sqrtPriceX96 = live > open ? live : open;

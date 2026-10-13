@@ -11,11 +11,11 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {RobinHook} from "../src/RobinHook.sol";
+import {StagHook} from "../src/StagHook.sol";
 import {PadPortal} from "../src/PadPortal.sol";
 import {HolderPadPortal} from "../src/HolderPadPortal.sol";
 import {PadRevenueSplitter} from "../src/PadRevenueSplitter.sol";
-import {RobinHolderToken} from "../src/RobinHolderToken.sol";
+import {StagHolderToken} from "../src/StagHolderToken.sol";
 
 /// @notice Post-deploy rehearsal against a LOCAL fork, never mainnet: after
 /// DeployRobinhood.s.sol has run on an anvil fork of Robinhood Chain, this
@@ -44,7 +44,7 @@ contract RehearseOnFork is Script {
         uint256 traderKey = vm.envUint("TRADER_KEY");
         address creator = vm.addr(creatorKey);
         address trader = vm.addr(traderKey);
-        RobinHook hook = RobinHook(pad.hook());
+        StagHook hook = StagHook(pad.hook());
         require(IERC20(USDG).balanceOf(trader) >= 200e6, "fund the trader with USDG first (see header)");
 
         // 1. Launch: creator 80%, holders 20%, 3%/3% tax, $1,000 opening market cap.
@@ -101,8 +101,8 @@ contract RehearseOnFork is Script {
         PadRevenueSplitter sp = PadRevenueSplitter(pad.splitterForToken(t));
         vm.startBroadcast(traderKey);
         hook.flush(key);
-        uint256 shared = RobinHolderToken(t).distribute();
-        uint256 dividend = RobinHolderToken(t).claim();
+        uint256 shared = StagHolderToken(t).distribute();
+        uint256 dividend = StagHolderToken(t).claim();
         vm.stopBroadcast();
         uint256 creatorPool = revenue - (revenue * 2_000) / 10_000;
         require(shared == (creatorPool * 2_000) / 10_000, "holders did not get their 20%");

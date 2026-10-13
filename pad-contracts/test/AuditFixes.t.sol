@@ -18,15 +18,15 @@ import {CustomRevert} from "@uniswap/v4-core/src/libraries/CustomRevert.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {HookMiner} from "@uniswap/v4-periphery/test/shared/HookMiner.sol";
 
-import {RobinPortal} from "../src/RobinPortal.sol";
-import {RobinHook} from "../src/RobinHook.sol";
-import {RobinRevenueSplitter} from "../src/RobinRevenueSplitter.sol";
-import {RobinLocker} from "../src/RobinLocker.sol";
-import {RobinLaunchToken} from "../src/RobinLaunchToken.sol";
-import {RobinPadFactory} from "../src/RobinPadFactory.sol";
+import {StagPortal} from "../src/StagPortal.sol";
+import {StagHook} from "../src/StagHook.sol";
+import {StagRevenueSplitter} from "../src/StagRevenueSplitter.sol";
+import {StagLocker} from "../src/StagLocker.sol";
+import {StagLaunchToken} from "../src/StagLaunchToken.sol";
+import {StagPadFactory} from "../src/StagPadFactory.sol";
 import {PadRevenueSplitter} from "../src/PadRevenueSplitter.sol";
-import {RobinTreasury} from "../src/RobinTreasury.sol";
-import {RobinFeeDesk} from "../src/RobinFeeDesk.sol";
+import {StagTreasury} from "../src/StagTreasury.sol";
+import {StagFeeDesk} from "../src/StagFeeDesk.sol";
 
 /// @dev Stand-in USDC. Deployed with deployCodeTo at a chosen address so a
 /// test can force either pool orientation (token below or above quote).
@@ -36,7 +36,7 @@ contract TestUSDC is MockERC20 {
 
 /// @notice Regression tests for the 2026-09-24 adversarial audit
 /// (docs/AUDIT-2026-09-24.md). Every tax assertion is exact, and each shape
-/// runs in both orientations — the gaps tests-spec-6 found in RobinPad.t.sol.
+/// runs in both orientations — the gaps tests-spec-6 found in StagPad.t.sol.
 contract AuditFixesTest is Test, Deployers {
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
@@ -57,10 +57,10 @@ contract AuditFixesTest is Test, Deployers {
 
     struct Env {
         MockERC20 quote;
-        RobinHook hook;
-        RobinPortal portal;
-        RobinTreasury treasury;
-        RobinFeeDesk desk;
+        StagHook hook;
+        StagPortal portal;
+        StagTreasury treasury;
+        StagFeeDesk desk;
         address token;
         address locker;
         address splitter;
@@ -72,10 +72,10 @@ contract AuditFixesTest is Test, Deployers {
         deployFreshManagerAndRouters();
     }
 
-    function _hook() internal returns (RobinHook h) {
+    function _hook() internal returns (StagHook h) {
         bytes memory args = abi.encode(address(manager), address(this));
-        (address predicted, bytes32 salt) = HookMiner.find(address(this), FLAGS, type(RobinHook).creationCode, args);
-        h = new RobinHook{salt: salt}(address(manager), address(this));
+        (address predicted, bytes32 salt) = HookMiner.find(address(this), FLAGS, type(StagHook).creationCode, args);
+        h = new StagHook{salt: salt}(address(manager), address(this));
         require(address(h) == predicted, "hook address mismatch");
     }
 
@@ -85,22 +85,22 @@ contract AuditFixesTest is Test, Deployers {
         deployCodeTo("AuditFixes.t.sol:TestUSDC", quoteAt);
         e.quote = MockERC20(quoteAt);
         e.hook = _hook();
-        e.treasury = new RobinTreasury(makeAddr("treasuryOwner"));
-        e.desk = new RobinFeeDesk(address(manager), address(e.hook), quoteAt, address(e.treasury));
-        e.portal = new RobinPortal(address(manager), address(e.hook), address(e.treasury), quoteAt, true, address(e.desk));
+        e.treasury = new StagTreasury(makeAddr("treasuryOwner"));
+        e.desk = new StagFeeDesk(address(manager), address(e.hook), quoteAt, address(e.treasury));
+        e.portal = new StagPortal(address(manager), address(e.hook), address(e.treasury), quoteAt, true, address(e.desk));
         e.hook.bootstrapMainPortal(address(e.portal));
 
         vm.prank(creator);
         (e.token, e.locker) = e.portal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Audit Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Audit STAG Pad",
                 symbol: "AUDIT",
                 startingMarketCapQuote: STARTING_MC,
                 buyTaxBps: BUY_BPS,
                 sellTaxBps: SELL_BPS
             })
         );
-        e.splitter = RobinLocker(e.locker).splitter();
+        e.splitter = StagLocker(e.locker).splitter();
         e.tokenIsToken0 = e.token < quoteAt;
         e.key = PoolKey({
             currency0: Currency.wrap(e.tokenIsToken0 ? e.token : quoteAt),
@@ -114,7 +114,7 @@ contract AuditFixesTest is Test, Deployers {
         e.quote.mint(trader, 1_000_000e6);
         vm.startPrank(trader);
         e.quote.approve(address(swapRouter), type(uint256).max);
-        RobinLaunchToken(e.token).approve(address(swapRouter), type(uint256).max);
+        StagLaunchToken(e.token).approve(address(swapRouter), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -159,7 +159,7 @@ contract AuditFixesTest is Test, Deployers {
         assertEq(_pending(e) - p0, (1_000e6 * uint256(BUY_BPS)) / 10_000, "exact-in buy tax");
 
         // Exact-in sell: 7% of the gross USDC the pool pays out.
-        uint256 bal = RobinLaunchToken(e.token).balanceOf(trader);
+        uint256 bal = StagLaunchToken(e.token).balanceOf(trader);
         p0 = _pending(e);
         (q,) = _swap(e, false, -int256(bal / 4));
         uint256 tax = _pending(e) - p0;
@@ -186,10 +186,10 @@ contract AuditFixesTest is Test, Deployers {
         uint256 total = _pending(e);
         e.hook.flush(e.key);
         uint256 platform = (total * 2_000) / 10_000;
-        assertEq(RobinRevenueSplitter(e.splitter).creditedToPlatform(quoteAt), platform, "main pad platform share");
-        assertEq(RobinRevenueSplitter(e.splitter).creditedToCreator(quoteAt), total - platform, "creator share");
-        assertEq(RobinRevenueSplitter(e.splitter).creditedToCreator(e.token), 0, "never credited in the launch token");
-        assertEq(RobinLaunchToken(e.token).balanceOf(e.splitter), 0, "splitter never holds the launch token");
+        assertEq(StagRevenueSplitter(e.splitter).creditedToPlatform(quoteAt), platform, "main pad platform share");
+        assertEq(StagRevenueSplitter(e.splitter).creditedToCreator(quoteAt), total - platform, "creator share");
+        assertEq(StagRevenueSplitter(e.splitter).creditedToCreator(e.token), 0, "never credited in the launch token");
+        assertEq(StagLaunchToken(e.token).balanceOf(e.splitter), 0, "splitter never holds the launch token");
         assertEq(e.quote.balanceOf(e.splitter), total, "splitter holds exactly what it credited");
     }
 
@@ -208,21 +208,21 @@ contract AuditFixesTest is Test, Deployers {
     function _opensAtEdgeAndBlocksFreePush(address quoteAt) internal {
         Env memory e = _launch(quoteAt);
         (uint160 sqrtBefore, int24 tick,,) = manager.getSlot0(e.key.toId());
-        int24 edge = e.tokenIsToken0 ? RobinLocker(e.locker).tickLower() : RobinLocker(e.locker).tickUpper();
+        int24 edge = e.tokenIsToken0 ? StagLocker(e.locker).tickLower() : StagLocker(e.locker).tickUpper();
         assertEq(tick, edge, "pool should open exactly at the position's near edge");
 
         // Selling before any buy has nothing to fill: the swap would only
         // move the price across empty ticks, so the hook rejects it.
         deal(e.token, attacker, 1 ether);
         vm.startPrank(attacker);
-        RobinLaunchToken(e.token).approve(address(swapRouter), type(uint256).max);
+        StagLaunchToken(e.token).approve(address(swapRouter), type(uint256).max);
         bool zeroForOne = e.tokenIsToken0;
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
                 address(e.hook),
                 IHooks.afterSwap.selector,
-                abi.encodeWithSelector(RobinHook.NoLiquidityToFill.selector),
+                abi.encodeWithSelector(StagHook.NoLiquidityToFill.selector),
                 abi.encodeWithSelector(Hooks.HookCallFailed.selector)
             )
         );
@@ -267,7 +267,7 @@ contract AuditFixesTest is Test, Deployers {
         deal(e.token, attacker, 1_000_000 ether);
         e.quote.mint(attacker, 1_000e6);
         vm.startPrank(attacker);
-        RobinLaunchToken(e.token).approve(address(modifyLiquidityRouter), type(uint256).max);
+        StagLaunchToken(e.token).approve(address(modifyLiquidityRouter), type(uint256).max);
         e.quote.approve(address(modifyLiquidityRouter), type(uint256).max);
         // A one-sided range just past the price on either side: a limit
         // order that other people's swaps would fill with no tax.
@@ -278,7 +278,7 @@ contract AuditFixesTest is Test, Deployers {
                     CustomRevert.WrappedError.selector,
                     address(e.hook),
                     IHooks.beforeAddLiquidity.selector,
-                    abi.encodeWithSelector(RobinHook.LiquidityLocked.selector),
+                    abi.encodeWithSelector(StagHook.LiquidityLocked.selector),
                     abi.encodeWithSelector(Hooks.HookCallFailed.selector)
                 )
             );
@@ -307,7 +307,7 @@ contract AuditFixesTest is Test, Deployers {
                 CustomRevert.WrappedError.selector,
                 address(e.hook),
                 IHooks.afterSwap.selector,
-                abi.encodeWithSelector(RobinHook.PartialFillUnsupported.selector),
+                abi.encodeWithSelector(StagHook.PartialFillUnsupported.selector),
                 abi.encodeWithSelector(Hooks.HookCallFailed.selector)
             )
         );
@@ -324,49 +324,49 @@ contract AuditFixesTest is Test, Deployers {
     // ------------------------------------------------------------------
 
     function test_BootstrapFactoryRejectsNonFactoriesAndMiswiredFactories() public {
-        RobinHook h = _hook();
-        vm.expectRevert(RobinHook.InvalidFactory.selector);
+        StagHook h = _hook();
+        vm.expectRevert(StagHook.InvalidFactory.selector);
         h.bootstrapFactory(makeAddr("eoa"));
 
-        RobinHook other = _hook();
-        RobinPadFactory wrong =
-            new RobinPadFactory(address(manager), address(other), makeAddr("treasury"), address(1), address(new PadRevenueSplitter()), 100e6, address(this));
-        vm.expectRevert(RobinHook.InvalidFactory.selector);
+        StagHook other = _hook();
+        StagPadFactory wrong =
+            new StagPadFactory(address(manager), address(other), makeAddr("treasury"), address(1), address(new PadRevenueSplitter()), 100e6, address(this));
+        vm.expectRevert(StagHook.InvalidFactory.selector);
         h.bootstrapFactory(address(wrong));
 
-        RobinPadFactory right =
-            new RobinPadFactory(address(manager), address(h), makeAddr("treasury"), address(1), address(new PadRevenueSplitter()), 100e6, address(this));
+        StagPadFactory right =
+            new StagPadFactory(address(manager), address(h), makeAddr("treasury"), address(1), address(new PadRevenueSplitter()), 100e6, address(this));
         h.bootstrapFactory(address(right));
         assertEq(h.factory(), address(right));
     }
 
     function test_RenounceClosesTheFactorySlotForGood() public {
-        RobinHook h = _hook();
+        StagHook h = _hook();
         vm.prank(attacker);
-        vm.expectRevert(RobinHook.NotBootstrapper.selector);
+        vm.expectRevert(StagHook.NotBootstrapper.selector);
         h.renounceFactoryBootstrap();
 
         h.renounceFactoryBootstrap();
         assertTrue(h.factoryBootstrapped());
         assertEq(h.factory(), address(0));
 
-        RobinPadFactory f =
-            new RobinPadFactory(address(manager), address(h), makeAddr("treasury"), address(1), address(new PadRevenueSplitter()), 100e6, address(this));
-        vm.expectRevert(RobinHook.AlreadyBootstrapped.selector);
+        StagPadFactory f =
+            new StagPadFactory(address(manager), address(h), makeAddr("treasury"), address(1), address(new PadRevenueSplitter()), 100e6, address(this));
+        vm.expectRevert(StagHook.AlreadyBootstrapped.selector);
         h.bootstrapFactory(address(f));
     }
 
     function test_FactoryConstructorRejectsBadWiring() public {
-        RobinHook h = _hook();
+        StagHook h = _hook();
         address impl = address(new PadRevenueSplitter());
-        vm.expectRevert(RobinPadFactory.HookMismatch.selector);
-        new RobinPadFactory(makeAddr("otherManager"), address(h), makeAddr("t"), address(1), impl, 100e6, address(this));
-        vm.expectRevert(RobinPadFactory.FeeTooHigh.selector);
-        new RobinPadFactory(address(manager), address(h), makeAddr("t"), address(1), impl, 100e18, address(this));
-        vm.expectRevert(RobinPadFactory.ZeroAddress.selector);
-        new RobinPadFactory(address(manager), address(h), address(0), address(1), impl, 100e6, address(this));
-        vm.expectRevert(RobinPadFactory.ZeroAddress.selector); // a splitter implementation with no code
-        new RobinPadFactory(address(manager), address(h), makeAddr("t"), address(1), makeAddr("noCode"), 100e6, address(this));
+        vm.expectRevert(StagPadFactory.HookMismatch.selector);
+        new StagPadFactory(makeAddr("otherManager"), address(h), makeAddr("t"), address(1), impl, 100e6, address(this));
+        vm.expectRevert(StagPadFactory.FeeTooHigh.selector);
+        new StagPadFactory(address(manager), address(h), makeAddr("t"), address(1), impl, 100e18, address(this));
+        vm.expectRevert(StagPadFactory.ZeroAddress.selector);
+        new StagPadFactory(address(manager), address(h), address(0), address(1), impl, 100e6, address(this));
+        vm.expectRevert(StagPadFactory.ZeroAddress.selector); // a splitter implementation with no code
+        new StagPadFactory(address(manager), address(h), makeAddr("t"), address(1), makeAddr("noCode"), 100e6, address(this));
     }
 
     function test_PortalCannotRegisterAPoolItDidNotInitialize() public {
@@ -374,7 +374,7 @@ contract AuditFixesTest is Test, Deployers {
         PoolKey memory squat = e.key;
         squat.currency1 = Currency.wrap(makeAddr("predictedNextToken")); // some other pool on this hook
         vm.prank(address(e.portal)); // authorized, but never initialized this key
-        vm.expectRevert(RobinHook.NotInitializer.selector);
+        vm.expectRevert(StagHook.NotInitializer.selector);
         e.hook.registerPool(squat, e.splitter, e.locker, LOW_QUOTE, false, 100, 100);
     }
 
@@ -395,17 +395,17 @@ contract AuditFixesTest is Test, Deployers {
         assertGt(uint256(bought), 1e27 / 2, "one buyer may take most of the supply; no max-wallet");
 
         // Selling the whole bag straight back works in the same block — no cooldown, not a honeypot.
-        uint256 bal = RobinLaunchToken(e.token).balanceOf(trader);
+        uint256 bal = StagLaunchToken(e.token).balanceOf(trader);
         (int256 got,) = _swap(e, false, -int256(bal));
         assertGt(got, 0, "sell-all must succeed");
-        assertEq(RobinLaunchToken(e.token).balanceOf(trader), 0);
+        assertEq(StagLaunchToken(e.token).balanceOf(trader), 0);
 
         // Wallet-to-wallet transfers are plain ERC-20: no tax, no restriction.
         (, int256 again) = _swap(e, true, -int256(10e6));
         address friend = makeAddr("friend");
         vm.prank(trader);
-        RobinLaunchToken(e.token).transfer(friend, uint256(again));
-        assertEq(RobinLaunchToken(e.token).balanceOf(friend), uint256(again), "transfers are never taxed");
+        StagLaunchToken(e.token).transfer(friend, uint256(again));
+        assertEq(StagLaunchToken(e.token).balanceOf(friend), uint256(again), "transfers are never taxed");
     }
 
     function test_NoTradingRestrictions_TokenIsCurrency1() public {
@@ -424,20 +424,20 @@ contract AuditFixesTest is Test, Deployers {
         Env memory e = _launch(LOW_QUOTE);
         e.quote.mint(e.splitter, 1_000e6); // e.g. someone mistook the splitter for a pay-in address
 
-        RobinRevenueSplitter(e.splitter).sweepSurplus(LOW_QUOTE);
-        assertEq(RobinRevenueSplitter(e.splitter).creditedToPlatform(LOW_QUOTE), 200e6);
-        assertEq(RobinRevenueSplitter(e.splitter).creditedToCreator(LOW_QUOTE), 800e6);
+        StagRevenueSplitter(e.splitter).sweepSurplus(LOW_QUOTE);
+        assertEq(StagRevenueSplitter(e.splitter).creditedToPlatform(LOW_QUOTE), 200e6);
+        assertEq(StagRevenueSplitter(e.splitter).creditedToCreator(LOW_QUOTE), 800e6);
 
-        vm.expectRevert(RobinRevenueSplitter.NothingToClaim.selector);
-        RobinRevenueSplitter(e.splitter).sweepSurplus(LOW_QUOTE);
+        vm.expectRevert(StagRevenueSplitter.NothingToClaim.selector);
+        StagRevenueSplitter(e.splitter).sweepSurplus(LOW_QUOTE);
 
         vm.prank(creator);
-        vm.expectRevert(RobinRevenueSplitter.InvalidRecipient.selector);
-        RobinRevenueSplitter(e.splitter).claim(e.splitter, LOW_QUOTE);
+        vm.expectRevert(StagRevenueSplitter.InvalidRecipient.selector);
+        StagRevenueSplitter(e.splitter).claim(e.splitter, LOW_QUOTE);
     }
 
     // ------------------------------------------------------------------
-    // RobinFeeDesk: the main pad's token-side LP fees, sold at 10% off
+    // StagFeeDesk: the main pad's token-side LP fees, sold at 10% off
     // ------------------------------------------------------------------
 
     uint256 constant Q96 = 1 << 96;
@@ -465,7 +465,7 @@ contract AuditFixesTest is Test, Deployers {
         sold = uint256(bought) / 2;
         _swap(e, false, -int256(sold));
         uint256 treasuryBefore = e.quote.balanceOf(address(e.treasury));
-        RobinLocker(e.locker).harvestFees();
+        StagLocker(e.locker).harvestFees();
         assertGt(e.quote.balanceOf(address(e.treasury)), treasuryBefore, "USDC-side LP fees to the treasury");
         assertApproxEqRel(e.desk.inventory(e.token), sold / 100, 0.001e18, "1% of what was sold, in the token");
         vm.roll(block.number + 1);
@@ -497,13 +497,13 @@ contract AuditFixesTest is Test, Deployers {
         uint256 inv = e.desk.inventory(e.token);
         uint256 tBefore = e.quote.balanceOf(address(e.treasury));
         vm.prank(buyer);
-        vm.expectRevert(RobinFeeDesk.Slippage.selector);
+        vm.expectRevert(StagFeeDesk.Slippage.selector);
         e.desk.buy(e.token, 1e6, q + 1, buyer);
         vm.prank(buyer);
         (uint256 out, uint256 paid) = e.desk.buy(e.token, 1e6, q, buyer);
         assertEq(out, q);
         assertEq(paid, 1e6);
-        assertEq(RobinLaunchToken(e.token).balanceOf(buyer), out);
+        assertEq(StagLaunchToken(e.token).balanceOf(buyer), out);
         assertEq(e.quote.balanceOf(address(e.treasury)), tBefore + 1e6, "every cent to the treasury");
         assertEq(e.desk.inventory(e.token), inv - out);
 
@@ -517,13 +517,13 @@ contract AuditFixesTest is Test, Deployers {
         assertEq(buyerBefore - e.quote.balanceOf(buyer), paid, "pays only for what it got");
         assertEq(e.desk.inventory(e.token), 0);
         vm.prank(buyer);
-        vm.expectRevert(RobinFeeDesk.NothingForSale.selector);
+        vm.expectRevert(StagFeeDesk.NothingForSale.selector);
         e.desk.buy(e.token, 1e6, 0, buyer);
 
         // Only launch pools on this hook have a price.
-        vm.expectRevert(RobinFeeDesk.UnknownLaunch.selector);
+        vm.expectRevert(StagFeeDesk.UnknownLaunch.selector);
         e.desk.quote(quoteAt, 1e6);
-        vm.expectRevert(RobinFeeDesk.UnknownLaunch.selector);
+        vm.expectRevert(StagFeeDesk.UnknownLaunch.selector);
         e.desk.quote(makeAddr("notALaunch"), 1e6);
     }
 
@@ -533,7 +533,7 @@ contract AuditFixesTest is Test, Deployers {
         (uint256 before,,) = e.desk.quote(e.token, 1e6);
 
         // Dump in this block: the live price falls, the desk's does not.
-        RobinLaunchToken t = RobinLaunchToken(e.token);
+        StagLaunchToken t = StagLaunchToken(e.token);
         _swap(e, false, -int256(t.balanceOf(trader) / 2));
         assertTrue(e.tokenIsToken0 ? _sqrtP(e) < open : _sqrtP(e) > open, "the dump moved the price down");
         (uint256 sameBlock,,) = e.desk.quote(e.token, 1e6);
@@ -553,13 +553,13 @@ contract AuditFixesTest is Test, Deployers {
 
     function test_FeeDesk_PortalRejectsADeskWiredElsewhere() public {
         deployCodeTo("AuditFixes.t.sol:TestUSDC", LOW_QUOTE);
-        RobinHook h = _hook();
-        RobinTreasury t = new RobinTreasury(makeAddr("treasuryOwner"));
-        RobinFeeDesk otherTreasury = new RobinFeeDesk(address(manager), address(h), LOW_QUOTE, makeAddr("elsewhere"));
-        vm.expectRevert(RobinPortal.FeeDeskMismatch.selector);
-        new RobinPortal(address(manager), address(h), address(t), LOW_QUOTE, true, address(otherTreasury));
-        RobinFeeDesk otherHook = new RobinFeeDesk(address(manager), makeAddr("hook"), LOW_QUOTE, address(t));
-        vm.expectRevert(RobinPortal.FeeDeskMismatch.selector);
-        new RobinPortal(address(manager), address(h), address(t), LOW_QUOTE, true, address(otherHook));
+        StagHook h = _hook();
+        StagTreasury t = new StagTreasury(makeAddr("treasuryOwner"));
+        StagFeeDesk otherTreasury = new StagFeeDesk(address(manager), address(h), LOW_QUOTE, makeAddr("elsewhere"));
+        vm.expectRevert(StagPortal.FeeDeskMismatch.selector);
+        new StagPortal(address(manager), address(h), address(t), LOW_QUOTE, true, address(otherTreasury));
+        StagFeeDesk otherHook = new StagFeeDesk(address(manager), makeAddr("hook"), LOW_QUOTE, address(t));
+        vm.expectRevert(StagPortal.FeeDeskMismatch.selector);
+        new StagPortal(address(manager), address(h), address(t), LOW_QUOTE, true, address(otherHook));
     }
 }

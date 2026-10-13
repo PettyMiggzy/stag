@@ -28,19 +28,19 @@ import {BeforeSwapDelta, BeforeSwapDeltaLibrary, toBeforeSwapDelta} from
     "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-import {IRobinSplitter} from "./interfaces/IRobinSplitter.sol";
+import {IStagSplitter} from "./interfaces/IStagSplitter.sol";
 
 /// @dev The two getters bootstrapFactory checks; an interface rather than
-/// importing RobinPadFactory, which imports this contract.
+/// importing StagPadFactory, which imports this contract.
 interface IFactoryWiring {
     function hook() external view returns (address);
     function poolManager() external view returns (address);
 }
 
-/// @notice ONE shared hook contract, used by every Robin Labs Pad launch's pool
-/// — including every white-label pad deployed through RobinPadFactory, not
-/// just the original Robin Labs Pad. Every launch is a real Uniswap v4 pool from
-/// block one (no bonding curve, no graduation — see RobinPortal), and this
+/// @notice ONE shared hook contract, used by every STAG Pad launch's pool
+/// — including every white-label pad deployed through StagPadFactory, not
+/// just the original STAG Pad. Every launch is a real Uniswap v4 pool from
+/// block one (no bonding curve, no graduation — see StagPortal), and this
 /// hook taxes every swap on every one of those pools. Deliberately a
 /// singleton instead of one hook per launch (or per pad) — see the
 /// `bootstrapMainPortal`/`bootstrapFactory`/`authorizePortal` trio below for
@@ -91,7 +91,7 @@ interface IFactoryWiring {
 /// a token-only or USDC-only range just past the price — a limit order that
 /// other people's swaps fill — and trade with no tax at all, while also
 /// taking a cut of the LP fees.
-contract RobinHook is IHooks, IUnlockCallback {
+contract StagHook is IHooks, IUnlockCallback {
     using SafeCast for uint256;
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
@@ -108,7 +108,7 @@ contract RobinHook is IHooks, IUnlockCallback {
         address locker; // the only address allowed to add liquidity to this pool
     }
 
-    uint16 public constant MAX_TAX_BPS = 1_000; // 10% per side — mirrors RobinPortal.MAX_TAX_BPS (defense in depth)
+    uint16 public constant MAX_TAX_BPS = 1_000; // 10% per side — mirrors StagPortal.MAX_TAX_BPS (defense in depth)
 
     address public immutable poolManager;
     // Not immutable: the hook must be deployed (mined to a valid flag
@@ -117,8 +117,8 @@ contract RobinHook is IHooks, IUnlockCallback {
     // time — a genuine circular dependency. Resolved with two one-time
     // bootstrap calls instead of a fragile address-prediction dance, both
     // restricted to the `bootstrapper` address passed into the constructor:
-    //   - `bootstrapMainPortal`: wires up Robin Labs Pad's own, original Portal.
-    //   - `bootstrapFactory`: wires up the ONE trusted RobinPadFactory,
+    //   - `bootstrapMainPortal`: wires up STAG Pad's own, original Portal.
+    //   - `bootstrapFactory`: wires up the ONE trusted StagPadFactory,
     //     which can then authorize as many more portals as it deploys
     //     (each is a paying customer's own white-label pad) via
     //     `authorizePortal`, forever, permissionlessly, with zero further
@@ -131,7 +131,7 @@ contract RobinHook is IHooks, IUnlockCallback {
     //
     // Passed in explicitly, NOT captured as msg.sender at construction
     // (audit finding D-1): this hook is deployed via a salted `new
-    // RobinHook{salt: salt}(...)` so its address lands on the required flag
+    // StagHook{salt: salt}(...)` so its address lands on the required flag
     // bits, and Foundry (and any other CREATE2-aware deploy tooling)
     // broadcasts a salted deploy THROUGH the shared, unowned CREATE2 factory
     // (0x4e59b844...) rather than directly from the broadcaster's EOA.
@@ -201,7 +201,7 @@ contract RobinHook is IHooks, IUnlockCallback {
         bootstrapper = bootstrapper_;
     }
 
-    /// @notice Wires up Robin Labs Pad's own original Portal. Callable exactly
+    /// @notice Wires up STAG Pad's own original Portal. Callable exactly
     /// once, only by the address named `bootstrapper` at construction.
     function bootstrapMainPortal(address portal_) external {
         if (msg.sender != bootstrapper) revert NotBootstrapper();
@@ -211,7 +211,7 @@ contract RobinHook is IHooks, IUnlockCallback {
         emit PortalAuthorized(portal_);
     }
 
-    /// @notice Wires up the one trusted RobinPadFactory. Callable exactly
+    /// @notice Wires up the one trusted StagPadFactory. Callable exactly
     /// once, only by the address named `bootstrapper` at construction. The
     /// factory must be a deployed contract wired to this hook and this
     /// PoolManager — the slot is one-shot, so a typo or a factory built for
@@ -302,7 +302,7 @@ contract RobinHook is IHooks, IUnlockCallback {
 
         Currency quote = Currency.wrap(cfg.quoteAsset);
         IPoolManager(poolManager).unlock(abi.encode(quote, cfg.splitter, amount));
-        IRobinSplitter(cfg.splitter).depositRevenue(cfg.quoteAsset, amount);
+        IStagSplitter(cfg.splitter).depositRevenue(cfg.quoteAsset, amount);
         emit TaxFlushed(id, cfg.quoteAsset, cfg.splitter, amount, msg.sender);
     }
 
@@ -321,7 +321,7 @@ contract RobinHook is IHooks, IUnlockCallback {
     /// in the current block, or the live price if it hasn't traded in this
     /// block. Swaps earlier in the same block (the same transaction
     /// included) can't move it, so a price read against it can't be pushed
-    /// around and exploited atomically. RobinFeeDesk prices its sales off
+    /// around and exploited atomically. StagFeeDesk prices its sales off
     /// the higher of this and the live price.
     function blockOpenSqrtPrice(bytes32 poolId) external view returns (uint160) {
         uint256 open = _blockOpen[poolId];

@@ -11,7 +11,7 @@
 # Usage (addresses from DeployRobinhood.s.sol's output):
 #   NETWORK=mainnet TREASURY=0x.. HOOK=0x.. FEE_DESK=0x.. PORTAL=0x.. FACTORY=0x.. DEPLOYER=0x.. \
 #   HOUSE_PAD=0x.. PAD_SETUP_FEE=100000000 LAUNCH_TOKEN=0x.. bash script/verify.sh
-# FEE_DESK: the RobinFeeDesk the main portal was built with. Leave it unset
+# FEE_DESK: the StagFeeDesk the main portal was built with. Leave it unset
 # for the 2026-09-26 deploy, whose portal has none (and set HOUSE_SHARE_BPS=1000).
 # TREASURY_DEPLOYER: who deployed the treasury, if it was reused from an
 # earlier deploy by someone else (defaults to DEPLOYER).
@@ -49,14 +49,14 @@ verify() { # address, contract, constructor-args ("" for none)
   fi
 }
 
-HOUSE_SHARE="${HOUSE_SHARE_BPS:-2000}" # RobinPadFactory.HOUSE_PLATFORM_SHARE_BPS
-verify "$TREASURY" src/RobinTreasury.sol:RobinTreasury "$(cast abi-encode 'constructor(address)' "${TREASURY_DEPLOYER:-${ADMIN:-$DEPLOYER}}")"
-verify "$HOOK" src/RobinHook.sol:RobinHook "$(cast abi-encode 'constructor(address,address)' "$POOL_MANAGER" "$DEPLOYER")"
+HOUSE_SHARE="${HOUSE_SHARE_BPS:-2000}" # StagPadFactory.HOUSE_PLATFORM_SHARE_BPS
+verify "$TREASURY" src/StagTreasury.sol:StagTreasury "$(cast abi-encode 'constructor(address)' "${TREASURY_DEPLOYER:-${ADMIN:-$DEPLOYER}}")"
+verify "$HOOK" src/StagHook.sol:StagHook "$(cast abi-encode 'constructor(address,address)' "$POOL_MANAGER" "$DEPLOYER")"
 if [ -n "${FEE_DESK:-}" ]; then
-  verify "$FEE_DESK" src/RobinFeeDesk.sol:RobinFeeDesk \
+  verify "$FEE_DESK" src/StagFeeDesk.sol:StagFeeDesk \
     "$(cast abi-encode 'constructor(address,address,address,address)' "$POOL_MANAGER" "$HOOK" "$USDG" "$TREASURY")"
 fi
-verify "$PORTAL" src/RobinPortal.sol:RobinPortal \
+verify "$PORTAL" src/StagPortal.sol:StagPortal \
   "$(cast abi-encode 'constructor(address,address,address,address,bool,address)' "$POOL_MANAGER" "$HOOK" "$TREASURY" "$USDG" true "${FEE_DESK:-0x0000000000000000000000000000000000000000}")"
 if [ -n "${FACTORY:-}" ]; then
   # Owner = the deployer (see script/RobinhoodStack.sol). The splitter
@@ -64,7 +64,7 @@ if [ -n "${FACTORY:-}" ]; then
   SPLITTER_IMPL=$(cast call "$FACTORY" 'splitterImplementation()(address)' --rpc-url "$RPC")
   TEMPLATE=$(cast call "$FACTORY" 'padPortalTemplate()(address)' --rpc-url "$RPC")
   verify "$SPLITTER_IMPL" src/PadRevenueSplitter.sol:PadRevenueSplitter ""
-  verify "$FACTORY" src/RobinPadFactory.sol:RobinPadFactory \
+  verify "$FACTORY" src/StagPadFactory.sol:StagPadFactory \
     "$(cast abi-encode 'constructor(address,address,address,address,address,uint256,address)' "$POOL_MANAGER" "$HOOK" "$TREASURY" "$USDG" "$SPLITTER_IMPL" "${PAD_SETUP_FEE:-100000000}" "$DEPLOYER")"
   # Created by the factory's constructor, so the factory is its deployer.
   verify "$TEMPLATE" src/PadPortalTemplate.sol:PadPortalTemplate \
@@ -97,6 +97,6 @@ if [ -n "${LAUNCH_TOKEN:-}" ]; then
   # Constructor args read back from the token itself: name, symbol, 1B supply, minted to the portal.
   NAME=$(cast call "$LAUNCH_TOKEN" 'name()(string)' --rpc-url "$RPC")
   SYMBOL=$(cast call "$LAUNCH_TOKEN" 'symbol()(string)' --rpc-url "$RPC")
-  verify "$LAUNCH_TOKEN" src/RobinLaunchToken.sol:RobinLaunchToken \
+  verify "$LAUNCH_TOKEN" src/StagLaunchToken.sol:StagLaunchToken \
     "$(cast abi-encode 'constructor(string,string,uint256,address)' "$NAME" "$SYMBOL" 1000000000000000000000000000 "$PORTAL")"
 fi

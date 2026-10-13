@@ -19,15 +19,15 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IRobinSplitter} from "./interfaces/IRobinSplitter.sol";
+import {IStagSplitter} from "./interfaces/IStagSplitter.sol";
 
 /// @notice Splits every dollar of revenue a launch generates — swap tax
 /// flushed from the shared hook, and (on white-label pads) LP fees harvested
-/// from the launch's own RobinLocker — between the platform treasury and the
+/// from the launch's own StagLocker — between the platform treasury and the
 /// creator. The main pad's LP fees skip the splitter: the quote side goes to
-/// the treasury in full, the token side to RobinFeeDesk. On Robin Labs
+/// the treasury in full, the token side to StagFeeDesk. On STAG Pad
 /// Pad's own original pad: 20% to the platform, 80% to the creator. On a
-/// RobinPadFactory white-label pad: 15/85 instead — the extra 5% covers
+/// StagPadFactory white-label pad: 15/85 instead — the extra 5% covers
 /// hosting the white-label frontend, since that's a real cost only
 /// white-label pads create. Flat, no further subdivision.
 ///
@@ -36,9 +36,9 @@ import {IRobinSplitter} from "./interfaces/IRobinSplitter.sol";
 /// can never revert because of who the recipient happens to be, so a
 /// blocklisted treasury or a broken creator address can only ever block its
 /// own claim — never the other side's, and never the swap or harvest that
-/// generated the revenue in the first place (see RobinHook's audit fix,
+/// generated the revenue in the first place (see StagHook's audit fix,
 /// H-2).
-contract RobinRevenueSplitter is IRobinSplitter {
+contract StagRevenueSplitter is IStagSplitter {
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_DENOMINATOR = 10_000;
@@ -47,13 +47,13 @@ contract RobinRevenueSplitter is IRobinSplitter {
 
     address public creator;
     address public pendingCreator;
-    address public immutable treasury; // Robin Labs Pad's shared plain USDC treasury — see RobinTreasury.sol
+    address public immutable treasury; // STAG Pad's shared plain USDC treasury — see StagTreasury.sol
     address public immutable portal; // the only address allowed to authorize sources, until locked
-    bool public immutable isMainPad; // see RobinPortal.isMainPad — decides the split ratio above
+    bool public immutable isMainPad; // see StagPortal.isMainPad — decides the split ratio above
 
     /// @dev Only these addresses may deposit revenue into this splitter —
     /// the Portal authorizes this launch's shared hook and its own
-    /// RobinLocker right after deploying them, in the same transaction the
+    /// StagLocker right after deploying them, in the same transaction the
     /// launch is created, then calls `lockSources` so the set can never grow
     /// again afterward.
     mapping(address => bool) public isAuthorizedSource;
@@ -86,7 +86,7 @@ contract RobinRevenueSplitter is IRobinSplitter {
 
     /// @notice Authorizes a new revenue source. Callable only by the Portal,
     /// only before `lockSources` — used to authorize both the shared hook
-    /// (swap tax) and this launch's own RobinLocker (harvested LP fees), in
+    /// (swap tax) and this launch's own StagLocker (harvested LP fees), in
     /// the same transaction the launch is created.
     function authorizeSource(address source) external {
         if (msg.sender != portal) revert NotAuthorized();

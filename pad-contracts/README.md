@@ -1,9 +1,9 @@
-# Robin Labs Pad
+# STAG Pad
 
 A permissionless token launchpad on **Robinhood Chain**, quoted in **USDG**.
 Every launch is a **real Uniswap v4 pool from block one**: no bonding curve,
 no graduation event, no migration, no market-cap cliff. See `src/` for the
-contracts and `test/RobinPad.t.sol` for the full lifecycle, tested end to end
+contracts and `test/StagPad.t.sol` for the full lifecycle, tested end to end
 against a real `PoolManager` and a real swap router (no mocks of Uniswap's
 own contracts). `test/ForkRobinhood.t.sol` runs the whole stack on real
 Robinhood Chain state with real USDG.
@@ -27,15 +27,15 @@ the original contract names:
 
 | name in the audit report | name here |
 |---|---|
-| `TrollHook` | `RobinHook` |
-| `TrollPortal` | `RobinPortal` |
-| `TrollPadFactory` | `RobinPadFactory` |
-| `TrollTreasury` | `RobinTreasury` |
-| `TrollLocker` | `RobinLocker` |
-| `TrollLaunchToken` | `RobinLaunchToken` |
-| `TrollRevenueSplitter` | `RobinRevenueSplitter` |
-| `TrollHolderToken` | `RobinHolderToken` |
-| `ITrollSplitter` | `IRobinSplitter` |
+| `TrollHook` | `StagHook` |
+| `TrollPortal` | `StagPortal` |
+| `TrollPadFactory` | `StagPadFactory` |
+| `TrollTreasury` | `StagTreasury` |
+| `TrollLocker` | `StagLocker` |
+| `TrollLaunchToken` | `StagLaunchToken` |
+| `TrollRevenueSplitter` | `StagRevenueSplitter` |
+| `TrollHolderToken` | `StagHolderToken` |
+| `ITrollSplitter` | `IStagSplitter` |
 
 The short version of the audit's outcome runs through this file: tax is
 always taken in the quote asset (never the launch token), swaps never make
@@ -45,20 +45,20 @@ authorized portals only.
 
 ## How a launch works
 
-1. **`RobinPortal.createLaunch(...)`** — permissionless, one transaction.
+1. **`StagPortal.createLaunch(...)`** — permissionless, one transaction.
    - Mints the full 1,000,000,000-token supply straight to the Portal.
-   - Deploys the launch's revenue splitter (`RobinRevenueSplitter`).
+   - Deploys the launch's revenue splitter (`StagRevenueSplitter`).
    - Picks the pool's opening price from the creator's chosen
      `startingMarketCapQuote` (e.g. $500) — `IPoolManager.initialize` sets
      a pool's starting price for **free**, completely independent of how
      much liquidity is then deposited, so no real capital is ever required
      to open at a meaningful price.
-   - Deploys this launch's `RobinLocker`, transfers the full token supply
+   - Deploys this launch's `StagLocker`, transfers the full token supply
      to it, and seeds a **single-sided concentrated position** — pure
      launch token, resting entirely above (or below, depending on
      token/quote address ordering) the opening price. No quote asset is
      ever collected to do this.
-   - Registers the pool with the shared `RobinHook` and authorizes both
+   - Registers the pool with the shared `StagHook` and authorizes both
      the hook and the Locker to deposit revenue into the splitter.
 2. **Trading happens on the real pool from that instant on** — the
    "curve" is just the pool's own natural price-impact at low depth, the
@@ -72,8 +72,8 @@ authorized portals only.
    hosting the white-label frontend, a real cost only white-label pads
    create). The creator gets the rest: a **full, undiluted 90% (or 85%)**,
    credited to a claimable balance, no further subdivision. Both sides are
-   pull-based: the creator calls `RobinRevenueSplitter.claim`, and anyone
-   can call `claimPlatform` to move the platform's cut into `RobinTreasury`
+   pull-based: the creator calls `StagRevenueSplitter.claim`, and anyone
+   can call `claimPlatform` to move the platform's cut into `StagTreasury`
    (shared across every pad) — see "No automated buyback" below for what
    happens to it from there. Pull-based on both sides, on purpose (see
    "Revenue never moves during a swap" below) — a broken or blocklisted
@@ -94,13 +94,13 @@ directly in `test_SellWorksOnlyAfterABuyCreatesBidSideDepth`.
 ## No automated buyback-and-burn
 
 An earlier version of this repo auto-swapped the platform's cut for
-$ROBIN and burned it on every single deposit, with its own no-keeper
+$STAG and burned it on every single deposit, with its own no-keeper
 trigger mechanism, slippage protection, and a dependency on the chain's
 UniversalRouter/Permit2/StateView addresses being exactly right. All of
-that is gone. `RobinTreasury` is now genuinely simple: it receives USDG,
+that is gone. `StagTreasury` is now genuinely simple: it receives USDG,
 and its `owner` can `withdraw` it. Nothing else. No swap logic, no price
 reads, no automatic trigger of any kind — what happens to the accumulated
-platform cut (buying back $ROBIN, or anything else) is a deliberate,
+platform cut (buying back $STAG, or anything else) is a deliberate,
 manual decision, on whatever cadence the owner wants. If holders of a
 launched token want to burn their own tokens, they can already do that
 themselves; nothing here needs to do it for them.
@@ -108,9 +108,9 @@ themselves; nothing here needs to do it for them.
 ## Creator-controlled tax — always denominated in quote
 
 `buyTaxBps` / `sellTaxBps` are set by the creator at launch time (0–10%
-per side, `RobinPortal.MAX_TAX_BPS` enforces the cap), immutable
+per side, `StagPortal.MAX_TAX_BPS` enforces the cap), immutable
 afterward — the rate can never change out from under a trader. The shared
-`RobinHook` taxes every swap on every launch's pool, and — post audit fix,
+`StagHook` taxes every swap on every launch's pool, and — post audit fix,
 see below — the tax is **always taken in the pool's quote asset, on both
 buy and sell, never in the launch token**:
 - Quote as the swap's *specified* leg (exact-in buy, exact-out sell) is
@@ -141,7 +141,7 @@ single blocklisted address anywhere in that chain (a regulated stablecoin like
 USDG can freeze addresses; the issuer freezing the treasury would be enough)
 would have permanently reverted every swap on every pool forever, since
 `PoolConfig` is immutable with no way to route around a stuck recipient
-mid-swap. `RobinRevenueSplitter`'s own two claim functions (`claim` for
+mid-swap. `StagRevenueSplitter`'s own two claim functions (`claim` for
 the creator, `claimPlatform` for the treasury) are pull-based for the same
 reason: a broken or blocklisted recipient can only ever block its own
 claim, never a swap, never `flush`, never the other side's funds. See
@@ -187,7 +187,7 @@ BEFORE_SWAP | AFTER_SWAP | BEFORE_SWAP_RETURNS_DELTA | AFTER_SWAP_RETURNS_DELTA`
   `script/DeployRobinhood.s.sol` fills both hook slots in the same broadcast
   as the hook, so there is no window where the bootstrapper key could name
   its own factory or portal.
-  `RobinPadFactory` rejects zero addresses, a hook on another PoolManager,
+  `StagPadFactory` rejects zero addresses, a hook on another PoolManager,
   and fees in the wrong decimals.
 - **A pool is registered only by the portal that initialized it**
   (`factory-trust-1`). `initializer[id]` is recorded in `beforeInitialize`.
@@ -222,23 +222,23 @@ Uniswap v4 requires a hook's contract address to have specific bits set,
 which normally means mining a CREATE2 salt per deployment. That's fine
 when it happens in a deploy script, but a customer paying to spin up their
 own white-label pad in one click has no such step available. So there's
-exactly ONE `RobinHook` instance — for every pad, not just the original —
+exactly ONE `StagHook` instance — for every pad, not just the original —
 mined once via Uniswap's own `HookMiner` library (see
-`script/RobinhoodStack.sol` and `test/RobinPad.t.sol`'s `setUp()`; no
+`script/RobinhoodStack.sol` and `test/StagPad.t.sol`'s `setUp()`; no
 `vm.ffi`, no external process — pure Solidity, run as part of the script's
 own simulation), and every launch's pool, from any pad, registers its own
 tax config into it via a mapping keyed by `poolId`.
 
-## RobinPadFactory — "give everybody a launchpad"
+## StagPadFactory — "give everybody a launchpad"
 
-`RobinPadFactory.deployPad(label)` is permissionless: pay the flat setup
-fee (in USDG, forwarded straight to the shared `RobinTreasury` — same
+`StagPadFactory.deployPad(label)` is permissionless: pay the flat setup
+fee (in USDG, forwarded straight to the shared `StagTreasury` — same
 destination as every dollar of ongoing revenue), get your own
-`RobinPortal` in the same transaction. A white-label pad is NOT separate
-contract logic — it's the exact same `RobinPortal`/`RobinHook`/
-`RobinLocker`/`RobinRevenueSplitter` code, just a new Portal instance
+`StagPortal` in the same transaction. A white-label pad is NOT separate
+contract logic — it's the exact same `StagPortal`/`StagHook`/
+`StagLocker`/`StagRevenueSplitter` code, just a new Portal instance
 wired into the same shared hook and the same shared treasury. Verified in
-`test_Pad_RevenueSplitsFifteenToRobinPadOwnerShareRestToCreator` — a customer's pad launches a
+`test_Pad_RevenueSplitsFifteenToStagPadOwnerShareRestToCreator` — a customer's pad launches a
 token straight into a real pool on the same shared hook the main pad
 uses, with zero collision between the two pads' pools, and its revenue
 correctly splits at the white-label 15/85 rate, not the main pad's 10/90.
@@ -270,8 +270,8 @@ doesn't have that, only the `.gitmodules` file for reference.
 
 ## Not built here yet
 
-- **The website** lives in `../robin-pad-web` (live at
-  https://www.robinlab.io).
+- **The website** lives in `../pad-web` (live at
+  https://stag-pad.vercel.app).
 - **A complete security audit.** The pre-port pass (Fable, 2026-09-22 and
   2026-09-24) found and got fixed 3 HIGH / 4 MEDIUM / 8 LOW findings; see
   `docs/AUDIT-2026-09-24.md` and the sections above. That pass is not
@@ -279,27 +279,27 @@ doesn't have that, only the `.gitmodules` file for reference.
   version, not as a substitute for a complete, final review before real
   funds are at risk.
 
-## White-label pads (PadPortal, PadRevenueSplitter, RobinPadFactory)
+## White-label pads (PadPortal, PadRevenueSplitter, StagPadFactory)
 
-Anyone can buy their own launchpad from `RobinPadFactory` for $100. It
-plugs into the same shared hook as the main pad. On a pad, Robin Labs takes a
+Anyone can buy their own launchpad from `StagPadFactory` for $100. It
+plugs into the same shared hook as the main pad. On a pad, STAG Pad takes a
 fixed 15% of every launch's revenue (tax plus the USDG-side LP fee), the
 pad owner sets their share from 0 to 85%, and the creator gets the rest.
 Each launch's split is locked when it launches, and the creator splits
 their share across up to 5 payout wallets plus buyback & burn. Pad owners
 can also charge a launch fee of up to $1,000, split the same way, and set
-the range of starting market caps creators may pick (Robin Labs Pad: $100 to
+the range of starting market caps creators may pick (STAG Pad: $100 to
 $10k). A pad
 launches tokens exactly the way the main portal does, with the same token,
 pool, lock and no trading restrictions. The factory owner can open house
-pads (Robin Labs takes 20% since the relaunch; 10% on the 2026-09-26 deploy); the new Robin Labs Pad is one.
+pads (STAG Pad takes 20% since the relaunch; 10% on the 2026-09-26 deploy); the new STAG Pad is one.
 
 **Templates.** The hook accepts exactly one factory, forever, so the
 factory builds pads through templates (`IPadTemplate`). Template #1,
 `PadPortalTemplate`, is created by the factory's constructor and builds
 every standard pad. The owner can approve more templates later (another
 quote asset, another launch token) without a new hook. The factory checks
-each new pad is on its hook, PoolManager and treasury, charges Robin Labs'
+each new pad is on its hook, PoolManager and treasury, charges STAG Pad'
 share and is owned by the buyer before authorizing it.
 
 **Holder dividends (template #2, the house pad's template).** A creator can
@@ -313,4 +313,4 @@ and new buyers never receive dividends from before they bought
 work on the same pad.
 
 `script/DeployRobinhood.s.sol` deploys the factory, approves the holders
-template and opens the Robin Labs Pad as a house pad built from it.
+template and opens the STAG Pad as a house pad built from it.

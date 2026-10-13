@@ -17,9 +17,9 @@
 */
 pragma solidity ^0.8.24;
 
-import {RobinHolderToken} from "./RobinHolderToken.sol";
+import {StagHolderToken} from "./StagHolderToken.sol";
 
-/// @notice Creates RobinHolderTokens for HolderPadPortal. A separate
+/// @notice Creates StagHolderTokens for HolderPadPortal. A separate
 /// contract only so HolderPadPortal stays under the 24 KB size limit. The
 /// whole supply is always minted to the caller, so calling it directly
 /// only ever creates a token that you hold and no pad knows about.
@@ -34,7 +34,7 @@ contract HolderTokenDeployer {
         uint256 holdersSlot
     ) external returns (address) {
         return address(
-            new RobinHolderToken(name, symbol, totalSupply, msg.sender, quoteAsset, poolManager, splitter, holdersSlot)
+            new StagHolderToken(name, symbol, totalSupply, msg.sender, quoteAsset, poolManager, splitter, holdersSlot)
         );
     }
 }

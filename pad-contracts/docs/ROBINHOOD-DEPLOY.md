@@ -3,9 +3,9 @@
 Deploys the pad (ported from `PettyMiggzy/tr`'s `launchpad/`, built for
 Arc) on Robinhood Chain (chain 4663), with **USDG** as every pool's quote
 asset. The 2026-09-26 deploy ran Tr's audited source unchanged. The relaunch
-below changes the fee routing (RobinLocker, RobinPortal, RobinRevenueSplitter,
-RobinPadFactory's house share), adds a block-open price record to RobinHook,
-and adds RobinFeeDesk; those changes have tests but no external audit yet.
+below changes the fee routing (StagLocker, StagPortal, StagRevenueSplitter,
+StagPadFactory's house share), adds a block-open price record to StagHook,
+and adds StagFeeDesk; those changes have tests but no external audit yet.
 
 ## Relaunch: 20% of the tax and every LP fee (live since 2026-09-27)
 
@@ -20,16 +20,16 @@ offered to `0x5899…5914`, which takes it by calling `acceptOwnership()` on it.
 
 | contract | address |
 |---|---|
-| `RobinTreasury` (reused) | `0x2F59476D23dE13e1Cd171d69Efe1227dE8349D3f` |
-| `RobinHook` | `0xcd7098a79B4D5EC5105EE11120f09A93AF81e8cc` |
-| `RobinFeeDesk` | `0x7151193a74EFBA9026596a09Ac4C43584c3E316D` |
-| **`RobinPortal` (main portal, the site's)** | **`0xC7006415A6633f87edbbF0feb091c9C460D7D0eC`** |
+| `StagTreasury` (reused) | `0x2F59476D23dE13e1Cd171d69Efe1227dE8349D3f` |
+| `StagHook` | `0xcd7098a79B4D5EC5105EE11120f09A93AF81e8cc` |
+| `StagFeeDesk` | `0x7151193a74EFBA9026596a09Ac4C43584c3E316D` |
+| **`StagPortal` (main portal, the site's)** | **`0xC7006415A6633f87edbbF0feb091c9C460D7D0eC`** |
 | `PadRevenueSplitter` implementation | `0x2F2be68711E6dA0c25d9e5c04e71a908849bCEb5` |
-| `RobinPadFactory` | `0x42dfB0740Ee799494F15b791e348A7488bc76970` |
+| `StagPadFactory` | `0x42dfB0740Ee799494F15b791e348A7488bc76970` |
 | `PadPortalTemplate` (#1) | `0x2c173477943B1253ce1ecF30563C6c0a3Bc59F9D` |
 | `HolderTokenDeployer` | `0x8ea6d1F92b68Ab0751FDD26219b09252202FEe0A` |
 | `HolderPadTemplate` (#2, approved) | `0x03EBc130A5a801b0EeCc89733aAB6040F33585e3` |
-| House pad "Robin Labs Pad" (`HolderPadPortal`) | `0x202Df71eF80cfbfc5731573DF82408Cd158c6247` |
+| House pad "STAG Pad" (`HolderPadPortal`) | `0x202Df71eF80cfbfc5731573DF82408Cd158c6247` |
 
 
 What changes for launches on the new main portal (older launches keep the
@@ -39,13 +39,13 @@ terms they launched with; the site keeps listing and trading them):
 |---|---|---|
 | Creator's tax (0-10% each way, their pick) | 90% creator / 10% platform | **80% creator / 20% platform** |
 | LP fee, 1% every swap, USDG side | split 90/10 like the tax | **100% to the treasury** |
-| LP fee, token side (sells pay it in the token) | burned | **sold by `RobinFeeDesk` for USDG at 10% under the pool price; USDG to the treasury** |
+| LP fee, token side (sells pay it in the token) | burned | **sold by `StagFeeDesk` for USDG at 10% under the pool price; USDG to the treasury** |
 | House pad platform share | 10% | **20%** |
 | White-label pads | 15% | 15% (unchanged) |
 
-`RobinFeeDesk` has no owner and no withdraw: tokens leave only through
+`StagFeeDesk` has no owner and no withdraw: tokens leave only through
 `buy`, paid in full. It prices off the pool, using the higher of the live
-price and the price the pool opened the block at (`RobinHook` now records
+price and the price the pool opened the block at (`StagHook` now records
 that), so pushing the price down inside one block never makes the desk
 cheaper. The platform never holds launch tokens and never sells into a pool.
 
@@ -53,7 +53,7 @@ Tests: 88 unit tests plus the 4 real-chain fork tests pass. The deploy was
 rehearsed on a mainnet fork (2026-09-27, block 73769230) exactly as below,
 as the real owner with the live treasury reused; the site's browser E2E then
 passed on that fork: launch with a first buy, buy, sell, fee desk stocked and
-bought out at exactly 10.00% under the pool, an old-portal coin (ROBINDOGE)
+bought out at exactly 10.00% under the pool, an old-portal coin (STAGDOGE)
 traded on its old hook, and /admin collected LP fees and tax from both
 deployments and withdrew everything.
 
@@ -70,7 +70,7 @@ forge script script/DeployRobinhood.s.sol:DeployRobinhood \
 Run it from the treasury's owner: `EXISTING_TREASURY` keeps all platform
 revenue in the one treasury, and the script refuses a treasury owned by
 anyone else. It needs about 0.001 ETH of gas and no USDG. Then point the site
-at the printed addresses (in `robin-pad-web/lib/config.ts` or the Vercel
+at the printed addresses (in `pad-web/lib/config.ts` or the Vercel
 env): `NEXT_PUBLIC_PORTAL`, `NEXT_PUBLIC_HOOK`, `NEXT_PUBLIC_FACTORY`,
 `NEXT_PUBLIC_FEE_DESK`, and `NEXT_PUBLIC_PORTAL_GENESIS_BLOCK` (the block it
 printed). The old portal is already listed in `GENERATIONS` there, so its
@@ -90,15 +90,15 @@ from Sourcify.
 
 | contract | address |
 |---|---|
-| `RobinTreasury` | `0x2F59476D23dE13e1Cd171d69Efe1227dE8349D3f` |
-| `RobinHook` | `0x04abDE4e77036178E0DF13d435B7b7f87265e8cc` |
-| `RobinPortal` (main portal) | `0x7e2f5dEe1A846fF21eE946d2e450F64133d0fD6F` |
+| `StagTreasury` | `0x2F59476D23dE13e1Cd171d69Efe1227dE8349D3f` |
+| `StagHook` | `0x04abDE4e77036178E0DF13d435B7b7f87265e8cc` |
+| `StagPortal` (main portal) | `0x7e2f5dEe1A846fF21eE946d2e450F64133d0fD6F` |
 | `PadRevenueSplitter` implementation | `0x05e2f711f8fe02BacC756dadE06396E79A2e77E3` |
-| `RobinPadFactory` | `0xD637De9DA24007D11e60BDf0B8358b060953D4E8` |
+| `StagPadFactory` | `0xD637De9DA24007D11e60BDf0B8358b060953D4E8` |
 | `PadPortalTemplate` (#1) | `0x116a5f07be9444215143A16ed4B5753a1906B7F7` |
 | `HolderTokenDeployer` | `0xc8B600de96Dab89e86E03280a1E3EA8bc8a58D50` |
 | `HolderPadTemplate` (#2, approved) | `0xe55013eb7E51cbc0FD6f95Cd54EaBCAe573A657F` |
-| **House pad "Robin Labs Pad"** (`HolderPadPortal`) | **`0x923c4443fd996c757646A9753D89F57913aBEe71`** |
+| **House pad "STAG Pad"** (`HolderPadPortal`) | **`0x923c4443fd996c757646A9753D89F57913aBEe71`** |
 
 External: USDG `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, PoolManager
 `0x8366a39CC670B4001A1121B8F6A443A643e40951`.
@@ -129,11 +129,11 @@ separate deploys:
 
 | contract | role |
 |---|---|
-| `RobinTreasury` | shared treasury; receives the platform cut in USDG; owner withdraws |
-| `RobinHook` | the one shared Uniswap v4 hook (mined address, flags `0x28CC`): swap tax in USDG, pool creation and liquidity gated |
-| `RobinPortal` | the original main pad. Deployed mainly to fill the hook's one-shot main-portal slot, which has no renounce. It also works as a plain pad (10% platform / 90% creator) |
+| `StagTreasury` | shared treasury; receives the platform cut in USDG; owner withdraws |
+| `StagHook` | the one shared Uniswap v4 hook (mined address, flags `0x28CC`): swap tax in USDG, pool creation and liquidity gated |
+| `StagPortal` | the original main pad. Deployed mainly to fill the hook's one-shot main-portal slot, which has no renounce. It also works as a plain pad (10% platform / 90% creator) |
 | `PadRevenueSplitter` | implementation every white-label launch's splitter is cloned from |
-| `RobinPadFactory` | sells white-label pads (`PAD_SETUP_FEE`, default $100 in USDG); owner can approve templates. Plugged into the hook, which closes the hook's factory slot |
+| `StagPadFactory` | sells white-label pads (`PAD_SETUP_FEE`, default $100 in USDG); owner can approve templates. Plugged into the hook, which closes the hook's factory slot |
 | `PadPortalTemplate` | template #1 (plain pads), created by the factory |
 | `HolderTokenDeployer`, `HolderPadTemplate` | template #2: pads whose creators can pay holders dividends in USDG; approved on the factory |
 | house pad (`HolderPadPortal`) | the pad the site points at: platform 10%, tax 0-10%, opening market cap $100-$10k, no launch fee, open to all |
@@ -163,7 +163,7 @@ cannot authorize any other pool-creating contract afterwards.
   exact init code, so build with that config. The script re-checks the mined
   address before and after deploying and reverts before spending if it
   doesn't match.
-- **Pick the house pad's name** (`HOUSE_PAD_NAME`, default "Robin Labs Pad"). It
+- **Pick the house pad's name** (`HOUSE_PAD_NAME`, default "STAG Pad"). It
   is stored on-chain.
 - Prefer a keystore or hardware wallet over a raw key:
   `--account <keystore-name> --sender <address>` or `--ledger --sender <address>`.
@@ -177,7 +177,7 @@ bash script/setup-deps.sh          # clones lib/ at the commits pinned in foundr
 forge build
 ROBINHOOD_FORK_URL=https://rpc.mainnet.chain.robinhood.com forge test   # 86 tests, incl. real-chain fork tests
 
-HOUSE_PAD_NAME="Robin Labs Pad" forge script script/DeployRobinhood.s.sol:DeployRobinhood \
+HOUSE_PAD_NAME="STAG Pad" forge script script/DeployRobinhood.s.sol:DeployRobinhood \
   --rpc-url https://rpc.mainnet.chain.robinhood.com \
   --broadcast --slow --legacy --with-gas-price 40000000 --account <keystore-name> --sender <address>
 ```
@@ -207,11 +207,11 @@ and claimed in USDG, creator and platform paid exactly).
    Blockscout and Sourcify both sit behind Cloudflare bot checks that can
    reject scripted requests; if every attempt gets a 403 "Just a moment..."
    page, retry later or use the explorer's web form.
-2. Frontend: live at https://www.robinlab.io (`robin-pad-web/`, Vercel
+2. Frontend: live at https://www.robinlab.io (`pad-web/`, Vercel
    project `labs`; it replaced the old v3 site there). It launches on the main
    portal and verifies each launch token's source on Sourcify automatically.
 3. Treasury: the owner withdraws accumulated USDG with
-   `RobinTreasury.withdraw(USDG, to, amount)`. Nothing is automated.
+   `StagTreasury.withdraw(USDG, to, amount)`. Nothing is automated.
 
 ## Things that differ from Arc
 
@@ -219,7 +219,7 @@ and claimed in USDG, creator and platform paid exactly).
   6 decimals, Paxos), not Arc's USDC predeploy. Same decimals, so every raw
   amount in the contracts (`100e6` = $100) means the same dollars. Wherever
   the source comments say "USDC", read "the quote asset".
-- **Gas:** ETH, not USDC. `RobinTreasury.receive()` therefore accepts ETH
+- **Gas:** ETH, not USDC. `StagTreasury.receive()` therefore accepts ETH
   here; the owner can withdraw it with `withdraw(address(0), ...)`.
 - **Address ordering:** USDG sorts at `0x5f…`, Arc's USDC at `0x36…`, so a
   larger share of coins land as `currency0`. Both orderings were already

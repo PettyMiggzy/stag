@@ -29,11 +29,11 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {RobinLaunchToken} from "./RobinLaunchToken.sol";
-import {RobinRevenueSplitter} from "./RobinRevenueSplitter.sol";
-import {RobinHook} from "./RobinHook.sol";
-import {RobinLocker} from "./RobinLocker.sol";
-import {RobinFeeDesk} from "./RobinFeeDesk.sol";
+import {StagLaunchToken} from "./StagLaunchToken.sol";
+import {StagRevenueSplitter} from "./StagRevenueSplitter.sol";
+import {StagHook} from "./StagHook.sol";
+import {StagLocker} from "./StagLocker.sol";
+import {StagFeeDesk} from "./StagFeeDesk.sol";
 
 /// @notice Permissionless factory: one transaction takes a creator from
 /// nothing to a live, real Uniswap v4 pool trading their token's full
@@ -45,13 +45,13 @@ import {RobinFeeDesk} from "./RobinFeeDesk.sol";
 /// capital ever required to seed it, since a pool's starting price is set
 /// for free via `IPoolManager.initialize`, completely independent of how
 /// much liquidity is then deposited.
-contract RobinPortal {
+contract StagPortal {
     using PoolIdLibrary for PoolKey;
     using SafeERC20 for IERC20;
 
     address public immutable poolManager;
-    address public immutable hook; // the one shared RobinHook instance (see RobinHook.sol)
-    address public immutable treasury; // shared across every launch — see RobinTreasury.sol
+    address public immutable hook; // the one shared StagHook instance (see StagHook.sol)
+    address public immutable treasury; // shared across every launch — see StagTreasury.sol
     // Fixed per portal, not caller-controlled (audit finding M-1: a
     // per-launch quoteAsset let anyone route arbitrary — including
     // fee-on-transfer or non-standard — ERC-20s into the shared treasury,
@@ -61,15 +61,15 @@ contract RobinPortal {
     // is the USDC predeploy.
     address public immutable quoteAsset;
 
-    // True only for Robin Labs Pad's own original Portal, deployed directly (not
-    // through RobinPadFactory). Passed down to each launch's
-    // RobinRevenueSplitter, which uses it to decide the platform/creator
+    // True only for STAG Pad's own original Portal, deployed directly (not
+    // through StagPadFactory). Passed down to each launch's
+    // StagRevenueSplitter, which uses it to decide the platform/creator
     // split ratio (20/80 on the main pad, 15/85 on every white-label pad).
     bool public immutable isMainPad;
 
-    // Where this portal's launches send their LP fees (see RobinLocker). Set:
+    // Where this portal's launches send their LP fees (see StagLocker). Set:
     // quote-side LP fees go to `treasury` in full and launch-token-side LP
-    // fees to this RobinFeeDesk, which sells them for USDG at a discount.
+    // fees to this StagFeeDesk, which sells them for USDG at a discount.
     // Zero: the white-label behaviour (quote side through the splitter,
     // token side burned).
     address public immutable feeDesk;
@@ -127,7 +127,7 @@ contract RobinPortal {
         if (quoteAsset_ == address(0)) revert ZeroAddress();
         if (feeDesk_ != address(0)) {
             if (treasury_ == address(0)) revert ZeroAddress();
-            RobinFeeDesk desk = RobinFeeDesk(feeDesk_);
+            StagFeeDesk desk = StagFeeDesk(feeDesk_);
             if (
                 desk.hook() != hook_ || desk.poolManager() != poolManager_ || desk.quoteAsset() != quoteAsset_
                     || desk.treasury() != treasury_
@@ -179,10 +179,10 @@ contract RobinPortal {
             revert StartingMcOutOfRange();
         }
 
-        RobinLaunchToken tokenContract = new RobinLaunchToken(p.name, p.symbol, TOTAL_SUPPLY, address(this));
+        StagLaunchToken tokenContract = new StagLaunchToken(p.name, p.symbol, TOTAL_SUPPLY, address(this));
         token = address(tokenContract);
 
-        RobinRevenueSplitter splitter = new RobinRevenueSplitter(msg.sender, treasury, address(this), isMainPad);
+        StagRevenueSplitter splitter = new StagRevenueSplitter(msg.sender, treasury, address(this), isMainPad);
 
         SeedResult memory r =
             _seedLaunchPool(token, address(splitter), p.startingMarketCapQuote, p.buyTaxBps, p.sellTaxBps);
@@ -306,7 +306,7 @@ contract RobinPortal {
         IPoolManager(poolManager).initialize(key, startingSqrtPriceX96);
 
         bool toDesk = feeDesk != address(0);
-        RobinLocker lockerContract = new RobinLocker(
+        StagLocker lockerContract = new StagLocker(
             poolManager,
             splitter,
             address(this),
@@ -321,14 +321,14 @@ contract RobinPortal {
 
         // Register before seeding: the hook only lets a pool's registered
         // locker add liquidity (audit hook-1).
-        RobinHook(hook).registerPool(key, splitter, r.locker, quoteAsset, tokenIsToken0, buyTaxBps, sellTaxBps);
+        StagHook(hook).registerPool(key, splitter, r.locker, quoteAsset, tokenIsToken0, buyTaxBps, sellTaxBps);
 
         IERC20(token).safeTransfer(r.locker, TOTAL_SUPPLY);
         lockerContract.seedLiquidity(liquidity);
 
-        RobinRevenueSplitter(splitter).authorizeSource(hook);
-        RobinRevenueSplitter(splitter).authorizeSource(r.locker);
-        RobinRevenueSplitter(splitter).lockSources();
+        StagRevenueSplitter(splitter).authorizeSource(hook);
+        StagRevenueSplitter(splitter).authorizeSource(r.locker);
+        StagRevenueSplitter(splitter).lockSources();
 
         r.key = key;
         r.tokenIsToken0 = tokenIsToken0;

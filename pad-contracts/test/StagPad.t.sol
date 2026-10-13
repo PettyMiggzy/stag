@@ -15,30 +15,30 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {HookMiner} from "@uniswap/v4-periphery/test/shared/HookMiner.sol";
 
-import {RobinPortal} from "../src/RobinPortal.sol";
-import {RobinHook} from "../src/RobinHook.sol";
-import {RobinRevenueSplitter} from "../src/RobinRevenueSplitter.sol";
-import {RobinLocker} from "../src/RobinLocker.sol";
-import {RobinLaunchToken} from "../src/RobinLaunchToken.sol";
-import {RobinPadFactory} from "../src/RobinPadFactory.sol";
+import {StagPortal} from "../src/StagPortal.sol";
+import {StagHook} from "../src/StagHook.sol";
+import {StagRevenueSplitter} from "../src/StagRevenueSplitter.sol";
+import {StagLocker} from "../src/StagLocker.sol";
+import {StagLaunchToken} from "../src/StagLaunchToken.sol";
+import {StagPadFactory} from "../src/StagPadFactory.sol";
 import {PadPortal} from "../src/PadPortal.sol";
 import {PadRevenueSplitter} from "../src/PadRevenueSplitter.sol";
-import {RobinTreasury} from "../src/RobinTreasury.sol";
-import {RobinFeeDesk} from "../src/RobinFeeDesk.sol";
+import {StagTreasury} from "../src/StagTreasury.sol";
+import {StagFeeDesk} from "../src/StagFeeDesk.sol";
 import {PadPortalTemplate} from "../src/PadPortalTemplate.sol";
 import {IPadTemplate} from "../src/interfaces/IPadTemplate.sol";
 
-contract RobinPadTest is Test, Deployers {
+contract StagPadTest is Test, Deployers {
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
 
     MockERC20 usdc;
-    RobinHook hook;
-    RobinPortal portal;
-    RobinPadFactory factory;
+    StagHook hook;
+    StagPortal portal;
+    StagPadFactory factory;
     PadRevenueSplitter splitterImpl;
-    RobinTreasury treasury;
-    RobinFeeDesk feeDesk;
+    StagTreasury treasury;
+    StagFeeDesk feeDesk;
     address treasuryOwner = makeAddr("treasuryOwner");
     address creator = makeAddr("creator");
     address trader1 = makeAddr("trader1");
@@ -62,12 +62,12 @@ contract RobinPadTest is Test, Deployers {
         // AFTER_SWAP + AFTER_SWAP_RETURNS_DELTA handle the complementary
         // case. Without the RETURNS_DELTA bits, a hook's returned delta is
         // silently ignored and every real swap reverts with
-        // CurrencyNotSettled() — see RobinHook's contract-level comment.
+        // CurrencyNotSettled() — see StagHook's contract-level comment.
         uint160 flags = uint160(
             Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
                 | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG
         );
-        bytes memory creationCode = type(RobinHook).creationCode;
+        bytes memory creationCode = type(StagHook).creationCode;
         // bootstrapper = address(this): this test contract is the one that
         // calls bootstrapMainPortal/bootstrapFactory below, so it must be
         // the address baked into the hook's constructor (audit finding
@@ -75,17 +75,17 @@ contract RobinPadTest is Test, Deployers {
         bytes memory constructorArgs = abi.encode(address(manager), address(this));
         (address predictedHook, bytes32 salt) = HookMiner.find(address(this), flags, creationCode, constructorArgs);
 
-        hook = new RobinHook{salt: salt}(address(manager), address(this));
+        hook = new StagHook{salt: salt}(address(manager), address(this));
         require(address(hook) == predictedHook, "hook address mismatch");
 
-        treasury = new RobinTreasury(treasuryOwner);
+        treasury = new StagTreasury(treasuryOwner);
 
-        feeDesk = new RobinFeeDesk(address(manager), address(hook), address(usdc), address(treasury));
-        portal = new RobinPortal(address(manager), address(hook), address(treasury), address(usdc), true, address(feeDesk));
+        feeDesk = new StagFeeDesk(address(manager), address(hook), address(usdc), address(treasury));
+        portal = new StagPortal(address(manager), address(hook), address(treasury), address(usdc), true, address(feeDesk));
         hook.bootstrapMainPortal(address(portal));
 
         splitterImpl = new PadRevenueSplitter();
-        factory = new RobinPadFactory(
+        factory = new StagPadFactory(
             address(manager), address(hook), address(treasury), address(usdc), address(splitterImpl), SETUP_FEE, address(this)
         );
         hook.bootstrapFactory(address(factory));
@@ -104,15 +104,15 @@ contract RobinPadTest is Test, Deployers {
     // HookMiner.find skips any candidate address that already has code,
     // and setUp()'s hook already occupies the first match.
 
-    function _createLaunch(RobinPortal p, uint16 buyTaxBps, uint16 sellTaxBps)
+    function _createLaunch(StagPortal p, uint16 buyTaxBps, uint16 sellTaxBps)
         internal
         returns (address token, address locker)
     {
         vm.prank(creator);
         (token, locker) = p.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Test Robin Labs",
-                symbol: "TROBIN",
+            StagPortal.CreateLaunchParams({
+                name: "Test STAG Pad",
+                symbol: "TSTAG",
                 startingMarketCapQuote: STARTING_MC,
                 buyTaxBps: buyTaxBps,
                 sellTaxBps: sellTaxBps
@@ -137,7 +137,7 @@ contract RobinPadTest is Test, Deployers {
     function _buy(address trader, address token, PoolKey memory key, uint256 quoteIn) internal returns (uint256 tokensOut) {
         bool tokenIsToken0 = Currency.unwrap(key.currency0) == token;
         bool zeroForOne = !tokenIsToken0; // giving quote, receiving token
-        uint256 tokenBefore = RobinLaunchToken(token).balanceOf(trader);
+        uint256 tokenBefore = StagLaunchToken(token).balanceOf(trader);
 
         vm.startPrank(trader);
         usdc.approve(address(swapRouter), quoteIn);
@@ -152,7 +152,7 @@ contract RobinPadTest is Test, Deployers {
             ""
         );
         vm.stopPrank();
-        tokensOut = RobinLaunchToken(token).balanceOf(trader) - tokenBefore;
+        tokensOut = StagLaunchToken(token).balanceOf(trader) - tokenBefore;
     }
 
     /// @dev Sells `tokenIn` of `token` for USDC, same direction-agnostic
@@ -163,7 +163,7 @@ contract RobinPadTest is Test, Deployers {
         uint256 quoteBefore = usdc.balanceOf(trader);
 
         vm.startPrank(trader);
-        RobinLaunchToken(token).approve(address(swapRouter), tokenIn);
+        StagLaunchToken(token).approve(address(swapRouter), tokenIn);
         swapRouter.swap(
             key,
             IPoolManager.SwapParams({
@@ -195,12 +195,12 @@ contract RobinPadTest is Test, Deployers {
         // tiny rounding remainder (integer tick math, a fraction of a wei
         // relative to 1e27) should be left sitting in the locker as dust.
         assertLt(
-            RobinLaunchToken(token).balanceOf(locker),
+            StagLaunchToken(token).balanceOf(locker),
             1e12,
             "locker should have almost no raw token balance left - the supply now backs the pool position"
         );
-        assertEq(RobinLaunchToken(token).totalSupply(), TOTAL_SUPPLY, "total supply should be exactly 1B");
-        assertTrue(RobinLocker(locker).seeded(), "locker should be seeded immediately, no separate step");
+        assertEq(StagLaunchToken(token).totalSupply(), TOTAL_SUPPLY, "total supply should be exactly 1B");
+        assertTrue(StagLocker(locker).seeded(), "locker should be seeded immediately, no separate step");
 
         // Not manager.getLiquidity() — that reflects only liquidity ACTIVE
         // at the pool's current tick, and this ask-wall position is
@@ -209,7 +209,7 @@ contract RobinPadTest is Test, Deployers {
         // pushes price into its range. Read the specific position instead.
         PoolKey memory key = _keyFor(token);
         (uint128 positionLiquidity,,) = manager.getPositionInfo(
-            key.toId(), locker, RobinLocker(locker).tickLower(), RobinLocker(locker).tickUpper(), bytes32(0)
+            key.toId(), locker, StagLocker(locker).tickLower(), StagLocker(locker).tickUpper(), bytes32(0)
         );
         assertGt(positionLiquidity, 0, "the locker's position should hold real liquidity from the moment it's created");
     }
@@ -241,7 +241,7 @@ contract RobinPadTest is Test, Deployers {
         PoolKey memory key = _keyFor(token);
 
         _buy(trader1, token, key, 200 * USDC_DECIMALS);
-        uint256 tokenBal = RobinLaunchToken(token).balanceOf(trader1);
+        uint256 tokenBal = StagLaunchToken(token).balanceOf(trader1);
         assertGt(tokenBal, 0);
 
         uint256 sellAmount = tokenBal / 4; // small relative to the buy, safely within the new bid-side depth
@@ -267,7 +267,7 @@ contract RobinPadTest is Test, Deployers {
     function test_BuyAndSellTaxAreBothAlwaysInQuoteNeverInLaunchToken() public {
         (address token, address locker) = _createLaunch(portal, 100, 150);
         PoolKey memory key = _keyFor(token);
-        address splitter = RobinLocker(locker).splitter();
+        address splitter = StagLocker(locker).splitter();
 
         uint256 quoteIn = 200 * USDC_DECIMALS;
         _buy(trader1, token, key, quoteIn);
@@ -275,24 +275,24 @@ contract RobinPadTest is Test, Deployers {
 
         // The buy tax must land in USDC, and must NOT accrue any credit in
         // the launch token at all — the exact H-1 regression.
-        assertEq(RobinRevenueSplitter(splitter).creditedToCreator(token), 0, "buy tax must never be credited in the launch token");
-        uint256 creditedAfterBuy = RobinRevenueSplitter(splitter).creditedToCreator(address(usdc));
+        assertEq(StagRevenueSplitter(splitter).creditedToCreator(token), 0, "buy tax must never be credited in the launch token");
+        uint256 creditedAfterBuy = StagRevenueSplitter(splitter).creditedToCreator(address(usdc));
         assertGt(creditedAfterBuy, 0, "creator should be credited some of the buy tax, in USDC");
 
-        uint256 tokenBal = RobinLaunchToken(token).balanceOf(trader1);
+        uint256 tokenBal = StagLaunchToken(token).balanceOf(trader1);
         _sell(trader1, token, key, tokenBal / 2);
         hook.flush(key);
 
         // The sell tax also lands in USDC — same ledger entry the buy tax
         // used, since both are quote-denominated now.
-        uint256 creditedAfterSell = RobinRevenueSplitter(splitter).creditedToCreator(address(usdc));
+        uint256 creditedAfterSell = StagRevenueSplitter(splitter).creditedToCreator(address(usdc));
         assertGt(creditedAfterSell, creditedAfterBuy, "creator should be credited some of the sell tax too, in the same USDC ledger");
-        assertEq(RobinRevenueSplitter(splitter).creditedToCreator(token), 0, "sell tax must never be credited in the launch token either");
+        assertEq(StagRevenueSplitter(splitter).creditedToCreator(token), 0, "sell tax must never be credited in the launch token either");
 
         // The tax never touched the hook's own ERC-20 balance or the
         // splitter's balance outside the credited ledger — it moved purely
         // through ERC-6909 claims until flush() settled it (H-2's fix).
-        assertEq(RobinLaunchToken(token).balanceOf(address(hook)), 0, "hook should never hold raw launch tokens");
+        assertEq(StagLaunchToken(token).balanceOf(address(hook)), 0, "hook should never hold raw launch tokens");
     }
 
     /// @notice A random, non-portal caller can never sneak a pool through
@@ -325,10 +325,10 @@ contract RobinPadTest is Test, Deployers {
 
     function test_TaxAboveTenPercentCapIsRejected() public {
         vm.prank(creator);
-        vm.expectRevert(RobinPortal.TaxTooHigh.selector);
+        vm.expectRevert(StagPortal.TaxTooHigh.selector);
         portal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Greedy Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Greedy STAG Pad",
                 symbol: "GREED",
                 startingMarketCapQuote: STARTING_MC,
                 buyTaxBps: 1_001, // just over MAX_TAX_BPS (1_000 = 10%)
@@ -355,10 +355,10 @@ contract RobinPadTest is Test, Deployers {
         uint256 maxMc = portal.MAX_STARTING_MC_QUOTE();
 
         vm.prank(creator);
-        vm.expectRevert(RobinPortal.StartingMcOutOfRange.selector);
+        vm.expectRevert(StagPortal.StartingMcOutOfRange.selector);
         portal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Zero Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Zero STAG Pad",
                 symbol: "ZERO",
                 startingMarketCapQuote: 0,
                 buyTaxBps: 100,
@@ -367,10 +367,10 @@ contract RobinPadTest is Test, Deployers {
         );
 
         vm.prank(creator);
-        vm.expectRevert(RobinPortal.StartingMcOutOfRange.selector);
+        vm.expectRevert(StagPortal.StartingMcOutOfRange.selector);
         portal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Almost Zero Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Almost Zero STAG Pad",
                 symbol: "ALMOST",
                 startingMarketCapQuote: minMc - 1,
                 buyTaxBps: 100,
@@ -379,10 +379,10 @@ contract RobinPadTest is Test, Deployers {
         );
 
         vm.prank(creator);
-        vm.expectRevert(RobinPortal.StartingMcOutOfRange.selector);
+        vm.expectRevert(StagPortal.StartingMcOutOfRange.selector);
         portal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Too Big Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Too Big STAG Pad",
                 symbol: "HUGE",
                 startingMarketCapQuote: maxMc + 1,
                 buyTaxBps: 100,
@@ -393,8 +393,8 @@ contract RobinPadTest is Test, Deployers {
         // The boundary value itself succeeds.
         vm.prank(creator);
         portal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Minimum Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Minimum STAG Pad",
                 symbol: "MIN",
                 startingMarketCapQuote: minMc,
                 buyTaxBps: 100,
@@ -411,39 +411,39 @@ contract RobinPadTest is Test, Deployers {
     function test_HarvestFeesMainPad_QuoteToTreasuryTokenToDesk() public {
         (address token, address locker) = _createLaunch(portal, 0, 0); // isolate pool-fee harvesting from hook tax
         PoolKey memory key = _keyFor(token);
-        address splitter = RobinLocker(locker).splitter();
-        assertEq(RobinLocker(locker).quoteFeeSink(), address(treasury));
-        assertEq(RobinLocker(locker).tokenFeeSink(), address(feeDesk));
+        address splitter = StagLocker(locker).splitter();
+        assertEq(StagLocker(locker).quoteFeeSink(), address(treasury));
+        assertEq(StagLocker(locker).tokenFeeSink(), address(feeDesk));
 
         _buy(trader1, token, key, 300 * USDC_DECIMALS);
-        uint256 tokenBal = RobinLaunchToken(token).balanceOf(trader1);
+        uint256 tokenBal = StagLaunchToken(token).balanceOf(trader1);
         _sell(trader1, token, key, tokenBal / 2);
 
         uint256 treasuryBefore = usdc.balanceOf(address(treasury));
-        RobinLocker(locker).harvestFees();
+        StagLocker(locker).harvestFees();
 
         // 1% of the $300 buy, less rounding, is the USDC side.
         uint256 toTreasury = usdc.balanceOf(address(treasury)) - treasuryBefore;
         assertApproxEqAbs(toTreasury, 3 * USDC_DECIMALS, 2, "USDC-side LP fees: all of it to the treasury");
         // 1% of the tokens sold is the token side.
-        assertApproxEqAbs(RobinLaunchToken(token).balanceOf(address(feeDesk)), (tokenBal / 2) / 100, 1e6, "token-side LP fees: to the desk");
-        assertEq(RobinLaunchToken(token).balanceOf(address(0xdEaD)), 0, "nothing burned on the main pad");
-        assertEq(RobinLaunchToken(token).balanceOf(address(treasury)), 0, "treasury never holds the launch token");
-        assertEq(RobinRevenueSplitter(splitter).creditedToCreator(address(usdc)), 0, "LP fees skip the creator split");
-        assertEq(RobinRevenueSplitter(splitter).creditedToPlatform(address(usdc)), 0);
+        assertApproxEqAbs(StagLaunchToken(token).balanceOf(address(feeDesk)), (tokenBal / 2) / 100, 1e6, "token-side LP fees: to the desk");
+        assertEq(StagLaunchToken(token).balanceOf(address(0xdEaD)), 0, "nothing burned on the main pad");
+        assertEq(StagLaunchToken(token).balanceOf(address(treasury)), 0, "treasury never holds the launch token");
+        assertEq(StagRevenueSplitter(splitter).creditedToCreator(address(usdc)), 0, "LP fees skip the creator split");
+        assertEq(StagRevenueSplitter(splitter).creditedToPlatform(address(usdc)), 0);
     }
 
     // ------------------------------------------------------------------
-    // RobinTreasury — plain, owner-only, no automation of any kind
+    // StagTreasury — plain, owner-only, no automation of any kind
     // ------------------------------------------------------------------
 
     function test_TreasuryAccumulatesAndOnlyOwnerCanWithdraw() public {
         (address token, address locker) = _createLaunch(portal, 100, 100);
         PoolKey memory key = _keyFor(token);
-        address splitter = RobinLocker(locker).splitter();
+        address splitter = StagLocker(locker).splitter();
 
         _buy(trader1, token, key, 200 * USDC_DECIMALS);
-        RobinLocker(locker).harvestFees(); // main pad: LP fees straight to the treasury
+        StagLocker(locker).harvestFees(); // main pad: LP fees straight to the treasury
         uint256 lpFees = usdc.balanceOf(address(treasury));
         assertGt(lpFees, 0, "USDC-side LP fees land in the treasury at harvest");
         hook.flush(key); // moves the hook's accrued swap tax into the splitter
@@ -452,21 +452,21 @@ contract RobinPadTest is Test, Deployers {
         // H-2 fix) — the treasury only receives the platform's 20% once
         // claimPlatform is actually called. Anyone may call it.
         assertEq(usdc.balanceOf(address(treasury)), lpFees, "tax reaches the treasury only through claimPlatform");
-        uint256 platformTax = RobinRevenueSplitter(splitter).creditedToPlatform(address(usdc));
-        RobinRevenueSplitter(splitter).claimPlatform(address(usdc));
+        uint256 platformTax = StagRevenueSplitter(splitter).creditedToPlatform(address(usdc));
+        StagRevenueSplitter(splitter).claimPlatform(address(usdc));
         assertEq(usdc.balanceOf(address(treasury)), lpFees + platformTax);
 
-        uint256 treasuryTokenBal = RobinLaunchToken(token).balanceOf(address(treasury));
+        uint256 treasuryTokenBal = StagLaunchToken(token).balanceOf(address(treasury));
         uint256 treasuryUsdcBal = usdc.balanceOf(address(treasury));
         // Token-side LP fees now route to TOKEN_FEE_SINK, not the treasury
         // (L-6 fix) — the treasury should hold ONLY USDC, never the launch
-        // token, confirming RobinTreasury's "plain USDC" premise actually
+        // token, confirming StagTreasury's "plain USDC" premise actually
         // holds post-fix.
         assertEq(treasuryTokenBal, 0, "treasury must never hold the launch token");
         assertGt(treasuryUsdcBal, 0, "treasury should have accumulated some platform cut in USDC");
 
         vm.prank(trader2);
-        vm.expectRevert(RobinTreasury.NotOwner.selector);
+        vm.expectRevert(StagTreasury.NotOwner.selector);
         treasury.withdraw(address(usdc), trader2, 1);
 
         vm.prank(treasuryOwner);
@@ -476,9 +476,9 @@ contract RobinPadTest is Test, Deployers {
 
     // ------------------------------------------------------------------
     // Pad factory: "a pad that launches pads" (docs/PAD-FACTORY.md)
-    // White-label pads: Robin Labs takes 15%, the pad owner picks their share,
+    // White-label pads: STAG Pad takes 15%, the pad owner picks their share,
     // creators split the rest by their own fee allocation (up to 5 wallets
-    // plus buyback & burn). House pads (Robin Labs Pad itself): Robin Labs takes 10%.
+    // plus buyback & burn). House pads (STAG Pad itself): STAG Pad takes 10%.
     // ------------------------------------------------------------------
 
     address padBuyer = makeAddr("padBuyer");
@@ -510,7 +510,7 @@ contract RobinPadTest is Test, Deployers {
 
     function _params(uint16 buyTaxBps, uint16 sellTaxBps) internal pure returns (PadPortal.CreateLaunchParams memory) {
         return PadPortal.CreateLaunchParams({
-            name: "Pad Robin Labs", symbol: "PROBIN", startingMarketCapQuote: STARTING_MC, buyTaxBps: buyTaxBps, sellTaxBps: sellTaxBps
+            name: "Pad STAG Pad", symbol: "PSTAG", startingMarketCapQuote: STARTING_MC, buyTaxBps: buyTaxBps, sellTaxBps: sellTaxBps
         });
     }
 
@@ -551,9 +551,9 @@ contract RobinPadTest is Test, Deployers {
     /// White-label pads keep the original LP-fee route: USDC side through
     /// the launch's splitter, token side burned. Only the main pad uses the fee desk.
     function test_Pad_WhiteLabelLpFeesStillSplitAndBurn() public {
-        PadPortal pad = PadPortal(factory.deployHousePad("Robin Labs Pad", address(this), _settings(0, 1_000, 0, 100e6)));
+        PadPortal pad = PadPortal(factory.deployHousePad("STAG Pad", address(this), _settings(0, 1_000, 0, 100e6)));
         (address token, PadRevenueSplitter sp) = _padLaunch(pad, creator, 0, 0);
-        RobinLocker locker = RobinLocker(pad.lockerForToken(token));
+        StagLocker locker = StagLocker(pad.lockerForToken(token));
         assertEq(locker.quoteFeeSink(), address(0));
         assertEq(locker.tokenFeeSink(), address(0));
         PoolKey memory key = _keyFor(token);
@@ -563,8 +563,8 @@ contract RobinPadTest is Test, Deployers {
         locker.harvestFees();
         assertGt(sp.platformCredit(), 0, "USDC-side LP fees credited through the splitter");
         assertEq(usdc.balanceOf(address(treasury)), treasuryBefore, "not paid to the treasury directly");
-        assertGt(RobinLaunchToken(token).balanceOf(address(0xdEaD)), 0, "token side burned");
-        assertEq(RobinLaunchToken(token).balanceOf(address(feeDesk)), 0, "the fee desk is the main pad's only");
+        assertGt(StagLaunchToken(token).balanceOf(address(0xdEaD)), 0, "token side burned");
+        assertEq(StagLaunchToken(token).balanceOf(address(feeDesk)), 0, "the fee desk is the main pad's only");
     }
 
     function test_Pad_DeployChargesSetupFeeAndWiresThePad() public {
@@ -578,7 +578,7 @@ contract RobinPadTest is Test, Deployers {
         assertEq(pad.factory(), factory.padPortalTemplate(), "a standard pad is built by template #1");
         assertEq(PadPortalTemplate(pad.factory()).factory(), address(factory));
         assertEq(factory.templateOf(address(pad)), factory.padPortalTemplate());
-        assertEq(pad.platformShareBps(), 1_500, "Robin Labs takes 15% on white-label pads");
+        assertEq(pad.platformShareBps(), 1_500, "STAG Pad takes 15% on white-label pads");
         assertEq(pad.maxPadOwnerShareBps(), 8_500);
         assertTrue(hook.isAuthorizedPortal(address(pad)), "the hook trusts the new pad");
         assertEq(usdc.balanceOf(address(treasury)), treasuryBefore + SETUP_FEE, "$100 setup fee to the treasury");
@@ -591,18 +591,18 @@ contract RobinPadTest is Test, Deployers {
 
     function test_Pad_HousePadTakesTwentyPercentAndIsOwnerOnly() public {
         vm.prank(customer);
-        vm.expectRevert(RobinPadFactory.NotOwner.selector);
-        factory.deployHousePad("Fake Robin Labs Pad", customer, _settings(0, 1_000, 0, 100e6));
+        vm.expectRevert(StagPadFactory.NotOwner.selector);
+        factory.deployHousePad("Fake STAG Pad", customer, _settings(0, 1_000, 0, 100e6));
 
         uint256 treasuryBefore = usdc.balanceOf(address(treasury));
-        PadPortal house = PadPortal(factory.deployHousePad("Robin Labs Pad", address(this), _settings(0, 1_000, 0, 100e6)));
+        PadPortal house = PadPortal(factory.deployHousePad("STAG Pad", address(this), _settings(0, 1_000, 0, 100e6)));
         assertTrue(factory.isHousePad(address(house)));
         assertEq(house.platformShareBps(), 2_000);
         assertEq(usdc.balanceOf(address(treasury)), treasuryBefore, "no setup fee for a house pad");
 
         (address token, PadRevenueSplitter sp) = _padLaunch(house, creator, 300, 300);
         uint256 revenue = _tradeAndFlush(token);
-        assertEq(sp.platformCredit(), (revenue * 2_000) / 10_000, "Robin Labs: 20%");
+        assertEq(sp.platformCredit(), (revenue * 2_000) / 10_000, "STAG Pad: 20%");
         assertEq(sp.padOwnerCredit(), 0);
         assertEq(sp.creditOf(creator), revenue - (revenue * 2_000) / 10_000, "creator: 80%");
     }
@@ -611,18 +611,18 @@ contract RobinPadTest is Test, Deployers {
         factory.setSetupFee(200e6);
         vm.startPrank(customer);
         usdc.approve(address(factory), 200e6);
-        vm.expectRevert(RobinPadFactory.FeeChanged.selector);
+        vm.expectRevert(StagPadFactory.FeeChanged.selector);
         factory.deployPad("MoonPad", _settings(0, 1_000, 0, 100e6), SETUP_FEE); // agreed to pay $100 at most
         vm.stopPrank();
     }
 
     function test_Pad_SetupFeeIsOwnerOnlyAndBounded() public {
         vm.prank(customer);
-        vm.expectRevert(RobinPadFactory.NotOwner.selector);
+        vm.expectRevert(StagPadFactory.NotOwner.selector);
         factory.setSetupFee(1);
-        vm.expectRevert(RobinPadFactory.ZeroFee.selector);
+        vm.expectRevert(StagPadFactory.ZeroFee.selector);
         factory.setSetupFee(0);
-        vm.expectRevert(RobinPadFactory.FeeTooHigh.selector);
+        vm.expectRevert(StagPadFactory.FeeTooHigh.selector);
         factory.setSetupFee(10_000e6 + 1);
         factory.setSetupFee(250e6);
         assertEq(factory.setupFee(), 250e6);
@@ -632,11 +632,11 @@ contract RobinPadTest is Test, Deployers {
         vm.prank(customer);
         factory.acceptOwnership();
         assertEq(factory.owner(), customer);
-        vm.expectRevert(RobinPadFactory.NotOwner.selector);
+        vm.expectRevert(StagPadFactory.NotOwner.selector);
         factory.setSetupFee(100e6);
     }
 
-    function test_Pad_RevenueSplitsFifteenToRobinPadOwnerShareRestToCreator() public {
+    function test_Pad_RevenueSplitsFifteenToStagPadOwnerShareRestToCreator() public {
         PadPortal pad = _deployPad(_settings(2_000, 1_000, 0, 100e6)); // pad owner keeps 20%
         (address token, PadRevenueSplitter sp) = _padLaunch(pad, creator, 300, 300);
         uint256 revenue = _tradeAndFlush(token);
@@ -644,7 +644,7 @@ contract RobinPadTest is Test, Deployers {
 
         uint256 platform = (revenue * 1_500) / 10_000;
         uint256 padOwnerCut = (revenue * 2_000) / 10_000;
-        assertEq(sp.platformCredit(), platform, "Robin Labs: 15%");
+        assertEq(sp.platformCredit(), platform, "STAG Pad: 15%");
         assertEq(sp.padOwnerCredit(), padOwnerCut, "pad owner: their 20%");
         assertEq(sp.creditOf(creator), revenue - platform - padOwnerCut, "creator: the other 65%");
 
@@ -667,7 +667,7 @@ contract RobinPadTest is Test, Deployers {
         PadPortal pad = _deployPad(_settings(8_500, 1_000, 0, 100e6));
         (address token, PadRevenueSplitter sp) = _padLaunch(pad, creator, 500, 500);
         uint256 revenue = _tradeAndFlush(token);
-        assertEq(sp.platformCredit(), (revenue * 1_500) / 10_000, "Robin Labs still gets 15%");
+        assertEq(sp.platformCredit(), (revenue * 1_500) / 10_000, "STAG Pad still gets 15%");
         assertEq(sp.padOwnerCredit(), (revenue * 8_500) / 10_000);
         assertLe(sp.creditOf(creator), 1, "creator gets only rounding dust at an 85% pad");
 
@@ -682,7 +682,7 @@ contract RobinPadTest is Test, Deployers {
         uint256 ownerBefore = usdc.balanceOf(customer);
         uint256 creatorBefore = usdc.balanceOf(creator);
         _padLaunch(pad, creator, 100, 100);
-        assertEq(usdc.balanceOf(address(treasury)), treasuryBefore + 75e6, "Robin Labs: 15% of $500");
+        assertEq(usdc.balanceOf(address(treasury)), treasuryBefore + 75e6, "STAG Pad: 15% of $500");
         assertEq(usdc.balanceOf(customer), ownerBefore + 425e6, "pad owner: 85% of $500");
         assertEq(usdc.balanceOf(creator), creatorBefore - 500e6);
 
@@ -737,7 +737,7 @@ contract RobinPadTest is Test, Deployers {
         vm.stopPrank();
     }
 
-    /// Robin Labs Pad deploys with a $10k cap (owner: no launch opens above a
+    /// STAG Pad deploys with a $10k cap (owner: no launch opens above a
     /// $10k market cap); every pad owner sets their own cap.
     function test_Pad_MaxStartingMarketCapIsEnforced() public {
         PadPortal.PadSettings memory s = _settings(0, 1_000, 0, 100e6);
@@ -861,14 +861,14 @@ contract RobinPadTest is Test, Deployers {
         uint256 got = _buy(trader1, token, key, 50 * USDC_DECIMALS); // launch block
         assertGt(got, 0);
         vm.prank(trader1);
-        RobinLaunchToken(token).transfer(trader2, got / 2); // free wallet-to-wallet transfer
-        assertEq(RobinLaunchToken(token).balanceOf(trader2), got / 2);
+        StagLaunchToken(token).transfer(trader2, got / 2); // free wallet-to-wallet transfer
+        assertEq(StagLaunchToken(token).balanceOf(trader2), got / 2);
         assertGt(_sell(trader2, token, key, got / 2), 0, "sell straight back");
-        assertGt(_sell(trader1, token, key, RobinLaunchToken(token).balanceOf(trader1)), 0);
+        assertGt(_sell(trader1, token, key, StagLaunchToken(token).balanceOf(trader1)), 0);
     }
 
     function test_Pad_FeeAllocationSplitsAcrossWalletsAndIsLocked() public {
-        PadPortal pad = _deployPad(_settings(1_000, 1_000, 0, 100e6)); // pad owner 10%, Robin Labs 15%: creators share 75%
+        PadPortal pad = _deployPad(_settings(1_000, 1_000, 0, 100e6)); // pad owner 10%, STAG Pad 15%: creators share 75%
         address dev = makeAddr("dev");
         address mkt = makeAddr("mkt");
         address team = makeAddr("team");
@@ -960,12 +960,12 @@ contract RobinPadTest is Test, Deployers {
         vm.expectRevert(PadRevenueSplitter.Slippage.selector);
         sp.executeBuyback(bucket, type(uint256).max);
 
-        uint256 deadBefore = RobinLaunchToken(token).balanceOf(DEAD);
+        uint256 deadBefore = StagLaunchToken(token).balanceOf(DEAD);
         uint256 creditBefore = sp.creditOf(creator);
         vm.prank(creator);
         uint256 burned = sp.executeBuyback(bucket, 1);
         assertGt(burned, 0);
-        assertEq(RobinLaunchToken(token).balanceOf(DEAD), deadBefore + burned, "bought tokens went to the dead address");
+        assertEq(StagLaunchToken(token).balanceOf(DEAD), deadBefore + burned, "bought tokens went to the dead address");
         assertEq(sp.buybackCredit(), 0);
         assertEq(sp.totalBurned(), burned);
         assertEq(sp.totalBuybackSpent(), bucket);
@@ -984,7 +984,7 @@ contract RobinPadTest is Test, Deployers {
     }
 
     /// @notice A blocklisted pad owner can only block their own payout: never
-    /// trading, the hook's flush, the creator's claim or Robin Labs' share.
+    /// trading, the hook's flush, the creator's claim or STAG Pad' share.
     function test_Pad_BlockedPadOwnerOnlyBlocksTheirOwnPayout() public {
         BlockableERC20 q = new BlockableERC20();
         q.mint(trader1, 100_000 * USDC_DECIMALS);
@@ -994,9 +994,9 @@ contract RobinPadTest is Test, Deployers {
                 | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG
         );
         (, bytes32 salt) =
-            HookMiner.find(address(this), flags, type(RobinHook).creationCode, abi.encode(address(manager), address(this)));
-        RobinHook h = new RobinHook{salt: salt}(address(manager), address(this));
-        RobinPadFactory f = new RobinPadFactory(
+            HookMiner.find(address(this), flags, type(StagHook).creationCode, abi.encode(address(manager), address(this)));
+        StagHook h = new StagHook{salt: salt}(address(manager), address(this));
+        StagPadFactory f = new StagPadFactory(
             address(manager), address(h), address(treasury), address(q), address(splitterImpl), SETUP_FEE, address(this)
         );
         h.bootstrapFactory(address(f));
@@ -1041,7 +1041,7 @@ contract RobinPadTest is Test, Deployers {
         pad.claimPadOwnerFees(0, 1); // only this reverts
         vm.prank(creator);
         sp.claim(creator, address(q)); // creator unaffected
-        pad.claimPlatformFees(0, 1); // Robin Labs unaffected
+        pad.claimPlatformFees(0, 1); // STAG Pad unaffected
         assertGt(q.balanceOf(creator), 0);
     }
 
@@ -1070,19 +1070,19 @@ contract RobinPadTest is Test, Deployers {
             Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
                 | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG
         );
-        bytes memory creationCode = type(RobinHook).creationCode;
+        bytes memory creationCode = type(StagHook).creationCode;
         bytes memory constructorArgs = abi.encode(address(manager), address(this));
         // Re-mining with identical (deployer, flags, initCode) inputs to
         // setUp()'s hook naturally lands on a DIFFERENT salt here —
         // HookMiner.find skips any candidate address that already has
         // code, and setUp()'s hook already occupies the first match.
         (address predictedHook, bytes32 salt) = HookMiner.find(address(this), flags, creationCode, constructorArgs);
-        RobinHook freshHook = new RobinHook{salt: salt}(address(manager), address(this));
+        StagHook freshHook = new StagHook{salt: salt}(address(manager), address(this));
         require(address(freshHook) == predictedHook, "hook address mismatch");
 
-        RobinTreasury blockedTreasury = new RobinTreasury(treasuryOwner);
-        RobinPortal freshPortal =
-            new RobinPortal(address(manager), address(freshHook), address(blockedTreasury), address(blockableQuote), true, address(0));
+        StagTreasury blockedTreasury = new StagTreasury(treasuryOwner);
+        StagPortal freshPortal =
+            new StagPortal(address(manager), address(freshHook), address(blockedTreasury), address(blockableQuote), true, address(0));
         freshHook.bootstrapMainPortal(address(freshPortal));
 
         // Block the treasury's INCOMING transfers only — simulating e.g. a
@@ -1091,8 +1091,8 @@ contract RobinPadTest is Test, Deployers {
 
         vm.prank(creator);
         (address token, address locker) = freshPortal.createLaunch(
-            RobinPortal.CreateLaunchParams({
-                name: "Blocked Quote Robin Labs",
+            StagPortal.CreateLaunchParams({
+                name: "Blocked Quote STAG Pad",
                 symbol: "BLOCK",
                 startingMarketCapQuote: STARTING_MC,
                 buyTaxBps: 100,
@@ -1126,28 +1126,28 @@ contract RobinPadTest is Test, Deployers {
         );
         vm.stopPrank();
 
-        address splitter = RobinLocker(locker).splitter();
+        address splitter = StagLocker(locker).splitter();
 
         // flush() also succeeds — it only ever pays the splitter, never the
         // treasury directly.
         freshHook.flush(key);
         assertGt(
-            RobinRevenueSplitter(splitter).creditedToPlatform(address(blockableQuote)),
+            StagRevenueSplitter(splitter).creditedToPlatform(address(blockableQuote)),
             0,
             "platform should have been credited its cut despite the treasury being blocked"
         );
 
         // Only the platform's OWN claim, to the blocked treasury, reverts.
         vm.expectRevert();
-        RobinRevenueSplitter(splitter).claimPlatform(address(blockableQuote));
+        StagRevenueSplitter(splitter).claimPlatform(address(blockableQuote));
 
         // The creator's claim is completely unaffected by the treasury
         // being blocked — pull-based accounting means one broken recipient
         // can never block another's funds.
-        uint256 creatorCredited = RobinRevenueSplitter(splitter).creditedToCreator(address(blockableQuote));
+        uint256 creatorCredited = StagRevenueSplitter(splitter).creditedToCreator(address(blockableQuote));
         assertGt(creatorCredited, 0, "creator should still be credited");
         vm.prank(creator);
-        RobinRevenueSplitter(splitter).claim(creator, address(blockableQuote));
+        StagRevenueSplitter(splitter).claim(creator, address(blockableQuote));
         assertEq(blockableQuote.balanceOf(creator), creatorCredited, "creator's claim should succeed despite the treasury being blocked");
     }
 
@@ -1167,9 +1167,9 @@ contract RobinPadTest is Test, Deployers {
     function test_Template_OnlyTheOwnerApprovesAndOnlyContracts() public {
         MockPadTemplate t = _mockTemplate(address(usdc));
         vm.prank(customer);
-        vm.expectRevert(RobinPadFactory.NotOwner.selector);
+        vm.expectRevert(StagPadFactory.NotOwner.selector);
         factory.setTemplateApproved(address(t), true);
-        vm.expectRevert(RobinPadFactory.InvalidTemplate.selector);
+        vm.expectRevert(StagPadFactory.InvalidTemplate.selector);
         factory.setTemplateApproved(makeAddr("eoa"), true);
 
         factory.setTemplateApproved(address(t), true);
@@ -1182,7 +1182,7 @@ contract RobinPadTest is Test, Deployers {
         MockPadTemplate t = _mockTemplate(address(usdc));
         vm.startPrank(customer);
         usdc.approve(address(factory), SETUP_FEE);
-        vm.expectRevert(RobinPadFactory.TemplateNotApproved.selector);
+        vm.expectRevert(StagPadFactory.TemplateNotApproved.selector);
         factory.deployPadFromTemplate(address(t), "Nope", abi.encode(_settings(0, 1_000, 0, 100e6)), SETUP_FEE);
         vm.stopPrank();
     }
@@ -1199,7 +1199,7 @@ contract RobinPadTest is Test, Deployers {
 
     /// The point of templates: a new kind of pad on the same hook, here one
     /// whose coins are paired against another token instead of USDC (the
-    /// Fork Wars idea). Same $100 USDC setup fee, same 15% to Robin Labs, paid in
+    /// Fork Wars idea). Same $100 USDC setup fee, same 15% to STAG Pad, paid in
     /// that pad's own quote token.
     function test_Template_NewKindOfPadQuotedInAnotherToken() public {
         MockERC20 parent = new MockERC20("Parent Coin", "PARENT", 6);
@@ -1244,12 +1244,12 @@ contract RobinPadTest is Test, Deployers {
             ""
         );
         vm.stopPrank();
-        assertGt(RobinLaunchToken(token).balanceOf(trader1), 0, "bought the fork with the parent coin");
+        assertGt(StagLaunchToken(token).balanceOf(trader1), 0, "bought the fork with the parent coin");
 
         uint256 revenue = hook.pendingTax(PoolId.unwrap(key.toId()));
         assertEq(revenue, (200 * USDC_DECIMALS * 300) / 10_000, "3% buy tax, in the parent coin");
         hook.flush(key);
-        assertEq(sp.platformCredit(), (revenue * 1_500) / 10_000, "Robin Labs: 15%");
+        assertEq(sp.platformCredit(), (revenue * 1_500) / 10_000, "STAG Pad: 15%");
         assertEq(sp.padOwnerCredit(), (revenue * 2_000) / 10_000, "pad owner: 20%");
         pad.claimPlatformFees(0, 10);
         assertEq(parent.balanceOf(address(treasury)), (revenue * 1_500) / 10_000, "treasury paid in the parent coin");
@@ -1260,9 +1260,9 @@ contract RobinPadTest is Test, Deployers {
         factory.setTemplateApproved(address(t), true);
         bytes memory cfg = abi.encode(_settings(0, 1_000, 0, 100e6));
         vm.prank(customer);
-        vm.expectRevert(RobinPadFactory.NotOwner.selector);
+        vm.expectRevert(StagPadFactory.NotOwner.selector);
         factory.deployHousePadFromTemplate(address(t), "Fake", customer, cfg);
-        vm.expectRevert(RobinPadFactory.ZeroAddress.selector);
+        vm.expectRevert(StagPadFactory.ZeroAddress.selector);
         factory.deployHousePadFromTemplate(address(t), "House", address(0), cfg);
 
         uint256 treasuryBefore = usdc.balanceOf(address(treasury));
@@ -1275,7 +1275,7 @@ contract RobinPadTest is Test, Deployers {
 
     function test_Template_HousePadNeedsAnApprovedTemplateToo() public {
         MockPadTemplate t = _mockTemplate(address(usdc));
-        vm.expectRevert(RobinPadFactory.TemplateNotApproved.selector);
+        vm.expectRevert(StagPadFactory.TemplateNotApproved.selector);
         factory.deployHousePadFromTemplate(address(t), "House", address(this), abi.encode(_settings(0, 1_000, 0, 100e6)));
     }
 
@@ -1286,7 +1286,7 @@ contract RobinPadTest is Test, Deployers {
         MockPadTemplate t = _mockTemplate(address(usdc));
         factory.setTemplateApproved(address(t), true);
         t.setMode(MockPadTemplate.Mode.FakePad, address(0));
-        vm.expectRevert(RobinPadFactory.ZeroAddress.selector);
+        vm.expectRevert(StagPadFactory.ZeroAddress.selector);
         factory.deployHousePadFromTemplate(address(t), "House", address(0), "");
     }
 
@@ -1296,13 +1296,13 @@ contract RobinPadTest is Test, Deployers {
         factory.setSetupFee(200e6);
         vm.startPrank(customer);
         usdc.approve(address(factory), 200e6);
-        vm.expectRevert(RobinPadFactory.FeeChanged.selector);
+        vm.expectRevert(StagPadFactory.FeeChanged.selector);
         factory.deployPadFromTemplate(address(t), "ForkPad", abi.encode(_settings(0, 1_000, 0, 100e6)), SETUP_FEE);
         vm.stopPrank();
     }
 
     /// Even an approved template can't slip in a pad on another hook,
-    /// PoolManager or treasury, charging less than Robin Labs' share, owned by
+    /// PoolManager or treasury, charging less than STAG Pad' share, owned by
     /// someone else, already registered, or not a contract at all.
     function test_Template_MiswiredPadsAreRejected() public {
         MockPadTemplate t = _mockTemplate(address(usdc));
@@ -1325,7 +1325,7 @@ contract RobinPadTest is Test, Deployers {
             t.setMode(bad[i], address(existing));
             vm.startPrank(customer);
             usdc.approve(address(factory), SETUP_FEE);
-            vm.expectRevert(RobinPadFactory.InvalidPortal.selector);
+            vm.expectRevert(StagPadFactory.InvalidPortal.selector);
             factory.deployPadFromTemplate(address(t), "Bad", cfg, SETUP_FEE);
             vm.stopPrank();
         }
@@ -1341,7 +1341,7 @@ contract RobinPadTest is Test, Deployers {
 
         vm.startPrank(customer);
         usdc.approve(address(factory), SETUP_FEE);
-        vm.expectRevert(RobinPadFactory.TemplateNotApproved.selector);
+        vm.expectRevert(StagPadFactory.TemplateNotApproved.selector);
         factory.deployPadFromTemplate(address(t), "Late", abi.encode(_settings(0, 1_000, 0, 100e6)), SETUP_FEE);
         vm.stopPrank();
 

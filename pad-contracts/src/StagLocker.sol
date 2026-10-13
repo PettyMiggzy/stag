@@ -24,7 +24,7 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IRobinSplitter} from "./interfaces/IRobinSplitter.sol";
+import {IStagSplitter} from "./interfaces/IStagSplitter.sol";
 
 /// @notice Holds a launch's LP position forever. Deliberately the contract
 /// that CREATES the position (via `seedLiquidity`, called once by the
@@ -41,9 +41,9 @@ import {IRobinSplitter} from "./interfaces/IRobinSplitter.sol";
 ///     launch's splitter, split like its tax; launch-token-side fees burned.
 ///   - the main pad (both sinks set): quote-side fees straight to the
 ///     platform treasury, and launch-token-side fees to the fee desk
-///     (RobinFeeDesk), which sells them to anyone for USDG at a discount,
+///     (StagFeeDesk), which sells them to anyone for USDG at a discount,
 ///     so the platform never holds launch tokens or sells them into the pool.
-contract RobinLocker is IUnlockCallback {
+contract StagLocker is IUnlockCallback {
     using SafeERC20 for IERC20;
 
     /// @dev LP fees collected on the launch-token side are routed here
@@ -108,7 +108,7 @@ contract RobinLocker is IUnlockCallback {
     /// launch's full token supply to this contract. Creates the
     /// single-sided concentrated position (pure launch token, resting above
     /// or below the opening price depending on token/quote ordering — see
-    /// RobinPortal._seedLaunchPool), owned by this locker from the moment
+    /// StagPortal._seedLaunchPool), owned by this locker from the moment
     /// it exists. No quote asset is ever required to seed it.
     function seedLiquidity(uint128 liquidity) external {
         if (msg.sender != portal) revert NotPortal();
@@ -185,7 +185,7 @@ contract RobinLocker is IUnlockCallback {
             IPoolManager(poolManager).take(currency, quoteFeeSink, amount);
         } else {
             IPoolManager(poolManager).take(currency, splitter, amount);
-            IRobinSplitter(splitter).depositRevenue(asset, amount);
+            IStagSplitter(splitter).depositRevenue(asset, amount);
         }
     }
 

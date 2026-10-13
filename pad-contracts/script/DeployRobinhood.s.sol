@@ -7,7 +7,7 @@ import {RobinhoodStack} from "./RobinhoodStack.sol";
 /// @notice Fresh deploy of the whole pad on Robinhood Chain (chain 4663),
 /// quoted in USDG. One broadcast; see RobinhoodStack.sol for what it builds.
 ///
-/// Arc reached the same state in three steps (DeployRobinPad.s.sol,
+/// Arc reached the same state in three steps (DeployStagPad.s.sol,
 /// DeployPadFactory.s.sol, DeployHolderPad.s.sol). Those scripts upgrade
 /// Arc's live contracts and hardcode Arc addresses, so they are Arc-only
 /// history; on Robinhood run this one instead.
@@ -22,8 +22,8 @@ import {RobinhoodStack} from "./RobinhoodStack.sol";
 /// Gas is ETH, not USDG. The deploy needs no USDG at all.
 ///
 /// Env (optional): PAD_SETUP_FEE (raw USDG, default 100e6 = $100 per
-/// white-label pad), HOUSE_PAD_NAME (default "Robin Labs Pad"; stored on-chain),
-/// EXISTING_TREASURY (reuse a live RobinTreasury owned by the deployer).
+/// white-label pad), HOUSE_PAD_NAME (default "STAG Pad"; stored on-chain),
+/// EXISTING_TREASURY (reuse a live StagTreasury owned by the deployer).
 contract DeployRobinhood is Script, RobinhoodStack {
     function run() external returns (Stack memory s) {
         require(block.chainid == 4663 || vm.envOr("ALLOW_OTHER_CHAIN", false), "not Robinhood Chain (4663)");
@@ -36,7 +36,7 @@ contract DeployRobinhood is Script, RobinhoodStack {
         require(deployer != 0xA95f339fde0fb6846e7d888f6A063EC2aB04C678, "leaked testnet key");
 
         uint256 setupFee = vm.envOr("PAD_SETUP_FEE", uint256(100e6));
-        string memory name = vm.envOr("HOUSE_PAD_NAME", string("Robin Labs Pad"));
+        string memory name = vm.envOr("HOUSE_PAD_NAME", string("STAG Pad"));
         // Keep the live treasury (all platform revenue lands in one place):
         // EXISTING_TREASURY=0x2F59476D23dE13e1Cd171d69Efe1227dE8349D3f. Unset deploys a new one.
         address existingTreasury = vm.envOr("EXISTING_TREASURY", address(0));
@@ -52,12 +52,12 @@ contract DeployRobinhood is Script, RobinhoodStack {
         s = _deployStack(deployer, CREATE2_DEPLOYER, setupFee, name, existingTreasury, admin);
         vm.stopBroadcast();
 
-        console2.log("RobinTreasury:", address(s.treasury));
-        console2.log("RobinHook:", address(s.hook));
-        console2.log("RobinFeeDesk (sells the main pad's token-side LP fees at 10% off):", address(s.feeDesk));
-        console2.log("RobinPortal (main portal, closes the hook's one-shot slot):", address(s.mainPortal));
+        console2.log("StagTreasury:", address(s.treasury));
+        console2.log("StagHook:", address(s.hook));
+        console2.log("StagFeeDesk (sells the main pad's token-side LP fees at 10% off):", address(s.feeDesk));
+        console2.log("StagPortal (main portal, closes the hook's one-shot slot):", address(s.mainPortal));
         console2.log("PadRevenueSplitter implementation:", address(s.splitterImpl));
-        console2.log("RobinPadFactory:", address(s.factory));
+        console2.log("StagPadFactory:", address(s.factory));
         console2.log("PadPortalTemplate (template #1):", s.factory.padPortalTemplate());
         console2.log("HolderTokenDeployer:", address(s.tokenDeployer));
         console2.log("HolderPadTemplate (template #2, approved):", address(s.holderTemplate));

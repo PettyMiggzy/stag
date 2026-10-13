@@ -4,20 +4,20 @@ pragma solidity ^0.8.24;
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {HookMiner} from "@uniswap/v4-periphery/test/shared/HookMiner.sol";
 
-import {RobinHook} from "../src/RobinHook.sol";
-import {RobinPortal} from "../src/RobinPortal.sol";
-import {RobinPadFactory} from "../src/RobinPadFactory.sol";
+import {StagHook} from "../src/StagHook.sol";
+import {StagPortal} from "../src/StagPortal.sol";
+import {StagPadFactory} from "../src/StagPadFactory.sol";
 import {PadPortal} from "../src/PadPortal.sol";
 import {PadRevenueSplitter} from "../src/PadRevenueSplitter.sol";
-import {RobinTreasury} from "../src/RobinTreasury.sol";
-import {RobinFeeDesk} from "../src/RobinFeeDesk.sol";
+import {StagTreasury} from "../src/StagTreasury.sol";
+import {StagFeeDesk} from "../src/StagFeeDesk.sol";
 import {HolderTokenDeployer} from "../src/HolderTokenDeployer.sol";
 import {HolderPadTemplate} from "../src/HolderPadTemplate.sol";
 import {HolderPadPortal} from "../src/HolderPadPortal.sol";
 
 /// @notice The whole pad stack for Robinhood Chain, from nothing, in the
 /// state Arc's live deployment reached after its three incremental deploys
-/// (DeployRobinPad -> DeployPadFactory -> DeployHolderPad): shared hook and
+/// (DeployStagPad -> DeployPadFactory -> DeployHolderPad): shared hook and
 /// treasury, the white-label factory with the holder-dividends template
 /// approved, and the house pad built from that template. Shared by
 /// DeployRobinhood.s.sol and test/ForkRobinhood.t.sol so the fork test runs
@@ -40,19 +40,19 @@ abstract contract RobinhoodStack {
     address internal constant USDG = 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168;
     address internal constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-    // 0x28CC — see RobinHook's contract comment and DeployRobinPad.s.sol.
+    // 0x28CC — see StagHook's contract comment and DeployStagPad.s.sol.
     uint160 internal constant HOOK_FLAGS = uint160(
         Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
             | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG
     );
 
     struct Stack {
-        RobinTreasury treasury;
-        RobinHook hook;
-        RobinFeeDesk feeDesk;
-        RobinPortal mainPortal;
+        StagTreasury treasury;
+        StagHook hook;
+        StagFeeDesk feeDesk;
+        StagPortal mainPortal;
         PadRevenueSplitter splitterImpl;
-        RobinPadFactory factory;
+        StagPadFactory factory;
         HolderTokenDeployer tokenDeployer;
         HolderPadTemplate holderTemplate;
         HolderPadPortal housePad;
@@ -91,31 +91,31 @@ abstract contract RobinhoodStack {
     ) internal returns (Stack memory s) {
         require(admin != address(0), "admin is zero");
         if (existingTreasury != address(0)) {
-            s.treasury = RobinTreasury(payable(existingTreasury));
+            s.treasury = StagTreasury(payable(existingTreasury));
             require(s.treasury.owner() == admin, "existing treasury has another owner");
         } else {
-            s.treasury = new RobinTreasury(admin);
+            s.treasury = new StagTreasury(admin);
         }
 
         bytes memory args = abi.encode(POOL_MANAGER, owner);
-        (address predictedHook, bytes32 salt) = HookMiner.find(create2Deployer, HOOK_FLAGS, type(RobinHook).creationCode, args);
+        (address predictedHook, bytes32 salt) = HookMiner.find(create2Deployer, HOOK_FLAGS, type(StagHook).creationCode, args);
         require(predictedHook.code.length == 0, "mined hook address already has code - re-mine");
-        s.hook = new RobinHook{salt: salt}(POOL_MANAGER, owner);
+        s.hook = new StagHook{salt: salt}(POOL_MANAGER, owner);
         require(address(s.hook) == predictedHook, "hook address mismatch - build differs from the one mined against");
         require(uint160(address(s.hook)) & Hooks.ALL_HOOK_MASK == HOOK_FLAGS, "hook address lacks the required flags");
 
         // The main-portal slot is one-shot and, unlike the factory slot, has
         // no renounce. Filling it is the only way to close it, so the fresh
-        // deploy fills it the way Arc did, with the original RobinPortal.
+        // deploy fills it the way Arc did, with the original StagPortal.
         // The main pad's LP fees: USDG side to the treasury in full, token
         // side to the fee desk, which sells it at a discount for USDG.
-        s.feeDesk = new RobinFeeDesk(POOL_MANAGER, address(s.hook), USDG, address(s.treasury));
+        s.feeDesk = new StagFeeDesk(POOL_MANAGER, address(s.hook), USDG, address(s.treasury));
         s.mainPortal =
-            new RobinPortal(POOL_MANAGER, address(s.hook), address(s.treasury), USDG, true, address(s.feeDesk));
+            new StagPortal(POOL_MANAGER, address(s.hook), address(s.treasury), USDG, true, address(s.feeDesk));
         s.hook.bootstrapMainPortal(address(s.mainPortal));
 
         s.splitterImpl = new PadRevenueSplitter();
-        s.factory = new RobinPadFactory(
+        s.factory = new StagPadFactory(
             POOL_MANAGER, address(s.hook), address(s.treasury), USDG, address(s.splitterImpl), setupFee, owner
         );
         s.hook.bootstrapFactory(address(s.factory)); // closes the factory slot for good

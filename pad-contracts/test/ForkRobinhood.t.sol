@@ -12,13 +12,13 @@ import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {RobinHook} from "../src/RobinHook.sol";
-import {RobinPortal} from "../src/RobinPortal.sol";
-import {RobinLocker} from "../src/RobinLocker.sol";
-import {RobinRevenueSplitter} from "../src/RobinRevenueSplitter.sol";
+import {StagHook} from "../src/StagHook.sol";
+import {StagPortal} from "../src/StagPortal.sol";
+import {StagLocker} from "../src/StagLocker.sol";
+import {StagRevenueSplitter} from "../src/StagRevenueSplitter.sol";
 import {PadPortal} from "../src/PadPortal.sol";
 import {PadRevenueSplitter} from "../src/PadRevenueSplitter.sol";
-import {RobinHolderToken} from "../src/RobinHolderToken.sol";
+import {StagHolderToken} from "../src/StagHolderToken.sol";
 import {RobinhoodStack} from "../script/RobinhoodStack.sol";
 
 /// @notice The whole pad on REAL Robinhood Chain state: the live Uniswap v4
@@ -44,7 +44,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
         }
         vm.createSelectFork(url);
         assertEq(block.chainid, 4663, "not a Robinhood Chain fork");
-        s = _deployStack(address(this), address(this), 100e6, "Robin Labs Pad", address(0), address(this));
+        s = _deployStack(address(this), address(this), 100e6, "STAG Pad", address(0), address(this));
         router = new PoolSwapTest(IPoolManager(POOL_MANAGER));
         return true;
     }
@@ -102,7 +102,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
 
         vm.prank(creator);
         (address token, address locker) = s.mainPortal.createLaunch(
-            RobinPortal.CreateLaunchParams({
+            StagPortal.CreateLaunchParams({
                 name: "Fork Robin", symbol: "FROB", startingMarketCapQuote: 1_000e6, buyTaxBps: 300, sellTaxBps: 300
             })
         );
@@ -126,7 +126,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
         assertGt(pending, 3e6, "the sell added its own tax, also in USDG");
 
         hook().flush(key);
-        RobinRevenueSplitter sp = RobinRevenueSplitter(RobinLocker(locker).splitter());
+        StagRevenueSplitter sp = StagRevenueSplitter(StagLocker(locker).splitter());
         uint256 creatorCut = sp.creditedToCreator(USDG);
         assertEq(creatorCut, pending - (pending * 2_000) / 10_000, "80% to the creator");
         vm.prank(creator);
@@ -145,7 +145,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
         // LP fees: the USDG side to the treasury in full, the token side to
         // the fee desk, which sells it for real USDG at 10% off.
         uint256 t1 = IERC20(USDG).balanceOf(address(s.treasury));
-        RobinLocker(locker).harvestFees();
+        StagLocker(locker).harvestFees();
         uint256 lpUsdg = IERC20(USDG).balanceOf(address(s.treasury)) - t1;
         assertGt(lpUsdg, 0, "USDG-side LP fees to the treasury");
         assertApproxEqRel(s.feeDesk.inventory(token), bought / 100, 0.001e18, "1% of the sell, in the token, at the desk");
@@ -186,7 +186,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
         for (uint256 i; i < 24 && !(sawToken0 && sawToken1); ++i) {
             vm.prank(creator);
             (address token,) = s.mainPortal.createLaunch(
-                RobinPortal.CreateLaunchParams({
+                StagPortal.CreateLaunchParams({
                     name: "Order", symbol: "ORD", startingMarketCapQuote: 5_000e6, buyTaxBps: 500, sellTaxBps: 200
                 })
             );
@@ -304,9 +304,9 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
         assertEq(IERC20(USDG).balanceOf(creator), c0 + creatorPool - bucket, "creator's wallet paid its 70%");
 
         // Both hook slots are closed for good.
-        vm.expectRevert(RobinHook.AlreadyBootstrapped.selector);
+        vm.expectRevert(StagHook.AlreadyBootstrapped.selector);
         hook().bootstrapFactory(address(s.factory));
-        vm.expectRevert(RobinHook.AlreadyBootstrapped.selector);
+        vm.expectRevert(StagHook.AlreadyBootstrapped.selector);
         hook().bootstrapMainPortal(address(pad));
     }
 
@@ -343,7 +343,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
             0,
             0
         );
-        RobinHolderToken token = RobinHolderToken(t);
+        StagHolderToken token = StagHolderToken(t);
         PadRevenueSplitter sp = PadRevenueSplitter(s.housePad.splitterForToken(t));
         (address[] memory r,,) = sp.allocation();
         assertEq(r[2], t, "holders' slot pays the token");
@@ -401,7 +401,7 @@ contract ForkRobinhoodTest is Test, RobinhoodStack {
         assertEq(PadRevenueSplitter(s.housePad.splitterForToken(plain)).platformShareBps(), 2_000);
     }
 
-    function hook() internal view returns (RobinHook) {
+    function hook() internal view returns (StagHook) {
         return s.hook;
     }
 }
