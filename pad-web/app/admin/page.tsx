@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AdminPanel } from '@/components/AdminPanel';
 import { TreasuryPanel } from '@/components/TreasuryPanel';
+import { OwnershipPanel } from '@/components/OwnershipPanel';
 
 // Not linked from anywhere. Anyone can collect fees into the treasury; only
 // the treasury owner can withdraw, and only the pad admin can use the switch.
@@ -9,6 +10,7 @@ export const metadata: Metadata = { title: 'Pad admin', robots: { index: false, 
 export default function Admin() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <OwnershipPanel />
       <TreasuryPanel />
       <AdminPanel />
     </div>
