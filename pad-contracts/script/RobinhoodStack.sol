@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {HookMiner} from "@uniswap/v4-periphery/test/shared/HookMiner.sol";
+
+import {RobinHook} from "../src/RobinHook.sol";
+import {RobinPortal} from "../src/RobinPortal.sol";
+import {RobinPadFactory} from "../src/RobinPadFactory.sol";
+import {PadPortal} from "../src/PadPortal.sol";
+import {PadRevenueSplitter} from "../src/PadRevenueSplitter.sol";
+import {RobinTreasury} from "../src/RobinTreasury.sol";
+import {RobinFeeDesk} from "../src/RobinFeeDesk.sol";
+import {HolderTokenDeployer} from "../src/HolderTokenDeployer.sol";
+import {HolderPadTemplate} from "../src/HolderPadTemplate.sol";
+import {HolderPadPortal} from "../src/HolderPadPortal.sol";
+
+/// @notice The whole pad stack for Robinhood Chain, from nothing, in the
+/// state Arc's live deployment reached after its three incremental deploys
+/// (DeployRobinPad -> DeployPadFactory -> DeployHolderPad): shared hook and
+/// treasury, the white-label factory with the holder-dividends template
+/// approved, and the house pad built from that template. Shared by
+/// DeployRobinhood.s.sol and test/ForkRobinhood.t.sol so the fork test runs
+/// the exact deploy path, not a copy of it.
+///
+/// `owner` must be whoever makes the calls (the broadcaster in a script,
+/// the test contract in a test): it becomes the hook's bootstrapper, the
+/// treasury and factory owner and the house pad's owner, and it calls the
+/// bootstrap/approve functions below directly.
+///
+/// `create2Deployer` is who a salted `new` actually deploys from: the
+/// canonical CREATE2 proxy when forge broadcasts, the calling contract
+/// itself in a test. The hook address is mined against it.
+abstract contract RobinhoodStack {
+    // Uniswap v4 PoolManager on Robinhood Chain (chain 4663). Same address as
+    // on Arc; verified on-chain before this port.
+    address internal constant POOL_MANAGER = 0x8366a39CC670B4001A1121B8F6A443A643e40951;
+    // USDG (Global Dollar, Paxos), 6 decimals like USDC, so every raw amount
+    // in the contracts ($100 = 100e6) means the same dollars.
+    address internal constant USDG = 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168;
+    address internal constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+
+    // 0x28CC — see RobinHook's contract comment and DeployRobinPad.s.sol.
+    uint160 internal constant HOOK_FLAGS = uint160(
+        Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
+            | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG
+    );
+
+    struct Stack {
+        RobinTreasury treasury;
+        RobinHook hook;
+        RobinFeeDesk feeDesk;
+        RobinPortal mainPortal;
+        PadRevenueSplitter splitterImpl;
+        RobinPadFactory factory;
+        HolderTokenDeployer tokenDeployer;
+        HolderPadTemplate holderTemplate;
+        HolderPadPortal housePad;
+    }
+
+    /// The house pad's terms: platform takes its fixed 20%
+    /// (HOUSE_PLATFORM_SHARE_BPS), creators pick any tax 0-10%, opening market cap
+    /// $100-$10k, no launch fee, open to everyone.
+    function _housePadSettings() internal pure returns (PadPortal.PadSettings memory) {
+        return PadPortal.PadSettings({
+            padOwnerShareBps: 0,
+            minTaxBps: 0,
+            maxTaxBps: 1_000,
+            launchFee: 0,
+            minStartingMarketCapQuote: 100e6,
+            launchesPaused: false,
+            inviteOnly: false,
+            maxStartingMarketCapQuote: 10_000e6
+        });
+    }
+
+    /// `existingTreasury`: keep collecting into a treasury that's already
+    /// live (its owner must be `admin`); zero deploys a new one for `admin`.
+    /// `admin`: who ends up in charge. `owner` (the deployer) must make the
+    /// wiring calls, so it bootstraps the hook and owns the factory while
+    /// deploying; with a different `admin`, the house pad is created owned by
+    /// `admin` and the factory is offered to `admin` (it calls
+    /// acceptOwnership to take it). Pass `admin == owner` for one wallet.
+    function _deployStack(
+        address owner,
+        address create2Deployer,
+        uint256 setupFee,
+        string memory housePadName,
+        address existingTreasury,
+        address admin
+    ) internal returns (Stack memory s) {
+        require(admin != address(0), "admin is zero");
+        if (existingTreasury != address(0)) {
+            s.treasury = RobinTreasury(payable(existingTreasury));
+            require(s.treasury.owner() == admin, "existing treasury has another owner");
+        } else {
+            s.treasury = new RobinTreasury(admin);
+        }
+
+        bytes memory args = abi.encode(POOL_MANAGER, owner);
+        (address predictedHook, bytes32 salt) = HookMiner.find(create2Deployer, HOOK_FLAGS, type(RobinHook).creationCode, args);
+        require(predictedHook.code.length == 0, "mined hook address already has code - re-mine");
+        s.hook = new RobinHook{salt: salt}(POOL_MANAGER, owner);
+        require(address(s.hook) == predictedHook, "hook address mismatch - build differs from the one mined against");
+        require(uint160(address(s.hook)) & Hooks.ALL_HOOK_MASK == HOOK_FLAGS, "hook address lacks the required flags");
+
+        // The main-portal slot is one-shot and, unlike the factory slot, has
+        // no renounce. Filling it is the only way to close it, so the fresh
+        // deploy fills it the way Arc did, with the original RobinPortal.
+        // The main pad's LP fees: USDG side to the treasury in full, token
+        // side to the fee desk, which sells it at a discount for USDG.
+        s.feeDesk = new RobinFeeDesk(POOL_MANAGER, address(s.hook), USDG, address(s.treasury));
+        s.mainPortal =
+            new RobinPortal(POOL_MANAGER, address(s.hook), address(s.treasury), USDG, true, address(s.feeDesk));
+        s.hook.bootstrapMainPortal(address(s.mainPortal));
+
+        s.splitterImpl = new PadRevenueSplitter();
+        s.factory = new RobinPadFactory(
+            POOL_MANAGER, address(s.hook), address(s.treasury), USDG, address(s.splitterImpl), setupFee, owner
+        );
+        s.hook.bootstrapFactory(address(s.factory)); // closes the factory slot for good
+
+        s.tokenDeployer = new HolderTokenDeployer();
+        s.holderTemplate = new HolderPadTemplate(
+            address(s.factory),
+            POOL_MANAGER,
+            address(s.hook),
+            address(s.treasury),
+            USDG,
+            address(s.splitterImpl),
+            address(s.tokenDeployer)
+        );
+        s.factory.setTemplateApproved(address(s.holderTemplate), true);
+        s.housePad = HolderPadPortal(
+            s.factory.deployHousePadFromTemplate(
+                address(s.holderTemplate), housePadName, admin, abi.encode(_housePadSettings())
+            )
+        );
+        if (admin != owner) s.factory.transferOwnership(admin);
+
+        _checkStack(s, owner, admin);
+    }
+
+    /// Read everything back off the chain; any miswiring reverts here.
+    function _checkStack(Stack memory s, address owner, address admin) internal view {
+        require(s.hook.mainPortalBootstrapped() && s.hook.factoryBootstrapped(), "a hook slot is still open");
+        require(s.hook.factory() == address(s.factory), "factory not plugged into the hook");
+        require(s.hook.isAuthorizedPortal(address(s.mainPortal)), "main portal not authorized");
+        require(s.hook.isAuthorizedPortal(address(s.housePad)), "house pad not authorized");
+        require(s.mainPortal.quoteAsset() == USDG && s.factory.quoteAsset() == USDG, "quote is not USDG");
+        require(s.factory.owner() == owner && s.treasury.owner() == admin, "wrong owner");
+        require(admin == owner || s.factory.pendingOwner() == admin, "factory not offered to the admin");
+        require(s.factory.isApprovedTemplate(address(s.holderTemplate)), "holders template not approved");
+        require(s.factory.isHousePad(address(s.housePad)), "not a house pad");
+        require(s.factory.templateOf(address(s.housePad)) == address(s.holderTemplate), "house pad not from the holders template");
+        require(s.housePad.platformShareBps() == 2_000 && s.housePad.padOwner() == admin, "wrong house pad share or owner");
+        require(s.mainPortal.feeDesk() == address(s.feeDesk), "main portal not wired to the fee desk");
+        require(s.feeDesk.treasury() == address(s.treasury) && s.feeDesk.hook() == address(s.hook), "fee desk miswired");
+        require(s.housePad.holderTokenDeployer() == address(s.tokenDeployer), "wrong holder token deployer");
+    }
+}
