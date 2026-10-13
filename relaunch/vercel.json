@@ -9,5 +9,17 @@
     }
    ]
   }
+ ],
+ "redirects": [
+  {
+   "source": "/pad",
+   "destination": "https://stag-pad-oversize-escort-hub.vercel.app",
+   "permanent": false
+  },
+  {
+   "source": "/pad/:path*",
+   "destination": "https://stag-pad-oversize-escort-hub.vercel.app",
+   "permanent": false
+  }
  ]
 }
