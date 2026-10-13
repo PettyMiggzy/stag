@@ -1,0 +1,289 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="description" content="STAGR helps service businesses manage customers, leads, estimates, jobs, scheduling, invoices, payments and follow-ups, all in one place."><title>STAGR | Field-service software for service businesses</title><link rel="icon" href="/crm/favicon.png"><link rel="apple-touch-icon" href="/crm/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ink:#070a08; --pine:#0c120f; --panel:#111a15; --panel2:#16231b; --line:#1f2e25; --bone:#f3f2ec; --mute:#a3b2a9;
+  --neon:#39ff14; --neon-d:#031207; --warn:#f0b429;
+  --display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif; --body:'Figtree',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--body);font-size:17px;line-height:1.6;overflow-x:hidden}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:.96;margin:0;text-wrap:balance;text-transform:uppercase;letter-spacing:.005em}
+p{margin:0}
+img{max-width:100%}
+.wrap{max-width:1180px;margin-inline:auto;padding-inline:clamp(16px,4vw,32px)}
+.mono{font-family:var(--mono);font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+:focus-visible{outline:2px solid var(--neon);outline-offset:3px;border-radius:4px}
+
+header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand img{width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(57,255,20,.5))}
+.brand b{font-family:var(--display);font-size:1.9rem;font-weight:900;letter-spacing:.06em}
+nav{display:flex;gap:24px}
+nav a{font-size:.92rem;color:var(--mute);text-decoration:none}
+nav a:hover{color:var(--bone)}
+.pill{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--neon);color:var(--neon);padding:5px 10px;border-radius:999px;white-space:nowrap}
+@media(max-width:820px){nav{display:none}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:8px;font-weight:700;text-decoration:none;border:1px solid var(--line);background:var(--panel);transition:border-color .2s,transform .2s;cursor:pointer;font-size:1rem;font-family:inherit;color:var(--bone)}
+.btn:hover{border-color:var(--neon);transform:translateY(-1px)}
+.btn.main{background:var(--neon);border-color:var(--neon);color:var(--neon-d)}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+
+/* hero */
+.hero{position:relative;isolation:isolate;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero-bg{position:absolute;inset:0;z-index:-2;background:url(/a/stagr-hero.webp) 70% center/cover;opacity:.32;animation:kb 30s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.1) translate(-1.5%,-1%)}}
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(900px 500px at 78% 40%,rgba(57,255,20,.14),transparent 60%),linear-gradient(90deg,var(--ink) 18%,rgba(7,10,8,.7) 60%,rgba(7,10,8,.9)),linear-gradient(0deg,var(--ink),transparent 40%)}
+.hero-in{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,4vw,56px);align-items:center;padding-block:clamp(40px,6vw,84px)}
+.hero h1{font-size:clamp(2.8rem,6.4vw,5.2rem)}
+.hero h1 em{font-style:normal;color:var(--neon)}
+.hero .wm{display:block;width:min(230px,50%);height:auto;margin-bottom:16px;filter:drop-shadow(0 0 22px rgba(57,255,20,.5))}
+.hero .lead{margin-top:18px;font-size:1.14rem;color:#dfe5e1;max-width:52ch}
+.checks{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;color:var(--mute);font-size:.95rem}
+.checks li{display:flex;gap:8px;align-items:flex-start}.checks li::before{content:"";flex:none;width:16px;height:16px;margin-top:5px;border-radius:50%;background:var(--neon) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%23031207' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px}
+@media(max-width:560px){.checks{grid-template-columns:1fr}}
+.frame{border:1px solid #2a4033;border-radius:14px;background:#0a0f0c;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(57,255,20,.12)}
+.frame-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#0f1713;border-bottom:1px solid var(--line)}
+.frame-bar i{width:10px;height:10px;border-radius:50%;background:#2a3a31}
+.frame-bar span{margin-left:10px;flex:1;text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--mute);letter-spacing:.06em}
+.frame img{display:block;width:100%;height:auto;transition:opacity .35s}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tabs button{all:unset;cursor:pointer;padding:8px 16px;border-radius:999px;border:1px solid var(--line);color:var(--mute);font-size:.88rem;font-weight:600}
+.tabs button[aria-pressed=true]{background:var(--neon);color:var(--neon-d);border-color:var(--neon)}
+.tabs button:focus-visible{outline:2px solid var(--neon);outline-offset:2px}
+.cap{margin-top:12px;color:var(--mute);font-size:.92rem;min-height:3.2em}
+@media(max-width:900px){.hero-in{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hero-bg{animation:none}html{scroll-behavior:auto}}
+
+.strip{border-bottom:1px solid var(--line);background:#0a0f0c}
+.strip-in{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:18px 34px;padding-block:18px}
+.strip-in img{width:54px;height:54px;object-fit:contain;background:#000;border-radius:10px}
+.strip-in span{color:var(--mute);font-size:.92rem}
+
+section{padding-block:clamp(54px,8vw,104px)}
+.head{margin-bottom:34px}
+.head h2{font-size:clamp(2.2rem,5.4vw,4rem);margin-top:10px}
+.head h2 em{font-style:normal;color:var(--neon)}
+.head p{margin-top:14px;color:var(--mute);max-width:62ch;font-size:1.05rem}
+
+/* features */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:20px;display:grid;gap:10px;align-content:start;transition:border-color .2s,transform .2s}
+.card:hover{border-color:#2f4a3a;transform:translateY(-2px)}
+.card svg{width:30px;height:30px;color:var(--neon)}
+.card h3{font-size:1.5rem}
+.card p{color:var(--mute);font-size:.96rem}
+.chip{display:inline-block;justify-self:start;font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid}
+.chip.live{color:var(--neon);border-color:rgba(57,255,20,.5)}
+.chip.soon{color:var(--warn);border-color:rgba(240,180,41,.5)}
+
+/* follow ups */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(22px,4vw,56px);align-items:center}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.form label{display:grid;gap:5px;font-size:.78rem;color:var(--mute);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.form input,.form select{font:inherit;font-size:1rem;color:var(--bone);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 12px;width:100%;text-transform:none;letter-spacing:0;font-family:var(--body)}
+.form input:focus,.form select:focus{outline:2px solid var(--neon);outline-offset:0;border-color:var(--neon)}
+@media(max-width:520px){.form{grid-template-columns:1fr}}
+.phone{max-width:340px;margin-inline:auto;border:1px solid #2a4033;border-radius:34px;background:#0a0f0c;padding:16px 14px 22px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(57,255,20,.1)}
+.phone-top{text-align:center;color:var(--mute);font-size:.8rem;padding:6px 0 12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.phone-top b{display:block;color:var(--bone);font-size:.95rem}
+.bubble{background:#1d2b23;border-radius:18px 18px 18px 4px;padding:12px 14px;font-size:.98rem;line-height:1.45;max-width:92%;white-space:pre-wrap;word-break:break-word}
+.meta{margin-top:8px;color:var(--mute);font-size:.76rem}
+.reply{margin:16px 0 0 auto;width:fit-content;background:var(--neon);color:var(--neon-d);border-radius:18px 18px 4px 18px;padding:10px 14px;font-weight:600;font-size:.95rem}
+.note{margin-top:14px;color:var(--mute);font-size:.86rem;border-left:2px solid var(--warn);padding-left:12px}
+
+/* payments */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;counter-reset:s}
+.step{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:20px;position:relative}
+.step::before{counter-increment:s;content:counter(s);font-family:var(--display);font-weight:900;font-size:2.2rem;color:var(--neon);line-height:1}
+.step h3{font-size:1.35rem;margin-top:8px}.step p{color:var(--mute);font-size:.94rem;margin-top:6px}
+
+/* pricing */
+.ads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.ads img{width:100%;height:auto;border-radius:14px;border:1px solid var(--line);display:block}@media(max-width:700px){.ads{grid-template-columns:1fr}}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.plans{grid-template-columns:1fr}}
+.plan{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:24px;display:grid;gap:12px;align-content:start}
+.plan.pop{border-color:var(--neon);box-shadow:0 0 0 1px var(--neon),0 0 40px rgba(57,255,20,.15)}
+.plan h3{font-size:1.8rem}
+.price{font-family:var(--display);font-weight:900;font-size:3.4rem;line-height:1}
+.price small{font-family:var(--body);font-weight:500;font-size:.95rem;color:var(--mute)}
+.vs{font-size:.88rem;color:var(--mute)}.vs b{color:var(--bone)}.vs s{color:#7d8f84}
+.plan ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;color:#d3dbd6;font-size:.95rem}
+.plan li{display:flex;gap:8px}.plan li::before{content:"✓";color:var(--neon);font-weight:700}
+.plan li.soon{color:var(--mute)}.plan li.soon::before{content:"○";color:var(--warn)}
+.fine{margin-top:18px;color:var(--mute);font-size:.86rem}
+.fine a{color:var(--neon)}
+
+/* story */
+.story{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:clamp(22px,4vw,48px);align-items:center}
+@media(max-width:900px){.story{grid-template-columns:1fr}}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.photos img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.photos .wide{grid-column:1/-1}
+.crews{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.crews span{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 14px 6px 6px;font-size:.9rem;color:var(--mute)}
+.crews img{width:42px;height:42px;object-fit:contain;background:#000;border-radius:8px}
+
+footer{border-top:1px solid var(--line);padding-block:34px 56px;color:var(--mute);font-size:.84rem;display:grid;gap:12px}
+footer p{max-width:90ch}
+.credit{display:inline-flex;align-items:center;gap:10px;color:var(--mute);font-size:.84rem}.credit img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(57,255,20,.45))}.credit b{color:var(--bone)}
+</style>
+</head><body>
+<header><div class="wrap bar"><a class="brand" href="/crm/#top"><img src="/a/stagr-mark.webp" alt=""><b>STAGR</b></a><nav aria-label="Sections"><a href="#features">Features</a><a href="#followups">Follow-ups</a><a href="#payments">Payments</a><a href="#pricing">Pricing</a><a href="#story">Our story</a><a href="/">$STAG</a></nav><span class="pill">Preview</span></div></header>
+
+<main id="top">
+<div class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="wrap hero-in">
+    <div>
+      <img class="wm" src="/a/stagr-wordmark.webp" alt="STAGR" width="841" height="417">
+      <h1>Run your whole service business <em>from one place.</em></h1>
+      <p class="lead">STAGR helps service businesses manage customers, leads, estimates, jobs, scheduling, invoices, payments and follow-ups all in one place.</p>
+      <ul class="checks"><li>Answer every lead fast</li><li>Estimates customers approve from their phone</li><li>Schedule and assign your crew</li><li>Invoice and track every payment</li></ul>
+      <div class="cta"><a class="btn main" href="#features">See the features</a><a class="btn" href="#pricing">See pricing</a></div>
+    </div>
+    <div>
+      <div class="frame"><div class="frame-bar"><i></i><i></i><i></i><span>STAGR · sample data</span></div><img id="shot" src="/a/crm/today.webp" alt="STAGR Today screen: leads to call, follow-ups due, jobs today and quotes going cold" width="1400" height="875"></div>
+      <div class="tabs" id="tabs" role="group" aria-label="Screens"></div>
+      <p class="cap" id="cap" aria-live="polite"></p>
+    </div>
+  </div>
+</div>
+
+<div class="strip"><div class="wrap strip-in"><span>Built for, and tested by, a real service company:</span><img src="/a/logo-spring.webp" alt="Junk Junkies Texas Spring" width="54" height="54"><img src="/a/logo-tomball.webp" alt="Junk Junkies Texas Tomball" width="54" height="54"><img src="/a/logo-cypress.webp" alt="Junk Junkies Texas Cypress" width="54" height="54"><img src="/a/logo-cs.webp" alt="Junk Junkies Texas College Station" width="54" height="54"></div></div>
+
+<section id="ads" style="padding-block:28px"><div class="wrap ads"><a href="#features"><img src="/a/stagr-ad-quotes.webp" alt="STAGR: quotes in minutes. Quick estimates, upfront pricing, fast haul away." width="820" height="1025" loading="lazy"></a><a href="#followups"><img src="/a/stagr-ad-followup.webp" alt="STAGR: follow up, get reviews, grow your business." width="820" height="1025" loading="lazy"></a></div></section>
+<section id="features"><div class="wrap">
+  <div class="head"><div class="mono">Features</div><h2>Everything a service business <em>runs on.</em></h2><p>One customer record from the first call to the final payment. Features marked Live are working in the beta today. Features marked Coming soon are on the way.</p></div>
+  <div class="grid" id="grid"></div>
+</div></section>
+
+<section id="followups" style="background:var(--pine);border-block:1px solid var(--line)"><div class="wrap two">
+  <div>
+    <div class="mono">Automatic follow-ups</div>
+    <div class="head" style="margin:10px 0 0"><h2>Bring customers <em>back.</em></h2></div>
+    <p style="margin-top:14px;color:var(--mute);max-width:54ch;font-size:1.05rem">STAGR can text past customers every month with an offer and a reason to book again. Each business fills in its own name, city, discount and phone number, and STAGR does the rest. <span class="chip soon" style="vertical-align:middle">Coming soon</span></p>
+    <div class="form">
+      <label>Business name<input id="fBiz" value="Junk Junkies Texas" maxlength="40"></label>
+      <label>City<input id="fCity" value="Spring" maxlength="30"></label>
+      <label>Discount<input id="fOff" value="$50" maxlength="10"></label>
+      <label>Business phone<input id="fPhone" value="(346) 413-9644" maxlength="20" inputmode="tel"></label>
+      <label style="grid-column:1/-1">Send<select id="fWhen"><option>Every month to customers from the last 12 months</option><option>Every 3 months to past customers</option><option>Once, 30 days after a finished job</option></select></label>
+    </div>
+    <p class="note">Texts go only to customers who agreed to get them, and every message includes a way to opt out.</p>
+  </div>
+  <div class="phone" aria-label="Preview of the text message customers receive">
+    <div class="phone-top"><b id="pBiz">Junk Junkies Texas</b>Text message</div>
+    <div class="bubble" id="bubble"></div>
+    <div class="meta" id="meta"></div>
+    <div class="reply">Yes, can you come Friday?</div>
+  </div>
+</div></section>
+
+<section id="payments"><div class="wrap">
+  <div class="head"><div class="mono">Get paid</div><h2>From quote to <em>money in the bank.</em></h2><p>Today STAGR tracks every payment: cash, check, Zelle and card, partial payments and balances. Taking card payments online and sending the money straight to your bank account is the next big step. <span class="chip soon" style="vertical-align:middle">Coming soon</span></p></div>
+  <div class="steps">
+    <div class="step"><h3>Send the quote</h3><p>Build an itemized estimate and text the customer a link.</p></div>
+    <div class="step"><h3>They approve it</h3><p>The customer taps Approve on their phone. You see it right away.</p></div>
+    <div class="step"><h3>Do the job, send the invoice</h3><p>One tap turns the approved quote into an invoice.</p></div>
+    <div class="step"><h3>Get paid</h3><p>Record the payment today. Card payments paid out to your bank are coming.</p></div>
+  </div>
+</div></section>
+
+<section id="pricing" style="background:var(--pine);border-block:1px solid var(--line)"><div class="wrap">
+  <div class="head"><div class="mono">Pricing · launch plans</div><h2>Priced below <em>the big guys.</em></h2><p>Simple monthly plans, priced under comparable Jobber plans. Launch prices may change before launch.</p></div>
+  <div class="plans">
+    <div class="plan"><h3>StagR Starter</h3><div class="price">$29<small> /month</small></div><div class="vs">Solo operators. Jobber Core is <s>$49</s>, so you save <b>$20 a month</b>.</div>
+      <ul><li>CRM, customers and leads</li><li>Estimates customers approve from their phone</li><li>Invoices and payment tracking</li><li>Scheduling and job tracking</li><li>Google review requests</li></ul></div>
+    <div class="plan pop"><span class="chip live" style="justify-self:start">Recommended</span><h3>StagR Growth</h3><div class="price">$59<small> /month</small></div><div class="vs">Growing businesses, up to 3 users. Jobber Connect is <s>$139</s>, so you save <b>$80 a month</b>.</div>
+      <ul><li>Everything in Starter</li><li>Automated follow-ups</li><li>Recurring customer texts</li><li>Job reminders</li><li>Basic reporting</li><li class="soon">Online card payments</li></ul></div>
+    <div class="plan"><h3>StagR Pro</h3><div class="price">$99<small> /month</small></div><div class="vs">Teams. Jobber Grow is <s>$199</s>, so you save <b>$100 a month</b>.</div>
+      <ul><li>Everything in Growth</li><li>Unlimited users</li><li>Crew dispatching</li><li>Priority support</li><li class="soon">Advanced automations</li><li class="soon">Route planning</li><li class="soon">Advanced reports</li></ul></div>
+  </div>
+  <p class="fine">Jobber prices are its month-to-month rates for one user, from <a href="https://getjobber.com/pricing/" target="_blank" rel="noopener">getjobber.com/pricing</a>, checked October 10, 2026. Jobber plans are not identical to STAGR plans, and prices change. ○ marks a feature that is coming soon. Texting needs a connected texting service.</p>
+</div></section>
+
+<section id="story"><div class="wrap story">
+  <div>
+    <div class="mono">Our story</div>
+    <div class="head" style="margin:10px 0 0"><h2>Built by a <em>real service company.</em></h2></div>
+    <p style="margin-top:16px;color:#dfe5e1">STAGR started inside Junk Junkies Texas, a junk removal company with four crews in Spring, Tomball, Cypress and College Station. We needed one place to answer every lead fast, send quotes customers can approve from their phone, schedule the crews and get paid. So we built our own.</p>
+    <p style="margin-top:12px;color:var(--mute)">Every feature here came from something our crews ran into on the job.</p>
+    <div class="crews"><span><img src="/a/logo-spring.webp" alt="" width="42" height="42">Spring</span><span><img src="/a/logo-tomball.webp" alt="" width="42" height="42">Tomball</span><span><img src="/a/logo-cypress.webp" alt="" width="42" height="42">Cypress</span><span><img src="/a/logo-cs.webp" alt="" width="42" height="42">College Station</span></div>
+  </div>
+  <div class="photos"><img class="wide" src="/a/rig.webp" alt="Junk Junkies pickup truck pulling a 16-foot trailer" width="1100" height="300" loading="lazy"><img src="/a/crew1.webp" alt="A crew member with the trailer at a storage unit" width="900" height="471" loading="lazy"><img src="/a/crew2.webp" alt="A curbside pile ready for pickup" width="900" height="471" loading="lazy"></div>
+</div></section>
+</main>
+
+<footer class="wrap">
+  <b style="font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--bone)">STAGR</b>
+  <div class="credit"><img src="/a/logo-hq.webp" alt="The Junk Junkies stag mascot" width="34" height="34"><span>Created by <b>$STAG</b> and the Junk Junkies stag, the junk removal mascot. <span id="chartSlot" class="mute">$STAG live chart: opens at token launch.</span></span></div>
+  <p>STAGR is in preview. Screens show sample data. Features marked Coming soon are not available yet, and pricing is a draft that may change.</p>
+</footer>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  // ---- screens
+  var SH=[{k:'today',n:'Today',c:'Who to call first, follow-ups due, jobs today and quotes going cold.',a:'STAGR Today screen: leads to call, follow-ups due, jobs today and quotes going cold'},
+    {k:'pipeline',n:'Pipeline',c:'Every lead as a card. Drag it from New to Contacted, Quoted, Booked and Done.',a:'STAGR pipeline board with leads in columns from New to Done'},
+    {k:'lead',n:'Customer',c:'One record with calls, texts, notes, quotes, invoices and the schedule.',a:'STAGR customer record with call and text buttons, stages, notes, quotes and invoices'},
+    {k:'schedule',n:'Schedule',c:'Booked jobs by day, with the crew on each one. A warning shows when no crew is assigned.',a:'STAGR schedule of booked jobs by day with the crew assigned'},
+    {k:'insights',n:'Dashboard',c:'Revenue, win rate, reply time, collected payments and a pipeline funnel.',a:'STAGR dashboard with revenue, win rate, reply time and collected payments'}];
+  var cur=0,timer=null,shot=$('#shot'),cap=$('#cap'),tabs=$('#tabs');
+  tabs.innerHTML=SH.map(function(s,i){return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+s.n+'</button>'}).join('');
+  function show(i,user){cur=i;var s=SH[i];shot.style.opacity=.15;setTimeout(function(){shot.src='a/crm/'+s.k+'.webp';shot.alt=s.a;shot.style.opacity=1},150);cap.textContent=s.c;tabs.querySelectorAll('button').forEach(function(b,j){b.setAttribute('aria-pressed',String(j===i))});if(user)stop()}
+  function stop(){clearInterval(timer);timer=null}
+  function start(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;stop();timer=setInterval(function(){show((cur+1)%SH.length,false)},5500)}
+  tabs.addEventListener('click',function(e){var b=e.target.closest('button');if(b)show(+b.dataset.i,true)});
+  cap.textContent=SH[0].c;start();
+  // ---- features
+  var IC={
+    users:'<path d="M8 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 11a2.5 2.5 0 100-5M17 14.2c2.6.5 4.5 2.7 4.5 5.8"/>',
+    funnel:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+    doc:'<path d="M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6"/>',
+    cal:'<path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/>',
+    crew:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7M9 5l3-2 3 2"/>',
+    inv:'<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6"/>',
+    cash:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+    bell:'<path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/>',
+    cam:'<path d="M4 8h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    repeat:'<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>',
+    chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    sms:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'};
+  var F=[
+    ['users','Customer database','Every customer in one place, with their history, notes and whether they are a repeat customer.',1],
+    ['funnel','Leads and pipeline','Requests from your website, calls and ads land in one list, worked as a pipeline.',1],
+    ['doc','Estimates and approvals','Itemized quotes with tax and deposit. The customer approves from a link on their phone.',1],
+    ['cal','Job scheduling and dispatching','Pick a date and time, assign each job to a crew member, and see the whole week. Jobs with no crew are flagged.',1],
+    ['inv','Invoicing','Turn an approved quote into an invoice in one tap and send it by link.',1],
+    ['cash','Payment tracking','Record cash, check, Zelle and card payments, including partial payments and balances.',1],
+    ['cam','Job notes and photos','Customers send photos with their request, and your crew adds notes to every job.',1],
+    ['chart','Dashboard','Upcoming work, revenue, win rate, reply time and unpaid invoices at a glance.',1],
+    ['bell','Automated reminders and follow-ups','Appointment and invoice reminders, quote follow-ups, and monthly offers to bring past customers back. Needs a connected texting service.',1],
+    ['repeat','Recurring jobs','Set up weekly, monthly or yearly jobs once and let them schedule themselves.',1],
+    ['sms','Google review requests','Text customers your Google review link after a job, automatically or with one tap, and see when it was delivered.',1],
+    ['cash','Online card payments','Customers pay invoices by card from a link, paid out to your bank account.',0]];
+  $('#grid').innerHTML=F.map(function(f){return '<article class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[f[0]]+'</svg><span class="chip '+(f[3]?'live':'soon')+'">'+(f[3]?'Live in beta':'Coming soon')+'</span><h3>'+f[1]+'</h3><p>'+f[2]+'</p></article>'}).join('');
+  // ---- follow-up text preview
+  var fB=$('#fBiz'),fC=$('#fCity'),fO=$('#fOff'),fP=$('#fPhone');
+  function msg(){var biz=fB.value.trim()||'Your Business',city=fC.value.trim(),off=fO.value.trim()||'$50',ph=fP.value.trim();
+    var t=biz+' is back'+(city?' in '+city:' in your area')+'! Book today and get '+off+' off your next service. Reply to this text'+(ph?' or call '+ph:'')+' to schedule.\n\nReply STOP to opt out.';
+    $('#bubble').textContent=t;$('#pBiz').textContent=biz;$('#meta').textContent=t.length+' characters · sent automatically'}
+  [fB,fC,fO,fP].forEach(function(e){e.addEventListener('input',msg)});$('#fWhen').addEventListener('change',function(){$('#meta').textContent=$('#bubble').textContent.length+' characters · '+this.value.toLowerCase()});msg();
+})();
+</script>
+<script>
+/* Paste the $STAG chart link here at token launch (for example a DexScreener or GeckoTerminal page). Until then the footer says the chart opens at launch. */
+var STAG_CHART_URL='';
+(function(){var el=document.getElementById('chartSlot');if(el&&/^https:\/\//.test(STAG_CHART_URL)){el.innerHTML='<a href="'+STAG_CHART_URL+'" target="_blank" rel="noopener">Live $STAG chart &rarr;</a>';}})();
+</script>
+</body></html>
