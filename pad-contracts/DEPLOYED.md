@@ -27,4 +27,4 @@ Rebuild: `bash script/setup-deps.sh && forge build` (solc 0.8.26, cancun, pinned
 
 ## Site
 
-https://stag-pad.vercel.app (source: ../pad-web). Reads this deployment by default; see pad-web/.env.example.
+https://www.stagwifhood.fun (source: ../pad-web). Reads this deployment by default; see pad-web/.env.example.

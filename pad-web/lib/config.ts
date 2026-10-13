@@ -33,7 +33,7 @@ export const CONFIG = {
   brand: process.env.NEXT_PUBLIC_BRAND ?? 'STAG Pad',
   tagline: process.env.NEXT_PUBLIC_TAGLINE ?? 'Pick your price. Launch in one transaction.',
   // The site's public URL, for absolute social-preview links.
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stag-pad.vercel.app',
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.stagwifhood.fun',
   // WalletConnect (Reown) project id. Public by design. Injected wallets (MetaMask,
   // Rabby, Coinbase Wallet extension) work without one; phone wallets need it.
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? '',

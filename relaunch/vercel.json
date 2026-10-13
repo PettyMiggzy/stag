@@ -13,12 +13,12 @@
  "redirects": [
   {
    "source": "/pad",
-   "destination": "https://stag-pad.vercel.app",
+   "destination": "https://www.stagwifhood.fun",
    "permanent": false
   },
   {
    "source": "/pad/:path*",
-   "destination": "https://stag-pad.vercel.app",
+   "destination": "https://www.stagwifhood.fun",
    "permanent": false
   }
  ]
