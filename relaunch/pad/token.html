@@ -9,6 +9,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
+.gi{display:inline-block;width:1.25em;height:1.25em;vertical-align:-.3em;margin-right:.25em;object-fit:contain}
+.dcard .ic .gi{width:60px;height:60px;margin:0 0 4px}
+.up-ic .gi{width:54px;height:54px;margin:0}
+.search .ic .gi{width:18px;height:18px;margin:0}
+.summary .li .ic .gi{width:18px;height:18px;margin:0;vertical-align:-.25em}
+.btn .gi{width:1.4em;height:1.4em;vertical-align:-.4em}
+
 :root{--bg:#030504;--bg-2:#0a110d;--bg-3:#101a14;--panel:#0f1812;--line:rgba(57,255,20,.14);--line-2:rgba(255,255,255,.08);
   --line-strong:rgba(57,255,20,.34);--ink:#f6f7f1;--ink-dim:#a7ad97;--ink-faint:#7f8570;--lime:#39ff14;--lime-soft:#8cff75;--lime-deep:#27cc0c;--green:#48d16a;--red:#ff5a52;--gold:#e8c35a;
   --disp:"Bebas Neue",Impact,sans-serif;--sans:"Plus Jakarta Sans",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
@@ -109,7 +116,7 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
       <div class="chart">
         <div class="hd"><span class="dot"></span> DexScreener · live chart <span style="margin-left:auto" class="mono">Uniswap v3 · 1%</span></div>
         <iframe id="dex" title="DexScreener chart" loading="lazy" src="about:blank"></iframe>
-        <div class="ph" id="chartPh" style="display:none"><div><div class="big">📈 DexScreener chart</div><div>Loads here from block one — the coin is a real Uniswap v3 pair.</div></div></div>
+        <div class="ph" id="chartPh" style="display:none"><div><div class="big"><img class="gi" src="assets/ic/chart.webp" alt="" aria-hidden="true">DexScreener chart</div><div>Loads here from block one — the coin is a real Uniswap v3 pair.</div></div></div>
       </div>
       <div class="statrow">
         <div class="s"><div class="k">Market cap</div><div class="v" id="stMc">—</div></div>
@@ -119,9 +126,9 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
       </div>
       <div class="panel sec"><h3>How this coin works</h3><p>Launched on $STAG Pad — a real Uniswap v3 pair from block one. It walks up a bonding curve and, once it reaches the graduation window, posts <b style="color:var(--ink)">the Bond</b>: a protocol-owned floor it can’t be rugged below. Clean token, no transfer tax, LP locked forever.</p></div>
       <div class="panel sec holders"><h3>Protocol holdings</h3>
-        <div class="h"><span class="mono">🌲 Sherwood — locked LP</span><b>after graduation</b></div>
-        <div class="h"><span class="mono">🎯 Bounty — WETH floor</span><b>after graduation</b></div>
-        <div class="h"><span class="mono">🏹 Ambush — reserve</span><b>25%</b></div>
+        <div class="h"><span class="mono"><img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true">Sherwood — locked LP</span><b>after graduation</b></div>
+        <div class="h"><span class="mono"><img class="gi" src="assets/ic/target.webp" alt="" aria-hidden="true">Bounty — WETH floor</span><b>after graduation</b></div>
+        <div class="h"><span class="mono"><img class="gi" src="assets/ic/arrow.webp" alt="" aria-hidden="true">Ambush — reserve</span><b>25%</b></div>
       </div>
     </div>
 
@@ -137,18 +144,18 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
 
         <!-- Bond / graduation panel (JS fills it) -->
         <div class="bond" id="bondPanel">
-          <div class="lbl">🪙 The Bond</div>
+          <div class="lbl"><img class="gi" src="assets/ic/coin.webp" alt="" aria-hidden="true">The Bond</div>
           <h3 id="bondTitle">Loading…</h3>
           <div class="sub" id="bondSub"></div>
           <div class="bar"><div class="fill" id="bondFill" style="width:0%"></div><div class="mark" id="bondMark" style="left:0%;display:none"></div></div>
           <div class="bar-lab" id="bondLab"><span>Road to the Bond</span><b>—</b></div>
-          <button class="btn btn-lime" style="width:100%;margin-top:12px;display:none" id="gradBtn" type="button">🎓 Graduate now</button>
+          <button class="btn btn-lime" style="width:100%;margin-top:12px;display:none" id="gradBtn" type="button"><img class="gi" src="assets/ic/cap.webp" alt="" aria-hidden="true">Graduate now</button>
           <div class="floorpill" id="floorPill" style="display:none"></div>
         </div>
 
         <!-- Dev-only controls (shown when the connected wallet is the creator) -->
         <div class="devpanel" id="devPanel" style="display:none">
-          <div class="lbl">👑 Creator controls</div>
+          <div class="lbl"><img class="gi" src="assets/ic/crown.webp" alt="" aria-hidden="true">Creator controls</div>
           <h3>Set your graduation target</h3>
           <div class="sub">The later it graduates, the thicker the floor.</div>
           <div class="seg" id="targetSeg">
@@ -214,11 +221,11 @@ $('trade').addEventListener('click', async () => {
     if (SIDE === 'buy'){
       setNote('Buying with ' + amount + ' ETH — confirm in your wallet (no approval)…');
       const rc = await (await Pad.buy({ token: TOKEN, ethAmount: amount })).wait();
-      setNote('Bought ✓ ' + rc.hash.slice(0, 12) + '…', 'ok');
+      setNote('Bought · ' + rc.hash.slice(0, 12) + '…', 'ok');
     } else {
       setNote('Selling — one exact-amount approval to the router, then the swap…');
       const rc = await (await Pad.sell({ token: TOKEN, tokenAmount: amount })).wait();
-      setNote('Sold ✓ ' + rc.hash.slice(0, 12) + '…', 'ok');
+      setNote('Sold · ' + rc.hash.slice(0, 12) + '…', 'ok');
     }
     setTimeout(loadCoin, 1500);
   } catch (e) { setNote(e.message, 'err'); }
@@ -231,7 +238,7 @@ $('gradBtn').addEventListener('click', async () => {
     if (!Pad.account()) { await Pad.connect(); refreshConnect(); }
     setNote('Graduating — posting the Bond…');
     const rc = await (await Pad.graduate(COIN.curve)).wait();
-    setNote('Graduated ✓ the Bond is live. ' + rc.hash.slice(0, 12) + '…', 'ok');
+    setNote('Graduated · the Bond is live. ' + rc.hash.slice(0, 12) + '…', 'ok');
     setTimeout(loadCoin, 1500);
   } catch (e) { setNote(e.message, 'err'); }
 });
@@ -244,16 +251,16 @@ $('targetSeg').addEventListener('click', async (e) => {
   try {
     setNote('Setting graduation target…');
     await (await Pad.setGradTarget(COIN.curve, tick)).wait();
-    setNote('Target updated ✓', 'ok');
+    setNote('Target updated', 'ok');
     setTimeout(loadCoin, 1200);
   } catch (err) { setNote(err.message, 'err'); }
 });
 $('collectBtn').addEventListener('click', async () => {
-  try { setNote('Collecting your sell fees…'); await (await Pad.withdrawDev(TOKEN)).wait(); setNote('Collected ✓', 'ok'); setTimeout(loadDevEsc, 1200); }
+  try { setNote('Collecting your sell fees…'); await (await Pad.withdrawDev(TOKEN)).wait(); setNote('Collected', 'ok'); setTimeout(loadDevEsc, 1200); }
   catch (e) { setNote(e.message, 'err'); }
 });
 $('burnBtn').addEventListener('click', async () => {
-  try { setNote('Buying + burning with your fees…'); await (await Pad.burnDev(TOKEN)).wait(); setNote('Burned ✓', 'ok'); setTimeout(loadDevEsc, 1200); }
+  try { setNote('Buying + burning with your fees…'); await (await Pad.burnDev(TOKEN)).wait(); setNote('Burned', 'ok'); setTimeout(loadDevEsc, 1200); }
   catch (e) { setNote(e.message, 'err'); }
 });
 
@@ -314,7 +321,7 @@ function renderBond(info){
     lab.innerHTML = '<b>Bond posted</b><span>can’t rug to zero</span>';
     grad.style.display = 'none';
     pill.style.display = 'block';
-    pill.innerHTML = '🌲 <b>Bond posted</b> · Sherwood LP locked (fees compound in forever), Bounty floor below price, Ambush selling only into strength.';
+    pill.innerHTML = '<img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true"><b>Bond posted</b> · Sherwood LP locked (fees compound in forever), Bounty floor below price, Ambush selling only into strength.';
     return;
   }
   const pct = Math.round(info.progress * 100);

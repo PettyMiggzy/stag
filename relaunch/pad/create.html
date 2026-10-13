@@ -11,6 +11,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
+.gi{display:inline-block;width:1.25em;height:1.25em;vertical-align:-.3em;margin-right:.25em;object-fit:contain}
+.dcard .ic .gi{width:60px;height:60px;margin:0 0 4px}
+.up-ic .gi{width:54px;height:54px;margin:0}
+.search .ic .gi{width:18px;height:18px;margin:0}
+.summary .li .ic .gi{width:18px;height:18px;margin:0;vertical-align:-.25em}
+.btn .gi{width:1.4em;height:1.4em;vertical-align:-.4em}
+
 :root{--bg:#030504;--bg-2:#0a110d;--bg-3:#101a14;--panel:#0f1812;--line:rgba(57,255,20,.14);--line-2:rgba(255,255,255,.08);
   --line-strong:rgba(57,255,20,.34);--ink:#f6f7f1;--ink-dim:#a7ad97;--ink-faint:#7f8570;--lime:#39ff14;--lime-soft:#8cff75;--lime-deep:#27cc0c;--green:#48d16a;
   --disp:"Bebas Neue",Impact,sans-serif;--sans:"Plus Jakarta Sans",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
@@ -86,14 +93,14 @@ input[type=range]{width:100%;accent-color:var(--lime);margin:8px 0 2px}
 
       <div class="field">
         <label>Banner <span class="hint">1500×500, shown on the coin page</span></label>
-        <label class="banner-up" for="banner"><div><div class="up-ic">🖼️</div><div class="up-t">Click or drop a banner</div></div></label>
+        <label class="banner-up" for="banner"><div><div class="up-ic"><img class="gi" src="assets/ic/frame.webp" alt="" aria-hidden="true"></div><div class="up-t">Click or drop a banner</div></div></label>
         <input id="banner" type="file" accept="image/*" hidden onchange="prev(this,'banner')" />
       </div>
 
       <div class="field">
         <label>Coin image (pfp) <span class="hint">square, this is the token icon</span></label>
         <div class="pfp-wrap">
-          <label class="pfp-up" for="pfp" id="pfpBox"><div style="text-align:center"><div class="up-ic">📷</div><div class="up-t">Upload</div></div></label>
+          <label class="pfp-up" for="pfp" id="pfpBox"><div style="text-align:center"><div class="up-ic"><img class="gi" src="assets/ic/camera.webp" alt="" aria-hidden="true"></div><div class="up-t">Upload</div></div></label>
           <input id="pfp" type="file" accept="image/*" hidden onchange="prev(this,'pfp')" />
           <div class="txt">PNG / JPG / GIF.<br>This is what shows in the trending grid.</div>
         </div>
@@ -110,7 +117,7 @@ input[type=range]{width:100%;accent-color:var(--lime);margin:8px 0 2px}
         <div class="field"><label>Twitter / X <span class="hint">optional</span></label><input class="inp" placeholder="https://x.com/…" /></div>
         <div class="field"><label>Telegram <span class="hint">optional · link free</span></label>
           <input class="inp" id="tg" placeholder="https://t.me/…" />
-          <button type="button" id="linkTg" class="btn btn-ghost" style="margin-top:8px;font-size:.8rem;padding:8px 12px">🔗 Link with a free signature</button>
+          <button type="button" id="linkTg" class="btn btn-ghost" style="margin-top:8px;font-size:.8rem;padding:8px 12px"><img class="gi" src="assets/ic/link.webp" alt="" aria-hidden="true">Link with a free signature</button>
         </div>
       </div>
 
@@ -137,9 +144,9 @@ input[type=range]{width:100%;accent-color:var(--lime);margin:8px 0 2px}
           </div>
           <div id="allocWrap" style="display:none;margin-top:14px;border-top:1px solid var(--line-2);padding-top:12px">
             <div class="hint" style="margin-bottom:4px">Where <b>your 75%</b> of the above-1% fee goes — must total <b class="tax-tot ok" id="allocTot">100%</b></div>
-            <div class="alloc-row"><span>💰 Project wallet</span><input type="range" id="aw" min="0" max="100" step="5" value="100" oninput="taxSync()" /><b id="awV">100%</b></div>
-            <div class="alloc-row"><span>🪙 Deepen the Bond floor</span><input type="range" id="af" min="0" max="100" step="5" value="0" oninput="taxSync()" /><b id="afV">0%</b></div>
-            <div class="alloc-row"><span>🔥 Auto-burn</span><input type="range" id="ab" min="0" max="100" step="5" value="0" oninput="taxSync()" /><b id="abV">0%</b></div>
+            <div class="alloc-row"><span><img class="gi" src="assets/ic/wallet.webp" alt="" aria-hidden="true">Project wallet</span><input type="range" id="aw" min="0" max="100" step="5" value="100" oninput="taxSync()" /><b id="awV">100%</b></div>
+            <div class="alloc-row"><span><img class="gi" src="assets/ic/coin.webp" alt="" aria-hidden="true">Deepen the Bond floor</span><input type="range" id="af" min="0" max="100" step="5" value="0" oninput="taxSync()" /><b id="afV">0%</b></div>
+            <div class="alloc-row"><span><img class="gi" src="assets/ic/flame.webp" alt="" aria-hidden="true">Auto-burn</span><input type="range" id="ab" min="0" max="100" step="5" value="0" oninput="taxSync()" /><b id="abV">0%</b></div>
             <div class="field" style="margin:10px 0 0"><label style="font-size:.8rem">Payout wallet <span class="hint">where your share lands · defaults to your connected wallet</span></label>
               <input class="inp" id="pw" placeholder="0x… (optional)" /></div>
           </div>
@@ -147,19 +154,19 @@ input[type=range]{width:100%;accent-color:var(--lime);margin:8px 0 2px}
         </div>
       </div>
 
-      <button class="btn btn-lime" id="launchBtn" type="button">🚀 Launch coin</button>
+      <button class="btn btn-lime" id="launchBtn" type="button">Launch coin</button>
       <p class="note" id="launchNote">Free to launch — you only pay network gas. One transaction: no token approval, no authority grant. The dev buy (if any) rides in the same tx and is capped at 2% on-chain.</p>
     </form>
 
     <aside class="summary">
       <h3 id="sName">Your coin</h3>
       <div class="s-sub" id="sTick">$TICKER · Robinhood Chain</div>
-      <div class="li"><span class="ic">✦</span><div><b>1,000,000,000</b> supply · fixed, no mint</div></div>
-      <div class="li"><span class="ic">✦</span><div><b>DEX + DexScreener day one</b> — real Uniswap v3 pool from block one</div></div>
-      <div class="li"><span class="ic">✦</span><div><b>The Bond</b> — graduates into a protocol-owned floor it can't be rugged below</div></div>
-      <div class="li"><span class="ic">✦</span><div><b>Clean token</b> — no tax, no blacklist, LP locked forever</div></div>
-      <div class="li"><span class="ic">✦</span><div><b>Anti-snipe</b> — auto-expiring opening guard, sells never blocked</div></div>
-      <div class="free">✓ Free — just pay gas</div>
+      <div class="li"><span class="ic"><img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true"></span><div><b>1,000,000,000</b> supply · fixed, no mint</div></div>
+      <div class="li"><span class="ic"><img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true"></span><div><b>DEX + DexScreener day one</b> — real Uniswap v3 pool from block one</div></div>
+      <div class="li"><span class="ic"><img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true"></span><div><b>The Bond</b> — graduates into a protocol-owned floor it can't be rugged below</div></div>
+      <div class="li"><span class="ic"><img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true"></span><div><b>Clean token</b> — no tax, no blacklist, LP locked forever</div></div>
+      <div class="li"><span class="ic"><img class="gi" src="assets/ic/antlers.webp" alt="" aria-hidden="true"></span><div><b>Anti-snipe</b> — auto-expiring opening guard, sells never blocked</div></div>
+      <div class="free">Free — just pay gas</div>
     </aside>
   </div>
 </main>
@@ -235,7 +242,7 @@ $('linkTg').addEventListener('click', async () => {
     setNote('Check your wallet — this is a free signature, no funds move…');
     const { signature } = await Pad.linkTelegram(handle);
     await refreshConnect();
-    setNote('Telegram linked ✓ — signature ' + signature.slice(0, 10) + '…', 'ok');
+    setNote('Telegram linked — signature ' + signature.slice(0, 10) + '…', 'ok');
   } catch (e) { setNote(e.message, 'err'); }
 });
 
@@ -263,7 +270,7 @@ $('launchBtn').addEventListener('click', async () => {
     const tx = await Pad.launch({ name, symbol, dev: Pad.account(), devBuyEth: pct > 0 ? devBuyEth : '0', tax });
     setNote('Sent — waiting for confirmation…');
     const rc = await tx.wait();
-    setNote('Launched ✓ tx ' + rc.hash.slice(0, 10) + '… — your coin is live on Uniswap + DexScreener.', 'ok');
+    setNote('Launched · tx ' + rc.hash.slice(0, 10) + '… — your coin is live on Uniswap + DexScreener.', 'ok');
   } catch (e) {
     // pre-deploy this surfaces the honest "not live yet" message; post-deploy it
     // surfaces friendly, guarded errors (never the wallet's red screen)

@@ -12,6 +12,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
+.stag-hero{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line-strong);margin:20px 0;background:#030504}
+.stag-hero>img{display:block;width:100%;height:auto}
+.stag-hero .hero-copy{position:absolute;right:3%;top:50%;transform:translateY(-50%);width:35%}
+.stag-hero .kick{font-family:var(--mono);font-size:.74rem;letter-spacing:.24em;color:var(--gold)}
+.stag-hero h1{font-size:clamp(2.2rem,4.4vw,3.8rem);margin:8px 0 12px}.stag-hero h1 span{color:var(--lime)}
+.stag-hero p{color:var(--ink-dim);max-width:46ch;line-height:1.5}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+@media(max-width:760px){.stag-hero>img{height:300px;object-fit:cover;object-position:26% 35%}.stag-hero .hero-copy{position:static;transform:none;width:auto;padding:4px 18px 22px}.stag-hero h1{font-size:2.5rem}}
+.gi{display:inline-block;width:1.25em;height:1.25em;vertical-align:-.3em;margin-right:.25em;object-fit:contain}
+.dcard .ic .gi{width:60px;height:60px;margin:0 0 4px}
+.up-ic .gi{width:54px;height:54px;margin:0}
+.search .ic .gi{width:18px;height:18px;margin:0}
+.summary .li .ic .gi{width:18px;height:18px;margin:0;vertical-align:-.25em}
+.btn .gi{width:1.4em;height:1.4em;vertical-align:-.4em}
+
 :root{
   --bg:#030504; --bg-2:#0a110d; --bg-3:#101a14; --panel:#0f1812;
   --line:rgba(57,255,20,.14); --line-2:rgba(255,255,255,.07); --line-strong:rgba(57,255,20,.34);
@@ -48,7 +63,7 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
 .btn{display:inline-flex;align-items:center;gap:.5em;font-weight:700;font-size:.9rem;border-radius:10px;padding:10px 18px;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:.15s}
 .btn-lime{background:var(--lime);color:#10140a;box-shadow:0 6px 20px -8px rgba(57,255,20,.5)}
 .btn-lime:hover{transform:translateY(-1px);background:var(--lime-soft)}
-.btn-ghost{border-color:var(--line-strong);color:var(--ink)}
+.btn-ghost{background:rgba(57,255,20,.06);border-color:var(--line-strong);color:var(--ink)}
 .btn-ghost:hover{background:var(--bg-3)}
 
 /* marquee ticker */
@@ -140,7 +155,7 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
       <img src="assets/logo-mark.png" alt="" style="height:30px;width:auto" />
       <span>$STAG <span class="tag">PAD</span></span>
     </a>
-    <div class="search"><span class="ic">⌕</span><input placeholder="Search coins, tickers, address…" /></div>
+    <div class="search"><span class="ic"><img class="gi" src="assets/ic/search.webp" alt="" aria-hidden="true"></span><input placeholder="Search coins, tickers, address…" /></div>
     <div class="spacer"></div>
     <a class="nlink" href="../#plan">How it works</a>
     <a class="nlink" href="../#ecosystem">Ecosystem</a>
@@ -152,21 +167,25 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
 
 
 <main class="wrap">
-  <!-- promo banner (animated hero; poster + static image fallback) -->
-  <video class="promo" autoplay muted loop playsinline preload="auto" poster="assets/promo.jpg"
-    aria-label="$STAG Pad Launchpad on Robinhood Chain">
-    <source src="assets/promo.mp4" type="video/mp4" />
-    <img class="promo" src="assets/promo.jpg" alt="$STAG Pad Launchpad on Robinhood Chain" />
-  </video>
+  <!-- hero: Venice-made art in the logo's style, text is live HTML -->
+  <section class="stag-hero">
+    <img src="assets/hero.webp" alt="The hooded $STAG stag raising a green energy orb of coins above a rising chart" width="1400" height="594" fetchpriority="high" />
+    <div class="hero-copy">
+      <div class="kick">$STAG PAD</div>
+      <h1>Launch it.<br><span>Give it a floor.</span></h1>
+      <p>Free to launch. Every coin graduates into a protocol-owned floor, with a real pool and chart from block one.</p>
+      <div class="hero-cta"><a class="btn btn-lime" href="create.html">Start a coin</a><a class="btn btn-ghost" href="#coins">Browse coins</a></div>
+    </div>
+  </section>
 
   <!-- what makes us different (our real edge, not generic chips) -->
   <section class="diff">
     <h2>Why launch on <span>$STAG Pad</span></h2>
     <div class="diff-grid">
-      <div class="dcard hero"><div class="ic">🪙</div><h3>Every coin gets a floor</h3><p>It graduates into the Bond — a protocol-owned floor it <b style="color:var(--ink)">can't be rugged below</b>. No other pad does this.</p></div>
-      <div class="dcard"><div class="ic">🟢</div><h3>DEX day one</h3><p>A real Uniswap v3 pool + DexScreener from block one. No waiting to migrate.</p></div>
-      <div class="dcard"><div class="ic">📈</div><h3>Floor rises with volume</h3><p>The Bounty deepens on every trade — funded by the launch, never your pocket.</p></div>
-      <div class="dcard"><div class="ic">🆓</div><h3>Free to launch</h3><p>Just pay gas. Clean token, no tax, LP locked forever, anti-snipe baked in.</p></div>
+      <div class="dcard hero"><div class="ic"><img class="gi" src="assets/ic/coin.webp" alt="" aria-hidden="true"></div><h3>Every coin gets a floor</h3><p>It graduates into the Bond — a protocol-owned floor it <b style="color:var(--ink)">can't be rugged below</b>. No other pad does this.</p></div>
+      <div class="dcard"><div class="ic"><img class="gi" src="assets/ic/swap.webp" alt="" aria-hidden="true"></div><h3>DEX day one</h3><p>A real Uniswap v3 pool + DexScreener from block one. No waiting to migrate.</p></div>
+      <div class="dcard"><div class="ic"><img class="gi" src="assets/ic/chart.webp" alt="" aria-hidden="true"></div><h3>Floor rises with volume</h3><p>The Bounty deepens on every trade — funded by the launch, never your pocket.</p></div>
+      <div class="dcard"><div class="ic"><img class="gi" src="assets/ic/drop.webp" alt="" aria-hidden="true"></div><h3>Free to launch</h3><p>Just pay gas. Clean token, no tax, LP locked forever, anti-snipe baked in.</p></div>
     </div>
   </section>
 
@@ -176,11 +195,11 @@ h1,h2,h3{font-family:var(--disp);font-weight:400;letter-spacing:.5px;text-transf
   </section>
 
   <!-- filter tabs -->
-  <div class="tabs">
-    <button class="tab on" data-f="trending">🔥 Trending</button>
-    <button class="tab" data-f="new">🌱 New</button>
-    <button class="tab" data-f="grad">🎓 Graduating</button>
-    <button class="tab" data-f="done">🏆 Graduated</button>
+  <div class="tabs" id="coins">
+    <button class="tab on" data-f="trending"><img class="gi" src="assets/ic/flame.webp" alt="" aria-hidden="true">Trending</button>
+    <button class="tab" data-f="new"><img class="gi" src="assets/ic/sprout.webp" alt="" aria-hidden="true">New</button>
+    <button class="tab" data-f="grad"><img class="gi" src="assets/ic/cap.webp" alt="" aria-hidden="true">Graduating</button>
+    <button class="tab" data-f="done"><img class="gi" src="assets/ic/trophy.webp" alt="" aria-hidden="true">Graduated</button>
     <span class="sp"></span>
     <span class="sort">Sort <select id="sort"><option value="mc">Market cap</option><option value="age">Newest</option><option value="floor">Floor depth</option></select></span>
   </div>
@@ -213,7 +232,7 @@ let COINS = [], filter = "trending", sort = "mc";
 function card(c){
   const badge = c.state === "done" ? '<span class="badge grad">Graduated</span>'
     : c.state === "grad" ? '<span class="badge floor">Graduate ready</span>'
-    : c.prog >= 60 ? '<span class="badge hot">🔥 Close</span>' : "";
+    : c.prog >= 60 ? '<span class="badge hot"><img class="gi" src="assets/ic/flame.webp" alt="" aria-hidden="true">Close</span>' : "";
   const progLbl = c.state === "done" ? '<b>Bond posted</b><span>floor live</span>'
     : `<span>Road to the Bond</span><b>${c.prog}%</b>`;
   const initials = esc((c.symbol || "?").slice(0, 3));
@@ -302,8 +321,8 @@ async function load(){
 function renderHero(){
   const w = [...COINS].sort((a,b) => b.mc - a.mc)[0];
   const el = document.getElementById('wanted');
-  if (!w) { el.innerHTML = `<div class="lbl">★ Most Wanted</div><div class="sub" style="margin-top:10px">No launches yet — <a href="create.html" style="color:var(--lime)">start the first coin →</a></div>`; return; }
-  el.innerHTML = `<div class="lbl">★ Most Wanted</div>
+  if (!w) { el.innerHTML = `<div class="lbl"><img class="gi" src="assets/ic/crown.webp" alt="" aria-hidden="true">Most Wanted</div><div class="sub" style="margin-top:10px">No launches yet — <a href="create.html" style="color:var(--lime)">start the first coin →</a></div>`; return; }
+  el.innerHTML = `<div class="lbl"><img class="gi" src="assets/ic/crown.webp" alt="" aria-hidden="true">Most Wanted</div>
     <div class="row"><div class="pfp" style="background:linear-gradient(135deg,${color(w.i)},${color(w.i+3)});font-size:1.2rem">${esc((w.symbol||"?").slice(0,3))}</div>
     <div><h3>${esc(w.name)} <span style="color:var(--lime);font-size:1rem">$${esc(w.symbol)}</span></h3>
     <div class="sub">${fmt(w.mc)} MC · ${w.state === "done" ? "floor live" : w.prog + "% to the Bond"}</div></div></div>
