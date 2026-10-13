@@ -106,8 +106,9 @@ async function connect(p, account) {
   await connected.waitFor({ timeout: 30000 });
 }
 
-async function trade(p, side, amountText) {
+async function trade(p, side, amountText, asset = 'usdg') {
   await p.getByRole('button', { name: side === 'buy' ? 'Buy' : 'Sell', exact: true }).click();
+  await p.getByRole('button', { name: asset === 'eth' ? 'ETH' : 'USDG', exact: true }).click();
   if (side === 'buy') await p.getByPlaceholder('0.0').fill(amountText);
   else await p.getByRole('button', { name: amountText, exact: true }).click(); // e.g. "50%"
   const go = p.getByRole('button', { name: new RegExp(`^${side === 'buy' ? 'Buy' : 'Sell'} ${SYMBOL}$`) });
@@ -148,6 +149,7 @@ async function trade(p, side, amountText) {
   await p.getByPlaceholder('Antler Coin', { exact: true }).fill('Antler Test');
   await p.getByPlaceholder('ANTLR', { exact: true }).fill(SYMBOL);
   await p.locator('input[type="number"]').first().fill(String(MC_USD));
+  await p.getByRole('button', { name: 'USDG', exact: true }).click(); // the first buy defaults to ETH; this run pays in USDG
   await p.getByRole('button', { name: '$25', exact: true }).click(); // the required first buy
   await p.screenshot({ path: `${S}/e2e-1-create.png` });
   const usdgBeforeLaunch = await usdgOf(TRADER);
@@ -191,6 +193,22 @@ async function trade(p, side, amountText) {
   const usdg2 = await usdgOf(TRADER);
   console.log(`sold half: got back $${(Number(usdg2 - usdg1) / 1e6).toFixed(4)} USDG`);
   assert.ok(usdg2 > usdg1, 'the sell returned no USDG');
+  // Warm the fork's copy of the v3 pool and router state with one scripted ETH round trip first:
+  // anvil's forked backend can stall while mining a tx that needs a lot of not-yet-fetched
+  // upstream state with the browser polling it at the same time. (Not a chain or site issue.)
+  require('node:child_process').execFileSync('npx', ['tsx', 'scripts/eth-route-fork.mts'], { env: { ...process.env, TOKEN: token, FORK }, stdio: 'ignore', timeout: 240000 });
+  // Same coin, paying and getting paid in ETH through the UI (wrap -> v3 -> v4, and back).
+  const ethBal = async () => BigInt(await rpc('eth_getBalance', [TRADER, 'latest']));
+  const eth0 = await ethBal(); const tok0 = word(await call(token, '0x70a08231' + pad32(TRADER)));
+  await trade(p, 'buy', '0.01', 'eth');
+  const eth1 = await ethBal(); const tok1 = word(await call(token, '0x70a08231' + pad32(TRADER)));
+  console.log(`ETH buy: spent ${Number(eth0 - eth1) / 1e18} ETH (incl. gas), got ${Number(tok1 - tok0) / 1e18} ${SYMBOL}`);
+  assert.ok(eth0 - eth1 >= 10n ** 16n, 'the ETH buy did not spend 0.01 ETH');
+  assert.ok(tok1 > tok0, 'the ETH buy returned no tokens');
+  await trade(p, 'sell', '25%', 'eth');
+  const eth2 = await ethBal(); const tok2 = word(await call(token, '0x70a08231' + pad32(TRADER)));
+  console.log(`ETH sell: got ${Number(eth2 - eth1) / 1e18} ETH (net of gas) for ${Number(tok1 - tok2) / 1e18} ${SYMBOL}`);
+  assert.ok(eth2 > eth1 && tok2 < tok1, 'the ETH sell paid nothing or sold nothing');
   await p.screenshot({ path: `${S}/e2e-2-token.png` });
   const v = await import('viem');
   const client = v.createPublicClient({ transport: v.http(FORK) });

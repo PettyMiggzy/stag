@@ -1,14 +1,15 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAccount, usePublicClient, useReadContract, useWriteContract } from 'wagmi';
-import { formatUnits, type Address, type Hash } from 'viem';
+import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from 'wagmi';
+import { formatUnits, parseEther, type Address, type Hash } from 'viem';
 import { clsx } from 'clsx';
 import { erc20Abi, permit2Abi, universalRouterAbi } from '@/lib/abi';
 import { CONFIG, explorerTx } from '@/lib/config';
 import { robinhood } from '@/lib/chain';
 import type { PoolKey } from '@/lib/pool';
 import { buildExactInSwap, quoteExactIn } from '@/lib/swap';
+import { buildBuyWithEth, buildSellForEth, quoteBuyWithEth, quoteSellForEth } from '@/lib/ethroute';
 import { fmtCompact, parseUnitsSafe } from '@/lib/format';
 import { explainTxError } from '@/lib/txError';
 import { useEnsureChain } from '@/lib/ensureChain';
@@ -27,6 +28,9 @@ const SLIPPAGES = [0.5, 1, 3, 5];
 // Gas on Robinhood Chain is ETH, not USDG, so a buy can spend the whole USDG
 // balance. (On Arc, where USDC is the gas coin, the original kept $0.10 back.)
 const GAS_RESERVE_USDG = 0n;
+// Paying in ETH: keep a little back so the wallet can still pay gas.
+const GAS_RESERVE_ETH = parseEther('0.0005');
+const ETH_PRESETS = ['0.001', '0.005', '0.01', '0.05'];
 
 export function TradePanel(p: Props) {
   const { address, isConnected } = useAccount();
@@ -35,6 +39,8 @@ export function TradePanel(p: Props) {
   const ensureChain = useEnsureChain();
 
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
+  // ETH is the default way in and out; USDG stays for people who hold it.
+  const [asset, setAsset] = useState<'eth' | 'usdg'>('eth');
   const [amount, setAmount] = useState('');
   const [debounced, setDebounced] = useState('');
   const [slippagePct, setSlippagePct] = useState(1);
@@ -45,10 +51,11 @@ export function TradePanel(p: Props) {
   useEffect(() => { const t = setTimeout(() => setDebounced(amount), 350); return () => clearTimeout(t); }, [amount]);
 
   const isBuy = side === 'buy';
+  const useEth = asset === 'eth';
   const inToken = isBuy ? CONFIG.usdg : p.token;
   const outToken = isBuy ? p.token : CONFIG.usdg;
-  const inDecimals = isBuy ? CONFIG.quoteDecimals : 18;
-  const outDecimals = isBuy ? 18 : CONFIG.quoteDecimals;
+  const inDecimals = isBuy ? (useEth ? 18 : CONFIG.quoteDecimals) : 18;
+  const outDecimals = isBuy ? 18 : (useEth ? 18 : CONFIG.quoteDecimals);
   const taxBps = isBuy ? p.buyTaxBps : p.sellTaxBps;
   const zeroForOne = isBuy ? !p.tokenIsToken0 : p.tokenIsToken0;
 
@@ -57,8 +64,9 @@ export function TradePanel(p: Props) {
   // transferFrom, so the balance shown must come
   // from the same asset the swap actually spends.
   const usdgBal = useReadContract({ address: CONFIG.usdg, abi: erc20Abi, functionName: 'balanceOf', args: [address!], chainId: robinhood.id, query: { enabled: !!address, refetchInterval: 15_000 } });
+  const ethBal = useBalance({ address, chainId: robinhood.id, query: { enabled: !!address, refetchInterval: 15_000 } });
   const tokenBal = useReadContract({ address: p.token, abi: erc20Abi, functionName: 'balanceOf', args: [address!], chainId: robinhood.id, query: { enabled: !!address, refetchInterval: 15_000 } });
-  const inBal = isBuy ? usdgBal.data : tokenBal.data;
+  const inBal = isBuy ? (useEth ? ethBal.data?.value : usdgBal.data) : tokenBal.data;
 
   const amountIn = useMemo(() => parseUnitsSafe(amount, inDecimals) ?? 0n, [amount, inDecimals]);
   const quotedAmountIn = useMemo(() => parseUnitsSafe(debounced, inDecimals) ?? 0n, [debounced, inDecimals]);
@@ -66,22 +74,35 @@ export function TradePanel(p: Props) {
   // Real output from the live pool (tax, LP fee, opening gap and price impact
   // included), plus a 1/1000-size reference quote to show price impact.
   const quote = useQuery({
-    queryKey: ['quote', p.token, side, quotedAmountIn.toString()],
+    queryKey: ['quote', p.token, side, asset, quotedAmountIn.toString()],
     enabled: !!pc && quotedAmountIn > 0n,
     staleTime: 5_000,
     refetchInterval: 12_000,
     retry: 1,
     queryFn: async () => {
       const base = { key: p.poolKey, zeroForOne, currencyIn: inToken, currencyOut: outToken };
-      const refIn = quotedAmountIn / 1000n > 0n ? quotedAmountIn / 1000n : 1n;
-      const [out, refOut] = await Promise.all([
-        quoteExactIn(pc!, { ...base, amountIn: quotedAmountIn }),
-        quoteExactIn(pc!, { ...base, amountIn: refIn }).catch(() => 0n),
+      // Price impact is measured on the launch's own pool (the v3 ETH/USDG leg is deep enough to ignore).
+      let poolIn = quotedAmountIn;
+      let out: bigint;
+      if (useEth && isBuy) {
+        const r = await quoteBuyWithEth(pc!, { key: p.poolKey, zeroForOne, currencyOut: p.token }, quotedAmountIn);
+        poolIn = r.usdg; out = r.out;
+      } else if (useEth) {
+        const r = await quoteSellForEth(pc!, { key: p.poolKey, zeroForOne, currencyIn: p.token }, quotedAmountIn);
+        out = r.out;
+      } else {
+        out = await quoteExactIn(pc!, { ...base, amountIn: quotedAmountIn });
+      }
+      const poolBase = isBuy ? { ...base, currencyIn: CONFIG.usdg } : { ...base, currencyOut: CONFIG.usdg };
+      const refIn = poolIn / 1000n > 0n ? poolIn / 1000n : 1n;
+      const [poolOut, refOut] = await Promise.all([
+        useEth && !isBuy ? quoteExactIn(pc!, { ...poolBase, amountIn: poolIn }) : Promise.resolve(out),
+        poolIn > 0n ? quoteExactIn(pc!, { ...poolBase, amountIn: refIn }).catch(() => 0n) : Promise.resolve(0n),
       ]);
-      const impactPct = out > 0n && refOut > 0n
-        ? Math.max(0, (1 - (Number(out) / Number(quotedAmountIn)) / (Number(refOut) / Number(refIn))) * 100)
+      const impactPct = out > 0n && refOut > 0n && poolOut > 0n
+        ? Math.max(0, (1 - (Number(poolOut) / Number(poolIn)) / (Number(refOut) / Number(refIn))) * 100)
         : undefined;
-      return { out, impactPct };
+      return { out, impactPct, poolIn };
     },
   });
 
@@ -89,9 +110,10 @@ export function TradePanel(p: Props) {
   const out = quoteReady ? quote.data!.out : undefined;
   const amountOutMin = out !== undefined ? (out * BigInt(Math.round((100 - slippagePct) * 100))) / 10_000n : undefined;
   const noLiquidity = out === 0n;
-  const spendable = inBal === undefined ? undefined : isBuy ? (inBal > GAS_RESERVE_USDG ? inBal - GAS_RESERVE_USDG : 0n) : inBal;
+  const reserve = useEth ? GAS_RESERVE_ETH : GAS_RESERVE_USDG;
+  const spendable = inBal === undefined ? undefined : isBuy ? (inBal > reserve ? inBal - reserve : 0n) : inBal;
   const insufficient = spendable !== undefined && amountIn > 0n && amountIn > spendable;
-  const needsGasRoom = insufficient && isBuy && inBal !== undefined && amountIn <= inBal;
+  const needsGasRoom = insufficient && isBuy && useEth && inBal !== undefined && amountIn <= inBal;
   const canTrade = quoteReady && !!amountOutMin && amountOutMin > 0n && !insufficient && !busy;
 
   async function waitOk(hash: Hash, what: string) {
@@ -122,18 +144,29 @@ export function TradePanel(p: Props) {
       await ensureChain();
       // Approval runs for BOTH sides — a buy spends USDG via ERC-20
       // transferFrom just as a sell spends the launch token.
-      await ensureAllowance();
-      const { args } = buildExactInSwap({ key: p.poolKey, zeroForOne, amountIn, amountOutMin, currencyIn: inToken, currencyOut: outToken });
+      if (!(isBuy && useEth)) await ensureAllowance(); // ETH buys spend no tokens, so need no approval
+      let args: readonly [`0x${string}`, readonly `0x${string}`[], bigint];
+      let value: bigint | undefined;
+      if (useEth && isBuy) {
+        // The router checks the final amount of tokens; the middle USDG leg gets the same slippage room.
+        const usdgMin = ((quote.data!.poolIn ?? 0n) * BigInt(Math.round((100 - slippagePct) * 100))) / 10_000n;
+        const b = buildBuyWithEth({ key: p.poolKey, zeroForOne, token: p.token, ethIn: amountIn, usdgMin, tokensMin: amountOutMin });
+        args = b.args; value = b.value;
+      } else if (useEth) {
+        args = buildSellForEth({ key: p.poolKey, zeroForOne, token: p.token, tokensIn: amountIn, ethMin: amountOutMin }).args;
+      } else {
+        args = buildExactInSwap({ key: p.poolKey, zeroForOne, amountIn, amountOutMin, currencyIn: inToken, currencyOut: outToken }).args;
+      }
       // Run the exact swap against the chain first: if it would fail (price moved
       // past the slippage, balance changed), say why here instead of sending
       // the wallet a transaction it would warn is likely to fail.
       setBusy('Checking the swap…');
-      await pc.simulateContract({ address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args, account: address });
+      await pc.simulateContract({ address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args: args as never, value, account: address });
       setBusy('Swap waiting on your wallet…');
-      const h = await writeContractAsync({ chainId: robinhood.id, address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args });
+      const h = await writeContractAsync({ chainId: robinhood.id, address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args: args as never, value });
       setTx(h); setBusy(`Waiting for ${CONFIG.chainName}…`);
       await waitOk(h, 'Swap');
-      setAmount(''); usdgBal.refetch(); tokenBal.refetch();
+      setAmount(''); usdgBal.refetch(); tokenBal.refetch(); ethBal.refetch();
     } catch (e: unknown) {
       setErr(explainTxError(e));
     } finally {
@@ -142,7 +175,7 @@ export function TradePanel(p: Props) {
   }
 
   const balLabel = inBal === undefined ? '—' : isBuy
-    ? `${Number(formatUnits(inBal, CONFIG.quoteDecimals)).toFixed(2)} USDG`
+    ? (useEth ? `${Number(formatUnits(inBal, 18)).toFixed(4)} ETH` : `${Number(formatUnits(inBal, CONFIG.quoteDecimals)).toFixed(2)} USDG`)
     : `${fmtCompact(Number(formatUnits(inBal, 18)))} ${p.symbol}`;
 
   function fillPct(pct: number) {
@@ -150,7 +183,8 @@ export function TradePanel(p: Props) {
     setAmount(formatUnits((spendable * BigInt(pct)) / 100n, inDecimals));
   }
 
-  const outSymbol = isBuy ? p.symbol : 'USDG';
+  const outSymbol = isBuy ? p.symbol : (useEth ? 'ETH' : 'USDG');
+  const inSymbol = isBuy ? (useEth ? 'ETH' : 'USDG') : p.symbol;
   const fmtOut = (v: bigint) => `${Number(formatUnits(v, outDecimals)).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${outSymbol}`;
   const impact = quoteReady ? quote.data!.impactPct : undefined;
   const buttonLabel = busy
@@ -173,8 +207,18 @@ export function TradePanel(p: Props) {
         <button className={clsx('rounded-xl py-2.5 text-sm font-bold', !isBuy ? 'bg-stag-grad text-ink shadow-btn' : 'text-muted')} onClick={() => setSide('sell')}>Sell</button>
       </div>
 
-      <div className="mt-5 flex items-center justify-between text-sm">
-        <span className="font-semibold">{isBuy ? 'Amount in USDG' : `Amount in ${p.symbol}`}</span>
+      <div className="mt-3 flex items-center justify-between text-xs text-muted">
+        <span>{isBuy ? 'Pay with' : 'Get paid in'}</span>
+        <div className="flex gap-1">
+          {(['eth', 'usdg'] as const).map((a) => (
+            <button key={a} className={clsx('rounded-lg px-2.5 py-1 font-bold', asset === a ? 'bg-panel2 text-brand-hi' : 'text-dim hover:text-text')} onClick={() => { setAsset(a); setAmount(''); }}>
+              {a === 'eth' ? 'ETH' : 'USDG'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between text-sm">
+        <span className="font-semibold">Amount in {inSymbol}</span>
         <button className="text-muted hover:text-text" onClick={() => fillPct(100)}>Wallet: {balLabel}</button>
       </div>
       <input
@@ -183,7 +227,7 @@ export function TradePanel(p: Props) {
       />
       <div className="mt-3 grid grid-cols-4 gap-2">
         {isBuy
-          ? [1, 5, 10, 25].map((v) => <button key={v} className="rounded-xl border border-line2 bg-panel py-2 text-sm font-bold hover:bg-panel2" onClick={() => setAmount(String(v))}>${v}</button>)
+          ? (useEth ? ETH_PRESETS : ['1', '5', '10', '25']).map((v) => <button key={v} className="rounded-xl border border-line2 bg-panel py-2 text-sm font-bold hover:bg-panel2" onClick={() => setAmount(v)}>{useEth ? v : `$${v}`}</button>)
           : [25, 50, 75, 100].map((pct) => <button key={pct} className="rounded-xl border border-line2 bg-panel py-2 text-sm font-bold hover:bg-panel2" onClick={() => fillPct(pct)}>{pct}%</button>)}
       </div>
 
@@ -200,7 +244,7 @@ export function TradePanel(p: Props) {
       </dl>
       {noLiquidity && amountIn > 0n && (
         <div className="mt-3 rounded-xl border border-line2 bg-panel2 p-2 text-xs text-muted">
-          {isBuy ? 'Nothing left in the pool to buy at the moment.' : `No USDG in the pool yet. Once someone buys ${p.symbol}, selling opens up.`}
+          {isBuy ? 'Nothing left in the pool to buy at the moment.' : `No buyers' money in the pool yet. Once someone buys ${p.symbol}, selling opens up.`}
         </div>
       )}
 

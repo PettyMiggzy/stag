@@ -66,7 +66,7 @@ export function StatsBar({ items }: { items: Stat[] }) {
 export const STAT_ICONS = { Rocket, BarChart3, Trophy, Users };
 
 export function LaunchPromo() {
-  const points = ['Your starting market cap: $100 to $1M', 'A Uniswap v4 pool in USDG, live at once', 'Your own tax, 0 to 10% each way', `${FEES.creatorPct}% of your tax paid to you`];
+  const points = ['Your starting market cap: $100 to $1M', 'A Uniswap v4 pool, live at once. Buy and sell with ETH', 'Your own tax, 0 to 10% each way', `${FEES.creatorPct}% of your tax paid to you`];
   return (
     <div className="panel relative overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -59,6 +59,12 @@ export const CONFIG = {
   permit2: addr(process.env.NEXT_PUBLIC_PERMIT2, 'NEXT_PUBLIC_PERMIT2', '0x000000000022D473030F116dDEE9F6B43aC78BA3'),
   // USDG (Global Dollar, Paxos), 6 decimals: every pool's quote asset. Gas is ETH.
   usdg: addr(process.env.NEXT_PUBLIC_USDG, 'NEXT_PUBLIC_USDG', '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168'),
+  // ETH route: people pay and get paid in ETH. The router wraps it and trades
+  // WETH <-> USDG on Uniswap v3's deep 0.01% pool, then the launch's v4 pool.
+  // No contract of ours is involved in that leg.
+  weth: addr(undefined, 'WETH', '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73'),
+  v3Quoter: addr(undefined, 'V3_QUOTER', '0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7'),
+  ethPoolFee: 100,
   // FALSE, not true (see the comment in .env.example):
   // RobinHook/RobinPortal explicitly revert on quoteAsset == address(0)
   // (NativeQuoteUnsupported / ZeroAddress). There is no native-currency

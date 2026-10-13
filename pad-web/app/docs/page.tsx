@@ -76,8 +76,14 @@ export default function Docs() {
           </div>
         </div>
         <p className="text-xs text-dim">
-          Decimals: USDG has 6, launch tokens have 18. Supply is always 1,000,000,000. Gas is paid in ETH;
-          trades are in USDG, so a wallet needs a little of both.
+          Decimals: USDG has 6, launch tokens have 18. Supply is always 1,000,000,000. Gas is paid in ETH.
+        </p>
+        <p className="text-xs text-dim">
+          Buying and selling with ETH: every pool is token/USDG, so the site's default is one Universal Router
+          transaction that wraps your ETH, swaps WETH to USDG on Uniswap v3&apos;s 0.01% pool
+          ({CONFIG.weth}), then swaps USDG for the launch token on its v4 pool. Selling runs the same route
+          backwards and sends ETH straight to your wallet. Only Uniswap&apos;s own contracts are involved in the
+          ETH leg, and the minimum you will receive is enforced on-chain. Wallets that hold USDG can pay in it directly.
         </p>
       </Section>
 

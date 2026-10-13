@@ -28,7 +28,7 @@ const WRAPPED_ERROR_SELECTOR = '0x90bfb865'; // PoolManager's WrappedError(addre
 
 export type SwapSide = { key: PoolKey; zeroForOne: boolean; amountIn: bigint; currencyIn: Address; currencyOut: Address };
 
-function encodeSwapParams(p: SwapSide, amountOutMin: bigint): Hex {
+export function encodeSwapParams(p: SwapSide, amountOutMin: bigint): Hex {
   return encodeAbiParameters(
     [{
       type: 'tuple',

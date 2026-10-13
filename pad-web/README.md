@@ -19,6 +19,7 @@ WalletConnect id, Blob token, site URL).
 
 ## What is live and what needs a key
 
+- **Pay and get paid in ETH:** the trade panel and the first buy default to ETH, routed wrap → Uniswap v3 WETH/USDG → launch pool in one transaction (`lib/ethroute.ts`, tested by `scripts/eth-route-fork.mts`). USDG works too.
 - **Launch, trade, claim fees, fee desk, admin treasury:** on-chain, always live.
 - **Chart, trades, 24h volume/change:** rebuilt from the pool's Swap events
   (last ~2 days) unless `NEXT_PUBLIC_INDEXER_URL` is set. Holder counts need an

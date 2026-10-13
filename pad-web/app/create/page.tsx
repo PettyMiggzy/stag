@@ -1,11 +1,13 @@
 'use client';
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useWriteContract, usePublicClient, useSignMessage, useReadContract } from 'wagmi';
-import { decodeEventLog, formatUnits, parseUnits, type Address } from 'viem';
+import { useAccount, useBalance, useWriteContract, usePublicClient, useSignMessage, useReadContract } from 'wagmi';
+import { useQuery } from '@tanstack/react-query';
+import { decodeEventLog, formatUnits, parseUnits, type Address, type Hash } from 'viem';
 import { FileText, Rocket, PieChart, Eye, ImageUp, ShieldCheck, Check } from 'lucide-react';
 import { erc20Abi, portalAbi } from '@/lib/abi';
-import { approveForRouter, buyWithUsdg } from '@/lib/buy';
+import { approveForRouter, buyWithUsdg, buyWithEth } from '@/lib/buy';
+import { quoteV3 } from '@/lib/ethroute';
 import { CONFIG, explorerTx } from '@/lib/config';
 import { FEES } from '@/lib/fees';
 import { fmtUsd } from '@/lib/format';
@@ -57,7 +59,10 @@ export default function Create() {
   // Set once createLaunch has confirmed: the token exists from here on, and
   // only the off-chain info (signed separately) may still need saving.
   const [launched, setLaunched] = useState<Address | null>(null);
-  const [firstBuy, setFirstBuy] = useState('10');
+  // ETH is the default way to pay; USDG for people who hold it.
+  const [payAsset, setPayAsset] = useState<'eth' | 'usdg'>('eth');
+  const [firstBuy, setFirstBuy] = useState('0.005');
+  const payEth = payAsset === 'eth';
   const [firstBought, setFirstBought] = useState(false);
   const usdgBal = useReadContract({ address: CONFIG.usdg, abi: erc20Abi, functionName: 'balanceOf', args: [address!], chainId: robinhood.id, query: { enabled: !!address, refetchInterval: 15_000 } });
 
@@ -66,9 +71,18 @@ export default function Create() {
   const splitTotal = Object.values(split).reduce((a, b) => a + b, 0);
   // The split is an off-chain display preference, never enforced on-chain,
   // so it must not be able to block a real launch.
-  const firstBuyRaw = useMemo(() => { try { return parseUnits(firstBuy.trim() || '0', CONFIG.quoteDecimals); } catch { return 0n; } }, [firstBuy]);
-  const firstBuyOk = firstBuyRaw >= BigInt(MIN_FIRST_BUY_USD * 10 ** CONFIG.quoteDecimals);
-  const firstBuyShort = usdgBal.data !== undefined && firstBuyRaw > usdgBal.data;
+  const firstBuyRaw = useMemo(() => { try { return parseUnits(firstBuy.trim() || '0', payEth ? 18 : CONFIG.quoteDecimals); } catch { return 0n; } }, [firstBuy, payEth]);
+  const ethBal = useBalance({ address, chainId: robinhood.id, query: { enabled: !!address, refetchInterval: 15_000 } });
+  // What the ETH is worth in dollars right now (the deep WETH/USDG pool), so the $1 minimum still applies.
+  const ethUsd = useQuery({
+    queryKey: ['first-buy-usd', firstBuyRaw.toString()], enabled: !!pc && payEth && firstBuyRaw > 0n, staleTime: 15_000,
+    queryFn: async () => Number(formatUnits(await quoteV3(pc!, CONFIG.weth, CONFIG.usdg, firstBuyRaw), CONFIG.quoteDecimals)),
+  });
+  const firstBuyUsd = payEth ? ethUsd.data : Number(firstBuy);
+  const firstBuyOk = payEth ? (ethUsd.data !== undefined && ethUsd.data >= MIN_FIRST_BUY_USD) : firstBuyRaw >= BigInt(MIN_FIRST_BUY_USD * 10 ** CONFIG.quoteDecimals);
+  const payBal = payEth ? ethBal.data?.value : usdgBal.data;
+  // With ETH, keep a little back for gas on the launch and the buy.
+  const firstBuyShort = payBal !== undefined && firstBuyRaw + (payEth ? parseUnits('0.002', 18) : 0n) > payBal;
   const valid = name.trim().length >= 2 && /^[A-Z0-9]{2,10}$/.test(symbol) && mcUsd >= MIN_MC_USD && mcUsd <= MAX_MC_USD && buyTax <= 10 && sellTax <= 10 && firstBuyOk && !firstBuyShort;
 
   function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -106,11 +120,16 @@ export default function Create() {
     setErr(null);
     try {
       await ensureChain();
-      await approveForRouter(pc, writeContractAsync, address, CONFIG.usdg, firstBuyRaw, (s) => setBusy(`First buy: ${s}`));
-      const hash = await buyWithUsdg(pc, writeContractAsync, address, token, firstBuyRaw, FIRST_BUY_SLIPPAGE_BPS, (s) => setBusy(`First buy: ${s}`));
+      let hash: Hash;
+      if (payEth) {
+        hash = await buyWithEth(pc, writeContractAsync, address, token, firstBuyRaw, FIRST_BUY_SLIPPAGE_BPS, (s) => setBusy(`First buy: ${s}`));
+      } else {
+        await approveForRouter(pc, writeContractAsync, address, CONFIG.usdg, firstBuyRaw, (s) => setBusy(`First buy: ${s}`));
+        hash = await buyWithUsdg(pc, writeContractAsync, address, token, firstBuyRaw, FIRST_BUY_SLIPPAGE_BPS, (s) => setBusy(`First buy: ${s}`));
+      }
       setTx(hash);
       setFirstBought(true);
-      usdgBal.refetch();
+      usdgBal.refetch(); ethBal.refetch();
       await saveInfo(token);
     } catch (e: unknown) {
       setErr(`The token launched, but the first buy didn't go through: ${explainTxError(e)}`);
@@ -125,9 +144,14 @@ export default function Create() {
       // The first buy is part of every launch, so the USDG for it has to be
       // there before anything is signed, and its approvals go first.
       await ensureChain();
-      const bal = await pc.readContract({ address: CONFIG.usdg, abi: erc20Abi, functionName: 'balanceOf', args: [address] });
-      if (bal < firstBuyRaw) throw new Error(`Your first buy is ${fmtUsd(Number(formatUnits(firstBuyRaw, CONFIG.quoteDecimals)))} of USDG, and this wallet holds ${fmtUsd(Number(formatUnits(bal, CONFIG.quoteDecimals)))}. Add USDG or lower the first buy.`);
-      await approveForRouter(pc, writeContractAsync, address, CONFIG.usdg, firstBuyRaw, (s) => setBusy(`Before launch: ${s}`));
+      if (payEth) {
+        const bal = await pc.getBalance({ address });
+        if (bal < firstBuyRaw + parseUnits('0.002', 18)) throw new Error(`Your first buy is ${formatUnits(firstBuyRaw, 18)} ETH and this wallet holds ${Number(formatUnits(bal, 18)).toFixed(4)} ETH (a little must stay for gas). Add ETH or lower the first buy.`);
+      } else {
+        const bal = await pc.readContract({ address: CONFIG.usdg, abi: erc20Abi, functionName: 'balanceOf', args: [address] });
+        if (bal < firstBuyRaw) throw new Error(`Your first buy is ${fmtUsd(Number(formatUnits(firstBuyRaw, CONFIG.quoteDecimals)))} of USDG, and this wallet holds ${fmtUsd(Number(formatUnits(bal, CONFIG.quoteDecimals)))}. Add USDG or lower the first buy.`);
+        await approveForRouter(pc, writeContractAsync, address, CONFIG.usdg, firstBuyRaw, (s) => setBusy(`Before launch: ${s}`));
+      }
       setBusy('Doing a test run…');
       const call = {
         address: CONFIG.portal,
@@ -190,7 +214,7 @@ export default function Create() {
           <span className="text-cream">LAUNCH</span><br />
           <span className="grad-text">YOUR TOKEN</span>
         </h1>
-        <p className="mt-2 font-semibold uppercase tracking-wide text-muted">One transaction. Your price. Its own USDG pool.</p>
+        <p className="mt-2 font-semibold uppercase tracking-wide text-muted">One transaction. Your price. Its own pool. Buy and sell with ETH.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -250,16 +274,23 @@ export default function Create() {
               </div>
             </div>
             <div>
-              <label className="label">Your first buy (USDG)</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Your first buy ({payEth ? 'ETH' : 'USDG'})</label>
+                <div className="flex gap-1 text-xs">
+                  {(['eth', 'usdg'] as const).map((a) => (
+                    <button key={a} className={`rounded-lg px-2.5 py-1 font-bold ${payAsset === a ? 'bg-panel2 text-brand-hi' : 'text-dim hover:text-text'}`} onClick={() => { setPayAsset(a); setFirstBuy(a === 'eth' ? '0.005' : '10'); }}>{a === 'eth' ? 'ETH' : 'USDG'}</button>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap items-center gap-2">
-                {[5, 10, 25, 50].map((v) => (
-                  <button key={v} className={`tab border border-line2 ${firstBuy === String(v) ? 'tab-active' : ''}`} onClick={() => setFirstBuy(String(v))}>${v}</button>
+                {(payEth ? ['0.002', '0.005', '0.01', '0.05'] : ['5', '10', '25', '50']).map((v) => (
+                  <button key={v} className={`tab border border-line2 ${firstBuy === v ? 'tab-active' : ''}`} onClick={() => setFirstBuy(v)}>{payEth ? v : `$${v}`}</button>
                 ))}
                 <input className="input w-32" inputMode="decimal" value={firstBuy} onChange={(e) => setFirstBuy(e.target.value.replace(/[^0-9.]/g, ''))} />
-                {usdgBal.data !== undefined && <span className="text-xs text-dim">Wallet: {fmtUsd(Number(formatUnits(usdgBal.data, CONFIG.quoteDecimals)))} USDG</span>}
+                {payBal !== undefined && <span className="text-xs text-dim">Wallet: {payEth ? `${Number(formatUnits(payBal, 18)).toFixed(4)} ETH` : `${fmtUsd(Number(formatUnits(payBal, CONFIG.quoteDecimals)))} USDG`}</span>}
               </div>
               <p className={`mt-1.5 text-xs ${firstBuyShort || !firstBuyOk ? 'text-down' : 'text-dim'}`}>
-                {!firstBuyOk ? `At least $${MIN_FIRST_BUY_USD}.` : firstBuyShort ? 'More than this wallet holds.' : 'Required: you make the first trade right after launch, so DexScreener lists your token from the start.'}
+                {!firstBuyOk ? (payEth && ethUsd.data === undefined && firstBuyRaw > 0n ? 'Checking the price…' : `At least $${MIN_FIRST_BUY_USD} worth.`) : firstBuyShort ? 'More than this wallet holds.' : 'Required: you make the first trade right after launch, so DexScreener lists your token from the start.'}
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -313,7 +344,7 @@ export default function Create() {
               <Row k="Sell tax" v={`${sellTax}%`} />
               <Row k="Your cut" v={`${FEES.creatorPct}% of the tax, set in the contract`} />
               <Row k="Starting liquidity" v={`${fmtUsd(mcUsd)} (full supply, locked)`} />
-              <Row k="Your first buy" v={firstBuyOk ? fmtUsd(Number(firstBuy)) : '—'} />
+              <Row k="Your first buy" v={firstBuyOk && firstBuyUsd !== undefined ? `${payEth ? `${firstBuy} ETH · ≈ ` : ''}${fmtUsd(firstBuyUsd)}` : '—'} />
             </dl>
             {launched && !busy && !firstBought ? (
               <button className="btn-brand mt-5 w-full py-3" onClick={() => doFirstBuy(launched)}>Try the first buy again</button>
@@ -336,7 +367,7 @@ export default function Create() {
           <div className="panel p-5">
             <h3 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-hi" />Same rules for every launch</h3>
             <ul className="mt-3 space-y-2 text-sm text-text/85">
-              {['No team tokens, no presale', 'Rules you can read on-chain', 'Each pool trades against USDG'].map((t) => (
+              {['No team tokens, no presale', 'Rules you can read on-chain', 'Buy and sell with ETH (pools settle in USDG)'].map((t) => (
                 <li key={t} className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-up" />{t}</li>
               ))}
             </ul>
@@ -345,7 +376,7 @@ export default function Create() {
       </div>
 
       <div className="panel grid grid-cols-2 gap-4 p-6 sm:grid-cols-4">
-        {[['1', 'Name it', 'Ticker, picture, a short story'], ['2', 'Launch it', 'Its USDG pool opens at once'], ['3', 'Share it', 'Rally your holders'], ['4', 'Build it', 'Keep showing up for holders']].map(([n, t, d]) => (
+        {[['1', 'Name it', 'Ticker, picture, a short story'], ['2', 'Launch it', 'Its pool opens at once'], ['3', 'Share it', 'Rally your holders'], ['4', 'Build it', 'Keep showing up for holders']].map(([n, t, d]) => (
           <div key={n} className="flex items-center gap-3">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-stag-grad font-display text-sm font-bold text-white">{n}</div>
             <div><div className="text-sm font-bold">{t}</div><div className="text-xs text-muted">{d}</div></div>

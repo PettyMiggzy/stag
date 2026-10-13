@@ -5,6 +5,7 @@ import { robinhood } from './chain';
 import { erc20Abi, permit2Abi, universalRouterAbi } from './abi';
 import { poolKeyFor } from './pool';
 import { buildExactInSwap, quoteExactIn } from './swap';
+import { buildBuyWithEth, quoteBuyWithEth } from './ethroute';
 
 // Buying a launch with USDG through the Universal Router, shared by the trade
 // panel's flow and the create page's first buy. Approvals are for the exact
@@ -54,6 +55,23 @@ export async function buyWithUsdg(pc: PublicClient, write: Write, account: Addre
   await pc.simulateContract({ address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args, account });
   step('Swap waiting on your wallet…');
   const hash = await write({ chainId: robinhood.id, address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args });
+  step(`Waiting for ${CONFIG.chainName}…`);
+  await waitOk(pc, hash, 'Swap');
+  return hash;
+}
+
+/** Same as buyWithUsdg, but paying `ethIn` of the wallet's ETH (wrapped and swapped to USDG by the router on the way). No approvals needed. */
+export async function buyWithEth(pc: PublicClient, write: Write, account: Address, token: Address, ethIn: bigint, slippageBps: number, step: Step): Promise<Hash> {
+  const { key, tokenIsToken0 } = poolKeyFor(token);
+  step('Getting a price…');
+  const { usdg, out } = await quoteBuyWithEth(pc, { key, zeroForOne: !tokenIsToken0, currencyOut: token }, ethIn);
+  if (out === 0n) throw new Error('The pool has nothing to sell at the moment.');
+  const keep = BigInt(10_000 - slippageBps);
+  const { args, value } = buildBuyWithEth({ key, zeroForOne: !tokenIsToken0, token, ethIn, usdgMin: (usdg * keep) / 10_000n, tokensMin: (out * keep) / 10_000n });
+  step('Checking the swap…');
+  await pc.simulateContract({ address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args, value, account });
+  step('Swap waiting on your wallet…');
+  const hash = await write({ chainId: robinhood.id, address: CONFIG.router, abi: universalRouterAbi, functionName: 'execute', args, value });
   step(`Waiting for ${CONFIG.chainName}…`);
   await waitOk(pc, hash, 'Swap');
   return hash;
