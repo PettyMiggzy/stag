@@ -1,0 +1,19 @@
+{
+  "appId": "com.stagr.app",
+  "appName": "STAGR",
+  "webDir": "www",
+  "backgroundColor": "#000000",
+  "server": {
+    "url": "https://stagr-app-ten.vercel.app/app",
+    "cleartext": false,
+    "errorPath": "offline.html",
+    "allowNavigation": ["stagr-app-ten.vercel.app"]
+  },
+  "ios": { "contentInset": "never", "limitsNavigationsToAppBoundDomains": false, "scrollEnabled": true },
+  "android": { "allowMixedContent": false, "backgroundColor": "#000000" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 1200, "backgroundColor": "#000000", "showSpinner": false },
+    "StatusBar": { "style": "DARK", "backgroundColor": "#000000", "overlaysWebView": false },
+    "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
+  }
+}

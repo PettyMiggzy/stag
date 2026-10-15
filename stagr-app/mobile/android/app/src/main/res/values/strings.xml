@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">STAGR</string>
+    <string name="title_activity_main">STAGR</string>
+    <string name="package_name">com.stagr.app</string>
+    <string name="custom_url_scheme">com.stagr.app</string>
+</resources>

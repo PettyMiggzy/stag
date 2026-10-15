@@ -67,6 +67,10 @@ const STATEMENTS = [
   scheduled_for TIMESTAMPTZ NOT NULL DEFAULT now(), sent_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 `CREATE INDEX IF NOT EXISTS messages_tenant ON messages(tenant_id, created_at DESC)`,
 `CREATE UNIQUE INDEX IF NOT EXISTS messages_ref ON messages(tenant_id, ref) WHERE ref <> ''`,
+`CREATE TABLE IF NOT EXISTS devices (
+  id SERIAL PRIMARY KEY, tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, user_id INT NOT NULL, platform TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), last_seen TIMESTAMPTZ NOT NULL DEFAULT now())`,
+`CREATE INDEX IF NOT EXISTS devices_tenant ON devices(tenant_id, user_id)`,
 `CREATE TABLE IF NOT EXISTS automations (
   id SERIAL PRIMARY KEY, tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, kind TEXT NOT NULL, enabled BOOLEAN NOT NULL DEFAULT false,
   config JSONB NOT NULL DEFAULT '{}'::jsonb, last_run_at TIMESTAMPTZ, UNIQUE (tenant_id, kind))`,

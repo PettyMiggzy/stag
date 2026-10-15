@@ -17,7 +17,7 @@ export async function api(method, path, body) {
   if (!r.ok) { if (r.status === 401 && S.user) { S.user = null; location.hash = ''; location.reload(); } throw new ApiError(r.status, j.error || 'Something went wrong'); }
   return j;
 }
-export const get = p => api('GET', p), post = (p, b = {}) => api('POST', p, b), put = (p, b = {}) => api('PUT', p, b), del = p => api('DELETE', p);
+export const get = p => api('GET', p), post = (p, b = {}) => api('POST', p, b), put = (p, b = {}) => api('PUT', p, b), del = (p, b) => api('DELETE', p, b);
 
 // ---- time zone aware formatting (the business's own time zone, not the browser's) ----
 export const tz = () => (S.business && S.business.timezone) || 'America/Chicago';

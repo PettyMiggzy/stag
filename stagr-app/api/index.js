@@ -10,4 +10,5 @@ import '../lib/routes/reviews.js';
 import '../lib/routes/legal.js';
 import '../lib/routes/automations.js';
 import '../lib/routes/insights.js';
+import '../lib/routes/devices.js';
 export default handle;

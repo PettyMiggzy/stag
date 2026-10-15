@@ -307,4 +307,46 @@ const cross = await sql`SELECT
   (SELECT count(*) FROM expenses e JOIN jobs j ON j.id = e.job_id WHERE e.tenant_id <> j.tenant_id) AS n`;
 ok('no cross-tenant references anywhere in the database', Number(cross[0].n) === 0, cross);
 
+// ---------- delete my account (required by the app stores) ----------
+{
+  const O = new Client(), T = new Client();
+  r = await O.post('/api/auth/signup', { business: 'Delta Delete Co', name: 'Dee Owner', email: 'dee@delta.test', password: 'password4', city: 'Tomball', state: 'tx' }); ok('signup for deletion test', r.s === 200, r);
+  const tid = r.j.business.id;
+  r = await O.post('/api/customers', { name: 'Delete Me Customer', phone: '5551230000' }); ok('customer for deletion test', r.s === 200 || r.s === 201, r);
+  r = await O.post('/api/team', { name: 'Walt Worker', email: 'walt@delta.test', password: 'password5', role: 'worker' }); ok('add worker', r.s === 200, r);
+  r = await T.post('/api/auth/login', { email: 'walt@delta.test', password: 'password5' }); ok('worker signs in', r.s === 200, r);
+  r = await anon.post('/api/auth/delete-account', { password: 'x', confirm: 'DELETE' }); ok('delete needs sign-in', r.s === 401, r);
+  r = await T.post('/api/auth/delete-account', { password: 'wrong-password', confirm: 'DELETE' }); ok('delete needs the right password', r.s === 401, r);
+  r = await T.post('/api/auth/delete-account', { password: 'password5', confirm: 'nope' }); ok('delete needs the typed confirmation', r.s === 400, r);
+  r = await T.post('/api/auth/delete-account', { password: 'password5', confirm: 'delete' }); ok('worker deletes own account', r.s === 200 && r.j.deleted === 'user', r);
+  r = await T.get('/api/auth/me'); ok('deleted worker is signed out', r.s === 401, r);
+  r = await anon.post('/api/auth/login', { email: 'walt@delta.test', password: 'password5' }); ok('deleted worker cannot sign in', r.s === 401, r);
+  const left = await sql`SELECT (SELECT count(*) FROM tenants WHERE id = ${tid}) AS t, (SELECT count(*) FROM users WHERE tenant_id = ${tid}) AS u, (SELECT count(*) FROM customers WHERE tenant_id = ${tid}) AS c`;
+  ok('business survives a worker leaving', Number(left[0].t) === 1 && Number(left[0].u) === 1 && Number(left[0].c) === 1, left);
+  r = await O.post('/api/auth/delete-account', { password: 'password4', confirm: 'DELETE' }); ok('owner deletes the business', r.s === 200 && r.j.deleted === 'business', r);
+  const gone = await sql`SELECT (SELECT count(*) FROM tenants WHERE id = ${tid}) AS t, (SELECT count(*) FROM users WHERE tenant_id = ${tid}) AS u, (SELECT count(*) FROM customers WHERE tenant_id = ${tid}) AS c, (SELECT count(*) FROM services WHERE tenant_id = ${tid}) AS s`;
+  ok('all of the business data is gone', ['t', 'u', 'c', 's'].every(k => Number(gone[0][k]) === 0), gone);
+  const others = await sql`SELECT count(*) AS n FROM tenants`; ok('other businesses untouched', Number(others[0].n) === 2, others);
+}
+
+// ---------- phones with the app installed (push tokens) ----------
+{
+  const E = new Client(), F = new Client(), tok = 'dev-token-' + 'x'.repeat(40);
+  r = await E.post('/api/auth/signup', { business: 'Echo Devices Co', name: 'Eve Owner', email: 'eve@echo.test', password: 'password6' }); ok('signup E', r.s === 200, r);
+  r = await F.post('/api/auth/signup', { business: 'Foxtrot Devices Co', name: 'Fay Owner', email: 'fay@foxtrot.test', password: 'password7' }); ok('signup F', r.s === 200, r);
+  r = await anon.post('/api/devices', { platform: 'ios', token: tok }); ok('device registration needs sign-in', r.s === 401, r);
+  r = await E.post('/api/devices', { platform: 'windows', token: tok }); ok('device registration rejects an unknown platform', r.s === 400, r);
+  r = await E.post('/api/devices', { platform: 'ios', token: 'short' }); ok('device registration rejects a short token', r.s === 400, r);
+  r = await E.post('/api/devices', { platform: 'ios', token: tok }); ok('device registers', r.s === 200, r);
+  r = await E.post('/api/devices', { platform: 'android', token: tok }); ok('same token registers again without duplicating', r.s === 200, r);
+  const n1 = await sql`SELECT count(*) AS n, min(platform) AS p FROM devices WHERE token = ${tok}`; ok('one row per token', Number(n1[0].n) === 1 && n1[0].p === 'android', n1);
+  r = await F.req('DELETE', '/api/devices', { token: tok }); ok('another business cannot remove it', r.s === 200, r);
+  const n2 = await sql`SELECT count(*) AS n FROM devices WHERE token = ${tok}`; ok('still registered after the other business tried', Number(n2[0].n) === 1, n2);
+  r = await E.req('DELETE', '/api/devices', { token: tok }); ok('device removed on sign-out', r.s === 200, r);
+  const n3 = await sql`SELECT count(*) AS n FROM devices WHERE token = ${tok}`; ok('device row gone', Number(n3[0].n) === 0, n3);
+  await E.post('/api/devices', { platform: 'ios', token: tok });
+  r = await E.post('/api/auth/delete-account', { password: 'password6', confirm: 'DELETE' }); ok('deleting the account', r.s === 200, r);
+  const n4 = await sql`SELECT count(*) AS n FROM devices WHERE token = ${tok}`; ok('deleting an account removes its devices', Number(n4[0].n) === 0, n4);
+}
+
 srv.close(); console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

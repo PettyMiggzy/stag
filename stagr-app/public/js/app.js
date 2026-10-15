@@ -27,7 +27,7 @@ function authScreen(mode = 'login') {
     <label class="field"><span>Password${signup ? ' (8+ characters)' : ''}</span><input name="password" type="password" required autocomplete="${signup ? 'new-password' : 'current-password'}" minlength="8"></label>
     <p class="small" id="authErr" style="color:var(--bad);margin:0" role="alert"></p>
     <button class="btn main" type="submit">${signup ? 'Create my account' : 'Sign in'}</button>
-    <p class="small mute" style="margin:0;text-align:center;display:flex;gap:8px;align-items:center;justify-content:center"><img src="/logo.webp" alt="" width="22" height="22" style="object-fit:contain"> Created by $STAG, the junk removal mascot</p>
+    <p class="small mute" style="margin:0;text-align:center;display:flex;gap:8px;align-items:center;justify-content:center"><img src="/logo.webp" alt="" width="22" height="22" style="object-fit:contain"> STAGR field service CRM</p>
     <p class="small mute" style="margin:0;text-align:center">${signup ? 'Already have an account? <a href="#" data-mode="login">Sign in</a>' : 'New to STAGR? <a href="#" data-mode="signup">Create an account</a>'}</p></form></div></div>`;
   $('[data-mode]').addEventListener('click', e => { e.preventDefault(); authScreen(e.target.dataset.mode); });
   $('#authForm').addEventListener('submit', async e => {
@@ -43,7 +43,7 @@ function shell() {
     <div class="who"><b>${esc(S.user.name)}</b><div class="mute small">${esc(S.business.name)} · ${esc(S.user.role)}</div><button class="btn small" id="logout" style="margin-top:8px">Sign out</button></div></aside>
     <main class="main" id="main" tabindex="-1"></main></div>
     <nav class="tabbar" aria-label="Main">${TABS.filter(t => t === 'more' ? allowed('admin') : NAV.find(n => n[0] === t && allowed(n[4]))).map(t => { const n = NAV.find(x => x[0] === t) || ['more', '/more', 'More', 'gear']; return `<a href="#${n[1]}" data-nav="${t}">${icon(n[3])}<span>${n[2]}</span></a>`; }).join('')}</nav>`;
-  $('#logout').addEventListener('click', async () => { await post('/auth/logout'); S.user = null; location.hash = ''; authScreen(); });
+  $('#logout').addEventListener('click', async () => { await import('./native.js').then(m => m.forgetDevice()).catch(() => {}); await post('/auth/logout'); S.user = null; location.hash = ''; authScreen(); });
   document.documentElement.style.setProperty('--accent', S.business.brand_color || '#39ff14');
 }
 let navToken = 0;
@@ -67,7 +67,14 @@ async function boot() {
   try { const me = await get('/auth/me'); S.user = me.user; S.business = me.business; } catch (e) { if (e instanceof ApiError && e.status === 401) return authScreen('login'); root.innerHTML = '<div class="auth"><div class="empty">Could not reach the server. Check your connection and refresh.</div></div>'; return; }
   const [t, s] = await Promise.all([get('/team'), get('/services')]); S.team = t.team; S.services = s.services;
   shell(); await route();
+  import('./native.js').then(m => m.initNative()).catch(() => {});
   if (allowed('admin')) get('/requests').then(r => { const n = r.requests.filter(x => x.status === 'new').length, b = $('#reqBadge'); if (b && n) { b.textContent = n; b.classList.remove('hidden'); } }).catch(() => {});
 }
 window.addEventListener('hashchange', route);
 boot();
+
+// ---- phone and offline polish ----
+if (window.Capacitor?.isNativePlatform?.()) document.documentElement.classList.add('native');
+const syncOnline = () => document.documentElement.classList.toggle('offline', !navigator.onLine);
+addEventListener('online', syncOnline); addEventListener('offline', syncOnline); syncOnline();
+if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));

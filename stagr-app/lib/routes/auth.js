@@ -57,6 +57,24 @@ route('POST', '/api/auth/password', async ctx => {
   return { ok: true };
 });
 
+// Delete the signed-in person's account from inside the app (required by the app stores).
+// A team member is removed. The owner deleting their account deletes the whole business and all of its data.
+route('POST', '/api/auth/delete-account', async ctx => {
+  const pw = String(ctx.body.password || ''), confirm = String(ctx.body.confirm || '').trim().toUpperCase();
+  const keys = ['delacct:' + ctx.user.id];
+  await checkLockout(keys);
+  const [u] = await sql`SELECT password_hash, role FROM users WHERE id = ${ctx.user.id} AND tenant_id = ${ctx.tid}`;
+  if (!u) throw new HttpError(404, 'Not found');
+  if (!verifyPassword(pw, u.password_hash)) { await recordFail(keys); throw new HttpError(401, 'Wrong password'); }
+  if (confirm !== 'DELETE') throw bad('Type DELETE to confirm');
+  await sql`DELETE FROM devices WHERE user_id = ${ctx.user.id} AND tenant_id = ${ctx.tid}`;
+  if (u.role === 'owner') await sql`DELETE FROM tenants WHERE id = ${ctx.tid}`;   // every business table is ON DELETE CASCADE
+  else await sql`DELETE FROM users WHERE id = ${ctx.user.id} AND tenant_id = ${ctx.tid}`;
+  await clearFails(keys);
+  clearSession(ctx.res);
+  return { ok: true, deleted: u.role === 'owner' ? 'business' : 'user' };
+});
+
 // ---- business profile and team ----
 route('PUT', '/api/business', async ctx => {
   need(ctx, 'admin'); const b = ctx.body;
