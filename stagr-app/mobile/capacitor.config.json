@@ -4,10 +4,10 @@
   "webDir": "www",
   "backgroundColor": "#000000",
   "server": {
-    "url": "https://stagr-app-ten.vercel.app/app",
+    "url": "https://stagr.junkjunkiesindiana.com/app",
     "cleartext": false,
     "errorPath": "offline.html",
-    "allowNavigation": ["stagr-app-ten.vercel.app"]
+    "allowNavigation": ["stagr.junkjunkiesindiana.com"]
   },
   "ios": { "contentInset": "never", "limitsNavigationsToAppBoundDomains": false, "scrollEnabled": true },
   "android": { "allowMixedContent": false, "backgroundColor": "#000000" },
