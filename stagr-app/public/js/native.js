@@ -3,6 +3,7 @@ import { del, post } from './core.js';
 const Cap = window.Capacitor, plug = n => Cap?.Plugins?.[n];
 export const isNative = !!Cap?.isNativePlatform?.();
 const TOKEN_KEY = 'stagr_push_token', ASKED_KEY = 'stagr_push_asked';
+const PUSH_ENABLED = false;
 
 export async function initNative() {
   if (!isNative) return;
@@ -11,7 +12,9 @@ export async function initNative() {
   if (Haptics) document.addEventListener('click', e => { if (e.target.closest?.('.btn.main,.tabbar a')) Haptics.impact({ style: 'LIGHT' }).catch(() => {}); }, { passive: true });
   // Android back button: go back, or leave the app from the home screen
   App?.addListener?.('backButton', ({ canGoBack }) => { if (canGoBack && location.hash && location.hash !== '#/') history.back(); else App.exitApp?.(); });
-  if (!Push) return;
+  // Push notifications stay OFF until Firebase is set up in the Android app (google-services.json) and the iPhone app.
+  // Calling register() without it crashes the Android app on launch (Google Play rejected version 2 for exactly that).
+  if (!PUSH_ENABLED || !Push) return;
   Push.addListener('registration', async t => { try { localStorage.setItem(TOKEN_KEY, t.value); await post('/devices', { platform: Cap.getPlatform(), token: t.value }); } catch {} });
   Push.addListener('pushNotificationActionPerformed', a => { const path = a?.notification?.data?.path; if (typeof path === 'string' && path.startsWith('/')) location.hash = '#' + path; });
   try {
