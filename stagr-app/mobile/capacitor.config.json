@@ -10,7 +10,7 @@
     "allowNavigation": ["stagr.junkjunkiesindiana.com"]
   },
   "ios": { "contentInset": "never", "limitsNavigationsToAppBoundDomains": false, "scrollEnabled": true },
-  "android": { "allowMixedContent": false, "backgroundColor": "#000000" },
+  "android": { "adjustMarginsForEdgeToEdge": "auto", "allowMixedContent": false, "backgroundColor": "#000000" },
   "plugins": {
     "SplashScreen": { "launchShowDuration": 1200, "backgroundColor": "#000000", "showSpinner": false },
     "StatusBar": { "style": "DARK", "backgroundColor": "#000000", "overlaysWebView": false },
