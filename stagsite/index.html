@@ -1,0 +1,126 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>$STAG | Stag Wif Hood</title><meta name="description" content="The $STAG community token: StagR CRM and Stag House Records."><meta property="og:title" content="$STAG | Stag Wif Hood"><meta property="og:description" content="The $STAG community token: StagR CRM and Stag House Records."><meta property="og:image" content="https://stagwifhood.fun/assets/poster.webp"><meta name="theme-color" content="#050806"><link rel="icon" href="/assets/badge.webp">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
+<style>
+/* Layout: a dark neon label site. Full-bleed bands, one booth hero, a playable intro. Boldness lives in the hero; the rest stays quiet. */
+:root{
+  --ink:#050806; --panel:#0a110c; --panel2:#0e1810; --line:#1d3022;
+  --fg:#e9f2e5; --muted:#9bb197; --neon:#39ff14; --neon-dim:#1f8f0c; --gold:#d8ab4b; --gold-hi:#f4dc8f;
+  --display:'Anton','Impact','Arial Narrow',sans-serif; --body:'Barlow','Helvetica Neue',Arial,sans-serif; --mono:'Space Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--fg);font:17px/1.6 var(--body);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#050806;z-index:60}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-transform:uppercase;line-height:.98;margin:0;text-wrap:balance;letter-spacing:.005em}
+p{margin:0;max-width:62ch}
+.in{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band{padding-block:clamp(56px,9vw,112px)}
+.eyebrow{font:700 13px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--neon);margin-bottom:18px;display:block}
+.gold{color:var(--gold-hi)} .neon{color:var(--neon)}
+.btn{display:inline-flex;align-items:center;gap:10px;font:600 16px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;padding:16px 26px;border-radius:999px;border:2px solid var(--neon);color:var(--neon);background:transparent;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover,.btn:focus-visible{box-shadow:0 0 28px rgba(57,255,20,.55);transform:translateY(-2px);outline:none}
+.btn.solid{background:var(--neon);color:#031005}
+.btn:focus-visible{outline:3px solid var(--gold-hi);outline-offset:3px}
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(5,8,6,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;gap:20px;min-height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font:400 21px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.brand img{width:46px;height:46px;border-radius:50%}
+nav{margin-left:auto;display:flex;gap:26px;align-items:center}
+nav a{font:600 14px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--fg)}
+nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)}
+@media(max-width:820px){nav a:not(.btn){display:none}.brand span{font-size:17px}}
+/* hero */
+.hero{position:relative;overflow:hidden;background:radial-gradient(1000px 600px at 78% 30%,rgba(30,120,40,.45),transparent 70%),var(--ink)}
+.hero .in{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,5vw,72px);align-items:center;padding-block:clamp(36px,6vw,84px)}
+.hero h1{font-size:clamp(54px,9.5vw,128px)}
+.hero h1 em{font-style:normal;color:var(--neon);text-shadow:0 0 38px rgba(57,255,20,.55)}
+.hero .lead{margin-top:22px;font-size:clamp(18px,2vw,22px);color:#cfe0cb}
+.hero .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:34px;font:700 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stats b{color:var(--gold-hi);font-weight:700}
+.boothwrap{position:relative;border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.55);box-shadow:0 0 70px rgba(57,255,20,.28),0 30px 80px rgba(0,0,0,.65)}
+.boothwrap>img{width:100%;aspect-ratio:4/5;object-fit:cover}
+.boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
+@media(max-width:900px){.hero .in{grid-template-columns:1fr}.boothwrap{order:-1;max-width:520px}}
+/* player */
+.player{position:absolute;z-index:3;left:14px;right:14px;bottom:14px;background:rgba(5,10,6,.82);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center}
+.play{grid-row:span 2;width:56px;height:56px;border-radius:50%;border:2px solid var(--neon);background:var(--neon);color:#031005;display:grid;place-items:center;cursor:pointer;transition:box-shadow .2s}
+.play:hover,.play:focus-visible{box-shadow:0 0 26px rgba(57,255,20,.7);outline:none}
+.play svg{width:24px;height:24px}
+.ptitle{font:700 13px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-hi)}
+.psub{font-size:14px;color:var(--muted);line-height:1.2}
+.eq{grid-column:1/-1;display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:6px}
+.eq i{flex:1;background:linear-gradient(180deg,var(--neon),var(--neon-dim));border-radius:2px;height:12%;opacity:.55}
+.playing .eq i{animation:eq 900ms ease-in-out infinite alternate;opacity:1}
+@keyframes eq{from{height:12%}to{height:100%}}
+.bar{grid-column:1/-1;height:4px;background:#16241a;border-radius:3px;overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--neon);box-shadow:0 0 12px var(--neon)}
+.ident{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#0c3a12,#020603 70%);opacity:0;pointer-events:none;transition:opacity .25s}
+.ident.on{opacity:1}
+.ident img{width:58%;border-radius:50%;box-shadow:0 0 90px rgba(57,255,20,.7);transform:scale(.7);opacity:0}
+.ident.on img{animation:pop 1.9s cubic-bezier(.2,.9,.2,1) forwards}
+.ident span{position:absolute;bottom:18%;font:400 26px/1 var(--display);letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);opacity:0}
+.ident.on span{animation:fade 1.9s ease forwards}
+@keyframes pop{0%{transform:scale(.7);opacity:0;filter:brightness(2.5)}30%{opacity:1;filter:brightness(1.2)}100%{transform:scale(1.04);opacity:1;filter:brightness(1)}}
+@keyframes fade{0%,35%{opacity:0;transform:translateY(10px)}60%,100%{opacity:1;transform:none}}
+.note{font:700 11px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+/* ticker */
+.ticker{border-block:1px solid var(--line);background:var(--panel);overflow:hidden;white-space:nowrap}
+.ticker div{display:inline-flex;gap:46px;padding-block:16px;animation:slide 38s linear infinite;font:400 22px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-hi)}
+.ticker span::after{content:"◆";margin-left:46px;color:var(--neon);font-size:14px;vertical-align:middle}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+.sec-h{font-size:clamp(38px,6vw,78px);margin-bottom:18px}.sec-p{color:#c4d6c0;font-size:19px;margin-bottom:40px}
+.grid{display:grid;gap:22px;grid-template-columns:repeat(3,1fr)}
+.grid.two{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.grid,.grid.two{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;transition:transform .2s,border-color .2s,box-shadow .2s}
+a.card:hover{transform:translateY(-4px);border-color:var(--neon);box-shadow:0 0 40px rgba(57,255,20,.25)}
+.card img{width:100%;aspect-ratio:4/3;object-fit:cover}
+.card .b{padding:22px 24px 26px;display:flex;flex-direction:column;gap:10px;flex:1}
+.card h3{font-size:30px}.card p{color:#c4d6c0;font-size:16px}
+.chip{align-self:flex-start;font:700 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;padding:7px 10px;border-radius:999px;border:1px solid var(--neon);color:var(--neon)}
+.chip.soon{border-color:var(--gold);color:var(--gold-hi)}
+.go{margin-top:auto;font:700 13px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--neon)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,64px);align-items:center}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+.frame{border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.45);box-shadow:0 0 60px rgba(57,255,20,.2)}
+.frame video,.frame img{width:100%;display:block}
+.steps{display:grid;gap:14px;counter-reset:s;margin-top:8px;padding:0;list-style:none}
+.steps li{counter-increment:s;padding:16px 18px 16px 64px;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.steps li::before{content:counter(s);position:absolute;left:16px;top:50%;translate:0 -50%;width:34px;height:34px;border-radius:50%;background:var(--neon);color:#031005;font:400 18px/34px var(--display);text-align:center}
+.ca{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--panel);border:1px dashed var(--gold);border-radius:16px;padding:16px 20px;font:700 14px/1.4 var(--mono);color:var(--gold-hi);word-break:break-all}
+.alt{background:var(--panel)}
+footer{border-top:1px solid var(--line);padding-block:40px;color:var(--muted);font-size:14px}
+footer .in{display:flex;flex-wrap:wrap;gap:12px 30px;align-items:center}
+footer a{text-decoration:none}footer a:hover{color:var(--fg)}
+.fine{max-width:80ch;margin-top:18px;font-size:13px;line-height:1.5}
+@media(prefers-reduced-motion:reduce){.ticker div{animation:none}}
+</style>
+<header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>$STAG</span></a><nav><a href="/#ecosystem">Ecosystem</a><a href="/stagr/">StagR</a><a href="https://records.stagwifhood.fun">Records</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
+<main>
+<section class="hero"><div class="in"><div>
+<span class="eyebrow">Stag Wif Hood</span>
+<h1>The stag <em>runs</em> the hood.</h1>
+<p class="lead">$STAG is the community token behind real businesses: a CRM built for junk removal and moving companies, and a record label where artists own their music.</p>
+<div class="cta"><a class="btn solid" href="/stagr/">See StagR CRM</a><a class="btn" href="https://records.stagwifhood.fun">Hear the music</a></div>
+<div class="stats"><span><b>1</b> CRM in beta</span><span><b>5</b> tracks live</span><span><b>Robinhood</b> Chain</span></div>
+</div><div class="boothwrap"><img src="/assets/poster.webp" alt="Stag Wif Hood poster"></div></div></section>
+<div class="ticker" aria-hidden="true"><div><span>$STAG</span><span>StagR CRM</span><span>Stag House Records</span><span>Winslow Bankz</span><span>Own your music</span><span>$STAG</span><span>StagR CRM</span><span>Stag House Records</span><span>Winslow Bankz</span><span>Own your music</span></div></div>
+<section class="band" id="ecosystem"><div class="in"><span class="eyebrow">The ecosystem</span><h2 class="sec-h">Two doors. One <span class="gold">stag</span>.</h2><p class="sec-p">Everything is built by the same crew and tied back to the community.</p>
+<div class="grid two">
+<a class="card" href="/stagr/"><img src="/assets/stagr.webp" alt="StagR CRM"><div class="b"><span class="chip">In beta</span><h3>StagR CRM</h3><p>Customers, quotes, jobs, invoices and follow-ups for junk removal and moving companies. Already tested with a real crew.</p><span class="go">Open StagR →</span></div></a>
+<a class="card" href="https://records.stagwifhood.fun"><img src="/assets/booth.webp" alt="Stag House Records booth"><div class="b"><span class="chip">Live</span><h3>Stag House Records</h3><p>Winslow Bankz and the label. Stream the tracks now. Music NFTs and videos are next.</p><span class="go">Open Records →</span></div></a>
+</div></div></section>
+<section class="band alt"><div class="in split"><div><span class="eyebrow">Hood Rich</span><h2 class="sec-h">Winslow Bankz</h2><p class="sec-p">The first artist on Stag House Records. Press play on a track, and watch for the Hood Rich digital album drop.</p><a class="btn solid" href="https://records.stagwifhood.fun">Listen now</a></div><div class="frame"><img src="/assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" onerror="this.src='/assets/booth.webp'"></div></div></section>
+<section class="band"><div class="in"><span class="eyebrow">Where it's going</span><h2 class="sec-h">The plan</h2><ol class="steps"><li>Ship StagR to real service businesses and keep improving it.</li><li>Release music on Stag House Records with the artist's say on every deal.</li><li>Use profits for music videos, with a stag clip ahead of each one.</li><li>Open NFT drops for fans, once the legal and platform details are settled.</li></ol></div></section>
+<section class="band alt"><div class="in"><span class="eyebrow">Contract</span><h2 class="sec-h">Verify before you buy</h2><div class="ca"><span>Contract address: announced in Telegram at launch. Never trust an address from a DM.</span><a class="btn" href="https://t.me/StagWifHood" rel="noopener">Get it in Telegram</a></div></div></section>
+</main>
+<footer><div class="in"><span>© $STAG · Stag Wif Hood</span><a href="/stagr/">StagR CRM</a><a href="https://records.stagwifhood.fun">Stag House Records</a><a href="https://t.me/StagWifHood" rel="noopener">Telegram</a></div><div class="in"><p class="fine">$STAG is a community token. Nothing here is financial advice or a promise of returns. Crypto is volatile and you can lose everything you put in. Some music on Stag House Records is made with AI.</p></div></footer>
+</html>
