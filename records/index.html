@@ -54,7 +54,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 .boothwrap.vid>video{opacity:1}
 .boothwrap.vid>canvas{display:none}
 .boothwrap>canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1}
-.boothwrap>img{width:100%;aspect-ratio:4/5;object-fit:cover}
+.boothwrap>img{width:100%;aspect-ratio:864/1184;object-fit:cover}
 .boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
 @media(max-width:900px){.hero .in{grid-template-columns:1fr}.boothwrap{order:-1;max-width:520px}}
 /* player */
@@ -213,9 +213,8 @@ dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
     <p class="note">Design mock: names, numbers and dates on this page are examples.</p>
   </div>
   <div class="boothwrap" id="stage">
-    <img src="assets/booth.webp" alt="The Stag House mascot, a hooded stag in headphones, singing into a studio microphone in a neon green recording booth" width="1100" height="1375" id="boothImg">
-    <canvas id="singer" aria-hidden="true"></canvas>
-    <video id="boothVid" src="assets/stag-sing.mp4" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+    <img src="assets/stag-hero.webp" alt="The Stag House mascot, an armored stag in headphones, standing at the mixing console under the neon Stag House Records sign" width="864" height="1184" id="boothImg">
+    <video id="boothVid" src="assets/stag-sing.mp4?v=2" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
     <div class="ident" id="ident" aria-hidden="true"><img src="assets/logo.webp" alt=""><span>Stag House Records</span></div>
     <div class="player" id="player">
       <button class="play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="ico"><path d="M8 5v14l11-7z"/></svg></button>
