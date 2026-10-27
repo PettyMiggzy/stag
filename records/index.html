@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stag House Records</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
+<style>
+/* Layout: a dark neon label site. Full-bleed bands, one booth hero, a playable intro. Boldness lives in the hero; the rest stays quiet. */
+:root{
+  --ink:#050806; --panel:#0a110c; --panel2:#0e1810; --line:#1d3022;
+  --fg:#e9f2e5; --muted:#9bb197; --neon:#39ff14; --neon-dim:#1f8f0c; --gold:#d8ab4b; --gold-hi:#f4dc8f;
+  --display:'Anton','Impact','Arial Narrow',sans-serif; --body:'Barlow','Helvetica Neue',Arial,sans-serif; --mono:'Space Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--fg);font:17px/1.6 var(--body);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#050806;z-index:60}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-transform:uppercase;line-height:.98;margin:0;text-wrap:balance;letter-spacing:.005em}
+p{margin:0;max-width:62ch}
+.in{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band{padding-block:clamp(56px,9vw,112px)}
+.eyebrow{font:700 13px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--neon);margin-bottom:18px;display:block}
+.gold{color:var(--gold-hi)} .neon{color:var(--neon)}
+.btn{display:inline-flex;align-items:center;gap:10px;font:600 16px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;padding:16px 26px;border-radius:999px;border:2px solid var(--neon);color:var(--neon);background:transparent;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover,.btn:focus-visible{box-shadow:0 0 28px rgba(57,255,20,.55);transform:translateY(-2px);outline:none}
+.btn.solid{background:var(--neon);color:#031005}
+.btn:focus-visible{outline:3px solid var(--gold-hi);outline-offset:3px}
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(5,8,6,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;gap:20px;min-height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font:400 21px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.brand img{width:46px;height:46px;border-radius:50%}
+nav{margin-left:auto;display:flex;gap:26px;align-items:center}
+nav a{font:600 14px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--fg)}
+nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)}
+@media(max-width:820px){nav a:not(.btn){display:none}.brand span{font-size:17px}}
+/* hero */
+.hero{position:relative;overflow:hidden;background:radial-gradient(1000px 600px at 78% 30%,rgba(30,120,40,.45),transparent 70%),var(--ink)}
+.hero .in{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,5vw,72px);align-items:center;padding-block:clamp(36px,6vw,84px)}
+.hero h1{font-size:clamp(54px,9.5vw,128px)}
+.hero h1 em{font-style:normal;color:var(--neon);text-shadow:0 0 38px rgba(57,255,20,.55)}
+.hero .lead{margin-top:22px;font-size:clamp(18px,2vw,22px);color:#cfe0cb}
+.hero .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:34px;font:700 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stats b{color:var(--gold-hi);font-weight:700}
+.boothwrap{position:relative;border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.55);box-shadow:0 0 70px rgba(57,255,20,.28),0 30px 80px rgba(0,0,0,.65)}
+.boothwrap>img{width:100%;aspect-ratio:4/5;object-fit:cover}
+.boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
+@media(max-width:900px){.hero .in{grid-template-columns:1fr}.boothwrap{order:-1;max-width:520px}}
+/* player */
+.player{position:absolute;z-index:3;left:14px;right:14px;bottom:14px;background:rgba(5,10,6,.82);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center}
+.play{grid-row:span 2;width:56px;height:56px;border-radius:50%;border:2px solid var(--neon);background:var(--neon);color:#031005;display:grid;place-items:center;cursor:pointer;transition:box-shadow .2s}
+.play:hover,.play:focus-visible{box-shadow:0 0 26px rgba(57,255,20,.7);outline:none}
+.play svg{width:24px;height:24px}
+.ptitle{font:700 13px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-hi)}
+.psub{font-size:14px;color:var(--muted);line-height:1.2}
+.eq{grid-column:1/-1;display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:6px}
+.eq i{flex:1;background:linear-gradient(180deg,var(--neon),var(--neon-dim));border-radius:2px;height:12%;opacity:.55}
+.playing .eq i{animation:eq 900ms ease-in-out infinite alternate;opacity:1}
+@keyframes eq{from{height:12%}to{height:100%}}
+.bar{grid-column:1/-1;height:4px;background:#16241a;border-radius:3px;overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--neon);box-shadow:0 0 12px var(--neon)}
+.ident{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#0c3a12,#020603 70%);opacity:0;pointer-events:none;transition:opacity .25s}
+.ident.on{opacity:1}
+.ident img{width:58%;border-radius:50%;box-shadow:0 0 90px rgba(57,255,20,.7);transform:scale(.7);opacity:0}
+.ident.on img{animation:pop 1.9s cubic-bezier(.2,.9,.2,1) forwards}
+.ident span{position:absolute;bottom:18%;font:400 26px/1 var(--display);letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);opacity:0}
+.ident.on span{animation:fade 1.9s ease forwards}
+@keyframes pop{0%{transform:scale(.7);opacity:0;filter:brightness(2.5)}30%{opacity:1;filter:brightness(1.2)}100%{transform:scale(1.04);opacity:1;filter:brightness(1)}}
+@keyframes fade{0%,35%{opacity:0;transform:translateY(10px)}60%,100%{opacity:1;transform:none}}
+.note{font:700 11px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+/* ticker */
+.ticker{border-block:1px solid var(--line);background:var(--panel);overflow:hidden;white-space:nowrap}
+.ticker div{display:inline-flex;gap:46px;padding-block:16px;animation:slide 38s linear infinite;font:400 22px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-hi)}
+.ticker span::after{content:"◆";margin-left:46px;color:var(--neon);font-size:14px;vertical-align:middle}
+@keyframes slide{to{transform:translateX(-50%)}}
+/* sections */
+.sec-h{font-size:clamp(38px,6vw,78px);margin-bottom:18px}
+.sec-p{color:#c4d6c0;font-size:19px;margin-bottom:44px}
+.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.grid4>div{padding:34px 30px;background:var(--panel);border:1px solid var(--line);margin:-1px 0 0 -1px;min-width:0}
+.grid4 h3{font-size:34px;color:var(--gold-hi);margin-bottom:12px}
+.grid4 p{color:#bcd0b8;font-size:17px}
+@media(max-width:700px){.grid4{grid-template-columns:1fr}}
+.split{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(24px,5vw,64px);align-items:center}
+.split img.poster{border-radius:22px;border:2px solid rgba(216,171,75,.55);box-shadow:0 0 60px rgba(216,171,75,.16);width:100%;max-width:460px;margin-inline:auto}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+.kit{list-style:none;padding:0;margin:26px 0 0;display:grid;gap:12px}
+.kit li{display:flex;gap:14px;align-items:flex-start;font-size:18px}
+.kit li::before{content:"";flex:none;width:14px;height:14px;margin-top:7px;border-radius:50%;background:var(--neon);box-shadow:0 0 12px var(--neon)}
+.steps{list-style:none;counter-reset:s;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;padding:0;margin:0}
+.steps li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 16px;position:relative}
+.steps li::before{content:counter(s);font:400 34px/1 var(--display);color:var(--neon);display:block;margin-bottom:10px}
+.steps b{display:block;font:400 20px/1 var(--display);text-transform:uppercase;color:var(--gold-hi);margin-bottom:6px;letter-spacing:.04em}
+.steps span{font-size:14.5px;color:var(--muted);line-height:1.35;display:block}
+@media(max-width:980px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* fans */
+.fans{background:linear-gradient(180deg,var(--ink),#08140b 60%,var(--ink))}
+.fan3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.fan3>div{background:var(--panel2);border:1px solid var(--line);border-radius:22px;padding:30px}
+.fan3 h3{font-size:30px;margin-bottom:10px}
+.fan3 p{color:#bcd0b8;font-size:16.5px}
+@media(max-width:900px){.fan3{grid-template-columns:1fr}}
+.pass{margin-top:22px;display:grid;grid-template-columns:1.1fr 1fr;gap:22px;align-items:center;border:2px solid var(--gold);border-radius:26px;padding:clamp(22px,4vw,40px);background:radial-gradient(600px 300px at 90% 0%,rgba(216,171,75,.18),transparent 70%),var(--panel)}
+.pass h3{font-size:clamp(34px,5vw,56px);color:var(--gold-hi);margin-bottom:10px}
+.pass ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:17px}
+.pass li::before{content:"✓";color:var(--neon);margin-right:10px;font-weight:700}
+@media(max-width:820px){.pass{grid-template-columns:1fr}}
+.fund{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px 28px}
+.fund .row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:700 13px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.fund .row b{color:var(--gold-hi);font-weight:700}
+.meter{height:16px;border-radius:10px;background:#12201a;overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;width:62%;background:linear-gradient(90deg,var(--neon-dim),var(--neon));box-shadow:0 0 22px rgba(57,255,20,.6);border-radius:10px}
+/* roster */
+.roster{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px}
+.card{border:1px solid var(--line);border-radius:24px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column;min-width:0}
+.card.feat{border-color:var(--gold);box-shadow:0 0 50px rgba(216,171,75,.15)}
+.card .ph{aspect-ratio:4/5;background:#0b140d;overflow:hidden}
+.card .ph img{width:100%;height:100%;object-fit:cover}
+.card .tx{padding:20px 22px 24px}
+.card h3{font-size:32px;margin-bottom:6px}
+.card .tag{font:700 11px/1 var(--mono);letter-spacing:.2em;color:var(--neon);text-transform:uppercase;margin-bottom:10px;display:block}
+.card p{color:var(--muted);font-size:15.5px}
+.slot .ph{display:grid;place-items:center;font:400 52px/1 var(--display);color:#1d3a22;text-transform:uppercase;text-align:center;padding:20px;border-bottom:1px dashed var(--line)}
+@media(max-width:900px){.roster{grid-template-columns:1fr}.card .ph{aspect-ratio:16/10}}
+/* form */
+.submit{background:linear-gradient(180deg,var(--ink),#0a170d)}
+form{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:860px}
+label{display:grid;gap:6px;font:700 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+input,select,textarea{font:500 17px/1.3 var(--body);color:var(--fg);background:#0b1510;border:1px solid #28402d;border-radius:12px;padding:14px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--neon);outline-offset:1px}
+.full{grid-column:1/-1}
+.check{display:flex;gap:12px;align-items:flex-start;font:500 16px/1.4 var(--body);letter-spacing:0;text-transform:none;color:#cfe0cb}
+.check input{width:22px;height:22px;margin-top:2px;flex:none;accent-color:var(--neon)}
+#sent{display:none;grid-column:1/-1;border:1px solid var(--neon);border-radius:14px;padding:16px 18px;color:var(--neon);font:700 13px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:700px){form{grid-template-columns:1fr}}
+/* gallery */
+.gal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.gal figure{margin:0;border-radius:20px;overflow:hidden;border:1px solid var(--line);position:relative}
+.gal img{width:100%;height:100%;aspect-ratio:4/5;object-fit:cover}
+@media(max-width:800px){.gal{grid-template-columns:1fr}.gal img{aspect-ratio:4/3}}
+/* faq */
+details{border-bottom:1px solid var(--line);padding:20px 0}
+summary{cursor:pointer;font:400 26px/1.1 var(--display);text-transform:uppercase;letter-spacing:.02em;list-style:none;display:flex;justify-content:space-between;gap:20px}
+summary::after{content:"+";color:var(--neon);font-size:32px;line-height:.9}
+details[open] summary::after{content:"–"}
+details p{margin-top:12px;color:#bcd0b8}
+/* footer */
+footer{border-top:1px solid var(--line);background:#030604;padding-block:56px 80px}
+footer .f{display:grid;grid-template-columns:auto 1fr auto;gap:30px;align-items:center}
+footer img.eco{width:120px;height:120px;border-radius:50%}
+footer .links{display:flex;flex-wrap:wrap;gap:12px 26px;font:700 13px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
+footer .links a{text-decoration:none;color:var(--muted)}
+footer .links a:hover{color:var(--neon)}
+.disc{margin-top:34px;font:500 13.5px/1.55 var(--body);color:#7f957c;max-width:90ch}
+@media(max-width:760px){footer .f{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}.ticker div{animation:none}}
+
+.bar{height:8px;cursor:pointer;position:relative}
+.bar:focus-visible{outline:2px solid var(--neon);outline-offset:3px}
+.ptime{grid-column:1/-1;display:flex;justify-content:space-between;font:700 11px/1 var(--mono);letter-spacing:.12em;color:var(--muted);margin-top:-2px}
+.live .eq i{animation:none;opacity:1;transition:height 70ms linear}
+/* tracklist */
+.tracks{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:900px}
+.trk{display:grid;grid-template-columns:auto 72px 1fr auto;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 16px 12px 12px;transition:border-color .2s,box-shadow .2s}
+.trk.cur{border-color:var(--neon);box-shadow:0 0 30px rgba(57,255,20,.2)}
+.trk img{width:72px;height:72px;border-radius:12px;object-fit:cover}
+.tplay{width:48px;height:48px;border-radius:50%;border:2px solid var(--neon);background:transparent;color:var(--neon);display:grid;place-items:center;cursor:pointer;flex:none;transition:background .15s,color .15s,box-shadow .15s}
+.tplay:hover,.tplay:focus-visible,.trk.cur .tplay{background:var(--neon);color:#031005;box-shadow:0 0 22px rgba(57,255,20,.6);outline:none}
+.tplay svg{width:20px;height:20px}
+.tmeta{min-width:0}.tmeta b{display:block;font:400 26px/1.05 var(--display);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere}
+.tmeta span{font:700 12px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.prov{font:700 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-hi);border:1px solid rgba(216,171,75,.55);border-radius:999px;padding:7px 12px;white-space:nowrap}
+@media(max-width:620px){.trk{grid-template-columns:auto 56px 1fr;grid-template-areas:"p c m" ". . v"}.trk img{width:56px;height:56px}.trk .prov{grid-column:2/-1;justify-self:start}.tmeta b{font-size:22px}}
+.provnote{margin-top:22px;color:var(--muted);font-size:15px;max-width:70ch}
+.vid{border-radius:24px;overflow:hidden;border:2px solid rgba(57,255,20,.5);box-shadow:0 0 60px rgba(57,255,20,.2);max-width:420px;margin-inline:auto;background:#000}
+.vid video{display:block;width:100%;height:auto}
+
+/* AI notice */
+dialog#aiNote{border:2px solid var(--gold);border-radius:24px;background:var(--panel);color:var(--fg);padding:0;max-width:min(520px,calc(100vw - 32px));box-shadow:0 0 80px rgba(216,171,75,.25),0 30px 90px rgba(0,0,0,.8)}
+dialog#aiNote::backdrop{background:rgba(2,6,3,.82);backdrop-filter:blur(4px)}
+dialog#aiNote .bx{padding:30px 30px 26px;display:grid;gap:14px}
+dialog#aiNote h2{font-size:clamp(34px,6vw,48px);color:var(--gold-hi)}
+dialog#aiNote p{color:#cfe0cb;font-size:17px}
+dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--muted);text-decoration:underline;cursor:pointer;letter-spacing:inherit;text-transform:inherit}
+.linkbtn:hover{color:var(--neon)}
+</style>
+
+<header><div class="in">
+  <a class="brand" href="#top"><img src="assets/badge.webp" alt="" width="46" height="46"><span>Stag House Records</span></a>
+  <nav aria-label="Main"><a href="#artists">Artists</a><a href="#fans">Fans</a><a href="#roster">Roster</a><a href="#faq">FAQ</a><a class="btn solid" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Join Telegram</a></nav>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="in">
+  <div>
+    <span class="eyebrow">Stag House Records · Robinhood Chain</span>
+    <h1>Where the stag <em>records the hits.</em></h1>
+    <p class="lead">A music label where artists keep their masters and fans fund the videos. Every release opens with the stag.</p>
+    <div class="cta"><a class="btn solid" href="#submit">Submit your demo</a><a class="btn" href="#fans">Become a collector</a></div>
+    <div class="stats"><span><b>Artists</b> keep 100% of the masters</span><span><b>Every drop</b> pays for a video</span><span><b>Fans</b> vote on the next single</span></div>
+    <p class="note">Design mock: names, numbers and dates on this page are examples.</p>
+  </div>
+  <div class="boothwrap" id="stage">
+    <img src="assets/booth.webp" alt="The Stag House mascot, a hooded stag in headphones, singing into a studio microphone in a neon green recording booth" width="1100" height="1375">
+    <div class="ident" id="ident" aria-hidden="true"><img src="assets/logo.webp" alt=""><span>Stag House Records</span></div>
+    <div class="player" id="player">
+      <button class="play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="ico"><path d="M8 5v14l11-7z"/></svg></button>
+      <div class="ptitle" id="ptitle">Winslow Bankz · Money on My Mind</div>
+      <div class="psub" id="pstate">Tap play: the stag intro runs first, then the track</div>
+      <div class="eq" id="eq"></div>
+      <div class="bar" id="seek" role="slider" tabindex="0" aria-label="Seek in track" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><b id="prog"></b></div>
+      <div class="ptime"><span id="tcur">0:00</span><span id="tdur">0:00</span></div>
+    </div>
+  </div>
+</div></section>
+
+<div class="ticker" aria-hidden="true"><div><span>Artists keep their masters</span><span>Fan-funded videos</span><span>Drop after drop</span><span>The stag plays first</span><span>Plain-English splits</span><span>Artists keep their masters</span><span>Fan-funded videos</span><span>Drop after drop</span><span>The stag plays first</span><span>Plain-English splits</span></div></div>
+
+<section class="band" id="listen"><div class="in">
+  <span class="eyebrow">Listen</span>
+  <h2 class="sec-h">Winslow Bankz: <span class="gold">the first five</span></h2>
+  <p class="sec-p">Press play on any track. Every play starts with the stag.</p>
+  <ol class="tracks" id="tracks">
+    <li class="trk" data-i="0"><button class="tplay" aria-label="Play Money on My Mind"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/money.jpg" alt="Cover art for Money on My Mind" width="72" height="72" loading="lazy"><div class="tmeta"><b>Money on My Mind</b><span>Winslow Bankz · 3:21</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="1"><button class="tplay" aria-label="Play Crown Too Heavy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/crown.jpg" alt="Cover art for Crown Too Heavy" width="72" height="72" loading="lazy"><div class="tmeta"><b>Crown Too Heavy</b><span>Winslow Bankz · 3:06</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="2"><button class="tplay" aria-label="Play First Heartbreak at School (Remix)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/heartbreak.jpg" alt="Cover art for First Heartbreak at School (Remix)" width="72" height="72" loading="lazy"><div class="tmeta"><b>First Heartbreak at School (Remix)</b><span>Winslow Bankz · 3:04</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="3"><button class="tplay" aria-label="Play No Me Llames"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/nomellames.jpg" alt="Cover art for No Me Llames" width="72" height="72" loading="lazy"><div class="tmeta"><b>No Me Llames</b><span>Winslow Bankz · 4:12</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="4"><button class="tplay" aria-label="Play Fresh Cut, White Tee"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/whitetee.jpg" alt="Cover art for Fresh Cut, White Tee" width="72" height="72" loading="lazy"><div class="tmeta"><b>Fresh Cut, White Tee</b><span>Winslow Bankz Ghost · 2:39</span></div><span class="prov">Made with Suno AI</span></li>
+  </ol>
+  <p class="provnote">Every release shows how it was made. These five were made with Suno AI. Commercial rights depend on the artist's Suno plan and terms, and they are confirmed before any drop.</p>
+</div></section>
+
+<section class="band" id="artists"><div class="in">
+  <span class="eyebrow">For artists</span>
+  <h2 class="sec-h">Why artists sign with <span class="gold">the House</span></h2>
+  <p class="sec-p">We handle the polish and the promotion. You keep the music.</p>
+  <div class="grid4">
+    <div><h3>Keep your masters</h3><p>Your recordings and your songs stay yours. The label earns from the services it provides on a release, never from owning the music.</p></div>
+    <div><h3>A full release kit</h3><p>Cover art in the House look, a 15-second promo with the stag, the pre-roll intro, a release page and a Telegram listening party.</p></div>
+    <div><h3>Fan-funded videos</h3><p>Each drop pays for the next video, and the progress is public. Artists without a budget get a real shoot.</p></div>
+    <div><h3>Plain-English splits</h3><p>Who gets what is written down in one page before you sign: artist, video fund, label. No surprises after the drop.</p></div>
+  </div>
+</div></section>
+
+<section class="band" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in split">
+  <img class="poster" src="assets/poster.webp" alt="The Stag House mascot at the mixing console under a neon Stag House Records sign" width="800" height="1096" loading="lazy">
+  <div>
+    <span class="eyebrow">How a release works</span>
+    <h2 class="sec-h">From demo to <span class="neon">drop day</span></h2>
+    <ul class="kit">
+      <li>Mastering checklist and release plan, with a date everyone can see</li>
+      <li>The stag ident plays in front of every video and every track on the site</li>
+      <li>Distribution to the streaming services and song registration, with our help</li>
+      <li>A promo clip and a drop page for every single</li>
+    </ul>
+  </div>
+</div>
+<div class="in" style="margin-top:56px"><ol class="steps">
+  <li><b>Demo</b><span>You send a link and confirm you own it.</span></li>
+  <li><b>Greenlight</b><span>We agree the one-page terms.</span></li>
+  <li><b>Record</b><span>Finish the song in the booth or remotely.</span></li>
+  <li><b>Drop</b><span>The edition opens for a fixed window.</span></li>
+  <li><b>Video</b><span>The drop pays for the shoot, with the stag ident up front.</span></li>
+  <li><b>Next</b><span>Fans vote on the following single.</span></li>
+</ol></div></section>
+
+<section class="band fans" id="fans"><div class="in">
+  <span class="eyebrow">For fans</span>
+  <h2 class="sec-h">Own the moment. <span class="gold">Shape the hit.</span></h2>
+  <p class="sec-p">Collect an edition of a release and get more than a file: a say in what happens next.</p>
+  <div class="fan3">
+    <div><h3>Collect</h3><p>Limited editions of each release with early plays, lyric sheets, stems and your name in the video credits.</p></div>
+    <div><h3>Vote</h3><p>Holders choose the next single and which demo gets a video budget. The House reports back on the result.</p></div>
+    <div><h3>Remix</h3><p>Stems get released for remix contests. Winners go out on the label and share in the release.</p></div>
+  </div>
+  <div class="pass">
+    <div><span class="eyebrow">Season membership</span><h3>The Stag Pass</h3><p style="color:#cfe0cb;margin-bottom:16px">One pass opens every drop in the season.</p>
+      <ul><li>Early access to every release</li><li>Members-only Telegram listening room</li><li>Vote weight on singles and videos</li><li>Studio session streams with the stag as host</li></ul></div>
+    <div class="fund" style="margin:0"><div class="row"><span>Video fund · Example</span><b>62% funded</b></div><div class="meter"><i></i></div>
+      <p style="margin-top:14px;color:var(--muted);font-size:15px">Every edition sold moves this bar. When it fills, the video is booked and the date goes up on the page. These numbers are an example.</p></div>
+  </div>
+</div></section>
+
+<section class="band" id="roster" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
+  <span class="eyebrow">The roster</span>
+  <h2 class="sec-h">First in <span class="gold">the House</span></h2>
+  <div class="roster">
+    <article class="card feat"><div class="ph"><img src="assets/poster.webp" alt="" loading="lazy"></div><div class="tx"><span class="tag">Flagship artist</span><h3>Winslow Bankz</h3><p>Five tracks are live on the page now. The first fan-funded video and the first stag ident come next. Artist photo goes here.</p></div></article>
+    <article class="card slot"><div class="ph">Your name here</div><div class="tx"><span class="tag">Open slot</span><h3>Next up</h3><p>Send a demo. If it fits the House, you get the full release kit.</p></div></article>
+    <article class="card slot"><div class="ph">Your name here</div><div class="tx"><span class="tag">Open slot</span><h3>Next up</h3><p>Producers, singers and rappers are all welcome to submit.</p></div></article>
+  </div>
+</div></section>
+
+<section class="band submit" id="submit"><div class="in">
+  <span class="eyebrow">Open submissions</span>
+  <h2 class="sec-h">Send us <span class="neon">your demo</span></h2>
+  <p class="sec-p">One link is enough. We listen to everything and answer every artist.</p>
+  <form id="demo" novalidate>
+    <label for="an">Artist name<input id="an" name="artist" type="text" autocomplete="off" required></label>
+    <label for="tg">Telegram handle<input id="tg" name="telegram" type="text" placeholder="@yourname" autocomplete="off"></label>
+    <label class="full" for="dl">Link to your demo<input id="dl" name="demo" type="url" placeholder="https://" required></label>
+    <label for="gn">Genre<select id="gn" name="genre"><option>Hip-hop</option><option>R&amp;B</option><option>Pop</option><option>Dance</option><option>Other</option></select></label>
+    <label for="st">Stage<select id="st" name="stage"><option>Finished song</option><option>Rough demo</option><option>Just an idea</option></select></label>
+    <label class="check full" for="ow"><input id="ow" name="own" type="checkbox"><span>I own the recordings and the songs I am sending, and any samples are cleared.</span></label>
+    <div class="full"><button class="btn solid" type="submit" id="go">Send demo</button></div>
+    <div id="sent" role="status">Mock form: nothing was sent. Real submissions will go to the label team.</div>
+  </form>
+</div></section>
+
+
+<section class="band" id="vibe" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
+  <span class="eyebrow">The vibe</span>
+  <h2 class="sec-h">Inside <span class="gold">the House</span></h2>
+  <div class="gal">
+    <figure><img src="assets/party.webp" alt="The Stag House mascot at the mic under the neon Stag House Records sign with the crew and stacks of cash" loading="lazy" width="896" height="1120"></figure>
+    <figure><img src="assets/booth.webp" alt="The Stag House mascot recording in the neon booth" loading="lazy" width="1100" height="1375"></figure>
+    <figure><img src="assets/pool.webp" alt="Stag House Records pool party at night with the mascot, supercars and neon lasers" loading="lazy" width="896" height="1120"></figure>
+  </div></div></section>
+
+<section class="band" id="faq"><div class="in" style="max-width:880px">
+  <span class="eyebrow">Questions</span>
+  <h2 class="sec-h">Straight <span class="gold">answers</span></h2>
+  <details><summary>Do artists really keep their masters?</summary><p>Yes. The label earns from the services it provides on a release, and the split is written on one page before signing.</p></details>
+  <details><summary>Are the NFTs an investment?</summary><p>No. Editions are collectibles with fan perks. We do not promise returns, and nothing here is financial advice.</p></details>
+  <details><summary>Which chain and which launchpad?</summary><p>The plan is Robinhood Chain through the Pons family launchpad. The exact setup is still being confirmed.</p></details>
+  <details><summary>What does the label take?</summary><p>A small published share of each drop plus fees for optional services. The numbers go on this page before the first drop.</p></details>
+  <details><summary>Who owns what I buy?</summary><p>You own the collectible edition. The music rights stay with the artist, and each release page spells out what holders may do.</p></details>
+</div></section>
+</main>
+
+<dialog id="aiNote" aria-labelledby="aiH"><div class="bx">
+  <span class="eyebrow" style="margin:0">Before you listen</span>
+  <h2 id="aiH">Some music here is made with AI</h2>
+  <p>Stag House Records welcomes artists who work with AI tools. Every track is labeled so you always know how it was made. Winslow Bankz's first five tracks were made with Suno AI.</p>
+  <div class="row"><button class="btn solid" id="aiOk" type="button">Got it, let's listen</button></div>
+</div></dialog>
+<footer><div class="in">
+  <div class="f">
+    <img class="eco" src="assets/ecosystem.webp" alt="$STAG Ecosystem" width="120" height="120">
+    <div class="links"><a href="https://t.me/StagWifHood" target="_blank" rel="noopener">t.me/StagWifHood</a><a href="#artists">Artists</a><a href="#fans">Fans</a><a href="#submit">Submit</a><button class="linkbtn" id="aiOpen" type="button">AI music notice</button></div>
+    <img src="assets/stagr.webp" alt="STAGR CRM" width="64" height="64" style="border-radius:16px">
+  </div>
+  <p class="disc">Stag House Records is part of the $STAG ecosystem. Editions are collectibles, not investments, and nothing on this page is financial advice. Some music on this site is made with AI and is labeled on each track. Crypto involves risk. Names, numbers and dates marked as examples are examples.</p>
+</div></footer>
+
+<script>
+(function(){
+  var TR=[
+    {t:'Money on My Mind',a:'Winslow Bankz',f:'assets/audio/money.mp3'},
+    {t:'Crown Too Heavy',a:'Winslow Bankz',f:'assets/audio/crown.mp3'},
+    {t:'First Heartbreak at School (Remix)',a:'Winslow Bankz',f:'assets/audio/heartbreak.mp3'},
+    {t:'No Me Llames',a:'Winslow Bankz',f:'assets/audio/nomellames.mp3'},
+    {t:'Fresh Cut, White Tee',a:'Winslow Bankz Ghost',f:'assets/audio/whitetee.mp3'}];
+  var $=function(id){return document.getElementById(id)};
+  var player=$('player'),btn=$('play'),ico=$('ico'),identEl=$('ident'),st=$('pstate'),prog=$('prog'),seek=$('seek'),eq=$('eq'),ptitle=$('ptitle'),tcur=$('tcur'),tdur=$('tdur');
+  var PLAY='<path d="M8 5v14l11-7z"/>',PAUSE='<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
+  var bars=[];for(var i=0;i<40;i++){var b=document.createElement('i');b.style.animationDelay=(Math.random()*-0.9).toFixed(2)+'s';b.style.animationDuration=(520+Math.random()*700|0)+'ms';eq.appendChild(b);bars.push(b)}
+  var audio=new Audio();audio.preload='metadata';var idAudio=new Audio('assets/audio/ident.mp3');idAudio.preload='auto';
+  var cur=0,mode='idle',token=0,idTimer=0,ctx=null,an=null,data=null,raf=0;
+  function fmt(s){if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/60)+':'+('0'+s%60).slice(-2)}
+  var rows=[].slice.call(document.querySelectorAll('.trk'));
+  function paint(){
+    var playing=(mode==='play');
+    ico.innerHTML=(playing||mode==='ident')?PAUSE:PLAY;btn.setAttribute('aria-label',playing?'Pause':'Play');
+    player.classList.toggle('playing',playing);
+    rows.forEach(function(r,i){var on=i===cur;r.classList.toggle('cur',on);r.querySelector('.tplay svg').innerHTML=(on&&(playing||mode==='ident'))?PAUSE:PLAY});
+  }
+  function setTrack(i){cur=i;audio.src=TR[i].f;ptitle.textContent=TR[i].a+' · '+TR[i].t;prog.style.width='0';tcur.textContent='0:00';tdur.textContent='0:00';paint()}
+  function wire(){
+    if(ctx||!(window.AudioContext||window.webkitAudioContext))return;
+    try{ctx=new(window.AudioContext||window.webkitAudioContext)();var src=ctx.createMediaElementSource(audio);an=ctx.createAnalyser();an.fftSize=128;an.smoothingTimeConstant=.78;src.connect(an);an.connect(ctx.destination);data=new Uint8Array(an.frequencyBinCount);player.classList.add('live')}catch(e){ctx=null;an=null}
+  }
+  function loop(){
+    if(mode!=='play'){return}
+    if(an){an.getByteFrequencyData(data);for(var i=0;i<bars.length;i++){var v=data[2+((i*1.15)|0)]/255;bars[i].style.height=(8+Math.pow(v,1.3)*92)+'%'}}
+    raf=requestAnimationFrame(loop);
+  }
+  function playTrack(){
+    mode='play';st.textContent='Now playing';paint();
+    if(ctx&&ctx.state==='suspended')ctx.resume();
+    var p=audio.play();if(p&&p.catch)p.catch(function(){mode='pause';st.textContent='Tap play to start';paint()});
+    cancelAnimationFrame(raf);loop();
+  }
+  function startWithIdent(i){
+    var my=++token;audio.pause();clearTimeout(idTimer);
+    if(i!==cur||!audio.src)setTrack(i);
+    wire();if(ctx&&ctx.state==='suspended')ctx.resume();
+    mode='ident';st.textContent='Stag House Records presents';identEl.classList.add('on');paint();
+    try{idAudio.currentTime=0;var q=idAudio.play();if(q&&q.catch)q.catch(function(){})}catch(e){}
+    idTimer=setTimeout(function(){if(my!==token)return;identEl.classList.remove('on');playTrack()},2350);
+  }
+  function skipIdent(){token++;clearTimeout(idTimer);try{idAudio.pause()}catch(e){}identEl.classList.remove('on');playTrack()}
+  function toggle(i){
+    if(i!==undefined&&i!==cur){startWithIdent(i);return}
+    if(mode==='ident'){skipIdent();return}
+    if(mode==='play'){audio.pause();mode='pause';st.textContent='Paused';paint();return}
+    if(mode==='pause'){playTrack();return}
+    startWithIdent(cur);
+  }
+  btn.addEventListener('click',function(){toggle()});
+  rows.forEach(function(r,i){r.querySelector('.tplay').addEventListener('click',function(){toggle(i)})});
+  audio.addEventListener('loadedmetadata',function(){tdur.textContent=fmt(audio.duration)});
+  audio.addEventListener('timeupdate',function(){var d=audio.duration||0;if(d){prog.style.width=(audio.currentTime/d*100)+'%';seek.setAttribute('aria-valuenow',Math.round(audio.currentTime/d*100))}tcur.textContent=fmt(audio.currentTime)});
+  audio.addEventListener('ended',function(){var n=(cur+1)%TR.length;setTrack(n);mode='play';playTrack()});
+  function seekTo(x){var r=seek.getBoundingClientRect(),p=Math.max(0,Math.min(1,(x-r.left)/r.width));if(audio.duration)audio.currentTime=p*audio.duration}
+  seek.addEventListener('click',function(e){seekTo(e.clientX)});
+  seek.addEventListener('keydown',function(e){if(e.key==='ArrowRight')audio.currentTime=Math.min(audio.duration||0,audio.currentTime+5);if(e.key==='ArrowLeft')audio.currentTime=Math.max(0,audio.currentTime-5)});
+  setTrack(0);
+  var dlg=$('aiNote');
+  function openNote(){try{dlg.showModal()}catch(e){dlg.setAttribute('open','')}}
+  try{if(!localStorage.getItem('shr_ai_ok'))openNote()}catch(e){openNote()}
+  $('aiOk').addEventListener('click',function(){try{localStorage.setItem('shr_ai_ok','1')}catch(e){}try{dlg.close()}catch(e){dlg.removeAttribute('open')}});
+  $('aiOpen').addEventListener('click',openNote);
+  $('demo').addEventListener('submit',function(e){e.preventDefault();var ok=$('an').value.trim()&&$('dl').value.trim()&&$('ow').checked;var s=$('sent');s.style.display='block';s.textContent=ok?'Mock form: nothing was sent. Real submissions will go to the label team.':'Add your name, a demo link and tick the rights box to continue.'});
+})();
+</script>
+
+</html>
