@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Stag House Records</title>
+<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
 <style>
@@ -49,6 +50,9 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 .stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:34px;font:700 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .stats b{color:var(--gold-hi);font-weight:700}
 .boothwrap{position:relative;border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.55);box-shadow:0 0 70px rgba(57,255,20,.28),0 30px 80px rgba(0,0,0,.65)}
+.boothwrap>video{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s;pointer-events:none;z-index:1}
+.boothwrap.vid>video{opacity:1}
+.boothwrap.vid>canvas{display:none}
 .boothwrap>canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1}
 .boothwrap>img{width:100%;aspect-ratio:4/5;object-fit:cover}
 .boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
@@ -211,6 +215,7 @@ dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
   <div class="boothwrap" id="stage">
     <img src="assets/booth.webp" alt="The Stag House mascot, a hooded stag in headphones, singing into a studio microphone in a neon green recording booth" width="1100" height="1375" id="boothImg">
     <canvas id="singer" aria-hidden="true"></canvas>
+    <video id="boothVid" src="assets/stag-sing.mp4" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
     <div class="ident" id="ident" aria-hidden="true"><img src="assets/logo.webp" alt=""><span>Stag House Records</span></div>
     <div class="player" id="player">
       <button class="play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="ico"><path d="M8 5v14l11-7z"/></svg></button>
@@ -412,7 +417,15 @@ dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
     };
   })();
   window.stagSing=sing;
+  var bv=$('boothVid'),stg=$('stage');
+  if(bv){bv.addEventListener('playing',function(){if(mode==='play')stg.classList.add('vid')});bv.addEventListener('error',function(){stg.classList.remove('vid');bv.removeAttribute('src');bv.load()})}
+  function vidSet(on){
+    if(!bv||!bv.play)return;
+    if(on){if(!bv.paused)return;var p=bv.play();if(p&&p.catch)p.catch(function(){})}
+    else{stg.classList.remove('vid');setTimeout(function(){if(mode!=='play')bv.pause()},400)}
+  }
   function loop(){
+    vidSet(mode==='play');
     if(mode!=='play'){var n=0;(function settle(){sing(0);if(++n<24&&mode!=='play')requestAnimationFrame(settle)})();return}
     if(an){an.getByteFrequencyData(data);for(var i=0;i<bars.length;i++){var v=data[2+((i*1.15)|0)]/255;bars[i].style.height=(8+Math.pow(v,1.3)*92)+'%'}var sum=0;for(var j=1;j<13;j++)sum+=data[j];sing(sum/12/255)}else{sing(.35+.35*Math.abs(Math.sin(audio.currentTime*7.3)))}
     raf=requestAnimationFrame(loop);
