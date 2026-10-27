@@ -214,7 +214,7 @@ dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
   </div>
   <div class="boothwrap" id="stage">
     <img src="assets/stag-hero.webp" alt="The Stag House mascot, an armored stag in headphones, standing at the mixing console under the neon Stag House Records sign" width="864" height="1184" id="boothImg">
-    <video id="boothVid" src="assets/stag-sing.mp4?v=2" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+    <video id="boothVid" src="assets/stag-sing.mp4?v=3" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
     <div class="ident" id="ident" aria-hidden="true"><img src="assets/logo.webp" alt=""><span>Stag House Records</span></div>
     <div class="player" id="player">
       <button class="play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="ico"><path d="M8 5v14l11-7z"/></svg></button>
@@ -418,13 +418,23 @@ dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
   window.stagSing=sing;
   var bv=$('boothVid'),stg=$('stage');
   if(bv){bv.addEventListener('playing',function(){if(mode==='play')stg.classList.add('vid')});bv.addEventListener('error',function(){stg.classList.remove('vid');bv.removeAttribute('src');bv.load()})}
-  function vidSet(on){
+  var vpk=0,vhold=0;
+  /* The video only moves while the audio is really playing and a vocal is in the mix, so the jaw never runs ahead of the music. */
+  function vidSet(on,voc){
     if(!bv||!bv.play)return;
-    if(on){if(!bv.paused)return;var p=bv.play();if(p&&p.catch)p.catch(function(){})}
-    else{stg.classList.remove('vid');setTimeout(function(){if(mode!=='play')bv.pause()},400)}
+    var live=on&&!audio.paused&&audio.readyState>=3&&audio.currentTime>.05;
+    if(live){
+      if(bv.readyState>=2)stg.classList.add('vid');
+      vpk=Math.max(voc,vpk*.995);
+      var talk=an?(voc>vpk*.5&&voc>.12):true,now=performance.now();
+      if(talk)vhold=now+180;
+      if(now<vhold){if(bv.paused){var p=bv.play();if(p&&p.catch)p.catch(function(){})}}
+      else if(!bv.paused)bv.pause();
+    }else{stg.classList.remove('vid');setTimeout(function(){if(mode!=='play'||audio.paused)bv.pause()},450)}
   }
   function loop(){
-    vidSet(mode==='play');
+    var vs=0;if(an&&data&&mode==='play'){an.getByteFrequencyData(data);for(var q=1;q<10;q++)vs+=data[q];vs=vs/9/255}
+    vidSet(mode==='play',vs);
     if(mode!=='play'){var n=0;(function settle(){sing(0);if(++n<24&&mode!=='play')requestAnimationFrame(settle)})();return}
     if(an){an.getByteFrequencyData(data);for(var i=0;i<bars.length;i++){var v=data[2+((i*1.15)|0)]/255;bars[i].style.height=(8+Math.pow(v,1.3)*92)+'%'}var sum=0;for(var j=1;j<13;j++)sum+=data[j];sing(sum/12/255)}else{sing(.35+.35*Math.abs(Math.sin(audio.currentTime*7.3)))}
     raf=requestAnimationFrame(loop);
