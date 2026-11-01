@@ -186,6 +186,13 @@ footer .links a:hover{color:var(--neon)}
 .vid{border-radius:24px;overflow:hidden;border:2px solid rgba(57,255,20,.5);box-shadow:0 0 60px rgba(57,255,20,.2);max-width:420px;margin-inline:auto;background:#000}
 .vid video{display:block;width:100%;height:auto}
 
+/* AI notice */
+dialog#aiNote{border:2px solid var(--gold);border-radius:24px;background:var(--panel);color:var(--fg);padding:0;max-width:min(520px,calc(100vw - 32px));box-shadow:0 0 80px rgba(216,171,75,.25),0 30px 90px rgba(0,0,0,.8)}
+dialog#aiNote::backdrop{background:rgba(2,6,3,.82);backdrop-filter:blur(4px)}
+dialog#aiNote .bx{padding:30px 30px 26px;display:grid;gap:14px}
+dialog#aiNote h2{font-size:clamp(34px,6vw,48px);color:var(--gold-hi)}
+dialog#aiNote p{color:#cfe0cb;font-size:17px}
+dialog#aiNote .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
 .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--muted);text-decoration:underline;cursor:pointer;letter-spacing:inherit;text-transform:inherit}
 .linkbtn:hover{color:var(--neon)}
 </style>
@@ -211,7 +218,7 @@ footer .links a:hover{color:var(--neon)}
     <div class="ident" id="ident" aria-hidden="true"><img src="assets/logo.webp" alt=""><span>Stag House Records</span></div>
     <div class="player" id="player">
       <button class="play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="ico"><path d="M8 5v14l11-7z"/></svg></button>
-      <div class="ptitle" id="ptitle">Winslow Banks · Money on My Mind</div>
+      <div class="ptitle" id="ptitle">Winslow Bankz · Money on My Mind</div>
       <div class="psub" id="pstate">Tap play: the stag intro runs first, then the track</div>
       <div class="eq" id="eq"></div>
       <div class="bar" id="seek" role="slider" tabindex="0" aria-label="Seek in track" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><b id="prog"></b></div>
@@ -224,25 +231,18 @@ footer .links a:hover{color:var(--neon)}
 
 <section class="band" id="listen"><div class="in">
   <span class="eyebrow">Listen</span>
-  <h2 class="sec-h">Winslow Banks: <span class="gold">the first five</span></h2>
+  <h2 class="sec-h">Winslow Bankz: <span class="gold">the first five</span></h2>
   <p class="sec-p">Press play on any track. Every play starts with the stag.</p>
   <ol class="tracks" id="tracks">
-    <li class="trk" data-i="0"><button class="tplay" aria-label="Play Money on My Mind"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Money on My Mind" width="72" height="72" loading="lazy"><div class="tmeta"><b>Money on My Mind</b><span>Winslow Banks · 3:21</span></div></li>
-    <li class="trk" data-i="1"><button class="tplay" aria-label="Play Crown Too Heavy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Crown Too Heavy" width="72" height="72" loading="lazy"><div class="tmeta"><b>Crown Too Heavy</b><span>Winslow Banks · 3:06</span></div></li>
-    <li class="trk" data-i="2"><button class="tplay" aria-label="Play First Heartbreak at School (Remix)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for First Heartbreak at School (Remix)" width="72" height="72" loading="lazy"><div class="tmeta"><b>First Heartbreak at School (Remix)</b><span>Winslow Banks · 3:04</span></div></li>
-    <li class="trk" data-i="3"><button class="tplay" aria-label="Play No Me Llames"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for No Me Llames" width="72" height="72" loading="lazy"><div class="tmeta"><b>No Me Llames</b><span>Winslow Banks · 4:12</span></div></li>
-    <li class="trk" data-i="4"><button class="tplay" aria-label="Play Fresh Cut, White Tee"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Fresh Cut, White Tee" width="72" height="72" loading="lazy"><div class="tmeta"><b>Fresh Cut, White Tee</b><span>Winslow Banks · 2:39</span></div></li>
+    <li class="trk" data-i="0"><button class="tplay" aria-label="Play Money on My Mind"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/money.jpg" alt="Cover art for Money on My Mind" width="72" height="72" loading="lazy"><div class="tmeta"><b>Money on My Mind</b><span>Winslow Bankz · 3:21</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="1"><button class="tplay" aria-label="Play Crown Too Heavy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/crown.jpg" alt="Cover art for Crown Too Heavy" width="72" height="72" loading="lazy"><div class="tmeta"><b>Crown Too Heavy</b><span>Winslow Bankz · 3:06</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="2"><button class="tplay" aria-label="Play First Heartbreak at School (Remix)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/heartbreak.jpg" alt="Cover art for First Heartbreak at School (Remix)" width="72" height="72" loading="lazy"><div class="tmeta"><b>First Heartbreak at School (Remix)</b><span>Winslow Bankz · 3:04</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="3"><button class="tplay" aria-label="Play No Me Llames"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/nomellames.jpg" alt="Cover art for No Me Llames" width="72" height="72" loading="lazy"><div class="tmeta"><b>No Me Llames</b><span>Winslow Bankz · 4:12</span></div><span class="prov">Made with Suno AI</span></li>
+    <li class="trk" data-i="4"><button class="tplay" aria-label="Play Fresh Cut, White Tee"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/whitetee.jpg" alt="Cover art for Fresh Cut, White Tee" width="72" height="72" loading="lazy"><div class="tmeta"><b>Fresh Cut, White Tee</b><span>Winslow Bankz Ghost · 2:39</span></div><span class="prov">Made with Suno AI</span></li>
   </ol>
+  <p class="provnote">Every release shows how it was made. These five were made with Suno AI. Commercial rights depend on the artist's Suno plan and terms, and they are confirmed before any drop.</p>
 </div></section>
 
-<section class="band" id="album" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in split">
-  <div class="frame" style="border-radius:26px;overflow:hidden;border:2px solid rgba(216,171,75,.6);box-shadow:0 0 60px rgba(216,171,75,.22)"><img src="assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Banks" loading="lazy" width="1000" height="1000"></div>
-  <div><span class="eyebrow">The album</span><h2 class="sec-h">Hood <span class="gold">Rich</span></h2>
-  <p class="sec-p">The full Hood Rich digital album by Winslow Banks, sold as one NFT.</p>
-  <p class="price" style="font:400 clamp(54px,9vw,96px)/1 var(--display);color:var(--gold-hi);margin:0 0 10px">$24.99</p>
-  <p class="note" style="margin:0 0 22px">One edition, the whole album. The mint date and details are announced in Telegram first. Nothing to buy yet.</p>
-  <a class="btn solid" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Get the drop in Telegram</a></div>
-</div></section>
 <section class="band" id="artists"><div class="in">
   <span class="eyebrow">For artists</span>
   <h2 class="sec-h">Why artists sign with <span class="gold">the House</span></h2>
@@ -298,7 +298,7 @@ footer .links a:hover{color:var(--neon)}
   <span class="eyebrow">The roster</span>
   <h2 class="sec-h">First in <span class="gold">the House</span></h2>
   <div class="roster">
-    <article class="card feat"><div class="ph"><img src="assets/poster.webp" alt="" loading="lazy"></div><div class="tx"><span class="tag">Flagship artist</span><h3>Winslow Banks</h3><p>Five tracks are live on the page now. The first fan-funded video and the first stag ident come next. Artist photo goes here.</p></div></article>
+    <article class="card feat"><div class="ph"><img src="assets/poster.webp" alt="" loading="lazy"></div><div class="tx"><span class="tag">Flagship artist</span><h3>Winslow Bankz</h3><p>Five tracks are live on the page now. The first fan-funded video and the first stag ident come next. Artist photo goes here.</p></div></article>
     <article class="card slot"><div class="ph">Your name here</div><div class="tx"><span class="tag">Open slot</span><h3>Next up</h3><p>Send a demo. If it fits the House, you get the full release kit.</p></div></article>
     <article class="card slot"><div class="ph">Your name here</div><div class="tx"><span class="tag">Open slot</span><h3>Next up</h3><p>Producers, singers and rappers are all welcome to submit.</p></div></article>
   </div>
@@ -321,7 +321,7 @@ footer .links a:hover{color:var(--neon)}
 </div></section>
 
 
-<section class="band" id="vibe" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
+<section class="band" id="hoodrich"><div class="in split"><div class="frame" style="border-radius:26px;overflow:hidden;border:2px solid rgba(216,171,75,.6);box-shadow:0 0 60px rgba(216,171,75,.22)"><img src="assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" loading="lazy" width="1000" height="1000"></div><div><span class="eyebrow">Digital album</span><h2 class="sec-h">Hood <span class="gold">Rich</span></h2><p class="sec-p">The next project from Winslow Bankz, the first artist on Stag House Records. Stream the tracks above now and follow the label for the drop.</p></div></div></section><section class="band" id="vibe" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
   <span class="eyebrow">The vibe</span>
   <h2 class="sec-h">Inside <span class="gold">the House</span></h2>
   <div class="gal">
@@ -341,23 +341,29 @@ footer .links a:hover{color:var(--neon)}
 </div></section>
 </main>
 
+<dialog id="aiNote" aria-labelledby="aiH"><div class="bx">
+  <span class="eyebrow" style="margin:0">Before you listen</span>
+  <h2 id="aiH">Some music here is made with AI</h2>
+  <p>Stag House Records welcomes artists who work with AI tools. Every track is labeled so you always know how it was made. Winslow Bankz's first five tracks were made with Suno AI.</p>
+  <div class="row"><button class="btn solid" id="aiOk" type="button">Got it, let's listen</button></div>
+</div></dialog>
 <footer><div class="in">
   <div class="f">
     <img class="eco" src="assets/ecosystem.webp" alt="$STAG Ecosystem" width="120" height="120">
-    <div class="links"><a href="https://t.me/StagWifHood" target="_blank" rel="noopener">t.me/StagWifHood</a><a href="#artists">Artists</a><a href="#fans">Fans</a><a href="#submit">Submit</a></div>
+    <div class="links"><a href="https://t.me/StagWifHood" target="_blank" rel="noopener">t.me/StagWifHood</a><a href="#artists">Artists</a><a href="#fans">Fans</a><a href="#submit">Submit</a><button class="linkbtn" id="aiOpen" type="button">AI music notice</button></div>
     <img src="assets/stagr.webp" alt="STAGR CRM" width="64" height="64" style="border-radius:16px">
   </div>
-  <p class="disc">Stag House Records is part of the $STAG ecosystem. Editions are collectibles, not investments, and nothing on this page is financial advice. Crypto involves risk. Names, numbers and dates marked as examples are examples.</p>
+  <p class="disc">Stag House Records is part of the $STAG ecosystem. Editions are collectibles, not investments, and nothing on this page is financial advice. Some music on this site is made with AI and is labeled on each track. Crypto involves risk. Names, numbers and dates marked as examples are examples.</p>
 </div></footer>
 
 <script>
 (function(){
   var TR=[
-    {t:'Money on My Mind',a:'Winslow Banks',f:'assets/audio/money.mp3'},
-    {t:'Crown Too Heavy',a:'Winslow Banks',f:'assets/audio/crown.mp3'},
-    {t:'First Heartbreak at School (Remix)',a:'Winslow Banks',f:'assets/audio/heartbreak.mp3'},
-    {t:'No Me Llames',a:'Winslow Banks',f:'assets/audio/nomellames.mp3'},
-    {t:'Fresh Cut, White Tee',a:'Winslow Banks',f:'assets/audio/whitetee.mp3'}];
+    {t:'Money on My Mind',a:'Winslow Bankz',f:'assets/audio/money.mp3'},
+    {t:'Crown Too Heavy',a:'Winslow Bankz',f:'assets/audio/crown.mp3'},
+    {t:'First Heartbreak at School (Remix)',a:'Winslow Bankz',f:'assets/audio/heartbreak.mp3'},
+    {t:'No Me Llames',a:'Winslow Bankz',f:'assets/audio/nomellames.mp3'},
+    {t:'Fresh Cut, White Tee',a:'Winslow Bankz Ghost',f:'assets/audio/whitetee.mp3'}];
   var $=function(id){return document.getElementById(id)};
   var player=$('player'),btn=$('play'),ico=$('ico'),identEl=$('ident'),st=$('pstate'),prog=$('prog'),seek=$('seek'),eq=$('eq'),ptitle=$('ptitle'),tcur=$('tcur'),tdur=$('tdur');
   var PLAY='<path d="M8 5v14l11-7z"/>',PAUSE='<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
@@ -464,6 +470,11 @@ footer .links a:hover{color:var(--neon)}
   seek.addEventListener('click',function(e){seekTo(e.clientX)});
   seek.addEventListener('keydown',function(e){if(e.key==='ArrowRight')audio.currentTime=Math.min(audio.duration||0,audio.currentTime+5);if(e.key==='ArrowLeft')audio.currentTime=Math.max(0,audio.currentTime-5)});
   setTrack(0);
+  var dlg=$('aiNote');
+  function openNote(){try{dlg.showModal()}catch(e){dlg.setAttribute('open','')}}
+  try{if(!localStorage.getItem('shr_ai_ok'))openNote()}catch(e){openNote()}
+  $('aiOk').addEventListener('click',function(){try{localStorage.setItem('shr_ai_ok','1')}catch(e){}try{dlg.close()}catch(e){dlg.removeAttribute('open')}});
+  $('aiOpen').addEventListener('click',openNote);
   $('demo').addEventListener('submit',function(e){e.preventDefault();var ok=$('an').value.trim()&&$('dl').value.trim()&&$('ow').checked;var s=$('sent');s.style.display='block';s.textContent=ok?'Mock form: nothing was sent. Real submissions will go to the label team.':'Add your name, a demo link and tick the rights box to continue.'});
 })();
 </script>
