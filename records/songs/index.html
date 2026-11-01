@@ -1,0 +1,158 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Buy Songs | Stag House Records</title><meta name="description" content="Collect individual Winslow Bankz songs as NFTs on Stag House Records.">
+<meta property="og:title" content="Buy Songs | Stag House Records"><meta property="og:image" content="https://records.stagwifhood.fun/assets/hood-rich.webp"><meta name="theme-color" content="#050806">
+<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
+<style>
+/* Layout: a dark neon label site. Full-bleed bands, one booth hero, a playable intro. Boldness lives in the hero; the rest stays quiet. */
+:root{
+  --ink:#050806; --panel:#0a110c; --panel2:#0e1810; --line:#1d3022;
+  --fg:#e9f2e5; --muted:#9bb197; --neon:#39ff14; --neon-dim:#1f8f0c; --gold:#d8ab4b; --gold-hi:#f4dc8f;
+  --display:'Anton','Impact','Arial Narrow',sans-serif; --body:'Barlow','Helvetica Neue',Arial,sans-serif; --mono:'Space Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--fg);font:17px/1.6 var(--body);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#050806;z-index:60}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-transform:uppercase;line-height:.98;margin:0;text-wrap:balance;letter-spacing:.005em}
+p{margin:0;max-width:62ch}
+.in{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band{padding-block:clamp(56px,9vw,112px)}
+.eyebrow{font:700 13px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--neon);margin-bottom:18px;display:block}
+.gold{color:var(--gold-hi)} .neon{color:var(--neon)}
+.btn{display:inline-flex;align-items:center;gap:10px;font:600 16px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;padding:16px 26px;border-radius:999px;border:2px solid var(--neon);color:var(--neon);background:transparent;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover,.btn:focus-visible{box-shadow:0 0 28px rgba(57,255,20,.55);transform:translateY(-2px);outline:none}
+.btn.solid{background:var(--neon);color:#031005}
+.btn:focus-visible{outline:3px solid var(--gold-hi);outline-offset:3px}
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(5,8,6,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;gap:20px;min-height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font:400 21px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.brand img{width:46px;height:46px;border-radius:50%}
+nav{margin-left:auto;display:flex;gap:26px;align-items:center}
+nav a{font:600 14px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--fg)}
+nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)}
+@media(max-width:820px){nav a:not(.btn){display:none}.brand span{font-size:17px}}
+/* hero */
+.hero{position:relative;overflow:hidden;background:radial-gradient(1000px 600px at 78% 30%,rgba(30,120,40,.45),transparent 70%),var(--ink)}
+.hero .in{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,5vw,72px);align-items:center;padding-block:clamp(36px,6vw,84px)}
+.hero h1{font-size:clamp(54px,9.5vw,128px)}
+.hero h1 em{font-style:normal;color:var(--neon);text-shadow:0 0 38px rgba(57,255,20,.55)}
+.hero .lead{margin-top:22px;font-size:clamp(18px,2vw,22px);color:#cfe0cb}
+.hero .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:34px;font:700 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stats b{color:var(--gold-hi);font-weight:700}
+.boothwrap{position:relative;border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.55);box-shadow:0 0 70px rgba(57,255,20,.28),0 30px 80px rgba(0,0,0,.65)}
+.boothwrap>video{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s;pointer-events:none;z-index:1}
+.boothwrap.vid>video{opacity:1}
+.boothwrap.vid>canvas{display:none}
+.boothwrap>canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.boothwrap>img{width:100%;aspect-ratio:864/1184;object-fit:cover}
+.boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
+@media(max-width:900px){.hero .in{grid-template-columns:1fr}.boothwrap{order:-1;max-width:520px}}
+/* player */
+.player{position:absolute;z-index:3;left:14px;right:14px;bottom:14px;background:rgba(5,10,6,.82);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center}
+.play{grid-row:span 2;width:56px;height:56px;border-radius:50%;border:2px solid var(--neon);background:var(--neon);color:#031005;display:grid;place-items:center;cursor:pointer;transition:box-shadow .2s}
+.play:hover,.play:focus-visible{box-shadow:0 0 26px rgba(57,255,20,.7);outline:none}
+.play svg{width:24px;height:24px}
+.ptitle{font:700 13px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-hi)}
+.psub{font-size:14px;color:var(--muted);line-height:1.2}
+.eq{grid-column:1/-1;display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:6px}
+.eq i{flex:1;background:linear-gradient(180deg,var(--neon),var(--neon-dim));border-radius:2px;height:12%;opacity:.55}
+.playing .eq i{animation:eq 900ms ease-in-out infinite alternate;opacity:1}
+@keyframes eq{from{height:12%}to{height:100%}}
+.bar{grid-column:1/-1;height:4px;background:#16241a;border-radius:3px;overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--neon);box-shadow:0 0 12px var(--neon)}
+.ident{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#0c3a12,#020603 70%);opacity:0;pointer-events:none;transition:opacity .25s}
+.ident.on{opacity:1}
+.ident img{width:58%;border-radius:50%;box-shadow:0 0 90px rgba(57,255,20,.7);transform:scale(.7);opacity:0}
+.ident.on img{animation:pop 1.9s cubic-bezier(.2,.9,.2,1) forwards}
+.ident span{position:absolute;bottom:18%;font:400 26px/1 var(--display);letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);opacity:0}
+.ident.on span{animation:fade 1.9s ease forwards}
+@keyframes pop{0%{transform:scale(.7);opacity:0;filter:brightness(2.5)}30%{opacity:1;filter:brightness(1.2)}100%{transform:scale(1.04);opacity:1;filter:brightness(1)}}
+@keyframes fade{0%,35%{opacity:0;transform:translateY(10px)}60%,100%{opacity:1;transform:none}}
+.note{font:700 11px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+/* ticker */
+.ticker{border-block:1px solid var(--line);background:var(--panel);overflow:hidden;white-space:nowrap}
+.ticker div{display:inline-flex;gap:46px;padding-block:16px;animation:slide 38s linear infinite;font:400 22px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-hi)}
+.ticker span::after{content:"◆";margin-left:46px;color:var(--neon);font-size:14px;vertical-align:middle}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+.wrap{max-width:1000px;margin:0 auto;padding:clamp(28px,6vw,70px) max(16px,env(safe-area-inset-left,0px))}
+.sg{display:grid;gap:14px;margin-top:22px}.sr{display:grid;grid-template-columns:72px 1fr auto;gap:16px;align-items:center;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:12px 16px}.sr img{width:72px;height:72px;border-radius:12px;object-fit:cover}.sr b{font:400 24px/1.1 var(--display);text-transform:uppercase;display:block}.sr span{font:700 12px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.sr .btn{padding:12px 18px;font-size:14px}@media(max-width:560px){.sr{grid-template-columns:56px 1fr}.sr img{width:56px;height:56px}.sr .btn{grid-column:1/-1}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,56px);align-items:center}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.cover{border-radius:26px;overflow:hidden;border:2px solid rgba(216,171,75,.6);box-shadow:0 0 60px rgba(216,171,75,.22)}
+.cover img{width:100%;display:block}
+.price{font:400 clamp(60px,10vw,104px)/1 var(--display);color:var(--gold-hi);margin:6px 0 4px}
+.cnt{font:700 15px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--neon);margin-bottom:6px}
+.bar2{height:8px;border-radius:5px;background:#16241a;overflow:hidden;margin:10px 0 22px}.bar2 b{display:block;height:100%;width:0;background:var(--neon);box-shadow:0 0 12px var(--neon);transition:width .5s}
+.list{display:grid;gap:8px;margin:0 0 24px;padding:0;list-style:none;color:#c4d6c0;font-size:17px}.list li::before{content:"✓ ";color:var(--neon);font-weight:700}
+#msg{margin-top:16px;font:600 15px/1.5 var(--body);color:var(--muted);min-height:24px;word-break:break-word}
+#msg.err{color:#ff8a80}#msg.ok{color:var(--neon)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.small{font:700 11px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:18px;max-width:60ch}
+.small a{color:var(--gold-hi)}
+</style>
+<header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>Stag House Records</span></a><nav><a href="/#listen">Listen</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
+<main class="wrap"><span class="eyebrow">Winslow Bankz · Robinhood Chain</span><h1 class="sec-h">Collect a <span class="gold">song</span></h1>
+<p class="sec-p" style="margin-bottom:6px">Each song is its own limited NFT. Paid in USDG, straight to the artist's wallet. Want everything? <a class="gold" href="/album/">Get the whole album for $24.99</a>.</p>
+<div style="margin:14px 0 0"><button class="btn" id="conn" type="button">Connect wallet</button></div><div id="msg" role="status"></div>
+<div class="sg" id="list"></div>
+<p class="small">You need a wallet (MetaMask, Rabby or similar) with a little ETH for network fees and USDG on Robinhood Chain. Sales are final. A song NFT is a digital collectible and song access, not an investment. <span id="ca"></span></p></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+<script src="/songs/config.js"></script>
+<script>
+(function(){
+  var C=window.SONGS||{},$=function(i){return document.getElementById(i)},msg=$('msg'),list=$('list');
+  var CHAIN={chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']};
+  var ABI=['function songInfo(uint256) view returns (uint256 price,uint256 cap,uint256 minted,bool open,bool frozen,string metadataURI)','function mint(uint256)','function balanceOf(address,uint256) view returns (uint256)'];
+  var ERC20=['function balanceOf(address) view returns (uint256)','function allowance(address,address) view returns (uint256)','function approve(address,uint256) returns (bool)'];
+  var acct=null,info={},busy=false,songs=C.songs||[];
+  function say(t,k){msg.textContent=t||'';msg.className=k||''}
+  function usd(v){return '$'+(Number(v)/1e6).toFixed(2)}
+  function draw(){
+    list.innerHTML='';
+    songs.forEach(function(s){
+      var i=info[s.id],row=document.createElement('div');row.className='sr';
+      var sub=!C.contract?'Opens soon':(!i?'Loading…':(i.minted>=i.cap?'Sold out':(i.open?usd(i.price)+' · '+(i.cap-i.minted)+' of '+i.cap+' left':'Not open yet')));
+      row.innerHTML='<img src="/assets/covers/hood-rich.jpg" alt=""><div><b></b><span></span></div>';
+      row.querySelector('b').textContent=s.title;row.querySelector('span').textContent=sub;
+      var b=document.createElement('button');b.className='btn solid';b.type='button';
+      var live=C.contract&&i&&i.open&&i.minted<i.cap;
+      b.textContent=live?('Buy '+usd(i.price)):(C.contract?'Unavailable':'Telegram');b.disabled=C.contract&&!live||busy;
+      b.onclick=function(){if(!C.contract){location.href='https://t.me/StagWifHood';return}buy(s.id)};
+      row.appendChild(b);list.appendChild(row)})
+  }
+  async function readAll(){
+    if(!C.contract||!window.ethers)return draw();
+    try{var p=new ethers.JsonRpcProvider(C.rpc||CHAIN.rpcUrls[0],4663,{staticNetwork:true}),n=new ethers.Contract(C.contract,ABI,p);
+      await Promise.all(songs.map(async function(s){var r=await n.songInfo(s.id);info[s.id]={price:r[0],cap:Number(r[1]),minted:Number(r[2]),open:r[3]}}));
+      $('ca').innerHTML='Contract: <a href="'+CHAIN.blockExplorerUrls[0]+'/address/'+C.contract+'" target="_blank" rel="noopener">'+C.contract.slice(0,6)+'…'+C.contract.slice(-4)+'</a>'}
+    catch(e){say('Could not read the sale right now. Try again in a minute.','err')}
+    draw()
+  }
+  async function ensureChain(){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN.chainId}]})}catch(e){if(e&&(e.code===4902||e.code===-32603||/Unrecognized|not added/i.test(e.message||''))){await window.ethereum.request({method:'wallet_addEthereumChain',params:[CHAIN]})}else throw e}}
+  async function connect(){if(!window.ethereum){say('No wallet found. Open this page inside your wallet app\u2019s browser, or install MetaMask or Rabby.','err');return}
+    var a=await window.ethereum.request({method:'eth_requestAccounts'});acct=a[0];await ensureChain();say('Connected '+acct.slice(0,6)+'…'+acct.slice(-4),'ok');$('conn').textContent='Connected'}
+  async function buy(id){
+    if(!acct){try{await connect()}catch(e){say((e&&e.message)||'Could not connect','err');return}}
+    busy=true;draw();
+    try{var prov=new ethers.BrowserProvider(window.ethereum);if(Number((await prov.getNetwork()).chainId)!==4663){await ensureChain();prov=new ethers.BrowserProvider(window.ethereum)}
+      var s=await prov.getSigner(),nft=new ethers.Contract(C.contract,ABI,s),usdg=new ethers.Contract(C.usdg,ERC20,s),me=await s.getAddress();
+      var r=await nft.songInfo(id),price=r[0];if(!r[3])throw new Error('This song is not open yet.');if(r[2]>=r[1])throw new Error('Sold out.');
+      if((await usdg.balanceOf(me))<price)throw new Error('You need '+usd(price)+' of USDG on Robinhood Chain in this wallet.');
+      if((await usdg.allowance(me,C.contract))<price){say('Step 1 of 2: approve '+usd(price)+' USDG in your wallet…');await (await usdg.approve(C.contract,price)).wait()}
+      say('Step 2 of 2: confirm the purchase in your wallet…');var rc=await (await nft.mint(id)).wait();
+      say('Done. You own this song NFT. Tx: '+rc.hash,'ok');await readAll()}
+    catch(e){var m=(e&&(e.shortMessage||e.reason||e.message))||'Something went wrong';if(/user rejected|denied/i.test(m))m='Cancelled in your wallet. Nothing was charged.';say(m,'err')}
+    busy=false;draw()
+  }
+  $('conn').onclick=function(){connect().catch(function(e){say((e&&e.message)||'Could not connect','err')})};
+  draw();readAll()
+})();
+</script></html>

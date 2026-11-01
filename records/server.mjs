@@ -2,12 +2,13 @@
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
-const HIDE = new Set(['server.mjs', 'Dockerfile', '.dockerignore', 'README.txt']);
+const HIDE = new Set(['build.py', '_base.css', 'server.mjs', 'Dockerfile', '.dockerignore', 'README.txt']);
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav', '.mp4': 'video/mp4', '.webm': 'video/webm', '.txt': 'text/plain; charset=utf-8' };
 const send = (res, code, body, type = 'text/plain; charset=utf-8', extra = {}) => { res.writeHead(code, { 'content-type': type, 'x-content-type-options': 'nosniff', ...extra }); res.end(body); };
 http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', 'text/plain', { allow: 'GET, HEAD' });
   let rel; try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { return send(res, 400, 'Bad request'); }
+  if (!rel.endsWith('/') && !path.extname(rel)) return send(res, 301, '', 'text/plain', { location: rel + '/' });
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.normalize(path.join(ROOT, rel));
   if (!file.startsWith(ROOT + path.sep) || HIDE.has(path.basename(file)) || file.split(path.sep).some(p => p.startsWith('.'))) return send(res, 404, 'Not found');

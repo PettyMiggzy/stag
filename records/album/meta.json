@@ -1,0 +1,11 @@
+{
+  "name": "Hood Rich - Winslow Bankz",
+  "description": "One NFT unlocks the entire Hood Rich digital album by Winslow Bankz on Stag House Records. Only 100 copies. More tracks are being added.",
+  "image": "https://records.stagwifhood.fun/assets/hood-rich.webp",
+  "external_url": "https://records.stagwifhood.fun/album/",
+  "attributes": [
+    {"trait_type": "Artist", "value": "Winslow Bankz"},
+    {"trait_type": "Label", "value": "Stag House Records"},
+    {"trait_type": "Edition size", "value": 100}
+  ]
+}
