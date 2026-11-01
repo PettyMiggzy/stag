@@ -60,6 +60,15 @@ contract HoodRichSongs is ERC1155, Ownable2Step, ReentrancyGuard {
         emit SongOpen(id, open_);
     }
 
+    /// @notice Open or close several songs in one transaction.
+    function setOpenMany(uint256[] calldata ids, bool open_) external onlyOwner {
+        for (uint256 i; i < ids.length; ++i) {
+            _exists(ids[i]);
+            _songs[ids[i]].open = open_;
+            emit SongOpen(ids[i], open_);
+        }
+    }
+
     function setSongURI(uint256 id, string calldata metadataURI) external onlyOwner {
         _exists(id);
         if (_songs[id].frozen) revert Frozen();

@@ -1,0 +1,24 @@
+{
+  "name": "Crown Too Heavy - Winslow Bankz",
+  "description": "Limited song NFT: Crown Too Heavy by Winslow Bankz on Stag House Records. 100 copies.",
+  "image": "https://records.stagwifhood.fun/assets/hood-rich.webp",
+  "external_url": "https://records.stagwifhood.fun/songs/",
+  "attributes": [
+    {
+      "trait_type": "Artist",
+      "value": "Winslow Bankz"
+    },
+    {
+      "trait_type": "Label",
+      "value": "Stag House Records"
+    },
+    {
+      "trait_type": "Album",
+      "value": "Hood Rich"
+    },
+    {
+      "trait_type": "Edition size",
+      "value": 100
+    }
+  ]
+}

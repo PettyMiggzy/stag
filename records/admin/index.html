@@ -1,0 +1,165 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admin | Stag House Records</title><meta name="description" content="Label admin">
+<meta property="og:title" content="Admin | Stag House Records"><meta property="og:image" content="https://records.stagwifhood.fun/assets/hood-rich.webp"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#050806">
+<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
+<style>
+/* Layout: a dark neon label site. Full-bleed bands, one booth hero, a playable intro. Boldness lives in the hero; the rest stays quiet. */
+:root{
+  --ink:#050806; --panel:#0a110c; --panel2:#0e1810; --line:#1d3022;
+  --fg:#e9f2e5; --muted:#9bb197; --neon:#39ff14; --neon-dim:#1f8f0c; --gold:#d8ab4b; --gold-hi:#f4dc8f;
+  --display:'Anton','Impact','Arial Narrow',sans-serif; --body:'Barlow','Helvetica Neue',Arial,sans-serif; --mono:'Space Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--fg);font:17px/1.6 var(--body);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#050806;z-index:60}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-transform:uppercase;line-height:.98;margin:0;text-wrap:balance;letter-spacing:.005em}
+p{margin:0;max-width:62ch}
+.in{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band{padding-block:clamp(56px,9vw,112px)}
+.eyebrow{font:700 13px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--neon);margin-bottom:18px;display:block}
+.gold{color:var(--gold-hi)} .neon{color:var(--neon)}
+.btn{display:inline-flex;align-items:center;gap:10px;font:600 16px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;padding:16px 26px;border-radius:999px;border:2px solid var(--neon);color:var(--neon);background:transparent;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover,.btn:focus-visible{box-shadow:0 0 28px rgba(57,255,20,.55);transform:translateY(-2px);outline:none}
+.btn.solid{background:var(--neon);color:#031005}
+.btn:focus-visible{outline:3px solid var(--gold-hi);outline-offset:3px}
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(5,8,6,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;gap:20px;min-height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font:400 21px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.brand img{width:46px;height:46px;border-radius:50%}
+nav{margin-left:auto;display:flex;gap:26px;align-items:center}
+nav a{font:600 14px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--fg)}
+nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)}
+@media(max-width:820px){nav a:not(.btn){display:none}.brand span{font-size:17px}}
+/* hero */
+.hero{position:relative;overflow:hidden;background:radial-gradient(1000px 600px at 78% 30%,rgba(30,120,40,.45),transparent 70%),var(--ink)}
+.hero .in{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,5vw,72px);align-items:center;padding-block:clamp(36px,6vw,84px)}
+.hero h1{font-size:clamp(54px,9.5vw,128px)}
+.hero h1 em{font-style:normal;color:var(--neon);text-shadow:0 0 38px rgba(57,255,20,.55)}
+.hero .lead{margin-top:22px;font-size:clamp(18px,2vw,22px);color:#cfe0cb}
+.hero .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:34px;font:700 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stats b{color:var(--gold-hi);font-weight:700}
+.boothwrap{position:relative;border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.55);box-shadow:0 0 70px rgba(57,255,20,.28),0 30px 80px rgba(0,0,0,.65)}
+.boothwrap>video{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s;pointer-events:none;z-index:1}
+.boothwrap.vid>video{opacity:1}
+.boothwrap.vid>canvas{display:none}
+.boothwrap>canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.boothwrap>img{width:100%;aspect-ratio:864/1184;object-fit:cover}
+.boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
+@media(max-width:900px){.hero .in{grid-template-columns:1fr}.boothwrap{order:-1;max-width:520px}}
+/* player */
+.player{position:absolute;z-index:3;left:14px;right:14px;bottom:14px;background:rgba(5,10,6,.82);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center}
+.play{grid-row:span 2;width:56px;height:56px;border-radius:50%;border:2px solid var(--neon);background:var(--neon);color:#031005;display:grid;place-items:center;cursor:pointer;transition:box-shadow .2s}
+.play:hover,.play:focus-visible{box-shadow:0 0 26px rgba(57,255,20,.7);outline:none}
+.play svg{width:24px;height:24px}
+.ptitle{font:700 13px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-hi)}
+.psub{font-size:14px;color:var(--muted);line-height:1.2}
+.eq{grid-column:1/-1;display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:6px}
+.eq i{flex:1;background:linear-gradient(180deg,var(--neon),var(--neon-dim));border-radius:2px;height:12%;opacity:.55}
+.playing .eq i{animation:eq 900ms ease-in-out infinite alternate;opacity:1}
+@keyframes eq{from{height:12%}to{height:100%}}
+.bar{grid-column:1/-1;height:4px;background:#16241a;border-radius:3px;overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--neon);box-shadow:0 0 12px var(--neon)}
+.ident{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#0c3a12,#020603 70%);opacity:0;pointer-events:none;transition:opacity .25s}
+.ident.on{opacity:1}
+.ident img{width:58%;border-radius:50%;box-shadow:0 0 90px rgba(57,255,20,.7);transform:scale(.7);opacity:0}
+.ident.on img{animation:pop 1.9s cubic-bezier(.2,.9,.2,1) forwards}
+.ident span{position:absolute;bottom:18%;font:400 26px/1 var(--display);letter-spacing:.18em;text-transform:uppercase;color:var(--gold-hi);opacity:0}
+.ident.on span{animation:fade 1.9s ease forwards}
+@keyframes pop{0%{transform:scale(.7);opacity:0;filter:brightness(2.5)}30%{opacity:1;filter:brightness(1.2)}100%{transform:scale(1.04);opacity:1;filter:brightness(1)}}
+@keyframes fade{0%,35%{opacity:0;transform:translateY(10px)}60%,100%{opacity:1;transform:none}}
+.note{font:700 11px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+/* ticker */
+.ticker{border-block:1px solid var(--line);background:var(--panel);overflow:hidden;white-space:nowrap}
+.ticker div{display:inline-flex;gap:46px;padding-block:16px;animation:slide 38s linear infinite;font:400 22px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-hi)}
+.ticker span::after{content:"◆";margin-left:46px;color:var(--neon);font-size:14px;vertical-align:middle}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+.wrap{max-width:1000px;margin:0 auto;padding:clamp(28px,6vw,70px) max(16px,env(safe-area-inset-left,0px))}
+.sg{display:grid;gap:14px;margin-top:22px}.sr{display:grid;grid-template-columns:72px 1fr auto;gap:16px;align-items:center;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:12px 16px}.sr img{width:72px;height:72px;border-radius:12px;object-fit:cover}.sr b{font:400 24px/1.1 var(--display);text-transform:uppercase;display:block}.sr span{font:700 12px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.sr .btn{padding:12px 18px;font-size:14px}@media(max-width:560px){.sr{grid-template-columns:56px 1fr}.sr img{width:56px;height:56px}.sr .btn{grid-column:1/-1}}
+.card2{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:18px}.card2 h2{font:400 28px/1 var(--display);text-transform:uppercase;margin:0 0 12px}.card2 label{display:grid;gap:6px;margin:10px 0;font:700 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.card2 input,.card2 select{background:#050a06;border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--fg);font:500 16px var(--body)}.row2{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.kv{font:500 14px/1.7 var(--mono);color:#c4d6c0;word-break:break-all}.kv b{color:var(--gold-hi)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,56px);align-items:center}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.cover{border-radius:26px;overflow:hidden;border:2px solid rgba(216,171,75,.6);box-shadow:0 0 60px rgba(216,171,75,.22)}
+.cover img{width:100%;display:block}
+.price{font:400 clamp(60px,10vw,104px)/1 var(--display);color:var(--gold-hi);margin:6px 0 4px}
+.cnt{font:700 15px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--neon);margin-bottom:6px}
+.bar2{height:8px;border-radius:5px;background:#16241a;overflow:hidden;margin:10px 0 22px}.bar2 b{display:block;height:100%;width:0;background:var(--neon);box-shadow:0 0 12px var(--neon);transition:width .5s}
+.list{display:grid;gap:8px;margin:0 0 24px;padding:0;list-style:none;color:#c4d6c0;font-size:17px}.list li::before{content:"✓ ";color:var(--neon);font-weight:700}
+#msg{margin-top:16px;font:600 15px/1.5 var(--body);color:var(--muted);min-height:24px;word-break:break-word}
+#msg.err{color:#ff8a80}#msg.ok{color:var(--neon)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.small{font:700 11px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:18px;max-width:60ch}
+.small a{color:var(--gold-hi)}
+</style>
+<header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>Stag House Records</span></a><nav><a href="/#listen">Listen</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
+<main class="wrap"><span class="eyebrow">Label admin · owner wallet only</span><h1 class="sec-h">Stag House <span class="gold">admin</span></h1>
+<p class="sec-p" style="margin-bottom:6px">Anyone can open this page, but only the owner wallet can make changes. Everything you do here is a transaction you approve in your wallet.</p>
+<div class="row2"><button class="btn solid" id="conn" type="button">Connect owner wallet</button></div><div id="msg" role="status"></div>
+<section class="card2"><h2>Status</h2><div class="kv" id="status">Connect your wallet to see the status.</div><div class="row2" id="actions"></div></section>
+<section class="card2"><h2>Add a song or an album</h2>
+<p class="small" style="margin-top:0">Each item gets its own fixed price and copy limit. They can't be changed after you add them. New items start closed; open them when ready.</p>
+<label>Type<select id="kind"><option value="song">Song</option><option value="album">Album</option></select></label>
+<label>Title<input id="title" type="text" placeholder="Song or album name"></label>
+<label>Artist<input id="artist" type="text" value="Winslow Bankz"></label>
+<label>Price in USDG (dollars)<input id="price" type="number" step="0.01" min="0" value="4.99"></label>
+<label>Number of copies<input id="cap" type="number" step="1" min="1" value="100"></label>
+<label>Cover image (square works best)<input id="cover" type="file" accept="image/*"></label>
+<div class="row2"><button class="btn solid" id="add" type="button" disabled>Add on-chain</button></div></section>
+<p class="small">Songs and albums added here show up on the Songs page automatically. The cover is stored inside the item's own data, so there is nothing to upload to a server.</p></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+<script src="/album/config.js"></script><script src="/songs/config.js"></script>
+<script>
+(function(){
+  var A=window.ALBUM||{},S=window.SONGS||{},$=function(i){return document.getElementById(i)},msg=$('msg');
+  var CHAIN={chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']};
+  var SABI=['function owner() view returns (address)','function pendingOwner() view returns (address)','function songCount() view returns (uint256)','function songInfo(uint256) view returns (uint256,uint256,uint256,bool,bool,string)','function acceptOwnership()','function setOpen(uint256,bool)','function setOpenMany(uint256[],bool)','function addSong(uint128,uint32,string) returns (uint256)'];
+  var AABI=['function owner() view returns (address)','function paused() view returns (bool)','function totalSupply() view returns (uint256)','function maxSupply() view returns (uint256)','function setPaused(bool)'];
+  var acct=null,signer=null;
+  function say(t,k){msg.textContent=t||'';msg.className=k||''}
+  function short(a){return a.slice(0,6)+'…'+a.slice(-4)}
+  async function ensureChain(){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN.chainId}]})}catch(e){if(e&&(e.code===4902||e.code===-32603)){await window.ethereum.request({method:'wallet_addEthereumChain',params:[CHAIN]})}else throw e}}
+  async function connect(){if(!window.ethereum){say('No wallet found. Open this page in your wallet app\u2019s browser or install MetaMask or Rabby.','err');return}
+    var a=await window.ethereum.request({method:'eth_requestAccounts'});acct=a[0];await ensureChain();var prov=new ethers.BrowserProvider(window.ethereum);signer=await prov.getSigner();$('conn').textContent='Connected '+short(acct);say('');await refresh()}
+  async function tx(label,fn){try{say(label+': confirm in your wallet…');var t=await fn();say(label+': waiting for the network…');await t.wait();say(label+': done.','ok');await refresh()}catch(e){var m=(e&&(e.shortMessage||e.reason||e.message))||'failed';if(/user rejected|denied/i.test(m))m='Cancelled in your wallet.';if(/OwnableUnauthorizedAccount/i.test(m+JSON.stringify(e)))m='This wallet is not the owner.';say(label+' failed: '+m,'err')}}
+  async function refresh(){
+    var p=new ethers.JsonRpcProvider(CHAIN.rpcUrls[0],4663,{staticNetwork:true}),act=$('actions'),st=$('status'),html='';act.innerHTML='';
+    function btn(t,fn,cls){var b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=t;b.onclick=fn;act.appendChild(b)}
+    try{
+      if(A.contract){var al=new ethers.Contract(A.contract,AABI,p),o=await al.owner(),pa=await al.paused(),ts=await al.totalSupply(),ms=await al.maxSupply();
+        html+='<b>Album</b> '+short(A.contract)+' · owner '+short(o)+' · '+(pa?'PAUSED (not for sale)':'OPEN')+' · '+ts+' of '+ms+' sold<br>';
+        if(acct&&o.toLowerCase()===acct.toLowerCase()){var w=new ethers.Contract(A.contract,AABI,signer);btn(pa?'Open album sale':'Pause album sale',function(){tx(pa?'Open album sale':'Pause album sale',function(){return w.setPaused(!pa)})},pa?'solid':'')}}
+      if(S.contract){var sg=new ethers.Contract(S.contract,SABI,p),so=await sg.owner(),po=await sg.pendingOwner(),n=Number(await sg.songCount()),open=[],closed=[],sold=0;
+        for(var i=1;i<=n;i++){var r=await sg.songInfo(i);sold+=Number(r[2]);(r[3]?open:closed).push(i)}
+        html+='<b>Songs</b> '+short(S.contract)+' · owner '+short(so)+(po!=='0x0000000000000000000000000000000000000000'?' · ownership pending to '+short(po):'')+' · '+n+' items · '+open.length+' open · '+sold+' sold<br>';
+        if(acct){var w2=new ethers.Contract(S.contract,SABI,signer);
+          if(po.toLowerCase()===acct.toLowerCase())btn('Accept ownership of songs',function(){tx('Accept ownership',function(){return w2.acceptOwnership()})},'solid');
+          if(so.toLowerCase()===acct.toLowerCase()){
+            if(closed.length)btn('Open all '+closed.length+' closed items',function(){tx('Open items',function(){return w2.setOpenMany(closed,true)})},'solid');
+            if(open.length)btn('Close all open items',function(){tx('Close items',function(){return w2.setOpenMany(open,false)})});
+            $('add').disabled=false}}}
+    }catch(e){html+='Could not read the contracts right now.'}
+    st.innerHTML=html||'No contracts set.'
+  }
+  function fileToDataUri(f){return new Promise(function(res,rej){var img=new Image,u=URL.createObjectURL(f);img.onload=function(){var s=640,c=document.createElement('canvas'),r=Math.min(1,s/Math.max(img.width,img.height));c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);var q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>90000&&q>.4){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};img.onerror=function(){rej(new Error('Could not read that image'))};img.src=u})}
+  $('add').onclick=async function(){
+    try{var title=$('title').value.trim(),artist=$('artist').value.trim(),price=Number($('price').value),cap=Number($('cap').value),kind=$('kind').value;
+      if(!title)throw new Error('Add a title');if(!(price>=0))throw new Error('Check the price');if(!(cap>=1))throw new Error('Check the number of copies');
+      var img=$('cover').files[0]?await fileToDataUri($('cover').files[0]):'https://records.stagwifhood.fun/assets/hood-rich.webp';
+      var meta={name:title+' - '+artist,description:'Limited '+kind+' NFT: '+title+' by '+artist+' on Stag House Records. '+cap+' copies.',image:img,external_url:'https://records.stagwifhood.fun/songs/',attributes:[{trait_type:'Artist',value:artist},{trait_type:'Label',value:'Stag House Records'},{trait_type:'Type',value:kind==='album'?'Album':'Song'},{trait_type:'Edition size',value:cap}]};
+      var json=JSON.stringify(meta),b64=btoa(unescape(encodeURIComponent(json))),uri='data:application/json;base64,'+b64;
+      if(!confirm('Add "'+title+'" as a '+kind+' for $'+price.toFixed(2)+' with '+cap+' copies? Price and copies cannot be changed afterwards.'))return;
+      var w=new ethers.Contract(S.contract,SABI,signer);await tx('Add '+kind,function(){return w.addSong(BigInt(Math.round(price*1e6)),cap,uri)})}
+    catch(e){say((e&&e.message)||'Could not add','err')}
+  };
+  $('conn').onclick=function(){connect().catch(function(e){say((e&&e.message)||'Could not connect','err')})};
+  refresh()
+})();
+</script></html>

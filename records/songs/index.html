@@ -110,7 +110,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 (function(){
   var C=window.SONGS||{},$=function(i){return document.getElementById(i)},msg=$('msg'),list=$('list');
   var CHAIN={chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']};
-  var ABI=['function songInfo(uint256) view returns (uint256 price,uint256 cap,uint256 minted,bool open,bool frozen,string metadataURI)','function mint(uint256)','function balanceOf(address,uint256) view returns (uint256)'];
+  var ABI=['function songCount() view returns (uint256)','function songInfo(uint256) view returns (uint256 price,uint256 cap,uint256 minted,bool open,bool frozen,string metadataURI)','function mint(uint256)','function balanceOf(address,uint256) view returns (uint256)'];
   var ERC20=['function balanceOf(address) view returns (uint256)','function allowance(address,address) view returns (uint256)','function approve(address,uint256) returns (bool)'];
   var acct=null,info={},busy=false,songs=C.songs||[];
   function say(t,k){msg.textContent=t||'';msg.className=k||''}
@@ -120,7 +120,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
     songs.forEach(function(s){
       var i=info[s.id],row=document.createElement('div');row.className='sr';
       var sub=!C.contract?'Opens soon':(!i?'Loading…':(i.minted>=i.cap?'Sold out':(i.open?usd(i.price)+' · '+(i.cap-i.minted)+' of '+i.cap+' left':'Not open yet')));
-      row.innerHTML='<img src="/assets/covers/hood-rich.jpg" alt=""><div><b></b><span></span></div>';
+      row.innerHTML='<img alt=""><div><b></b><span></span></div>';row.querySelector('img').src=s.image||'/assets/covers/hood-rich.jpg';
       row.querySelector('b').textContent=s.title;row.querySelector('span').textContent=sub;
       var b=document.createElement('button');b.className='btn solid';b.type='button';
       var live=C.contract&&i&&i.open&&i.minted<i.cap;
@@ -128,10 +128,16 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
       b.onclick=function(){if(!C.contract){location.href='https://t.me/StagWifHood';return}buy(s.id)};
       row.appendChild(b);list.appendChild(row)})
   }
+  function ipfs(u){return u&&u.indexOf('ipfs://')===0?'https://ipfs.io/ipfs/'+u.slice(7):u}
   async function readAll(){
     if(!C.contract||!window.ethers)return draw();
     try{var p=new ethers.JsonRpcProvider(C.rpc||CHAIN.rpcUrls[0],4663,{staticNetwork:true}),n=new ethers.Contract(C.contract,ABI,p);
-      await Promise.all(songs.map(async function(s){var r=await n.songInfo(s.id);info[s.id]={price:r[0],cap:Number(r[1]),minted:Number(r[2]),open:r[3]}}));
+      var count=Number(await n.songCount()),ids=[];for(var k=1;k<=count;k++)ids.push(k);
+      await Promise.all(ids.map(async function(id){var r=await n.songInfo(id);info[id]={price:r[0],cap:Number(r[1]),minted:Number(r[2]),open:r[3],uri:r[5]};
+        var known=songs.filter(function(x){return x.id===id})[0];
+        if(!known){known={id:id,title:'Song #'+id};songs.push(known)}
+        try{var m=await (await fetch(ipfs(r[5]))).json();if(m&&m.name)known.title=m.name.replace(/ - Winslow Bankz$/,'');if(m&&m.image)known.image=ipfs(m.image)}catch(e){}}));
+      songs.sort(function(a,b){return a.id-b.id});
       $('ca').innerHTML='Contract: <a href="'+CHAIN.blockExplorerUrls[0]+'/address/'+C.contract+'" target="_blank" rel="noopener">'+C.contract.slice(0,6)+'…'+C.contract.slice(-4)+'</a>'}
     catch(e){say('Could not read the sale right now. Try again in a minute.','err')}
     draw()

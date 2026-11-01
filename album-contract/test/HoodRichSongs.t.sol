@@ -18,6 +18,10 @@ contract HoodRichSongsTest is Test {
         vm.startPrank(bob); usdg.approve(address(s),2_990_000); vm.expectRevert(HoodRichSongs.SoldOut.selector); s.mint(1); }
     function test_noSuchSong() public { vm.expectRevert(HoodRichSongs.NoSuchSong.selector); s.mint(3); vm.expectRevert(HoodRichSongs.NoSuchSong.selector); s.mint(0); }
     function test_onlyOwner() public { vm.startPrank(bob); vm.expectRevert(); s.addSong(1,1,"x"); vm.expectRevert(); s.setOpen(1,true); }
+    function test_openMany() public { uint256[] memory ids=new uint256[](2); ids[0]=1; ids[1]=2; vm.prank(owner); s.setOpenMany(ids,true);
+        buy(bob,1,2_990_000); buy(bob,2,4_990_000); assertEq(s.balanceOf(bob,1),1); assertEq(s.balanceOf(bob,2),1);
+        vm.prank(bob); vm.expectRevert(); s.setOpenMany(ids,false);
+        ids[1]=9; vm.prank(owner); vm.expectRevert(HoodRichSongs.NoSuchSong.selector); s.setOpenMany(ids,false); }
     function test_freeze() public { vm.startPrank(owner); s.freezeSong(1); vm.expectRevert(HoodRichSongs.Frozen.selector); s.setSongURI(1,"x"); }
     function test_priceNeverChanges() public { vm.prank(owner); s.setOpen(1,true); (uint256 p,,,,,)=s.songInfo(1); assertEq(p,2_990_000); }
     function test_zeroCapRejected() public { vm.prank(owner); vm.expectRevert(HoodRichSongs.BadCap.selector); s.addSong(1,0,"x"); }
