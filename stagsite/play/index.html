@@ -14,7 +14,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
 #score{left:12px}#time{right:12px}#combo{left:50%;transform:translateX(-50%);color:var(--y);text-shadow:0 0 12px var(--y);opacity:0;transition:opacity .2s}
 #cross{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 10px #39ff88;left:50%;top:50%}
 #cross:after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:#fff;border-radius:50%}
-#pow{position:absolute;left:50%;bottom:28px;width:min(320px,70vw);height:14px;margin-left:calc(min(320px,70vw)/-2);background:#000a;border:1px solid #39ff8870;border-radius:8px;overflow:hidden}
+#pow{position:absolute;left:50%;bottom:max(28px,env(safe-area-inset-bottom));width:min(320px,70vw);height:14px;margin-left:calc(min(320px,70vw)/-2);background:#000a;border:1px solid #39ff8870;border-radius:8px;overflow:hidden}
 #pow i{display:block;height:100%;width:0;background:linear-gradient(90deg,#39ff88,#ffd23f,#ff3b5c)}
 #pop{position:absolute;left:0;top:0;font-size:28px;color:#fff;text-shadow:0 0 10px #000;transform:translate(-50%,-50%);opacity:0}
 .scr{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(#0a1c14cc,#02060ae6);padding:20px;z-index:5}
@@ -27,12 +27,12 @@ button,.btn{font:inherit;font-size:24px;letter-spacing:2px;padding:14px 36px;mar
 #big{font-size:64px;color:var(--y)}
 .legend{display:flex;gap:18px;justify-content:center;margin:10px 0;font-family:system-ui,sans-serif;font-size:14px;flex-wrap:wrap}
 .legend b{color:var(--g)}.legend .r{color:var(--r)}.legend .y{color:var(--y)}
-#mute{position:absolute;right:12px;bottom:12px;pointer-events:auto;background:#000a;border:1px solid #39ff8860;color:#eafff3;font-size:16px;padding:6px 12px;box-shadow:none;margin:0}
+#mute{position:absolute;right:12px;top:64px;bottom:auto;pointer-events:auto;background:#000a;border:1px solid #39ff8860;color:#eafff3;font-size:16px;padding:6px 12px;box-shadow:none;margin:0}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud">
   <div class="pill" id="score">0</div><div class="pill" id="combo">x1</div><div class="pill" id="time">60</div>
-  <div id="cross"></div><div id="pow"><i></i></div><div id="pop"></div>
+  <div id="np" class="pill" style="top:auto;bottom:56px;left:50%;transform:translateX(-50%);font-size:13px;padding:5px 12px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;opacity:.85">♪</div><div id="cross"></div><div id="pow"><i></i></div><div id="pop"></div>
   <button id="mute">SOUND ON</button>
 </div>
 <div class="scr" id="load"><h1>STAG SHOT</h1><h2>LOADING THE RANGE</h2><div id="bar"><i></i></div></div>

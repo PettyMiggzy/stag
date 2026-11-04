@@ -33,6 +33,8 @@ const neonA=new THREE.PointLight(0x39ff88,60,40,2);neonA.position.set(-6,2.5,2);
 const neonB=new THREE.PointLight(0xff2bd6,45,45,2);neonB.position.set(7,3,-6);scene.add(neonB);
 const neonC=new THREE.PointLight(0x2bd6ff,40,60,2);neonC.position.set(0,6,-30);scene.add(neonC);
 
+const stagKey=new THREE.PointLight(0xcfffe6,38,16,2);stagKey.position.set(2.6,3.6,3.2);scene.add(stagKey);
+const stagFill=new THREE.DirectionalLight(0xbfe8ff,1.5);stagFill.position.set(4,3,6);stagFill.target.position.set(0,1.2,0);scene.add(stagFill);scene.add(stagFill.target);
 /* ---------- procedural textures ---------- */
 function canvasTex(w,h,draw,rep){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;if(rep)t.repeat.set(...rep);return t}
 const winTex=canvasTex(128,256,(g,w,h)=>{g.fillStyle='#000';g.fillRect(0,0,w,h);for(let y=6;y<h;y+=16)for(let x=6;x<w;x+=16){if(Math.random()<0.45){const c=['#ffd9a0','#9fd0ff','#39ff88','#ff9fe0'][Math.random()*4|0];g.fillStyle=c;g.globalAlpha=0.5+Math.random()*0.5;g.fillRect(x,y,8,10)}}g.globalAlpha=1});
@@ -96,7 +98,12 @@ const decor=new THREE.Group();scene.add(decor);
 
 /* ---------- audio ---------- */
 let AC=null,muted=false,master;
-function audioInit(){if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.5;master.connect(AC.destination);startMusic()}catch(e){}}
+const TRACKS=[['Money on My Mind','money'],['Crown Too Heavy','crown'],['Back On Go','backongo'],['Walk Me Through the Fire','walkfire'],["Still Ridin' Slow",'ridinslow'],['No Me Llames','nomellames'],['Fresh Cut, White Tee','whitetee'],['First Heartbreak at School (Remix)','heartbreak']];
+let trackI=Math.floor(Math.random()*TRACKS.length),bgm=null;
+function playMusic(){try{if(!bgm){bgm=new Audio();bgm.volume=0.55;bgm.addEventListener('ended',()=>{trackI=(trackI+1)%TRACKS.length;loadTrack();bgm.play().catch(()=>{})})}
+  loadTrack();bgm.muted=muted;bgm.play().catch(()=>{})}catch(e){}}
+function loadTrack(){const [t,f]=TRACKS[trackI];bgm.src='https://records.stagwifhood.fun/assets/audio/'+f+'.mp3';const el=document.getElementById('np');if(el)el.textContent='♪ '+t+' · Winslow Bankz'}
+function audioInit(){if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.5;master.connect(AC.destination)}catch(e){}}
 function tone(f,d,type='sine',v=0.3,f2=null,t0=0){if(!AC||muted)return;const t=AC.currentTime+t0,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d+0.02)}
 function noise(d,v=0.3,hp=800){if(!AC||muted)return;const n=AC.sampleRate*d|0,b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=hp;const g=AC.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(master);s.start()}
 const sfx={draw:()=>tone(120,0.5,'sawtooth',0.06,260),loose:()=>{noise(0.25,0.35,1500);tone(900,0.12,'triangle',0.15,300)},
@@ -105,7 +112,7 @@ const sfx={draw:()=>tone(120,0.5,'sawtooth',0.06,260),loose:()=>{noise(0.25,0.35
 function startMusic(){ // simple synth bass + arp loop
   const bpm=104,step=60/bpm/2;let i=0;const notes=[55,55,65.4,55,73.4,55,65.4,49];const arp=[220,261.6,329.6,392,329.6,261.6];
   setInterval(()=>{if(!AC||muted||AC.state!=='running'||state!=='play')return;const n=notes[i%8];tone(n,step*1.6,'sawtooth',0.06,0,0);if(i%2===0)tone(arp[(i/2)%arp.length|0]*(i%16<8?1:1.5),step*1.4,'triangle',0.035);if(i%4===0)tone(60,0.18,'sine',0.25,38);if(i%4===2)noise(0.06,0.06,6000);i++},step*1000)}
-$('mute').onclick=e=>{e.stopPropagation();muted=!muted;$('mute').textContent=muted?'SOUND OFF':'SOUND ON'};
+$('mute').onclick=e=>{e.stopPropagation();muted=!muted;$('mute').textContent=muted?'SOUND OFF':'SOUND ON';if(bgm)bgm.muted=muted};
 
 /* ---------- loading ---------- */
 const gl=new GLTFLoader();gl.setMeshoptDecoder(MeshoptDecoder);
@@ -166,7 +173,7 @@ function makeTarget(type){
   scene.add(root);return root;
 }
 function placeTarget(t){
-  const u=t.userData;const z=-(12+Math.random()*26);const lim=Math.min(13,3+(-z)*0.3);
+  const u=t.userData;const portrait=innerWidth/innerHeight<1;const z=-((portrait?8:12)+Math.random()*(portrait?15:26));const lim=Math.min(13,3+(-z)*0.3);
   const x=(Math.random()*2-1)*lim;const y=1.4+Math.random()*(5+(-z)*0.06);
   u.base=new THREE.Vector3(x,y,z);u.age=0;u.state='in';u.t=0;u.life=(u.type==='gold'?4.5:7)+Math.random()*4;
   u.mv={amp:u.type==='green'?0.6+Math.random()*1.2:u.type==='red'?2+Math.random()*3:3+Math.random()*4,spd:(u.type==='gold'?1.6:0.7)+Math.random()*0.8,ph:Math.random()*6.28,bob:0.25+Math.random()*0.4};
@@ -190,6 +197,12 @@ function burst(p,color,n=60,speed=7){const c=new THREE.Color(color);for(let k=0;
 function stepParticles(dt){for(let i=0;i<PN;i++){if(pLife[i]>0){pLife[i]-=dt;pVel[i*3+1]-=9*dt;pPos[i*3]+=pVel[i*3]*dt;pPos[i*3+1]+=pVel[i*3+1]*dt;pPos[i*3+2]+=pVel[i*3+2]*dt;const f=Math.max(pLife[i],0);pCol[i*3]*=0.985;pCol[i*3+1]*=0.985;pCol[i*3+2]*=0.985;if(pLife[i]<=0)pPos[i*3+1]=-999}}
   pGeo.attributes.position.needsUpdate=true;pGeo.attributes.color.needsUpdate=true}
 
+const arcGeo=new THREE.BufferGeometry();const ARC_N=34;arcGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(ARC_N*3),3));
+const arc=new THREE.Line(arcGeo,new THREE.LineDashedMaterial({color:0x9fffc8,dashSize:0.5,gapSize:0.35,transparent:true,opacity:0.8,fog:false}));arc.frustumCulled=false;arc.visible=false;scene.add(arc);
+function updateArc(){const a=aim.yaw,p=aim.pitch;const dir=new THREE.Vector3(-Math.sin(a)*Math.cos(p),Math.sin(p),-Math.cos(a)*Math.cos(p)).normalize();
+  const speed=38+power*42;const pos=new THREE.Vector3(0,1.55,0).addScaledVector(dir,1.0);const v=dir.multiplyScalar(speed);const arr=arcGeo.attributes.position.array;
+  for(let i=0;i<ARC_N;i++){arr[i*3]=pos.x;arr[i*3+1]=pos.y;arr[i*3+2]=pos.z;for(let k=0;k<2;k++){v.y-=GRAV*0.011;pos.addScaledVector(v,0.011)}}
+  arcGeo.attributes.position.needsUpdate=true;arc.computeLineDistances();arc.visible=true}
 /* ---------- arrows ---------- */
 const arrows=[];const GRAV=7.5;
 const X=new THREE.Vector3(1,0,0);
@@ -277,15 +290,17 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 $('play').onclick=()=>{audioInit();startGame()};$('again').onclick=()=>{audioInit();startGame()};
 
 function startGame(){
+  playMusic();
   state='play';score=0;combo=0;timeLeft=60;shots=0;hits=0;clearTargets();arrows.forEach(a=>{scene.remove(a.obj);scene.remove(a.trail.l)});arrows.length=0;
   for(let i=0;i<TARGET_COUNT;i++)spawnTarget();
   $('menu').style.display='none';$('end').style.display='none';$('hud').style.display='block';updateHUD();backToIdle();
 }
 function endGame(){
   state='end';if(pointer.down){pointer.down=false;endDraw(false)}
+  let top=[];try{top=JSON.parse(localStorage.getItem('stagshot_top')||'[]')}catch(e){}top.push(score);top=top.sort((x,y)=>y-x).slice(0,5);try{localStorage.setItem('stagshot_top',JSON.stringify(top))}catch(e){}
   const isBest=score>best;if(isBest){best=score;try{localStorage.setItem('stagshot_best',best)}catch(e){}}
   $('big').textContent=score;const acc=shots?Math.round(hits/shots*100):0;
-  $('endmsg').textContent=`${hits} hits from ${shots} arrows (${acc}% accuracy). ${isBest?'NEW BEST!':'Best: '+best}`;
+  $('endmsg').textContent=`${hits} hits from ${shots} arrows (${acc}% accuracy). ${isBest?'NEW BEST!':'Best: '+best}  ·  Your top 5: ${top.join(' · ')}`;
   const txt=encodeURIComponent(`I scored ${score} in Stag Shot — 3D rooftop archery by $STAG. Beat it:`);
   $('share').href=`https://twitter.com/intent/tweet?text=${txt}&url=${encodeURIComponent(location.href.split('?')[0])}`;
   sfx.end();$('hud').style.display='none';$('end').style.display='flex';$('best').textContent=`BEST: ${best}`;
@@ -320,10 +335,10 @@ function frame(){
   if(state==='play'){timeLeft-=dt;if(timeLeft<=0){timeLeft=0;updateHUD();endGame()}else{if(Math.ceil(timeLeft)!==+$('time').textContent)updateHUD()}}
   // targets
   for(const t of targets){const u=t.userData;u.age+=dt;u.t+=dt;
-    const m=u.mv;let off=new THREE.Vector3();
-    if(u.type==='green'){off.set(Math.sin(u.t*m.spd+m.ph)*m.amp,Math.sin(u.t*1.7+m.ph)*m.bob,0)}
-    else if(u.type==='red'){off.set(Math.sin(u.t*m.spd+m.ph)*m.amp,Math.sin(u.t*2+m.ph)*m.bob,0)}
-    else{off.set(Math.sin(u.t*m.spd+m.ph)*m.amp,Math.sin(u.t*m.spd*1.3+m.ph)*m.amp*0.25,Math.cos(u.t*m.spd+m.ph)*1.5)}
+    const m=u.mv;const diff=1+(60-Math.min(60,timeLeft))/60*0.9;let off=new THREE.Vector3();
+    if(u.type==='green'){off.set(Math.sin(u.t*m.spd*diff+m.ph)*m.amp,Math.sin(u.t*1.7+m.ph)*m.bob,0)}
+    else if(u.type==='red'){off.set(Math.sin(u.t*m.spd*diff+m.ph)*m.amp,Math.sin(u.t*2+m.ph)*m.bob,0)}
+    else{off.set(Math.sin(u.t*m.spd*diff+m.ph)*m.amp,Math.sin(u.t*m.spd*diff*1.3+m.ph)*m.amp*0.25,Math.cos(u.t*m.spd*diff+m.ph)*1.5)}
     t.position.copy(u.base).add(off);
     let sc=1;if(u.age<0.4)sc=u.age/0.4;else if(u.age>u.life-0.6){sc=Math.max(0.001,(u.life-u.age)/0.6);if(u.age>=u.life){u.state='out';scene.remove(t);targets.splice(targets.indexOf(t),1);setTimeout(()=>{if(state==='play')spawnTarget()},300);continue}}
     t.scale.setScalar(sc*(1+Math.sin(u.t*3)*0.02));
@@ -331,6 +346,7 @@ function frame(){
     u.ring.position.y=-(t.position.y)+0.05;u.ring.scale.setScalar(1+0.1*Math.sin(u.t*4));
   }
   decor.children.forEach(c=>{c.rotation.y+=dt*c.userData.spin});
+  arc.visible=false;if(poseState==='draw'&&power>0.1)updateArc();
   stepArrows(dt);stepParticles(dt);
   neonA.intensity=55+Math.sin(tAll*3)*8;neonB.intensity=42+Math.sin(tAll*2.2+1)*7;
   // camera: smooth third-person behind-right of the archer, follows aim (no shake)
