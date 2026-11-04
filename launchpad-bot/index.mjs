@@ -220,7 +220,7 @@ async function sendTelegram(a) {
     })() : "",
     a.st && a.st.mult >= 1.005 ? `📈 <b>${a.st.mult >= 10 ? fmt(a.st.mult, 0) : fmt(a.st.mult, 2)}x</b> from launch price` : "",
     a.st ? `🔥 24h: <b>${a.st.buys24}</b> buys · <b>${fmt(a.st.vol24, 2)} ETH</b> volume · Buy <b>#${a.st.buyNo}</b>` : "",
-    a.st ? `👥 <b>${fmt(a.st.holderCount, 0)}</b> holders · Top 10 own <b>${fmt(a.st.top10, 1)}%</b>` : "",
+    a.st ? `👥 <b>${fmt(a.st.holderCount, 0)}</b> holders` : "",
     `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a> · <a href="${a.txUrl}">Tx</a>`,
   ].filter(Boolean);
   const caption = lines.join("\n");
