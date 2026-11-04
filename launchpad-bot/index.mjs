@@ -14,6 +14,8 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { initExtras } from "./extras.mjs";
+let EX = null;
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -206,17 +208,17 @@ function buttons(a, clip) {
 }
 // A real Telegram music player under each alert: tap play in the chat, plays in the background, no web page.
 const AUDIO_IDS = {};
-async function sendSongReply(api, clip, replyTo) {
+async function sendSongReply(api, clip, replyTo, chatId = CFG.tgChat) {
   if (process.env.AUDIO_REPLY === "0") return;
   const f = path.join(DIR, "audio", clip.n + ".mp3");
   try {
     let res;
     if (AUDIO_IDS[clip.n]) {
       res = await fetch(`${api}/sendAudio`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: CFG.tgChat, audio: AUDIO_IDS[clip.n], title: clip.title, performer: "Winslow Bankz · Stag House Records", reply_parameters: { message_id: replyTo }, disable_notification: true }) });
+        body: JSON.stringify({ chat_id: chatId, audio: AUDIO_IDS[clip.n], title: clip.title, performer: "Winslow Bankz · Stag House Records", reply_parameters: { message_id: replyTo }, disable_notification: true }) });
     } else if (existsSync(f)) {
       const fd = new FormData();
-      fd.append("chat_id", CFG.tgChat); fd.append("title", clip.title); fd.append("performer", "Winslow Bankz · Stag House Records");
+      fd.append("chat_id", chatId); fd.append("title", clip.title); fd.append("performer", "Winslow Bankz · Stag House Records");
       fd.append("duration", "40"); fd.append("disable_notification", "true");
       fd.append("reply_parameters", JSON.stringify({ message_id: replyTo }));
       fd.append("audio", new Blob([readFileSync(f)], { type: "audio/mpeg" }), `${clip.title}.mp3`);
@@ -234,6 +236,7 @@ async function sendTelegram(a) {
   const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
   const lines = [
     process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
+    a.ex?.record ? `<b>🏆 NEW BIGGEST BUY</b>` : "",
     a.tier ? `<b>${a.tier}</b>` : "",
     `<b>$${sym} · BUY</b>`,
     `${em("COIN", "💵")} <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
@@ -246,6 +249,10 @@ async function sendTelegram(a) {
       const pct = Math.max(0, Math.min(100, a.bondEth / goal * 100)); const f = Math.round(pct / 10);
       return `🎯 Bonding: <b>${fmt(a.bondEth, 2)} / ${fmt(goal, 1)} ETH</b> (${fmt(pct, 1)}%)\n${"▰".repeat(f)}${"▱".repeat(10 - f)}`;
     })() : "",
+    a.bondEth != null && a.bondEth < (parseFloat(process.env.BOND_ETH || "4.2") || 4.2) ? `⏳ <b>${fmt(Math.max(0, (parseFloat(process.env.BOND_ETH || "4.2") || 4.2) - a.bondEth), 2)} ETH</b> left to graduate` : "",
+    a.ex?.buys10m >= 3 ? `⚡ <b>${a.ex.buys10m}</b> buys in the last 10 min` : "",
+    a.ex?.streak ? `🔁 <b>${a.ex.streak}${a.ex.streak === 2 ? "nd" : a.ex.streak === 3 ? "rd" : "th"} buy today</b> from this wallet` : "",
+    a.isNew && a.ex?.holderCount ? `🆕 Holder <b>#${a.ex.holderCount}</b>` : "",
     a.st && a.st.mult >= 1.005 ? `📈 <b>${a.st.mult >= 10 ? fmt(a.st.mult, 0) : fmt(a.st.mult, 2)}x</b> from launch price` : "",
     a.st ? `🔥 24h: <b>${a.st.buys24}</b> buys · <b>${fmt(a.st.vol24, 2)} ETH</b> volume · Buy <b>#${a.st.buyNo}</b>` : "",
     a.st ? `👥 <b>${fmt(a.st.holderCount, 0)}</b> holders` : "",
@@ -425,7 +432,8 @@ async function scan(fromBlock, toBlock) {
     let bondEth = null;
     try { bondEth = Number(ethers.formatEther(await provider.getBalance(CFG.pool))); } catch {}
     const px = tokens > 0 && eth > 0 && ETHUSD ? (eth / tokens) * ETHUSD : 0;
-    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, bondEth, st: statsFor(lg.transactionHash, lg.blockNumber, tokens > 0 && eth > 0 ? eth / tokens : 0), tx: lg.transactionHash, block: lg.blockNumber });
+    const ex = EX ? await EX.cardExtras(lg.transactionHash, lg.blockNumber, buyer, eth) : {};
+    await announce({ buyer, tokens, eth, holds, posPct, isNew, ex, holdsUsd: px * holds, bondEth, st: statsFor(lg.transactionHash, lg.blockNumber, tokens > 0 && eth > 0 ? eth / tokens : 0), tx: lg.transactionHash, block: lg.blockNumber });
   }
 }
 
@@ -445,6 +453,20 @@ async function main() {
   const head = await connectRpc();   // blocks (with retries) until the chain answers
   await loadMeta();
   await backfillStats(head);
+  if (process.env.EXTRAS !== "0" && CFG.tg && CFG.tgChat) {
+    EX = initExtras({ provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY,
+      META: () => META, ethUsd: () => ETHUSD, CLIPS: () => CLIPS,
+      sendSong: (chatId, clip, replyTo) => sendSongReply(`https://api.telegram.org/bot${CFG.tg}`, clip, replyTo, chatId),
+      sendVideoCard: async (caption, markup) => {
+        const clip = CLIPS.length ? CLIPS[CLIP_N++ % CLIPS.length] : null; const api = `https://api.telegram.org/bot${CFG.tg}`;
+        const f = clip ? path.join(DIR, "clips", clip.n + ".mp4") : null;
+        if (f && existsSync(f)) {
+          const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(markup));
+          fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "stag.mp4"); await fetch(`${api}/sendVideo`, { method: "POST", body: fd });
+        } else await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", reply_markup: markup }) });
+      } });
+    EX.start(head).catch((e) => log("extras start err:", e.message));
+  }
   const st = loadState();
   let last = st.lastBlock || CFG.startBlock || head; // default: start now (don't spam history)
   log(`starting at block ${last} (head ${head}); poll every ${CFG.pollMs}ms`);
