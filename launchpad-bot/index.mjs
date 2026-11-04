@@ -142,6 +142,10 @@ async function ethSpent(txHash) {
     }
     const tx = await provider.getTransaction(txHash);
     if (tx?.value) return Number(ethers.formatEther(tx.value));
+    // Paid via an aggregator / other asset: read the ETH amount from the pool's own swap event
+    if (rc?.logs) for (const lg of rc.logs) {
+      if (lg.address.toLowerCase() === CFG.pool && lg.topics[0] === "0xec36bf571f136799e8dc0b0b8bea4b04d8bd3d43de838aab0d5fc21d4cbfc455" && lg.data.length >= 66) return Number(ethers.formatEther(BigInt(lg.data.slice(0, 66))));
+    }
   } catch (e) { log("ethSpent err:", e.message); }
   return 0;
 }
@@ -250,11 +254,27 @@ async function scan(fromBlock, toBlock) {
     }
     log("getLogs err:", e.message); return;
   }
+  // One alert per transaction. On Pons the pool pays the token to a router, which forwards it to the buyer,
+  // so the "to" of the pool transfer is the router - the real buyer is the wallet that sent the tx.
+  const seen = new Set();
   for (const lg of logs) {
-    const to = "0x" + (lg.topics[2] || "").slice(-40);
-    const buyer = to.toLowerCase();
+    if (seen.has(lg.transactionHash)) continue;
+    seen.add(lg.transactionHash);
+    let tx;
+    try { tx = await provider.getTransaction(lg.transactionHash); } catch { tx = null; }
+    const buyer = (tx?.from || "0x" + (lg.topics[2] || "").slice(-40)).toLowerCase();
     if (buyer === CFG.pool || buyer === "0x0000000000000000000000000000000000000000") continue;
-    const tokens = Number(ethers.formatUnits(BigInt(lg.data), META.decimals));
+    // tokens the buyer actually received in this tx (sum of token transfers to the buyer, else the pool outflow)
+    let tokens = 0;
+    try {
+      const rc = await provider.getTransactionReceipt(lg.transactionHash);
+      const buyerTopic = ethers.zeroPadValue(buyer, 32).toLowerCase();
+      for (const l2 of rc.logs) {
+        if (l2.address.toLowerCase() !== CFG.token || l2.topics[0] !== TRANSFER_TOPIC) continue;
+        if ((l2.topics[2] || "").toLowerCase() === buyerTopic) tokens += Number(ethers.formatUnits(BigInt(l2.data), META.decimals));
+      }
+    } catch {}
+    if (tokens <= 0) tokens = Number(ethers.formatUnits(BigInt(lg.data), META.decimals));
     if (tokens <= 0) continue;
     const eth = await ethSpent(lg.transactionHash);
     if (CFG.minBuyEth && eth < CFG.minBuyEth) continue;
@@ -305,4 +325,5 @@ async function main() {
 process.on("unhandledRejection", (e) => log("unhandledRejection:", e?.message || e));
 process.on("uncaughtException", (e) => log("uncaughtException:", e?.message || e));
 
+import("node:http").then(({default:http})=>{ if(process.env.PORT) http.createServer((q,r)=>{r.writeHead(200);r.end("stag buy bot ok")}).listen(+process.env.PORT); });
 main().catch((e) => { log("startup error, retrying in 10s:", e?.message || e); setTimeout(() => main(), 10000); });
