@@ -165,7 +165,10 @@ async function ethSpent(txHash) {
 
 function buildAlert(b) {
   const steps = Math.max(1, Math.min(80, Math.floor((b.eth || 0) / CFG.emojiStepEth) || 1));
-  const emojis = CFG.buyEmoji.repeat(steps);
+  const usdIn = ETHUSD && b.eth ? b.eth * ETHUSD : 0;
+  const stagSteps = Math.max(1, Math.min(30, Math.floor(usdIn / 25) || 1));
+  const emojis = "🦌".repeat(stagSteps);
+  const tier = usdIn >= 1000 ? "🚨🐋 MEGA WHALE BUY" : usdIn >= 500 ? "🐋 WHALE BUY" : usdIn >= 100 ? "🔥 BIG BUY" : "";
   const priceEth = b.tokens > 0 && b.eth > 0 ? b.eth / b.tokens : 0;
   const priceUsd = ETHUSD && priceEth ? priceEth * ETHUSD : 0;
   const supply = Number(ethers.formatUnits(META.supply || 0n, META.decimals));
@@ -177,7 +180,7 @@ function buildAlert(b) {
   const chartUrl = `${CFG.launchpad}/${CFG.token}`;   // robinhoodchain.blockscout.com/token/<CA> — buy + chart
 
   return {
-    emojis,
+    emojis, tier,
     priceUsd, priceEth, mcapUsd, spentUsd,
     txUrl, buyerUrl, chartUrl,
     ...b,
@@ -200,12 +203,15 @@ async function sendTelegram(a) {
   const sym = esc(META.symbol);
   const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
   const lines = [
+    process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
+    a.tier ? `<b>${a.tier}</b>` : "",
     `<b>$${sym} · BUY</b>`,
     `💵 <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
     `🪙 Got <b>${fmt(a.tokens, 0)}</b> ${sym}`,
     a.emojis,
     a.priceUsd ? `Price <b>${usd(a.priceUsd)}</b>${a.mcapUsd ? ` · MC <b>${usd(a.mcapUsd)}</b>` : ""}` : "",
     holdLine,
+    a.soldPct != null ? `📊 Bought so far: <b>${fmt(a.soldPct, 1)}%</b> of supply\n${"▰".repeat(Math.round(a.soldPct / 10))}${"▱".repeat(10 - Math.round(a.soldPct / 10))}` : "",
     `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a> · <a href="${a.txUrl}">Tx</a>`,
   ].filter(Boolean);
   const caption = lines.join("\n");
@@ -325,8 +331,14 @@ async function scan(fromBlock, toBlock) {
       const prior = holds - tokens;
       if (prior <= tokens * 0.001) isNew = true; else posPct = tokens / prior * 100;
     } catch {}
+    let soldPct = null;
+    try {
+      const pb = await token.balanceOf(CFG.pool);
+      const sup = Number(ethers.formatUnits(META.supply || 0n, META.decimals));
+      if (sup > 0) soldPct = Math.max(0, Math.min(100, (1 - Number(ethers.formatUnits(pb, META.decimals)) / sup) * 100));
+    } catch {}
     const px = tokens > 0 && eth > 0 && ETHUSD ? (eth / tokens) * ETHUSD : 0;
-    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, tx: lg.transactionHash, block: lg.blockNumber });
+    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, soldPct, tx: lg.transactionHash, block: lg.blockNumber });
   }
 }
 
