@@ -2,6 +2,7 @@
 // All numbers come from chain logs (ST) and the pool balance. Nothing here is invented.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
+import { initWhale } from "./whale.mjs";
 
 export function initExtras(X) {
   const { provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY } = X;
@@ -18,6 +19,7 @@ export function initExtras(X) {
     [{ text: "🏹 Play Stag Shot", url: "https://stagwifhood.fun/play/", style: "success" }, { text: "🎵 Records", url: "https://records.stagwifhood.fun", style: "primary" }],
   ] });
 
+  const W = initWhale({ CFG, ST, fmt, short, log, tgPost });
   // ---------- buyer lookup (cached) ----------
   const BUYER = new Map();
   let TEAM = "";
@@ -107,7 +109,7 @@ export function initExtras(X) {
       const n = await streakFor(buyer, block); if (n >= 2) out.streak = n;
       const prevMax = biggestBefore(tx, block); if (eth >= 0.05 && eth > prevMax && prevMax > 0) out.record = true;
       out.holderCount = [...ST.bal.entries()].filter(([a, v]) => v > 0n && a !== CFG.pool).length;
-      out.rank = holderRank(buyer);
+      out.rank = holderRank(buyer); out.herd = W.tierOf(buyer);
       const head = await provider.getBlockNumber();
       out.buys10m = ST.buys.filter((b) => b.block > head - BLOCKS_10M).length;
     } catch {}
@@ -132,6 +134,12 @@ export function initExtras(X) {
         return reply(bal > 0 ? `👛 <b>${short(a)}</b>\nHolds <b>${fmt(bal, 0)}</b> $STAG (${usd(bal * m.priceUsd)})\nRank <b>#${rank}</b> of ${fmt(m.holders, 0)} holders` : `👛 ${short(a)} holds no $STAG yet.`);
       }
       if (cmd === "song") { const c = X.CLIPS(); if (!c.length) return; const k = c[Math.floor(Math.random() * c.length)]; return X.sendSong(msg.chat.id, k, msg.message_id); }
+      if (["whale", "link", "wallets", "rank", "unlink"].includes(cmd) || (cmd === "start" && args[0] === "whale")) return W.command(msg, cmd, args, reply);
+      if (cmd === "archers" || cmd === "arcade") {
+        if (!W.hasDb) return reply("Leaderboard isn't on yet.");
+        const rows = await W.topArchers(5); if (!rows.length) return reply("🏹 No Stag Shot scores today yet. Play: https://stagwifhood.fun/play/");
+        const med = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]; return reply(["<b>🏹 TOP ARCHERS · TODAY</b>", ...rows.map((r, i) => `${med[i]} ${esc(r.name)} · <b>${r.s}</b>`), "", "Play: https://stagwifhood.fun/play/"].join("\n"));
+      }
       if (cmd === "ca" || cmd === "contract" || cmd === "address") return reply(`<b>$STAG contract (Robinhood Chain)</b>\n<code>${CFG.token}</code>\n<i>tap to copy</i>\n\n<a href="${CFG.explorer}/token/${CFG.token}">Explorer</a> · <a href="${BUY}">Buy on Pons</a>`);
       if (cmd === "buy") return reply(`🟩 <b>Buy $STAG</b> on Pons (Robinhood Chain)\n${BUY}\n\nCA: <code>${CFG.token}</code>`, { reply_markup: { inline_keyboard: [[{ text: "🟩 Buy $STAG", url: BUY, style: "success" }]] } });
       if (cmd === "chart") return reply(`📈 <b>$STAG chart</b>\n${BUY}`, { reply_markup: { inline_keyboard: [[{ text: "📈 Open chart", url: CFG.chartUrl || BUY, style: "primary" }]] } });
@@ -195,6 +203,7 @@ export function initExtras(X) {
 
   async function start(head) {
     await prefetchDay(head);
+    W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();
     updateDashboard(); setInterval(updateDashboard, 3600000);
     watchMilestones(); setInterval(watchMilestones, 30000);

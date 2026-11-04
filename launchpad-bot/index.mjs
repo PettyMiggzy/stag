@@ -238,6 +238,7 @@ async function sendTelegram(a) {
   const lines = [
     process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
     a.ex?.record ? `<b>🏆 NEW BIGGEST BUY</b>` : "",
+    a.ex?.herd ? `<b>${a.ex.herd}</b> just bought` : "",
     a.tier ? `<b>${a.tier}</b>` : "",
     `<b>$${sym} · BUY</b>`,
     `${em("COIN", "💵")} <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
@@ -497,5 +498,4 @@ async function main() {
 process.on("unhandledRejection", (e) => log("unhandledRejection:", e?.message || e));
 process.on("uncaughtException", (e) => log("uncaughtException:", e?.message || e));
 
-import("node:http").then(({default:http})=>{ if(process.env.PORT) http.createServer((q,r)=>{r.writeHead(200);r.end("stag buy bot ok")}).listen(+process.env.PORT); });
 main().catch((e) => { log("startup error, retrying in 10s:", e?.message || e); setTimeout(() => main(), 10000); });
