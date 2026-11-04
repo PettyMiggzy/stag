@@ -163,11 +163,13 @@ async function ethSpent(txHash) {
   return 0;
 }
 
+// Custom (3D) emoji: set EMOJI_STAG / EMOJI_CANDLE / EMOJI_COIN to the custom_emoji_id from our sticker set.
+const em = (key, fallback) => { const id = process.env["EMOJI_" + key]; return id ? `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>` : fallback; };
 function buildAlert(b) {
   const steps = Math.max(1, Math.min(80, Math.floor((b.eth || 0) / CFG.emojiStepEth) || 1));
   const usdIn = ETHUSD && b.eth ? b.eth * ETHUSD : 0;
   const stagSteps = Math.max(1, Math.min(30, Math.floor(usdIn / 25) || 1));
-  const emojis = "🦌".repeat(stagSteps);
+  const emojis = em("STAG", "🦌").repeat(stagSteps);
   const tier = usdIn >= 1000 ? "🚨🐋 MEGA WHALE BUY" : usdIn >= 500 ? "🐋 WHALE BUY" : usdIn >= 100 ? "🔥 BIG BUY" : "";
   const priceEth = b.tokens > 0 && b.eth > 0 ? b.eth / b.tokens : 0;
   const priceUsd = ETHUSD && priceEth ? priceEth * ETHUSD : 0;
@@ -206,8 +208,8 @@ async function sendTelegram(a) {
     process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
     a.tier ? `<b>${a.tier}</b>` : "",
     `<b>$${sym} · BUY</b>`,
-    `💵 <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
-    `🪙 Got <b>${fmt(a.tokens, 0)}</b> ${sym}`,
+    `${em("COIN", "💵")} <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
+    `${em("CANDLE", "🟩")} Got <b>${fmt(a.tokens, 0)}</b> ${sym}`,
     a.emojis,
     a.priceUsd ? `Price <b>${usd(a.priceUsd)}</b>${a.mcapUsd ? ` · MC <b>${usd(a.mcapUsd)}</b>` : ""}` : "",
     holdLine,
