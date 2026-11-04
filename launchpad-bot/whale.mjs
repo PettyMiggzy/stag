@@ -115,7 +115,7 @@ b.onclick=async()=>{try{
 }catch(e){s.textContent='❌ '+(e.message||e)}};
 </script>`;
   const json = (res, code, obj, extra = {}) => { res.writeHead(code, { "content-type": "application/json", ...extra }); res.end(JSON.stringify(obj)); };
-  const body = (req) => new Promise((ok) => { let d = ""; req.on("data", (c) => { d += c; if (d.length > 20000) req.destroy(); }); req.on("end", () => { try { ok(JSON.parse(d || "{}")); } catch { ok({}); } }); });
+  const body = (req, max = 20000) => new Promise((ok) => { let d = ""; req.on("data", (c) => { d += c; if (d.length > max) req.destroy(); }); req.on("end", () => { try { ok(JSON.parse(d || "{}")); } catch { ok({}); } }); });
   function checkInitData(initData) {
     try {
       const p = new URLSearchParams(initData); const hash = p.get("hash"); p.delete("hash");
@@ -127,6 +127,7 @@ b.onclick=async()=>{try{
     } catch { return null; }
   }
   const CORS = { "access-control-allow-origin": "https://stagwifhood.fun", "access-control-allow-headers": "content-type", "access-control-allow-methods": "POST,OPTIONS" };
+  const CARDS = new Map();
   function startWeb() {
     http.createServer(async (req, res) => {
       try {
@@ -152,6 +153,22 @@ b.onclick=async()=>{try{
           await q("insert into game_scores(tg_id, name, score) values ($1,$2,$3)", [user.id, name, score]);
           const [rk] = await q("select count(*)::int as n from (select tg_id, max(score) s from game_scores where day=current_date group by tg_id) t where s > $1", [score]);
           return json(res, 200, { ok: true, rank: (rk?.n || 0) + 1 }, CORS);
+        }
+        if (u.pathname === "/api/card" && req.method === "POST") { // score-card image for Telegram Stories
+          const b = await body(req, 1800000); const user = checkInitData(String(b.initData || ""));
+          const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.image || ""));
+          if (!user || !m) return json(res, 200, { ok: false }, CORS);
+          const buf = Buffer.from(m[1], "base64"); if (buf.length > 1500000) return json(res, 200, { ok: false }, CORS);
+          const id = crypto.randomBytes(9).toString("hex"); CARDS.set(id, { buf, exp: Date.now() + 3600000 });
+          for (const [k, v] of CARDS) if (v.exp < Date.now()) CARDS.delete(k);
+          return json(res, 200, { ok: true, url: `${PUBLIC}/card/${id}.jpg` }, CORS);
+        }
+        if (u.pathname.startsWith("/card/")) { const c = CARDS.get(u.pathname.slice(6).replace(/\.jpg$/, "")); if (!c) { res.writeHead(404); return res.end(); } res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "public, max-age=600" }); return res.end(c.buf); }
+        if (u.pathname === "/api/prepare" && req.method === "POST") { // prepared inline message so the player can challenge a friend
+          const b = await body(req); const user = checkInitData(String(b.initData || "")); const score = Math.floor(Number(b.score));
+          if (!user || !(score >= 0 && score <= 2500)) return json(res, 200, { ok: false }, CORS);
+          const r = await tgPost("savePreparedInlineMessage", { user_id: user.id, result: { type: "article", id: crypto.randomBytes(6).toString("hex"), title: "Beat my Stag Shot score", input_message_content: { message_text: `🏹 I scored ${score} in Stag Shot, 3D forest archery by $STAG. Think you can beat me?` }, reply_markup: { inline_keyboard: [[{ text: "🏹 Play Stag Shot", url: process.env.MINIAPP_URL || "https://stagwifhood.fun/play/" }]] } }, allow_user_chats: true, allow_group_chats: true, allow_channel_chats: false, allow_bot_chats: false });
+          return json(res, 200, r.ok ? { ok: true, id: r.result.id } : { ok: false, error: r.description }, CORS);
         }
         res.writeHead(200, { "content-type": "text/plain" }); res.end("stag bot ok");
       } catch (e) { json(res, 500, { ok: false }); }

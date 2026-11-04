@@ -27,21 +27,22 @@ button,.btn{font:inherit;font-size:24px;letter-spacing:2px;padding:14px 36px;mar
 #big{font-size:64px;color:var(--y)}
 .legend{display:flex;gap:18px;justify-content:center;margin:10px 0;font-family:system-ui,sans-serif;font-size:14px;flex-wrap:wrap}
 .legend b{color:var(--g)}.legend .r{color:var(--r)}.legend .y{color:var(--y)}
-#mute{position:absolute;right:12px;top:64px;bottom:auto;pointer-events:auto;background:#000a;border:1px solid #39ff8860;color:#eafff3;font-size:16px;padding:6px 12px;box-shadow:none;margin:0}
+.pill{top:calc(var(--top,0px) + 12px)}#tilt{position:absolute;right:12px;top:calc(var(--top,0px) + 112px);pointer-events:auto;background:#000a;border:1px solid #39ff8860;color:#eafff3;font-size:16px;padding:6px 12px;box-shadow:none;margin:0;display:none}#mute{position:absolute;right:12px;top:64px;bottom:auto;pointer-events:auto;background:#000a;border:1px solid #39ff8860;color:#eafff3;font-size:16px;padding:6px 12px;box-shadow:none;margin:0}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud">
   <div class="pill" id="score">0</div><div class="pill" id="combo">x1</div><div class="pill" id="time">60</div>
   <div id="np" class="pill" style="top:auto;bottom:56px;left:50%;transform:translateX(-50%);font-size:13px;padding:5px 12px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;opacity:.85">♪</div><div id="cross"></div><div id="pow"><i></i></div><div id="pop"></div>
-  <button id="mute">SOUND ON</button>
+  <button id="mute">SOUND ON</button><button id="tilt">TILT AIM: OFF</button>
 </div>
 <div class="scr" id="load"><h1>STAG SHOT</h1><h2>LOADING THE RANGE</h2><div id="bar"><i></i></div></div>
 <div class="scr" id="menu" style="display:none"><h1>STAG SHOT</h1><h2>$STAG FOREST ARCHERY</h2>
 <p>Move to aim. Hold to draw. Release to loose. Hit the candles before the clock runs out.</p>
 <div class="legend"><span><b>GREEN</b> +10</span><span class="y">GOLD COIN +50 &amp; +2s</span><span class="r">RED −15</span></div>
-<button id="play">PLAY</button><div id="best" style="font-family:system-ui;color:#9fc"></div></div>
+<button id="play">PLAY</button><div><button class="btn alt" id="home" style="display:none;font-family:inherit">ADD TO HOME SCREEN</button></div><div id="best" style="font-family:system-ui;color:#9fc"></div></div>
 <div class="scr" id="end" style="display:none"><h2>TIME</h2><div id="big">0</div><p id="endmsg"></p>
 <div><button id="again">AGAIN</button></div>
+<div id="tgx" style="display:none"><button class="btn alt" id="story" style="font-family:inherit">SHARE TO STORY</button><button class="btn alt" id="chal" style="font-family:inherit">CHALLENGE A FRIEND</button><button class="btn alt" id="wear" style="font-family:inherit">WEAR THE STAG COIN</button></div>
 <div><a class="btn alt" id="share" target="_blank" rel="noopener">SHARE SCORE</a><a class="btn alt" href="https://t.me/StagWifHood" target="_blank" rel="noopener">JOIN THE HERD</a></div>
 <p style="font-size:12px;opacity:.6">Just a game. Scores are for bragging rights only.</p></div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>

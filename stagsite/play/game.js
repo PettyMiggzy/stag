@@ -10,8 +10,12 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 const $=id=>document.getElementById(id);
 try{const tw=window.Telegram&&window.Telegram.WebApp;if(tw){tw.ready();tw.expand();try{tw.disableVerticalSwipes&&tw.disableVerticalSwipes()}catch(e){}}}catch(e){}
 const LITE=/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)||!!(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||/[?&]lite/.test(location.search);
+const TW=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)?window.Telegram.WebApp:null;
+const API='https://buybot.stagwifhood.fun';
+const hap=(k,t)=>{try{if(!TW||!TW.HapticFeedback)return;if(k==='n')TW.HapticFeedback.notificationOccurred(t);else TW.HapticFeedback.impactOccurred(t)}catch(e){}};
+if(TW){try{const ins=()=>{const a=(TW.safeAreaInset&&TW.safeAreaInset.top||0)+(TW.contentSafeAreaInset&&TW.contentSafeAreaInset.top||0);document.documentElement.style.setProperty('--top',a+'px')};ins();TW.onEvent&&TW.onEvent('safeAreaChanged',ins);TW.onEvent&&TW.onEvent('contentSafeAreaChanged',ins)}catch(e){}}
 const canvas=$('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:!LITE,powerPreference:'high-performance'});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:!LITE,powerPreference:'high-performance',preserveDrawingBuffer:!!TW});
 let pr=Math.min(devicePixelRatio||1,LITE?1.25:2);const PR_MAX=pr;renderer.setPixelRatio(pr);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
 renderer.shadowMap.enabled=!LITE;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -277,8 +281,8 @@ function onHit(t,a){
   burst(t.position,type==='green'?0x39ff88:type==='red'?0xff3b5c:0xffd23f,type==='gold'?110:70,type==='gold'?10:7);
   const col=type==='green'?'#39ff88':type==='red'?'#ff3b5c':'#ffd23f';
   let pts;
-  if(type==='red'){combo=0;pts=u.def.pts;score=Math.max(0,score+pts);sfx.bad();shake=0;stagHit();showPop(`${pts}`,col,t.position)}
-  else{combo++;const mult=1+Math.min(combo-1,9)*0.5|0||1;const m2=Math.min(1+Math.floor((combo-1)/3),5);pts=u.def.pts*m2;score+=pts;hits++;if(type==='gold'){timeLeft=Math.min(timeLeft+2,90);sfx.coin()}else sfx.hit();showPop(`+${pts}${type==='gold'?'  +2s':''}`,col,t.position);if(combo>=3&&combo%3===0)stagVictory()}
+  if(type==='red'){hap('n','error');combo=0;pts=u.def.pts;score=Math.max(0,score+pts);sfx.bad();shake=0;stagHit();showPop(`${pts}`,col,t.position)}
+  else{hap(type==='gold'?'n':'i',type==='gold'?'success':'rigid');combo++;const mult=1+Math.min(combo-1,9)*0.5|0||1;const m2=Math.min(1+Math.floor((combo-1)/3),5);pts=u.def.pts*m2;score+=pts;hits++;if(type==='gold'){timeLeft=Math.min(timeLeft+2,90);sfx.coin()}else sfx.hit();showPop(`+${pts}${type==='gold'?'  +2s':''}`,col,t.position);if(combo>=3&&combo%3===0)stagVictory()}
   // arrow sticks into world at hit point and fades
   a.obj.position.copy(a.pos);
   // remove target
@@ -288,10 +292,10 @@ let shake=0; // (no camera shake by design)
 
 /* ---------- stag animation control ---------- */
 function fadeTo(name,fade=0.18,time=null,ts=1,loop=true){const next=acts[name];if(!next)return;Object.entries(acts).forEach(([k,a])=>{if(a!==next&&a.isRunning())a.fadeOut(fade)});next.reset();if(time!=null)next.time=time;next.setEffectiveTimeScale(ts);next.setEffectiveWeight(1);next.setLoop(loop?THREE.LoopRepeat:THREE.LoopOnce,Infinity);next.clampWhenFinished=!loop;next.fadeIn(fade).play();}
-function beginDraw(){if(poseState==='draw')return;poseState='draw';drawing=true;drawT=0;power=0;fadeTo('shot',0.15,2.0,1,false);sfx.draw();if(bowHolder)bowHolder.visible=true;if(arrowHolder)arrowHolder.visible=true;setBackBow(false)}
+function beginDraw(){if(poseState==='draw')return;hap('i','light');poseState='draw';drawing=true;drawT=0;power=0;fadeTo('shot',0.15,2.0,1,false);sfx.draw();if(bowHolder)bowHolder.visible=true;if(arrowHolder)arrowHolder.visible=true;setBackBow(false)}
 function endDraw(fire){
   if(poseState!=='draw')return;drawing=false;
-  if(fire&&power>0.12){poseState='release';releaseT=0;const a=acts.shot;a.time=3.85;a.setEffectiveTimeScale(2.2);a.paused=false;shootArrow();if(arrowHolder)arrowHolder.visible=false}
+  if(fire&&power>0.12){poseState='release';releaseT=0;const a=acts.shot;a.time=3.85;a.setEffectiveTimeScale(2.2);a.paused=false;shootArrow();hap('i','medium');if(arrowHolder)arrowHolder.visible=false}
   else{backToIdle()}
 }
 function backToIdle(){poseState='idle';fadeTo('idle',0.25,null,1,true);if(bowHolder)bowHolder.visible=false;if(arrowHolder)arrowHolder.visible=false;setBackBow(true)}
@@ -315,6 +319,28 @@ function updateHUD(){$('score').textContent=score;const m=Math.min(1+Math.floor(
 const projV=new THREE.Vector3();
 function showPop(txt,col,world){projV.copy(world).project(camera);const el=$('pop');el.textContent=txt;el.style.color=col;el.style.left=((projV.x*0.5+0.5)*innerWidth)+'px';el.style.top=((-projV.y*0.5+0.5)*innerHeight)+'px';el.style.transition='none';el.style.opacity=1;el.style.transform='translate(-50%,-50%) scale(1.4)';requestAnimationFrame(()=>requestAnimationFrame(()=>{el.style.transition='all .8s ease-out';el.style.opacity=0;el.style.transform='translate(-50%,-220%) scale(1)'}))}
 
+/* ---------- Telegram Mini App extras ---------- */
+let tiltOn=false,tiltBase=null;
+if(TW){
+  if(TW.DeviceOrientation&&TW.DeviceOrientation.start){$('tilt').style.display='block';
+    $('tilt').onclick=e=>{e.stopPropagation();tiltOn=!tiltOn;$('tilt').textContent='TILT AIM: '+(tiltOn?'ON':'OFF');
+      if(tiltOn){try{TW.DeviceOrientation.start({refresh_rate:60,need_absolute:false},ok=>{if(ok){tiltBase={a:TW.DeviceOrientation.alpha,b:TW.DeviceOrientation.beta}}else{tiltOn=false;$('tilt').textContent='TILT AIM: OFF'}})}catch(err){tiltOn=false;$('tilt').textContent='TILT AIM: OFF'}}
+      else{try{TW.DeviceOrientation.stop()}catch(err){}}}}
+  $('tgx').style.display='block';
+  try{TW.checkHomeScreenStatus&&TW.checkHomeScreenStatus(st=>{if(st==='missed'||st==='unknown'){$('home').style.display='inline-block';$('home').onclick=()=>TW.addToHomeScreen()}})}catch(e){}
+  const post=(path,body)=>fetch(API+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({initData:TW.initData},body))}).then(r=>r.json());
+  $('story').onclick=async()=>{try{
+    const src=renderer.domElement;const c=document.createElement('canvas');c.width=720;c.height=1280;const g=c.getContext('2d');
+    const sr=src.width/src.height,dr=c.width/c.height;let sw=src.width,sh=src.height,sx=0,sy=0;if(sr>dr){sw=sh*dr;sx=(src.width-sw)/2}else{sh=sw/dr;sy=(src.height-sh)/2}
+    g.drawImage(src,sx,sy,sw,sh,0,0,c.width,c.height);const gr=g.createLinearGradient(0,0,0,c.height);gr.addColorStop(0,'rgba(0,0,0,0.55)');gr.addColorStop(0.35,'rgba(0,0,0,0)');gr.addColorStop(0.7,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,0.65)');g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);
+    g.textAlign='center';g.fillStyle='#39ff88';g.font='900 110px Impact,Arial Black,sans-serif';g.shadowColor='#39ff88';g.shadowBlur=30;g.fillText('STAG SHOT',360,150);g.shadowBlur=0;
+    g.fillStyle='#ffd23f';g.font='900 220px Impact,Arial Black,sans-serif';g.fillText(String(score),360,1090);g.fillStyle='#fff';g.font='700 42px system-ui,sans-serif';g.fillText('SCORE · BEAT ME',360,1160);g.font='600 34px system-ui,sans-serif';g.fillText('t.me/stagzbuybot/Play',360,1230);
+    const r=await post('/api/card',{image:c.toDataURL('image/jpeg',0.82)});
+    if(r.ok&&TW.shareToStory)TW.shareToStory(r.url,{text:'I scored '+score+' in Stag Shot 🏹 Beat me: t.me/stagzbuybot/Play',widget_link:{url:'https://t.me/stagzbuybot/Play',name:'Play Stag Shot'}});
+    else TW.showAlert('Could not make the story card. Try again.')}catch(e){try{TW.showAlert('Story sharing is not available here.')}catch(x){}}};
+  $('chal').onclick=async()=>{try{const r=await post('/api/prepare',{score});if(r.ok&&TW.shareMessage)TW.shareMessage(r.id);else TW.showAlert('Could not prepare the challenge.')}catch(e){}};
+  $('wear').onclick=()=>{try{TW.requestEmojiStatusAccess(ok=>{if(ok)TW.setEmojiStatus('5141324265630468031',{},()=>{});else TW.showAlert('Needs Telegram Premium and your permission.')})}catch(e){try{TW.showAlert('Emoji status is not available here.')}catch(x){}}};
+}
 /* ---------- input ---------- */
 function setPointer(e){pointer.x=e.clientX/innerWidth;pointer.y=e.clientY/innerHeight}
 canvas.addEventListener('pointermove',e=>{setPointer(e)});
@@ -327,7 +353,7 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 $('play').onclick=()=>{audioInit();startGame()};$('again').onclick=()=>{audioInit();startGame()};
 
 function startGame(){
-  playMusic();
+  playMusic();try{if(TW&&TW.requestFullscreen&&!TW.isFullscreen)TW.requestFullscreen()}catch(e){}
   state='play';score=0;combo=0;timeLeft=60;shots=0;hits=0;clearTargets();arrows.forEach(a=>{scene.remove(a.obj);scene.remove(a.trail.l)});arrows.length=0;
   for(let i=0;i<TARGET_COUNT;i++)spawnTarget();
   $('menu').style.display='none';$('end').style.display='none';$('hud').style.display='block';updateHUD();backToIdle();
@@ -354,8 +380,13 @@ function frame(){
   if(!ready){return}
   // auto quality
   if(tAll>2&&tAll<6){fpsAcc+=dt;fpsN++}else if(tAll>=6&&quality){quality=false;const avg=fpsAcc/fpsN;if(avg>1/34){if(avg>1/22){detail.visible=false;pr=Math.max(0.75,pr*0.7);useBloom=false;renderer.shadowMap.enabled=false;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true})}else{useBloom=false}resize()}}
-  // aim from pointer
-  if(state==='play'){aim.ty=-(pointer.x-0.5)*2*0.75;aim.tp=0.02+(0.5-pointer.y)*0.5+0.12}
+  // aim from pointer, or from the phone's tilt inside Telegram
+  if(state==='play'&&tiltOn&&tiltBase&&TW&&TW.DeviceOrientation&&TW.DeviceOrientation.isStarted){
+    let da=TW.DeviceOrientation.alpha-tiltBase.a;da=((da+540)%360)-180;
+    aim.ty=Math.max(-0.75,Math.min(0.75,da/50*0.75));
+    aim.tp=0.14+Math.max(-0.25,Math.min(0.3,(tiltBase.b-TW.DeviceOrientation.beta)/60*0.4));
+  }
+  else if(state==='play'){aim.ty=-(pointer.x-0.5)*2*0.75;aim.tp=0.02+(0.5-pointer.y)*0.5+0.12}
   else{aim.ty=Math.sin(tAll*0.3)*0.2;aim.tp=0.1}
   aim.yaw+=(aim.ty-aim.yaw)*Math.min(1,dt*10);aim.pitch+=(aim.tp-aim.pitch)*Math.min(1,dt*10);
   aim.pitch=Math.max(-0.1,Math.min(0.55,aim.pitch));
