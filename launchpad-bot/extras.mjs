@@ -20,6 +20,8 @@ export function initExtras(X) {
 
   // ---------- buyer lookup (cached) ----------
   const BUYER = new Map();
+  let TEAM = "";
+  const isTeam = (tx) => !!TEAM && BUYER.get(tx) === TEAM;
   async function buyerOf(tx) {
     if (BUYER.has(tx)) return BUYER.get(tx);
     try { const t = await provider.getTransaction(tx); const b = (t?.from || "").toLowerCase(); BUYER.set(tx, b); return b; } catch { return ""; }
@@ -37,7 +39,9 @@ export function initExtras(X) {
     const last = ST.buys[ST.buys.length - 1];
     const price = last ? last.eth / last.tok : 0;
     const dayAgo = head - BLOCKS_PER_DAY;
-    const day = ST.buys.filter((b) => b.block > dayAgo);
+    const dayAll = ST.buys.filter((b) => b.block > dayAgo);
+    const teamDay = dayAll.filter((b) => isTeam(b.tx));
+    const day = dayAll.filter((b) => !isTeam(b.tx));
     const before = [...ST.buys].reverse().find((b) => b.block <= dayAgo) || ST.buys[0];
     const first = before ? before.eth / before.tok : price;
     const hourAgo = [...ST.buys].reverse().find((b) => b.block <= head - BLOCKS_PER_DAY / 24) || ST.buys[0];
@@ -48,7 +52,8 @@ export function initExtras(X) {
       head, price, priceUsd: price * ethUsd, mcUsd: price * supply * ethUsd, ethUsd,
       ch24: first ? (price / first - 1) * 100 : 0, ch1h: hp ? (price / hp - 1) * 100 : 0,
       buys24: day.length, vol24: day.reduce((x, b) => x + b.eth, 0), holders, bondEth, bondPct: Math.min(100, (bondEth / BOND) * 100),
-      lastBlock: last?.block || 0, buys10m: ST.buys.filter((b) => b.block > head - BLOCKS_10M).length, vol10m: ST.buys.filter((b) => b.block > head - BLOCKS_10M).reduce((x, b) => x + b.eth, 0),
+      lastBlock: last?.block || 0, buys10m: ST.buys.filter((b) => b.block > head - BLOCKS_10M && !isTeam(b.tx)).length, vol10m: ST.buys.filter((b) => b.block > head - BLOCKS_10M && !isTeam(b.tx)).reduce((x, b) => x + b.eth, 0),
+      teamBuys: teamDay.length, teamEth: teamDay.reduce((x, b) => x + b.eth, 0),
     };
   }
   const chg = (n) => `${n >= 0 ? "🟢 +" : "🔴 "}${fmt(n, 1)}%`;
@@ -61,10 +66,11 @@ export function initExtras(X) {
       `🔥 24h: <b>${m.buys24}</b> buys · <b>${fmt(m.vol24, 2)} ETH</b>`,
       `⚡ Last 10 min: <b>${m.buys10m}</b> buys · <b>${fmt(m.vol10m, 2)} ETH</b>`,
       `👥 <b>${fmt(m.holders, 0)}</b> holders`,
+      m.teamBuys ? `🏦 Team wallet (disclosed, not counted above): <b>${m.teamBuys}</b> buys · ${fmt(m.teamEth, 4)} ETH in 24h` : "",
       `🎯 Bonding <b>${fmt(m.bondEth, 2)} / ${fmt(BOND, 1)} ETH</b> (${fmt(m.bondPct, 1)}%)`,
       bar(m.bondPct, 12),
       m.bondPct < 100 ? `⏳ <b>${fmt(left, 2)} ETH</b> (~${usd(left * m.ethUsd)}) left to graduate` : `🎓 <b>GRADUATED</b>`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
   }
 
   // ---------- leaderboard / streaks ----------
@@ -195,5 +201,5 @@ export function initExtras(X) {
     setInterval(dailyCheck, 60000);
     log("extras ready: commands, dashboard, milestones, leaderboard");
   }
-  return { start, cardExtras, market, leaderboardText };
+  return { start, cardExtras, market, leaderboardText, isTeam, buyerCached: (tx) => BUYER.get(tx), setTeam: (a) => { TEAM = (a || "").toLowerCase(); } };
 }

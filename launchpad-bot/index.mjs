@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { initExtras } from "./extras.mjs";
+import { startTeamBuyer } from "./teambuyer.mjs";
 let EX = null;
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -366,7 +367,7 @@ async function backfillStats(head) {
 }
 function statsFor(tx, block, price) {
   const dayAgo = block - BLOCKS_PER_DAY;
-  const day = ST.buys.filter((b) => b.block > dayAgo && b.block <= block);
+  const day = ST.buys.filter((b) => b.block > dayAgo && b.block <= block && !(EX && EX.isTeam(b.tx)));
   const idx = day.findIndex((b) => b.tx === tx);
   const holders = [...ST.bal.entries()].filter(([a, v]) => v > 0n && a !== CFG.pool);
   const sup = Number(ethers.formatUnits(META.supply || 0n, META.decimals)) || 1;
@@ -466,6 +467,7 @@ async function main() {
         } else await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", reply_markup: markup }) });
       } });
     EX.start(head).catch((e) => log("extras start err:", e.message));
+    try { const team = startTeamBuyer({ provider, CFG, ST, log, ethUsd: () => ETHUSD, BLOCKS_PER_DAY, buyerCached: (tx) => EX.buyerCached(tx) }); if (team) EX.setTeam(team); } catch (e) { log("team buyer init err:", e.message); }
   }
   const st = loadState();
   let last = st.lastBlock || CFG.startBlock || head; // default: start now (don't spam history)
