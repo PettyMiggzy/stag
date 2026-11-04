@@ -218,6 +218,9 @@ async function sendTelegram(a) {
       const pct = Math.max(0, Math.min(100, a.bondEth / goal * 100)); const f = Math.round(pct / 10);
       return `🎯 Bonding: <b>${fmt(a.bondEth, 2)} / ${fmt(goal, 1)} ETH</b> (${fmt(pct, 1)}%)\n${"▰".repeat(f)}${"▱".repeat(10 - f)}`;
     })() : "",
+    a.st && a.st.mult >= 1.005 ? `📈 <b>${a.st.mult >= 10 ? fmt(a.st.mult, 0) : fmt(a.st.mult, 2)}x</b> from launch price` : "",
+    a.st ? `🔥 24h: <b>${a.st.buys24}</b> buys · <b>${fmt(a.st.vol24, 2)} ETH</b> volume · Buy <b>#${a.st.buyNo}</b>` : "",
+    a.st ? `👥 <b>${fmt(a.st.holderCount, 0)}</b> holders · Top 10 own <b>${fmt(a.st.top10, 1)}%</b>` : "",
     `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a> · <a href="${a.txUrl}">Tx</a>`,
   ].filter(Boolean);
   const caption = lines.join("\n");
@@ -288,6 +291,50 @@ async function announce(raw) {
   await Promise.all([sendTelegram(a), sendDiscord(a)]);
 }
 
+
+// ---- on-chain stats (holders, top-10, 24h volume, price multiple) built from logs; idempotent ----
+const CURVE_BUY = "0xec36bf571f136799e8dc0b0b8bea4b04d8bd3d43de838aab0d5fc21d4cbfc455";
+const BLOCKS_PER_DAY = parseInt(E("BLOCKS_PER_DAY", "830000"), 10);
+const STATS_FROM = parseInt(E("STATS_FROM_BLOCK", "105516351"), 10);
+const ST = { bal: new Map(), seen: new Set(), buys: [], firstPrice: 0 };
+function ingestTransfer(lg) {
+  const k = lg.transactionHash + ":" + lg.index; if (ST.seen.has(k)) return; ST.seen.add(k);
+  const from = ("0x" + lg.topics[1].slice(-40)).toLowerCase(), to = ("0x" + lg.topics[2].slice(-40)).toLowerCase(), v = BigInt(lg.data);
+  if (from !== "0x0000000000000000000000000000000000000000") ST.bal.set(from, (ST.bal.get(from) || 0n) - v);
+  ST.bal.set(to, (ST.bal.get(to) || 0n) + v);
+}
+function ingestBuy(lg) {
+  const k = "b" + lg.transactionHash + ":" + lg.index; if (ST.seen.has(k)) return; ST.seen.add(k);
+  const eth = Number(ethers.formatEther(BigInt("0x" + lg.data.slice(2, 66)))), tok = Number(ethers.formatUnits(BigInt("0x" + lg.data.slice(66, 130)), 18));
+  if (eth > 0 && tok > 0) { ST.buys.push({ block: lg.blockNumber, tx: lg.transactionHash, eth, tok }); if (!ST.firstPrice) ST.firstPrice = eth / tok; }
+}
+async function ingestRange(from, to) {
+  try {
+    const [tl, bl] = await Promise.all([
+      provider.getLogs({ address: CFG.token, topics: [TRANSFER_TOPIC], fromBlock: from, toBlock: to }),
+      provider.getLogs({ address: CFG.pool, topics: [CURVE_BUY], fromBlock: from, toBlock: to }),
+    ]);
+    tl.forEach(ingestTransfer); bl.forEach(ingestBuy);
+  } catch (e) { log("ingest err:", e.message); }
+}
+async function backfillStats(head) {
+  for (let f = STATS_FROM; f <= head; f += 5000) await ingestRange(f, Math.min(f + 4999, head));
+  log(`stats ready: ${ST.buys.length} buys, ${ST.bal.size} wallets`);
+}
+function statsFor(tx, block, price) {
+  const dayAgo = block - BLOCKS_PER_DAY;
+  const day = ST.buys.filter((b) => b.block > dayAgo && b.block <= block);
+  const idx = day.findIndex((b) => b.tx === tx);
+  const holders = [...ST.bal.entries()].filter(([a, v]) => v > 0n && a !== CFG.pool);
+  const sup = Number(ethers.formatUnits(META.supply || 0n, META.decimals)) || 1;
+  const top = holders.map(([, v]) => Number(ethers.formatUnits(v, META.decimals))).sort((a, b) => b - a).slice(0, 10).reduce((x, y) => x + y, 0);
+  return {
+    buys24: day.length, vol24: day.reduce((x, b) => x + b.eth, 0), buyNo: idx >= 0 ? idx + 1 : day.length,
+    holderCount: holders.length, top10: top / sup * 100,
+    mult: ST.firstPrice && price ? price / ST.firstPrice : 0,
+  };
+}
+
 // ---- scan a block range for buys (Transfer from == pool) ----
 async function scan(fromBlock, toBlock) {
   const poolTopic = ethers.zeroPadValue(CFG.pool, 32).toLowerCase();
@@ -306,6 +353,7 @@ async function scan(fromBlock, toBlock) {
     }
     log("getLogs err:", e.message); return;
   }
+  await ingestRange(fromBlock, toBlock);
   // One alert per transaction. On Pons the pool pays the token to a router, which forwards it to the buyer,
   // so the "to" of the pool transfer is the router - the real buyer is the wallet that sent the tx.
   const seen = new Set();
@@ -341,7 +389,7 @@ async function scan(fromBlock, toBlock) {
     let bondEth = null;
     try { bondEth = Number(ethers.formatEther(await provider.getBalance(CFG.pool))); } catch {}
     const px = tokens > 0 && eth > 0 && ETHUSD ? (eth / tokens) * ETHUSD : 0;
-    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, bondEth, tx: lg.transactionHash, block: lg.blockNumber });
+    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, bondEth, st: statsFor(lg.transactionHash, lg.blockNumber, tokens > 0 && eth > 0 ? eth / tokens : 0), tx: lg.transactionHash, block: lg.blockNumber });
   }
 }
 
@@ -360,6 +408,7 @@ async function connectRpc() {
 async function main() {
   const head = await connectRpc();   // blocks (with retries) until the chain answers
   await loadMeta();
+  await backfillStats(head);
   const st = loadState();
   let last = st.lastBlock || CFG.startBlock || head; // default: start now (don't spam history)
   log(`starting at block ${last} (head ${head}); poll every ${CFG.pollMs}ms`);
