@@ -184,7 +184,7 @@ async function burnStragglers(provider, token, burn, masterAddr, fees) {
 async function main() {
   const token = ethers.getAddress(val('--token', '0x67ef4460a1280fbd9d31d6312fed2ce1efd66305'));
   const ethPerHour = parseFloat(val('--eth-per-hour', '0.01'));
-  const buyMin = parseFloat(val('--buy-min', '0.001')), buyMax = parseFloat(val('--buy-max', '0.01'));
+  const buyMin = parseFloat(val('--buy-min', '0.00001')), buyMax = parseFloat(val('--buy-max', '0.0001'));
   const burstMin = parseInt(val('--burst-min', '5'), 10), burstMax = parseInt(val('--burst-max', '10'), 10);
   const burn = !has('--no-burn');
 
@@ -275,7 +275,7 @@ async function main() {
     const f = await feeData(provider);
     const gasEachNow = (BUY_GAS + BURN_GAS + SWEEP_GAS) * f.maxFeePerGas;
     const fundEach = buys.map(b => b + gasEachNow + gasEachNow / 5n);
-    const need = fundEach.reduce((a, b) => a + b, 0n) + ethers.parseEther('0.001');
+    const need = fundEach.reduce((a, b) => a + b, 0n) + ethers.parseEther('0.00005');
 
     // Graduation check before every burst: once it is on Uniswap v4 this curve bot stops.
     const now = await resolveLaunch(provider, token);
