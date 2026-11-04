@@ -62,7 +62,7 @@ const CFG = {
   mediaUrl: E("MEDIA_URL"),
   videoFile: E("VIDEO_FILE", "buy.mp4"),
   chartUrl: E("CHART_URL"), buyUrl: E("BUY_URL"),
-  links: E("EXTRA_BUTTONS", "🎵 Stag House Records|https://records.stagwifhood.fun|primary;🌐 stagwifhood.fun|https://stagwifhood.fun|danger"),                         // optional gif/image on each alert
+  links: E("EXTRA_BUTTONS", "🏹 Play Stag Shot|https://stagwifhood.fun/play/|success;🎵 Stag House Records|https://records.stagwifhood.fun|primary;🌐 stagwifhood.fun|https://stagwifhood.fun|danger"),                         // optional gif/image on each alert
   pollMs: Math.max(3000, parseInt(E("POLL_MS", "8000"), 10) || 8000),
   startBlock: parseInt(E("START_BLOCK", "0"), 10) || 0,
   tg: E("TELEGRAM_BOT_TOKEN"),
@@ -202,8 +202,31 @@ function buttons(a, clip) {
   for (const part of CFG.links.split(";")) {
     const [text, url, style] = part.split("|"); if (text && url) rows.push([{ text: text.trim(), url: url.trim(), ...(style ? { style: style.trim() } : {}) }]);
   }
-  if (clip) rows.push([{ text: "▶ Play Song", url: `https://records.stagwifhood.fun/listen/?s=${SLUGS[clip.n] || "money"}`, style: "success" }]);
   return { inline_keyboard: rows };
+}
+// A real Telegram music player under each alert: tap play in the chat, plays in the background, no web page.
+const AUDIO_IDS = {};
+async function sendSongReply(api, clip, replyTo) {
+  if (process.env.AUDIO_REPLY === "0") return;
+  const f = path.join(DIR, "audio", clip.n + ".mp3");
+  try {
+    let res;
+    if (AUDIO_IDS[clip.n]) {
+      res = await fetch(`${api}/sendAudio`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: CFG.tgChat, audio: AUDIO_IDS[clip.n], title: clip.title, performer: "Winslow Bankz · Stag House Records", reply_parameters: { message_id: replyTo }, disable_notification: true }) });
+    } else if (existsSync(f)) {
+      const fd = new FormData();
+      fd.append("chat_id", CFG.tgChat); fd.append("title", clip.title); fd.append("performer", "Winslow Bankz · Stag House Records");
+      fd.append("duration", "40"); fd.append("disable_notification", "true");
+      fd.append("reply_parameters", JSON.stringify({ message_id: replyTo }));
+      fd.append("audio", new Blob([readFileSync(f)], { type: "audio/mpeg" }), `${clip.title}.mp3`);
+      const tf = path.join(DIR, "thumbs", clip.n + ".jpg");
+      if (existsSync(tf)) fd.append("thumbnail", new Blob([readFileSync(tf)], { type: "image/jpeg" }), "cover.jpg");
+      res = await fetch(`${api}/sendAudio`, { method: "POST", body: fd });
+    } else return;
+    const j = await res.json();
+    if (j.ok) { const id = j.result?.audio?.file_id; if (id) AUDIO_IDS[clip.n] = id; } else log("tg audio err:", j.description);
+  } catch (e) { log("tg audio send err:", e.message); }
 }
 async function sendTelegram(a) {
   if (!CFG.tg || !CFG.tgChat) return;
@@ -249,7 +272,11 @@ async function sendTelegram(a) {
         res = await fetch(`${api}/sendVideo`, { method: "POST", body: fd });
       }
       const j = await res.json();
-      if (j.ok) { const fid = j.result?.video?.file_id; if (fid) { if (clip) VIDEO_IDS[clip.n] = fid; else VIDEO_ID = fid; } return; }
+      if (j.ok) {
+        const fid = j.result?.video?.file_id; if (fid) { if (clip) VIDEO_IDS[clip.n] = fid; else VIDEO_ID = fid; }
+        if (clip) await sendSongReply(api, clip, j.result.message_id);
+        return;
+      }
       log("tg video err:", j.description);
     }
     if (CFG.mediaUrl) {
