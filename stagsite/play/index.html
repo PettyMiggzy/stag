@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stag Shot — $STAG Archery</title>
+<meta name="description" content="Stag Shot: 3D rooftop archery. Hit the green candles, snipe the gold coins, dodge the red.">
+<link rel="icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+:root{--g:#39ff88;--r:#ff3b5c;--y:#ffd23f;--bg:#05080a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;height:100%;background:var(--bg);color:#eafff3;font-family:Impact,"Arial Black",system-ui,sans-serif;overflow:hidden;touch-action:none}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud{position:fixed;inset:0;pointer-events:none;display:none}
+.pill{position:absolute;top:12px;padding:8px 16px;background:#000a;border:1px solid #39ff8860;border-radius:10px;font-size:22px;letter-spacing:1px;text-shadow:0 0 12px #39ff88}
+#score{left:12px}#time{right:12px}#combo{left:50%;transform:translateX(-50%);color:var(--y);text-shadow:0 0 12px var(--y);opacity:0;transition:opacity .2s}
+#cross{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 10px #39ff88;left:50%;top:50%}
+#cross:after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:#fff;border-radius:50%}
+#pow{position:absolute;left:50%;bottom:28px;width:min(320px,70vw);height:14px;margin-left:calc(min(320px,70vw)/-2);background:#000a;border:1px solid #39ff8870;border-radius:8px;overflow:hidden}
+#pow i{display:block;height:100%;width:0;background:linear-gradient(90deg,#39ff88,#ffd23f,#ff3b5c)}
+#pop{position:absolute;left:0;top:0;font-size:28px;color:#fff;text-shadow:0 0 10px #000;transform:translate(-50%,-50%);opacity:0}
+.scr{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(#0a1c14cc,#02060ae6);padding:20px;z-index:5}
+.scr h1{font-size:clamp(44px,10vw,96px);margin:0;color:var(--g);text-shadow:0 0 30px var(--g),0 4px 0 #064;letter-spacing:3px;line-height:1}
+.scr h2{margin:6px 0 20px;font-weight:400;color:#bfe;font-size:clamp(14px,2.6vw,20px);letter-spacing:3px}
+.scr p{max-width:520px;color:#cfe;font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;margin:6px 0}
+button,.btn{font:inherit;font-size:24px;letter-spacing:2px;padding:14px 36px;margin:8px;border:0;border-radius:12px;background:var(--g);color:#012;cursor:pointer;box-shadow:0 0 24px #39ff8880;text-decoration:none;display:inline-block}
+.btn.alt{background:#0e2a1e;color:var(--g);border:1px solid var(--g);box-shadow:none;font-size:18px;padding:10px 24px}
+#bar{width:min(320px,70vw);height:8px;background:#123;border-radius:6px;overflow:hidden;margin-top:14px}#bar i{display:block;height:100%;width:0;background:var(--g)}
+#big{font-size:64px;color:var(--y)}
+.legend{display:flex;gap:18px;justify-content:center;margin:10px 0;font-family:system-ui,sans-serif;font-size:14px;flex-wrap:wrap}
+.legend b{color:var(--g)}.legend .r{color:var(--r)}.legend .y{color:var(--y)}
+#mute{position:absolute;right:12px;bottom:12px;pointer-events:auto;background:#000a;border:1px solid #39ff8860;color:#eafff3;font-size:16px;padding:6px 12px;box-shadow:none;margin:0}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="pill" id="score">0</div><div class="pill" id="combo">x1</div><div class="pill" id="time">60</div>
+  <div id="cross"></div><div id="pow"><i></i></div><div id="pop"></div>
+  <button id="mute">SOUND ON</button>
+</div>
+<div class="scr" id="load"><h1>STAG SHOT</h1><h2>LOADING THE RANGE</h2><div id="bar"><i></i></div></div>
+<div class="scr" id="menu" style="display:none"><h1>STAG SHOT</h1><h2>$STAG ROOFTOP ARCHERY</h2>
+<p>Move to aim. Hold to draw. Release to loose. Hit the candles before the clock runs out.</p>
+<div class="legend"><span><b>GREEN</b> +10</span><span class="y">GOLD COIN +50 &amp; +2s</span><span class="r">RED −15</span></div>
+<button id="play">PLAY</button><div id="best" style="font-family:system-ui;color:#9fc"></div></div>
+<div class="scr" id="end" style="display:none"><h2>TIME</h2><div id="big">0</div><p id="endmsg"></p>
+<div><button id="again">AGAIN</button></div>
+<div><a class="btn alt" id="share" target="_blank" rel="noopener">SHARE SCORE</a><a class="btn alt" href="https://t.me/StagWifHood" target="_blank" rel="noopener">JOIN THE HERD</a></div>
+<p style="font-size:12px;opacity:.6">Just a game. Scores are for bragging rights only.</p></div>
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
+<script type="module" src="./game.js"></script>
+</body></html>

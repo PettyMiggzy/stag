@@ -35,7 +35,7 @@ def page(title,desc,body,path):
 <title>{title}</title><meta name="description" content="{desc}"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}"><meta property="og:image" content="https://stagwifhood.fun/assets/poster.webp"><meta name="theme-color" content="#050806"><link rel="icon" href="/assets/badge.webp">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
 <style>{base}{extra}</style>
-<header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>$STAG</span></a><nav><a href="/#ecosystem">Ecosystem</a><a href="/stagr/">StagR</a><a href="https://records.stagwifhood.fun">Records</a><a class="btn solid" href="{TG}" rel="noopener">Join Telegram</a></nav></div></header>
+<header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>$STAG</span></a><nav><a href="/#ecosystem">Ecosystem</a><a href="/stagr/">StagR</a><a href="/play/">Play</a><a href="https://records.stagwifhood.fun">Records</a><a class="btn solid" href="{TG}" rel="noopener">Join Telegram</a></nav></div></header>
 {body}
 <footer><div class="in"><span>© $STAG · Stag Wif Hood</span><a href="/stagr/">StagR CRM</a><a href="https://records.stagwifhood.fun">Stag House Records</a><a href="{TG}" rel="noopener">Telegram</a></div><div class="in"><p class="fine">$STAG is a community token. Nothing here is financial advice or a promise of returns. Crypto is volatile and you can lose everything you put in. Some music on Stag House Records is made with AI.</p></div></footer>
 </html>'''
