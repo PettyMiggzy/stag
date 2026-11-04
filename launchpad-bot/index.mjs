@@ -199,8 +199,8 @@ try { CLIPS = readFileSync(path.join(DIR, "clips", "titles.txt"), "utf8").split(
 const SLUGS = ["","backongo","crown","heartbreak","money","nomellames","ridinslow","walkfire","whitetee"];
 function buttons(a, clip) {
   const rows = [[
-    { text: "📈 Chart", url: CFG.chartUrl || a.chartUrl, style: "primary" },
-    { text: "🟩 Buy $STAG", url: CFG.buyUrl || a.chartUrl, style: "success" },
+    { text: "Chart", url: CFG.chartUrl || a.chartUrl, style: "primary", ...(process.env.EMOJI_COIN ? { icon_custom_emoji_id: process.env.EMOJI_COIN } : {}) },
+    { text: "Buy $STAG", url: CFG.buyUrl || a.chartUrl, style: "success", ...(process.env.EMOJI_STAG ? { icon_custom_emoji_id: process.env.EMOJI_STAG } : {}) },
   ]];
   for (const part of CFG.links.split(";")) {
     const [text, url, style] = part.split("|"); if (text && url) rows.push([{ text: text.trim(), url: url.trim(), ...(style ? { style: style.trim() } : {}) }]);
@@ -341,12 +341,14 @@ async function announce(raw) {
 const CURVE_BUY = "0xec36bf571f136799e8dc0b0b8bea4b04d8bd3d43de838aab0d5fc21d4cbfc455";
 const BLOCKS_PER_DAY = parseInt(E("BLOCKS_PER_DAY", "830000"), 10);
 const STATS_FROM = parseInt(E("STATS_FROM_BLOCK", "105516351"), 10);
-const ST = { bal: new Map(), seen: new Set(), buys: [], firstPrice: 0 };
+const ST = { bal: new Map(), seen: new Set(), buys: [], firstPrice: 0, first: new Map(), out: new Map() };
 function ingestTransfer(lg) {
   const k = lg.transactionHash + ":" + lg.index; if (ST.seen.has(k)) return; ST.seen.add(k);
   const from = ("0x" + lg.topics[1].slice(-40)).toLowerCase(), to = ("0x" + lg.topics[2].slice(-40)).toLowerCase(), v = BigInt(lg.data);
   if (from !== "0x0000000000000000000000000000000000000000") ST.bal.set(from, (ST.bal.get(from) || 0n) - v);
   ST.bal.set(to, (ST.bal.get(to) || 0n) + v);
+  if (!ST.first.has(to)) ST.first.set(to, lg.blockNumber);
+  if (from !== CFG.pool && from !== "0x0000000000000000000000000000000000000000") ST.out.set(from, lg.blockNumber);
 }
 function ingestBuy(lg) {
   const k = "b" + lg.transactionHash + ":" + lg.index; if (ST.seen.has(k)) return; ST.seen.add(k);

@@ -7,6 +7,7 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 
 const $=id=>document.getElementById(id);
+try{const tw=window.Telegram&&window.Telegram.WebApp;if(tw){tw.ready();tw.expand();try{tw.disableVerticalSwipes&&tw.disableVerticalSwipes()}catch(e){}}}catch(e){}
 const canvas=$('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 let pr=Math.min(devicePixelRatio||1,2);renderer.setPixelRatio(pr);
@@ -303,6 +304,7 @@ function endGame(){
   $('endmsg').textContent=`${hits} hits from ${shots} arrows (${acc}% accuracy). ${isBest?'NEW BEST!':'Best: '+best}  ·  Your top 5: ${top.join(' · ')}`;
   const txt=encodeURIComponent(`I scored ${score} in Stag Shot — 3D rooftop archery by $STAG. Beat it:`);
   $('share').href=`https://twitter.com/intent/tweet?text=${txt}&url=${encodeURIComponent(location.href.split('?')[0])}`;
+  try{const tw=window.Telegram&&window.Telegram.WebApp;if(tw&&tw.initData){fetch('https://buybot.stagwifhood.fun/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tw.initData,score})}).then(r=>r.json()).then(j=>{if(j&&j.ok)$('endmsg').textContent+='  ·  Today\'s rank: #'+j.rank}).catch(()=>{})}}catch(e){}
   sfx.end();$('hud').style.display='none';$('end').style.display='flex';$('best').textContent=`BEST: ${best}`;
   fadeTo('victory',0.2,0,1,false);setTimeout(()=>{if(state==='end')fadeTo('idle',0.3)},1800);
 }
