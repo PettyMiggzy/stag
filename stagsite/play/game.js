@@ -169,7 +169,7 @@ function makeTarget(type){
   // neon halo ring on floor beneath
   const col=type==='green'?0x39ff88:type==='red'?0xff3b5c:0xffd23f;
   const ring=new THREE.Mesh(new THREE.TorusGeometry(1.5,0.07,12,48),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.8,fog:false}));ring.rotation.x=Math.PI/2;root.add(ring);
-  const l=new THREE.PointLight(col,type==='gold'?14:9,9,2);root.add(l);
+  const l=new THREE.PointLight(col,type==='gold'?5:4,7,2);root.add(l);
   root.userData={type,def:d,ring,model:m,light:l,age:0,life:7+Math.random()*4,state:'in',t:0,mv:null,flash:0};
   scene.add(root);return root;
 }
@@ -362,5 +362,5 @@ function frame(){
   if(useBloom)composer.render();else renderer.render(scene,camera);
 }
 boot().catch(e=>{console.error(e);$('load').querySelector('h2').textContent='LOAD FAILED — '+e.message});
-window.__g={get state(){return state},get score(){return score},aim,startGame,beginDraw,endDraw,targets,arrows,bones:()=>bones,pointer,setPose:(n)=>fadeTo(n),camera,scene,get power(){return power},setBloom:v=>useBloom=v};
+window.__g={endNow:()=>{timeLeft=0.01},get state(){return state},get score(){return score},aim,startGame,beginDraw,endDraw,targets,arrows,bones:()=>bones,pointer,setPose:(n)=>fadeTo(n),camera,scene,get power(){return power},setBloom:v=>useBloom=v};
 requestAnimationFrame(frame);
