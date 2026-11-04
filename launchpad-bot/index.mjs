@@ -213,7 +213,11 @@ async function sendTelegram(a) {
     a.emojis,
     a.priceUsd ? `Price <b>${usd(a.priceUsd)}</b>${a.mcapUsd ? ` · MC <b>${usd(a.mcapUsd)}</b>` : ""}` : "",
     holdLine,
-    a.soldPct != null ? `📊 Bought so far: <b>${fmt(a.soldPct, 1)}%</b> of supply\n${"▰".repeat(Math.round(a.soldPct / 10))}${"▱".repeat(10 - Math.round(a.soldPct / 10))}` : "",
+    a.bondEth != null ? (() => {
+      const goal = parseFloat(process.env.BOND_ETH || "4.2") || 4.2;
+      const pct = Math.max(0, Math.min(100, a.bondEth / goal * 100)); const f = Math.round(pct / 10);
+      return `🎯 Bonding: <b>${fmt(a.bondEth, 2)} / ${fmt(goal, 1)} ETH</b> (${fmt(pct, 1)}%)\n${"▰".repeat(f)}${"▱".repeat(10 - f)}`;
+    })() : "",
     `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a> · <a href="${a.txUrl}">Tx</a>`,
   ].filter(Boolean);
   const caption = lines.join("\n");
@@ -333,14 +337,11 @@ async function scan(fromBlock, toBlock) {
       const prior = holds - tokens;
       if (prior <= tokens * 0.001) isNew = true; else posPct = tokens / prior * 100;
     } catch {}
-    let soldPct = null;
-    try {
-      const pb = await token.balanceOf(CFG.pool);
-      const sup = Number(ethers.formatUnits(META.supply || 0n, META.decimals));
-      if (sup > 0) soldPct = Math.max(0, Math.min(100, (1 - Number(ethers.formatUnits(pb, META.decimals)) / sup) * 100));
-    } catch {}
+    // Pons bonding curve: the pool's ETH balance is the ETH raised so far; it graduates at BOND_ETH (4.2).
+    let bondEth = null;
+    try { bondEth = Number(ethers.formatEther(await provider.getBalance(CFG.pool))); } catch {}
     const px = tokens > 0 && eth > 0 && ETHUSD ? (eth / tokens) * ETHUSD : 0;
-    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, soldPct, tx: lg.transactionHash, block: lg.blockNumber });
+    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, bondEth, tx: lg.transactionHash, block: lg.blockNumber });
   }
 }
 
