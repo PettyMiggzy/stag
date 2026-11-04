@@ -11,7 +11,7 @@
 //
 //  No private keys. Read-only. Runs anywhere Node 18+ runs.
 // ============================================================
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -59,7 +59,10 @@ const CFG = {
   ethUsd: parseFloat(E("ETH_USD", "0")) || 0,      // optional static ETH price for $ display
   emojiStepEth: parseFloat(E("EMOJI_STEP_ETH", "0.02")) || 0.02,
   buyEmoji: E("BUY_EMOJI", "🟩"),
-  mediaUrl: E("MEDIA_URL"),                         // optional gif/image on each alert
+  mediaUrl: E("MEDIA_URL"),
+  videoFile: E("VIDEO_FILE", "buy.mp4"),
+  chartUrl: E("CHART_URL"), buyUrl: E("BUY_URL"),
+  links: E("EXTRA_BUTTONS", "Play Stag Shot|https://stagwifhood.fun/play/;Records|https://records.stagwifhood.fun;Join Telegram|https://t.me/StagWifHood"),                         // optional gif/image on each alert
   pollMs: Math.max(3000, parseInt(E("POLL_MS", "8000"), 10) || 8000),
   startBlock: parseInt(E("START_BLOCK", "0"), 10) || 0,
   tg: E("TELEGRAM_BOT_TOKEN"),
@@ -70,6 +73,7 @@ const CFG = {
 const STATE_FILE = path.join(DIR, ".state.json");
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ERC20 = [
+  "function balanceOf(address) view returns (uint256)",
   "function symbol() view returns (string)",
   "function name() view returns (string)",
   "function decimals() view returns (uint8)",
@@ -106,6 +110,15 @@ const provider = new ethers.JsonRpcProvider(CFG.rpcHttp, undefined, { staticNetw
 const token = new ethers.Contract(CFG.token, ERC20, provider);
 
 let META = { name: CFG.name, symbol: CFG.ticker, decimals: 18, supply: 0n };
+
+let ETHUSD = CFG.ethUsd;
+async function refreshEthUsd() {
+  try {
+    const r = await withTimeout(fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"), 8000, "price");
+    const j = await r.json(); if (j?.ethereum?.usd) ETHUSD = j.ethereum.usd;
+  } catch {}
+}
+setInterval(refreshEthUsd, 300000); refreshEthUsd();
 
 async function loadMeta() {
   try {
@@ -154,10 +167,10 @@ function buildAlert(b) {
   const steps = Math.max(1, Math.min(80, Math.floor((b.eth || 0) / CFG.emojiStepEth) || 1));
   const emojis = CFG.buyEmoji.repeat(steps);
   const priceEth = b.tokens > 0 && b.eth > 0 ? b.eth / b.tokens : 0;
-  const priceUsd = CFG.ethUsd && priceEth ? priceEth * CFG.ethUsd : 0;
+  const priceUsd = ETHUSD && priceEth ? priceEth * ETHUSD : 0;
   const supply = Number(ethers.formatUnits(META.supply || 0n, META.decimals));
   const mcapUsd = priceUsd && supply ? priceUsd * supply : 0;
-  const spentUsd = CFG.ethUsd && b.eth ? b.eth * CFG.ethUsd : 0;
+  const spentUsd = ETHUSD && b.eth ? b.eth * ETHUSD : 0;
 
   const txUrl = `${CFG.explorer}/tx/${b.tx}`;
   const buyerUrl = `${CFG.explorer}/address/${b.buyer}`;
@@ -171,29 +184,56 @@ function buildAlert(b) {
   };
 }
 
+let VIDEO_ID = null;
+function buttons(a) {
+  const rows = [[
+    { text: "📈 Chart", url: CFG.chartUrl || a.chartUrl },
+    { text: "🟩 Buy", url: CFG.buyUrl || a.chartUrl },
+  ]];
+  for (const part of CFG.links.split(";")) {
+    const [text, url] = part.split("|"); if (text && url) rows.push([{ text: text.trim(), url: url.trim() }]);
+  }
+  return { inline_keyboard: rows };
+}
 async function sendTelegram(a) {
   if (!CFG.tg || !CFG.tgChat) return;
+  const sym = esc(META.symbol);
+  const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
   const lines = [
+    `<b>$${sym} · BUY</b>`,
+    `💵 <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
+    `🪙 Got <b>${fmt(a.tokens, 0)}</b> ${sym}`,
     a.emojis,
-    `<b>$${esc(META.symbol)} BUY!</b>`,
-    `💵 ${fmt(a.eth, 4)} ETH${a.spentUsd ? ` (${usd(a.spentUsd)})` : ""}`,
-    `🪙 ${fmt(a.tokens, 0)} ${esc(META.symbol)}`,
-    `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a>`,
-    a.priceUsd ? `📈 ${usd(a.priceUsd)}${a.mcapUsd ? ` · MCap ${usd(a.mcapUsd)}` : ""}` : "",
-    `🔗 <a href="${a.txUrl}">Tx</a> · <a href="${a.chartUrl}">Buy</a>`,
+    a.priceUsd ? `Price <b>${usd(a.priceUsd)}</b>${a.mcapUsd ? ` · MC <b>${usd(a.mcapUsd)}</b>` : ""}` : "",
+    holdLine,
+    `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a> · <a href="${a.txUrl}">Tx</a>`,
   ].filter(Boolean);
-  const text = lines.join("\n");
+  const caption = lines.join("\n");
+  const api = `https://api.telegram.org/bot${CFG.tg}`;
+  const vfile = path.join(DIR, CFG.videoFile);
   try {
+    if (VIDEO_ID || existsSync(vfile)) {
+      let res;
+      if (VIDEO_ID) {
+        res = await fetch(`${api}/sendVideo`, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: CFG.tgChat, video: VIDEO_ID, caption, parse_mode: "HTML", reply_markup: buttons(a) }) });
+      } else {
+        const fd = new FormData();
+        fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML");
+        fd.append("reply_markup", JSON.stringify(buttons(a))); fd.append("supports_streaming", "true");
+        fd.append("video", new Blob([readFileSync(vfile)], { type: "video/mp4" }), "buy.mp4");
+        res = await fetch(`${api}/sendVideo`, { method: "POST", body: fd });
+      }
+      const j = await res.json();
+      if (j.ok) { VIDEO_ID = j.result?.video?.file_id || VIDEO_ID; return; }
+      log("tg video err:", j.description);
+    }
     if (CFG.mediaUrl) {
-      await fetch(`https://api.telegram.org/bot${CFG.tg}/sendPhoto`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: CFG.tgChat, photo: CFG.mediaUrl, caption: text, parse_mode: "HTML" }),
-      });
+      await fetch(`${api}/sendPhoto`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: CFG.tgChat, photo: CFG.mediaUrl, caption, parse_mode: "HTML", reply_markup: buttons(a) }) });
     } else {
-      await fetch(`https://api.telegram.org/bot${CFG.tg}/sendMessage`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: CFG.tgChat, text, parse_mode: "HTML", disable_web_page_preview: true }),
-      });
+      await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: buttons(a) }) });
     }
   } catch (e) { log("tg send err:", e.message); }
 }
@@ -278,7 +318,15 @@ async function scan(fromBlock, toBlock) {
     if (tokens <= 0) continue;
     const eth = await ethSpent(lg.transactionHash);
     if (CFG.minBuyEth && eth < CFG.minBuyEth) continue;
-    await announce({ buyer, tokens, eth, tx: lg.transactionHash, block: lg.blockNumber });
+    let holds = 0, posPct = 0, isNew = false;
+    try {
+      const bal = await token.balanceOf(buyer, { blockTag: lg.blockNumber });
+      holds = Number(ethers.formatUnits(bal, META.decimals));
+      const prior = holds - tokens;
+      if (prior <= tokens * 0.001) isNew = true; else posPct = tokens / prior * 100;
+    } catch {}
+    const px = tokens > 0 && eth > 0 && ETHUSD ? (eth / tokens) * ETHUSD : 0;
+    await announce({ buyer, tokens, eth, holds, posPct, isNew, holdsUsd: px * holds, tx: lg.transactionHash, block: lg.blockNumber });
   }
 }
 
