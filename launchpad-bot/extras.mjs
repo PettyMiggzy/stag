@@ -8,6 +8,7 @@ export function initExtras(X) {
   const api = `https://api.telegram.org/bot${CFG.tg}`;
   const chat = CFG.tgChat;
   const BOND = parseFloat(process.env.BOND_ETH || "4.2") || 4.2;
+  const BUY = CFG.buyUrl || `${CFG.launchpad}/${CFG.token}`;
   const BLOCKS_10M = Math.round(BLOCKS_PER_DAY / 144);
   const tgPost = (method, body) => fetch(`${api}/${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json()).catch((e) => ({ ok: false, description: e.message }));
   const sendText = (text, extra = {}) => tgPost("sendMessage", { chat_id: chat, text, parse_mode: "HTML", disable_web_page_preview: true, ...extra });
@@ -125,7 +126,12 @@ export function initExtras(X) {
         return reply(bal > 0 ? `👛 <b>${short(a)}</b>\nHolds <b>${fmt(bal, 0)}</b> $STAG (${usd(bal * m.priceUsd)})\nRank <b>#${rank}</b> of ${fmt(m.holders, 0)} holders` : `👛 ${short(a)} holds no $STAG yet.`);
       }
       if (cmd === "song") { const c = X.CLIPS(); if (!c.length) return; const k = c[Math.floor(Math.random() * c.length)]; return X.sendSong(msg.chat.id, k, msg.message_id); }
-      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip");
+      if (cmd === "ca" || cmd === "contract" || cmd === "address") return reply(`<b>$STAG contract (Robinhood Chain)</b>\n<code>${CFG.token}</code>\n<i>tap to copy</i>\n\n<a href="${CFG.explorer}/token/${CFG.token}">Explorer</a> · <a href="${BUY}">Buy on Pons</a>`);
+      if (cmd === "buy") return reply(`🟩 <b>Buy $STAG</b> on Pons (Robinhood Chain)\n${BUY}\n\nCA: <code>${CFG.token}</code>`, { reply_markup: { inline_keyboard: [[{ text: "🟩 Buy $STAG", url: BUY, style: "success" }]] } });
+      if (cmd === "chart") return reply(`📈 <b>$STAG chart</b>\n${BUY}`, { reply_markup: { inline_keyboard: [[{ text: "📈 Open chart", url: CFG.chartUrl || BUY, style: "primary" }]] } });
+      if (cmd === "links" || cmd === "socials" || cmd === "web") return reply(`<b>$STAG links</b>\n🟩 Buy: ${BUY}\n🌐 Site: https://stagwifhood.fun\n🏹 Game: https://stagwifhood.fun/play/\n🎵 Records: https://records.stagwifhood.fun\n💬 Telegram: https://t.me/StagWifHood\n\nCA: <code>${CFG.token}</code>`);
+      if (cmd === "game" || cmd === "play") return reply("🏹 <b>Stag Shot</b> – 3D rooftop archery\nhttps://stagwifhood.fun/play/");
+      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip");
     } catch (e) { log("cmd err:", e.message); }
   }
   async function pollCommands() {
