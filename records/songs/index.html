@@ -100,21 +100,21 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 </style>
 <header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>Stag House Records</span></a><nav><a href="/#listen">Listen</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
 <main class="wrap"><span class="eyebrow">Winslow Bankz · Robinhood Chain</span><h1 class="sec-h">Collect a <span class="gold">song</span></h1>
-<p class="sec-p" style="margin-bottom:6px">Each song is its own limited NFT. Paid in USDG, straight to the artist's wallet. Want everything? <a class="gold" href="/album/">Get the whole album for $24.99</a>.</p>
+<p class="sec-p" style="margin-bottom:6px">Each song is its own limited NFT. Paid in ETH on Robinhood Chain, straight to the artist's wallet. Want everything? <a class="gold" href="/album/">Get the whole album for $24.99</a>.</p>
 <div style="margin:14px 0 0"><button class="btn" id="conn" type="button">Connect wallet</button></div><div id="msg" role="status"></div>
 <div class="sg" id="list"></div>
-<p class="small">You need a wallet (MetaMask, Rabby or similar) with a little ETH for network fees and USDG on Robinhood Chain. Sales are final. A song NFT is a digital collectible and song access, not an investment. <span id="ca"></span></p></main>
+<p class="small">You need a wallet (MetaMask, Rabby or similar) with enough ETH on Robinhood Chain for the price shown plus a little for network fees. Sales are final. A song NFT is a digital collectible and song access, not an investment. <span id="ca"></span></p></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <script src="/songs/config.js"></script>
 <script>
 (function(){
   var C=window.SONGS||{},$=function(i){return document.getElementById(i)},msg=$('msg'),list=$('list');
   var CHAIN={chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']};
-  var ABI=['function songCount() view returns (uint256)','function songInfo(uint256) view returns (uint256 price,uint256 cap,uint256 minted,bool open,bool frozen,string metadataURI)','function mint(uint256)','function balanceOf(address,uint256) view returns (uint256)'];
-  var ERC20=['function balanceOf(address) view returns (uint256)','function allowance(address,address) view returns (uint256)','function approve(address,uint256) returns (bool)'];
+  var ABI=['function songCount() view returns (uint256)','function songInfo(uint256) view returns (uint256 price,uint256 cap,uint256 minted,bool open,bool frozen,string metadataURI)','function mint(uint256) payable','function balanceOf(address,uint256) view returns (uint256)'];
   var acct=null,info={},busy=false,songs=C.songs||[];
   function say(t,k){msg.textContent=t||'';msg.className=k||''}
-  function usd(v){return '$'+(Number(v)/1e6).toFixed(2)}
+  var ethUsd=0;fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd').then(function(r){return r.json()}).then(function(j){ethUsd=j.ethereum.usd||0;draw()}).catch(function(){});
+  function usd(v){var e=Number(ethers.formatEther(v)),t=(e<0.01?e.toFixed(5):e.toFixed(4)).replace(/0+$/,'').replace(/\.$/,'')+' ETH';return ethUsd?t+' (about $'+(e*ethUsd).toFixed(2)+')':t}
   function draw(){
     list.innerHTML='';
     songs.forEach(function(s){
@@ -124,7 +124,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
       row.querySelector('b').textContent=s.title;row.querySelector('span').textContent=sub;
       var b=document.createElement('button');b.className='btn solid';b.type='button';
       var live=C.contract&&i&&i.open&&i.minted<i.cap;
-      b.textContent=live?('Buy '+usd(i.price)):(C.contract?'Unavailable':'Telegram');b.disabled=C.contract&&!live||busy;
+      b.textContent=live?'Buy':(C.contract?'Unavailable':'Telegram');b.disabled=C.contract&&!live||busy;
       b.onclick=function(){if(!C.contract){location.href='https://t.me/StagWifHood';return}buy(s.id)};
       row.appendChild(b);list.appendChild(row)})
   }
@@ -149,11 +149,10 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
     if(!acct){try{await connect()}catch(e){say((e&&e.message)||'Could not connect','err');return}}
     busy=true;draw();
     try{var prov=new ethers.BrowserProvider(window.ethereum);if(Number((await prov.getNetwork()).chainId)!==4663){await ensureChain();prov=new ethers.BrowserProvider(window.ethereum)}
-      var s=await prov.getSigner(),nft=new ethers.Contract(C.contract,ABI,s),usdg=new ethers.Contract(C.usdg,ERC20,s),me=await s.getAddress();
+      var s=await prov.getSigner(),nft=new ethers.Contract(C.contract,ABI,s),me=await s.getAddress();
       var r=await nft.songInfo(id),price=r[0];if(!r[3])throw new Error('This song is not open yet.');if(r[2]>=r[1])throw new Error('Sold out.');
-      if((await usdg.balanceOf(me))<price)throw new Error('You need '+usd(price)+' of USDG on Robinhood Chain in this wallet.');
-      if((await usdg.allowance(me,C.contract))<price){say('Step 1 of 2: approve '+usd(price)+' USDG in your wallet…');await (await usdg.approve(C.contract,price)).wait()}
-      say('Step 2 of 2: confirm the purchase in your wallet…');var rc=await (await nft.mint(id)).wait();
+      if((await prov.getBalance(me))<price)throw new Error('You need '+usd(price)+' plus a little for fees in this wallet on Robinhood Chain.');
+      say('Confirm the purchase in your wallet…');var rc=await (await nft.mint(id,{value:price})).wait();
       say('Done. You own this song NFT. Tx: '+rc.hash,'ok');await readAll()}
     catch(e){var m=(e&&(e.shortMessage||e.reason||e.message))||'Something went wrong';if(/user rejected|denied/i.test(m))m='Cancelled in your wallet. Nothing was charged.';say(m,'err')}
     busy=false;draw()

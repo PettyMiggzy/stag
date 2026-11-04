@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 import {Test} from "forge-std/Test.sol";
-import {HoodRichAlbum} from "../src/HoodRichAlbum.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {HoodRichSongs} from "../src/HoodRichSongs.sol";
 
-/// Runs the sale against the REAL USDG on Robinhood Chain (fork of mainnet).
+/// Mainnet fork: pays Winslow's real wallet (a smart-account wallet) in real Robinhood Chain ETH, through the catalog.
 contract ForkTest is Test {
-    address constant USDG = 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168;
-    address payout = 0x72938Daaf3c2Fa4bEf722E1263a5766755788392;
-    address owner = address(0xA11CE); address bob = address(0xB0B);
+    address constant WINSLOW = 0xC3e89fC7F9d3594DE794EA4C60E5E4D7d59AB055;
+    address constant OWNER = 0x72938Daaf3c2Fa4bEf722E1263a5766755788392;
+    address bob = address(0xB0B);
 
-    function test_realUsdgSale() public {
-        HoodRichAlbum nft = new HoodRichAlbum(USDG, payout, 24_990_000, 100, "https://records.stagwifhood.fun/album/meta.json", owner);
-        deal(USDG, bob, 100e6);
-        assertEq(IERC20(USDG).balanceOf(bob), 100e6, "deal failed for this token");
-        vm.prank(owner); nft.setPaused(false);
-        uint256 before = IERC20(USDG).balanceOf(payout);
-        vm.startPrank(bob); IERC20(USDG).approve(address(nft), 24_990_000); nft.mint(); vm.stopPrank();
-        assertEq(IERC20(USDG).balanceOf(payout) - before, 24_990_000);
-        assertEq(IERC20(USDG).balanceOf(address(nft)), 0);
-        assertEq(nft.ownerOf(1), bob);
-        assertEq(IERC20(USDG).balanceOf(bob), 100e6 - 24_990_000);
+    function test_catalogPaysWinslowInEth() public {
+        HoodRichSongs c = new HoodRichSongs(address(this), OWNER);
+        c.addSong(0.0022 ether, 100, WINSLOW, 2000, "song");
+        c.addSong(0.011 ether, 100, WINSLOW, 2000, "album");
+        uint256[] memory ids = new uint256[](2); ids[0] = 1; ids[1] = 2; c.setOpenMany(ids, true);
+        vm.deal(bob, 1 ether); uint256 before = WINSLOW.balance; uint256 ownerBefore = OWNER.balance;
+        vm.prank(bob); c.mint{value: 0.0022 ether}(1);
+        vm.prank(bob); c.mint{value: 0.011 ether}(2);
+        // 20% to the label wallet (the owner wallet), 80% to Winslow
+        assertEq(WINSLOW.balance - before, 0.01056 ether, "Winslow share wrong");
+        assertEq(OWNER.balance - ownerBefore, 0.00264 ether, "label share wrong"); assertEq(address(c).balance, 0);
+        assertEq(c.balanceOf(bob, 1), 1); assertEq(c.balanceOf(bob, 2), 1);
     }
 }

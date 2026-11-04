@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Hood Rich Album | Stag House Records</title><meta name="description" content="One NFT unlocks the entire Hood Rich album by Winslow Bankz. $24.99, only 100 copies.">
+<title>Hood Rich Album | Stag House Records</title><meta name="description" content="One NFT unlocks the entire Hood Rich album by Winslow Bankz. Paid in ETH on Robinhood Chain, only 100 copies.">
 <meta property="og:title" content="Hood Rich Album | Stag House Records"><meta property="og:image" content="https://records.stagwifhood.fun/assets/hood-rich.webp"><meta name="theme-color" content="#050806">
 <link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
@@ -102,11 +102,11 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 <div class="cover"><img src="/assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" width="1000" height="1000"></div>
 <div><span class="eyebrow">Digital album · Robinhood Chain</span><h1 class="sec-h">Hood <span class="gold">Rich</span></h1>
 <p class="sec-p" style="margin-bottom:12px">One NFT unlocks the entire album by Winslow Bankz. More tracks are being added.</p>
-<div class="price">$24.99</div><div class="cnt" id="cnt">Loading…</div><div class="bar2"><b id="fill"></b></div>
-<ul class="list"><li>The full Hood Rich album, now and as new tracks are added</li><li>Only 100 copies will ever exist</li><li>Paid in USDG, straight to the artist's wallet</li></ul>
+<div class="price" id="price">…</div><div class="small" id="usdnote" style="margin:0 0 10px"></div><div class="cnt" id="cnt">Loading…</div><div class="bar2"><b id="fill"></b></div>
+<ul class="list"><li>The full Hood Rich album, now and as new tracks are added</li><li>Only 100 copies will ever exist</li><li>Paid in ETH on Robinhood Chain, straight to the artist's wallet</li></ul>
 <div style="display:flex;flex-wrap:wrap;gap:12px"><button class="btn solid" id="buy" type="button" disabled>Connect wallet</button></div>
 <div id="msg" role="status"></div>
-<p class="small">You need a wallet (MetaMask, Rabby or similar) with a little ETH for network fees and $24.99 of USDG on Robinhood Chain. The sale is final and the NFT is a digital collectible and album access, not an investment. <span id="ca"></span></p>
+<p class="small">You need a wallet (MetaMask, Rabby or similar) with enough ETH on Robinhood Chain for the price shown plus a little for network fees. The sale is final and the NFT is a digital collectible and album access, not an investment. <span id="ca"></span></p>
 </div></div></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <script src="/album/config.js"></script>
@@ -114,23 +114,23 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 (function(){
   var C=window.ALBUM||{},$=function(i){return document.getElementById(i)},btn=$('buy'),msg=$('msg');
   var CHAIN={chainId:'0x'+(4663).toString(16),chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']};
-  var NFT_ABI=['function price() view returns (uint256)','function maxSupply() view returns (uint256)','function totalSupply() view returns (uint256)','function paused() view returns (bool)','function mint() returns (uint256)','function balanceOf(address) view returns (uint256)','event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)'];
-  var ERC20_ABI=['function balanceOf(address) view returns (uint256)','function allowance(address,address) view returns (uint256)','function approve(address,uint256) returns (bool)'];
+  var ID=C.id||1,NFT_ABI=['function songInfo(uint256) view returns (uint256 price,uint256 cap,uint256 minted,bool open,bool frozen,string metadataURI)','function mint(uint256) payable','function balanceOf(address,uint256) view returns (uint256)'];
   var state={price:null,max:null,sold:null,paused:true,acct:null,busy:false};
   function say(t,k){msg.textContent=t||'';msg.className=k||''}
-  function fmt(v){return (Number(v)/1e6).toFixed(2)}
+  function fmt(v){var n=Number(ethers.formatEther(v));return (n<0.01?n.toFixed(5):n.toFixed(4)).replace(/0+$/,'').replace(/\.$/,'')+' ETH'}
+  async function usdNote(){try{var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'),j=await r.json(),u=j.ethereum.usd;if(u&&state.price!=null)$('usdnote').textContent='About $'+(Number(ethers.formatEther(state.price))*u).toFixed(2)+' at today\u2019s ETH price'}catch(e){}}
   function render(){
-    if(!C.contract){$('cnt').textContent='Mint opens soon';btn.textContent='Get the drop in Telegram';btn.disabled=false;btn.onclick=function(){location.href='https://t.me/StagWifHood'};return}
+    if(!C.contract){$('price').textContent='Soon';$('cnt').textContent='Mint opens soon';btn.textContent='Get the drop in Telegram';btn.disabled=false;btn.onclick=function(){location.href='https://t.me/StagWifHood'};return}
     if(state.sold!=null){$('cnt').textContent=state.sold+' of '+state.max+' minted';$('fill').style.width=Math.min(100,state.sold/state.max*100)+'%'}
     if(state.sold!=null&&state.sold>=state.max){btn.textContent='Sold out';btn.disabled=true;return}
     if(state.paused){btn.textContent=state.acct?'Mint not open yet':'Connect wallet';btn.disabled=!!state.acct&&true;if(state.acct)say('The sale is not open yet. Watch Telegram for the mint time.');return}
-    btn.disabled=state.busy;btn.textContent=state.busy?'Working…':(state.acct?'Buy the album · $'+fmt(state.price):'Connect wallet')
+    btn.disabled=state.busy;btn.textContent=state.busy?'Working…':(state.acct?'Buy the album · '+fmt(state.price):'Connect wallet')
   }
   async function readState(){
     if(!C.contract||!window.ethers)return;
     try{var p=new ethers.JsonRpcProvider(C.rpc||CHAIN.rpcUrls[0],4663,{staticNetwork:true}),n=new ethers.Contract(C.contract,NFT_ABI,p);
-      var r=await Promise.all([n.price(),n.maxSupply(),n.totalSupply(),n.paused()]);
-      state.price=r[0];state.max=Number(r[1]);state.sold=Number(r[2]);state.paused=r[3];
+      var r=await n.songInfo(ID);
+      state.price=r[0];state.max=Number(r[1]);state.sold=Number(r[2]);state.paused=!r[3];$('price').textContent=fmt(r[0]);usdNote();
       $('ca').innerHTML='Contract: <a href="'+CHAIN.blockExplorerUrls[0]+'/address/'+C.contract+'" target="_blank" rel="noopener">'+C.contract.slice(0,6)+'…'+C.contract.slice(-4)+'</a>'}
     catch(e){say('Could not read the sale right now. Try again in a minute.','err')}
     render()
@@ -148,15 +148,14 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
     try{
       var prov=new ethers.BrowserProvider(window.ethereum),net=await prov.getNetwork();
       if(Number(net.chainId)!==4663){await ensureChain();prov=new ethers.BrowserProvider(window.ethereum)}
-      var s=await prov.getSigner(),nft=new ethers.Contract(C.contract,NFT_ABI,s),usdg=new ethers.Contract(C.usdg,ERC20_ABI,s);
-      var price=await nft.price(),me=await s.getAddress();
-      if((await nft.paused()))throw new Error('The sale is not open yet.');
-      if((await usdg.balanceOf(me))<price)throw new Error('You need $'+fmt(price)+' of USDG on Robinhood Chain in this wallet.');
-      if((await usdg.allowance(me,C.contract))<price){say('Step 1 of 2: approve $'+fmt(price)+' USDG in your wallet…');var t1=await usdg.approve(C.contract,price);await t1.wait()}
-      say('Step 2 of 2: confirm the purchase in your wallet…');
-      var t2=await nft.mint(),rc=await t2.wait(),id='';
-      for(var l of rc.logs){if(l.address.toLowerCase()!==C.contract.toLowerCase())continue;try{var pl=nft.interface.parseLog(l);if(pl&&pl.name==='Transfer')id=pl.args[2].toString()}catch(e){}}
-      say('Done. You own Hood Rich album pass'+(id?' #'+id:'')+'. Tx: '+rc.hash,'ok');
+      var s=await prov.getSigner(),nft=new ethers.Contract(C.contract,NFT_ABI,s);
+      var inf=await nft.songInfo(ID),price=inf[0],me=await s.getAddress();
+      if(!inf[3])throw new Error('The sale is not open yet.');
+      if(inf[2]>=inf[1])throw new Error('Sold out.');
+      if((await prov.getBalance(me))<price)throw new Error('You need '+fmt(price)+' plus a little for fees in this wallet on Robinhood Chain.');
+      say('Confirm the purchase in your wallet…');
+      var t2=await nft.mint(ID,{value:price}),rc=await t2.wait(),id='';
+      say('Done. You own the Hood Rich album pass. Tx: '+rc.hash,'ok');
       await readState()
     }catch(e){var m=(e&&(e.shortMessage||e.reason||e.message))||'Something went wrong';if(/user rejected|denied/i.test(m))m='Cancelled in your wallet. Nothing was charged.';say(m,'err')}
     state.busy=false;render()
