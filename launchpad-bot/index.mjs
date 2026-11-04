@@ -62,7 +62,7 @@ const CFG = {
   mediaUrl: E("MEDIA_URL"),
   videoFile: E("VIDEO_FILE", "buy.mp4"),
   chartUrl: E("CHART_URL"), buyUrl: E("BUY_URL"),
-  links: E("EXTRA_BUTTONS", "🏹 Play Stag Shot|https://stagwifhood.fun/play/|success;🎵 Stag House Records|https://records.stagwifhood.fun|primary;🌐 stagwifhood.fun|https://stagwifhood.fun|danger"),                         // optional gif/image on each alert
+  links: E("EXTRA_BUTTONS", "🎵 Stag House Records|https://records.stagwifhood.fun|primary;🌐 stagwifhood.fun|https://stagwifhood.fun|danger"),                         // optional gif/image on each alert
   pollMs: Math.max(3000, parseInt(E("POLL_MS", "8000"), 10) || 8000),
   startBlock: parseInt(E("START_BLOCK", "0"), 10) || 0,
   tg: E("TELEGRAM_BOT_TOKEN"),
@@ -193,7 +193,8 @@ let VIDEO_ID = null;
 const VIDEO_IDS = {};
 let CLIPS = []; let CLIP_N = Math.floor(Math.random() * 8);
 try { CLIPS = readFileSync(path.join(DIR, "clips", "titles.txt"), "utf8").split("\n").filter(Boolean).map((l) => { const [n, ...t] = l.split("|"); return { n, title: t.join("|") }; }); } catch {}
-function buttons(a) {
+const SLUGS = ["","backongo","crown","heartbreak","money","nomellames","ridinslow","walkfire","whitetee"];
+function buttons(a, clip) {
   const rows = [[
     { text: "📈 Chart", url: CFG.chartUrl || a.chartUrl, style: "primary" },
     { text: "🟩 Buy $STAG", url: CFG.buyUrl || a.chartUrl, style: "success" },
@@ -201,6 +202,7 @@ function buttons(a) {
   for (const part of CFG.links.split(";")) {
     const [text, url, style] = part.split("|"); if (text && url) rows.push([{ text: text.trim(), url: url.trim(), ...(style ? { style: style.trim() } : {}) }]);
   }
+  if (clip) rows.push([{ text: "▶ Play Song", url: `https://records.stagwifhood.fun/listen/?s=${SLUGS[clip.n] || "money"}`, style: "success" }]);
   return { inline_keyboard: rows };
 }
 async function sendTelegram(a) {
@@ -238,11 +240,11 @@ async function sendTelegram(a) {
       let res;
       if (vid) {
         res = await fetch(`${api}/sendVideo`, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: CFG.tgChat, video: vid, caption, parse_mode: "HTML", reply_markup: buttons(a) }) });
+          body: JSON.stringify({ chat_id: CFG.tgChat, video: vid, caption, parse_mode: "HTML", reply_markup: buttons(a, clip) }) });
       } else {
         const fd = new FormData();
         fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML");
-        fd.append("reply_markup", JSON.stringify(buttons(a))); fd.append("supports_streaming", "true");
+        fd.append("reply_markup", JSON.stringify(buttons(a, clip))); fd.append("supports_streaming", "true");
         fd.append("video", new Blob([readFileSync(vfile)], { type: "video/mp4" }), "buy.mp4");
         res = await fetch(`${api}/sendVideo`, { method: "POST", body: fd });
       }
@@ -252,10 +254,10 @@ async function sendTelegram(a) {
     }
     if (CFG.mediaUrl) {
       await fetch(`${api}/sendPhoto`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: CFG.tgChat, photo: CFG.mediaUrl, caption, parse_mode: "HTML", reply_markup: buttons(a) }) });
+        body: JSON.stringify({ chat_id: CFG.tgChat, photo: CFG.mediaUrl, caption, parse_mode: "HTML", reply_markup: buttons(a, clip) }) });
     } else {
       await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: buttons(a) }) });
+        body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: buttons(a, clip) }) });
     }
   } catch (e) { log("tg send err:", e.message); }
 }

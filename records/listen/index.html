@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Listen | Stag House Records</title><meta name="description" content="Press play. Winslow Bankz on Stag House Records.">
+<meta name="theme-color" content="#050806"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#050806;color:#e9f2e5;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px;background:radial-gradient(900px 500px at 50% 0,#0f2a18,#050806 70%)}
+.card{width:min(440px,100%);text-align:center}
+.cover{width:100%;aspect-ratio:1;border-radius:18px;object-fit:cover;box-shadow:0 0 60px #39ff1440,0 20px 50px #000;border:1px solid #1d3022;background:#0a110c}
+.eye{font:700 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.24em;color:#39ff14;margin:22px 0 8px;text-transform:uppercase}
+h1{font-size:clamp(26px,7vw,36px);margin:0 0 4px;line-height:1.1}
+.by{color:#9bb197;margin:0 0 18px}
+audio{width:100%;margin:6px 0 14px;border-radius:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.btn{display:inline-block;padding:13px 20px;border-radius:12px;font-weight:700;text-decoration:none;color:#021;background:#39ff14;border:0;cursor:pointer;font-size:16px}
+.btn.alt{background:#0e1810;color:#39ff14;border:1px solid #1f8f0c}
+.big{width:100%;padding:18px;font-size:20px;margin-bottom:10px}
+small{display:block;margin-top:18px;color:#6f8a6c}
+</style>
+<div class="card">
+  <img class="cover" id="cover" alt="">
+  <div class="eye">Stag House Records · Now playing</div>
+  <h1 id="title">Loading…</h1>
+  <p class="by">Winslow Bankz</p>
+  <button class="btn big" id="play">▶ Play</button>
+  <audio id="au" controls preload="auto" playsinline></audio>
+  <div class="row">
+    <button class="btn alt" id="next">Next track ▶▶</button>
+    <a class="btn alt" href="/songs/">Collect this song</a>
+    <a class="btn alt" href="https://stagwifhood.fun/play/">🏹 Stag Shot</a>
+  </div>
+  <small>Paid in Robinhood Chain ETH. Not financial advice.</small>
+</div>
+<script>
+var T={backongo:'Back On Go',crown:'Crown Too Heavy',heartbreak:'First Heartbreak at School (Remix)',money:'Money on My Mind',nomellames:'No Me Llames',ridinslow:"Still Ridin' Slow",walkfire:'Walk Me Through the Fire',whitetee:'Fresh Cut, White Tee'};
+var C={crown:1,heartbreak:1,money:1,nomellames:1,whitetee:1};
+var keys=Object.keys(T);var q=new URLSearchParams(location.search).get('s');var i=Math.max(0,keys.indexOf(q));
+var au=document.getElementById('au'),cv=document.getElementById('cover');
+function load(){var k=keys[i];document.getElementById('title').textContent=T[k];document.title=T[k]+' | Stag House Records';
+  cv.src=C[k]?'/assets/covers/'+k+'.jpg':'/assets/hood-rich.webp';au.src='/assets/audio/'+k+'.mp3';}
+function go(){var p=au.play();if(p&&p.catch)p.catch(function(){});}
+document.getElementById('play').onclick=function(){go();this.style.display='none'};
+document.getElementById('next').onclick=function(){i=(i+1)%keys.length;load();go();document.getElementById('play').style.display='none'};
+au.addEventListener('ended',function(){i=(i+1)%keys.length;load();go()});
+load();au.addEventListener('playing',function(){document.getElementById('play').style.display='none'});
+go();
+</script>
+</html>
