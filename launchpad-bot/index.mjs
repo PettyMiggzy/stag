@@ -190,6 +190,9 @@ function buildAlert(b) {
 }
 
 let VIDEO_ID = null;
+const VIDEO_IDS = {};
+let CLIPS = []; let CLIP_N = Math.floor(Math.random() * 8);
+try { CLIPS = readFileSync(path.join(DIR, "clips", "titles.txt"), "utf8").split("\n").filter(Boolean).map((l) => { const [n, ...t] = l.split("|"); return { n, title: t.join("|") }; }); } catch {}
 function buttons(a) {
   const rows = [[
     { text: "📈 Chart", url: CFG.chartUrl || a.chartUrl, style: "primary" },
@@ -223,15 +226,19 @@ async function sendTelegram(a) {
     a.st ? `👥 <b>${fmt(a.st.holderCount, 0)}</b> holders` : "",
     `👤 <a href="${a.buyerUrl}">${short(a.buyer)}</a> · <a href="${a.txUrl}">Tx</a>`,
   ].filter(Boolean);
+  // rotate through the album: each buy plays a different Winslow Bankz clip
+  let clip = null;
+  if (CLIPS.length) { clip = CLIPS[CLIP_N % CLIPS.length]; CLIP_N++; lines.splice(lines.length - 1, 0, `🎵 Now playing: <b>${esc(clip.title)}</b> · Winslow Bankz`); }
   const caption = lines.join("\n");
   const api = `https://api.telegram.org/bot${CFG.tg}`;
-  const vfile = path.join(DIR, CFG.videoFile);
+  const vfile = clip ? path.join(DIR, "clips", clip.n + ".mp4") : path.join(DIR, CFG.videoFile);
+  const vid = clip ? VIDEO_IDS[clip.n] : VIDEO_ID;
   try {
-    if (VIDEO_ID || existsSync(vfile)) {
+    if (vid || existsSync(vfile)) {
       let res;
-      if (VIDEO_ID) {
+      if (vid) {
         res = await fetch(`${api}/sendVideo`, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: CFG.tgChat, video: VIDEO_ID, caption, parse_mode: "HTML", reply_markup: buttons(a) }) });
+          body: JSON.stringify({ chat_id: CFG.tgChat, video: vid, caption, parse_mode: "HTML", reply_markup: buttons(a) }) });
       } else {
         const fd = new FormData();
         fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML");
@@ -240,7 +247,7 @@ async function sendTelegram(a) {
         res = await fetch(`${api}/sendVideo`, { method: "POST", body: fd });
       }
       const j = await res.json();
-      if (j.ok) { VIDEO_ID = j.result?.video?.file_id || VIDEO_ID; return; }
+      if (j.ok) { const fid = j.result?.video?.file_id; if (fid) { if (clip) VIDEO_IDS[clip.n] = fid; else VIDEO_ID = fid; } return; }
       log("tg video err:", j.description);
     }
     if (CFG.mediaUrl) {
