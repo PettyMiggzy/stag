@@ -141,7 +141,7 @@ export function initExtras(X) {
   let dashId = 0;
   async function updateDashboard() {
     try {
-      const text = marketText(await market(), "$STAG · LIVE DASHBOARD") + `\n\n<i>updates every minute</i>`;
+      const text = marketText(await market(), "$STAG · LIVE DASHBOARD") + `\n\n<i>updates every hour</i>`;
       if (!dashId) {
         const c = await tgPost("getChat", { chat_id: chat });
         const pm = c.result?.pinned_message; if (pm?.from?.is_bot && pm.text?.includes("LIVE DASHBOARD")) dashId = pm.message_id;
@@ -184,7 +184,7 @@ export function initExtras(X) {
   async function start(head) {
     await prefetchDay(head);
     if (process.env.COMMANDS !== "0") pollCommands();
-    updateDashboard(); setInterval(updateDashboard, 60000);
+    updateDashboard(); setInterval(updateDashboard, 3600000);
     watchMilestones(); setInterval(watchMilestones, 30000);
     setInterval(dailyCheck, 60000);
     log("extras ready: commands, dashboard, milestones, leaderboard");
