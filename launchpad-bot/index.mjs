@@ -62,7 +62,7 @@ const CFG = {
   mediaUrl: E("MEDIA_URL"),
   videoFile: E("VIDEO_FILE", "buy.mp4"),
   chartUrl: E("CHART_URL"), buyUrl: E("BUY_URL"),
-  links: E("EXTRA_BUTTONS", "Play Stag Shot|https://stagwifhood.fun/play/;Records|https://records.stagwifhood.fun;Join Telegram|https://t.me/StagWifHood"),                         // optional gif/image on each alert
+  links: E("EXTRA_BUTTONS", "🏹 Play Stag Shot|https://stagwifhood.fun/play/|success;🎵 Stag House Records|https://records.stagwifhood.fun|primary;🌐 stagwifhood.fun|https://stagwifhood.fun|danger"),                         // optional gif/image on each alert
   pollMs: Math.max(3000, parseInt(E("POLL_MS", "8000"), 10) || 8000),
   startBlock: parseInt(E("START_BLOCK", "0"), 10) || 0,
   tg: E("TELEGRAM_BOT_TOKEN"),
@@ -187,11 +187,11 @@ function buildAlert(b) {
 let VIDEO_ID = null;
 function buttons(a) {
   const rows = [[
-    { text: "📈 Chart", url: CFG.chartUrl || a.chartUrl },
-    { text: "🟩 Buy", url: CFG.buyUrl || a.chartUrl },
+    { text: "📈 Chart", url: CFG.chartUrl || a.chartUrl, style: "primary" },
+    { text: "🟩 Buy $STAG", url: CFG.buyUrl || a.chartUrl, style: "success" },
   ]];
   for (const part of CFG.links.split(";")) {
-    const [text, url] = part.split("|"); if (text && url) rows.push([{ text: text.trim(), url: url.trim() }]);
+    const [text, url, style] = part.split("|"); if (text && url) rows.push([{ text: text.trim(), url: url.trim(), ...(style ? { style: style.trim() } : {}) }]);
   }
   return { inline_keyboard: rows };
 }
