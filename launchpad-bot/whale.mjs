@@ -16,6 +16,17 @@ export function initWhale(X) {
   const TIERS = [[WHALE_MIN, "👑 Royal Stag"], [5_000_000, "🦌 Stag"], [1_000_000, "🐂 Buck"], [100_000, "🍃 Fawn"]].sort((a, b) => b[0] - a[0]);
   const tierFor = (n) => (TIERS.find(([min]) => n >= min) || [0, ""])[1];
   const bal = (a) => Number(ethers.formatUnits(ST.bal.get(a.toLowerCase()) || 0n, 18));
+  // Founders pass: holding a Hooded 20 NFT (the original collection) counts as the top herd rank and opens the Whale group.
+  const FOUNDER_NFT = process.env.FOUNDER_NFT || "0x4384cB362D908d36266bDF3C31F18DB95EB127dc";
+  const rpc = new ethers.JsonRpcProvider(CFG.rpcHttp, undefined, { staticNetwork: true });
+  const nft = new ethers.Contract(FOUNDER_NFT, ["function balanceOf(address) view returns (uint256)"], rpc);
+  const fCache = new Map(); // address -> { n, at }
+  async function founderCount(addr) {
+    const k = addr.toLowerCase(); const c = fCache.get(k); if (c && Date.now() - c.at < 300000) return c.n;
+    try { const n = Number(await nft.balanceOf(k)); fCache.set(k, { n, at: Date.now() }); return n; } catch (e) { log("founder check err:", e.shortMessage || e.message); return c ? c.n : 0; }
+  }
+  const founderTotal = async (addrs) => { let t = 0; for (const a of addrs) t += await founderCount(a); return t; };
+  const FOUNDER = "🏹 Founder";
   const dm = (id, text, extra = {}) => tgPost("sendMessage", { chat_id: id, text, parse_mode: "HTML", disable_web_page_preview: true, ...extra });
 
   // address -> herd tier cache (only wallets people chose to link)
@@ -26,7 +37,7 @@ export function initWhale(X) {
       const rows = await q("select tg_id, address from wallet_links");
       const by = new Map(); for (const r of rows) (by.get(String(r.tg_id)) || by.set(String(r.tg_id), []).get(String(r.tg_id))).push(r.address);
       const m = new Map();
-      for (const [, addrs] of by) { const t = tierFor(addrs.reduce((s, a) => s + bal(a), 0)); for (const a of addrs) if (t) m.set(a, t); }
+      for (const [, addrs] of by) { let t = tierFor(addrs.reduce((s, a) => s + bal(a), 0)); if (await founderTotal(addrs) > 0) t = t ? `${t} · ${FOUNDER}` : FOUNDER; for (const a of addrs) if (t) m.set(a, t); }
       tierCache = m;
     } catch (e) { log("tier refresh err:", e.message); }
   }
@@ -34,7 +45,7 @@ export function initWhale(X) {
 
   async function totalFor(tg) {
     const rows = await q("select address from wallet_links where tg_id=$1", [tg]);
-    const addrs = rows.map((r) => r.address); return { addrs, total: addrs.reduce((s, a) => s + bal(a), 0) };
+    const addrs = rows.map((r) => r.address); return { addrs, total: addrs.reduce((s, a) => s + bal(a), 0), founders: await founderTotal(addrs) };
   }
 
   async function newNonce(tg) {
@@ -54,19 +65,19 @@ export function initWhale(X) {
   async function evaluate(tg) {
     if (!DB) return;
     try {
-      const { addrs, total } = await totalFor(tg); const tier = tierFor(total);
+      const { addrs, total, founders } = await totalFor(tg); const base = tierFor(total); const tier = founders > 0 ? (base ? `${base} · ${FOUNDER}` : FOUNDER) : base; const pass = total >= WHALE_MIN || founders > 0;
       if (WHALE_CHAT) {
         const [m] = await q("select tg_id from whale_members where tg_id=$1", [tg]);
-        if (total >= WHALE_MIN && !m) {
+        if (pass && !m) {
           const inv = await tgPost("createChatInviteLink", { chat_id: WHALE_CHAT, member_limit: 1, expire_date: Math.floor(Date.now() / 1000) + 3600, name: `whale ${tg}` });
           if (inv.ok) {
             await q("insert into whale_members(tg_id) values ($1) on conflict do nothing", [tg]);
-            await dm(tg, `👑 <b>Verified: ${fmt(total, 0)} $STAG</b>\nWelcome to the Whale group. This invite works once and expires in 1 hour.`, { reply_markup: { inline_keyboard: [[{ text: "👑 Join the Whale group", url: inv.result.invite_link }]] } });
+            await dm(tg, `👑 <b>Verified: ${founders > 0 ? `${founders} Hooded 20 Founder NFT${founders > 1 ? "s" : ""}` : `${fmt(total, 0)} $STAG`}</b>\nWelcome to the Whale group. This invite works once and expires in 1 hour.`, { reply_markup: { inline_keyboard: [[{ text: "👑 Join the Whale group", url: inv.result.invite_link }]] } });
           } else log("whale invite err:", inv.description);
-        } else if (total < WHALE_MIN && m) {
+        } else if (!pass && m) {
           await tgPost("banChatMember", { chat_id: WHALE_CHAT, user_id: tg }); await tgPost("unbanChatMember", { chat_id: WHALE_CHAT, user_id: tg, only_if_banned: true });
           await q("delete from whale_members where tg_id=$1", [tg]);
-          await dm(tg, `Your linked wallets now hold ${fmt(total, 0)} $STAG, below the ${fmt(WHALE_MIN, 0)} needed for the Whale group, so I removed you. Buy back in and send /whale to rejoin.`);
+          await dm(tg, `Your linked wallets now hold ${fmt(total, 0)} $STAG, below the ${fmt(WHALE_MIN, 0)} needed for the Whale group (and no Hooded 20 Founder NFT is linked), so I removed you. Buy back in and send /whale to rejoin.`);
         } else if (m) await q("update whale_members set last_ok=now() where tg_id=$1", [tg]);
       }
       if (process.env.TAG_CHAT_ID && tier) tgPost("setChatMemberTag", { chat_id: process.env.TAG_CHAT_ID, user_id: tg, tag: tier.replace(/^\S+\s/, "") }).then((r) => { if (!r.ok) log("tag err:", r.description); });
@@ -82,14 +93,14 @@ export function initWhale(X) {
     if (cmd === "whale" || (cmd === "start" && args[0] === "whale") || cmd === "link") {
       if (priv) { const ok = await sendLinkFlow(tg); return ok ? null : reply("Couldn't send the link. Try again."); }
       const ok = await sendLinkFlow(tg);
-      return reply(ok ? `👑 <b>Whale group access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG (across any wallets you link) to get in.\nI sent you a DM with the link to verify.` : `👑 <b>Whale group access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG across your wallets. Tap below, press Start, then send /whale again.`, ok ? {} : { reply_markup: { inline_keyboard: [[{ text: "Start the bot", url: `https://t.me/${BOT_USER}?start=whale`, style: "primary" }]] } });
+      return reply(ok ? `👑 <b>Whale group access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG (across any wallets you link) or a Hooded 20 Founder NFT to get in.\nI sent you a DM with the link to verify.` : `👑 <b>Whale group access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG across your wallets. Tap below, press Start, then send /whale again.`, ok ? {} : { reply_markup: { inline_keyboard: [[{ text: "Start the bot", url: `https://t.me/${BOT_USER}?start=whale`, style: "primary" }]] } });
     }
     if (cmd === "wallets" || cmd === "rank") {
       const info = await totalFor(tg);
       if (!info.addrs.length) return reply("You haven't linked a wallet yet. Send /whale and follow the link.");
       const lines = info.addrs.map((a) => `• <code>${short(a)}</code> · ${fmt(bal(a), 0)} $STAG`);
       const t = tierFor(info.total);
-      return reply(`<b>Your herd rank: ${t || "none yet"}</b>\nTotal <b>${fmt(info.total, 0)}</b> $STAG across ${info.addrs.length} wallet${info.addrs.length > 1 ? "s" : ""}\n${lines.join("\n")}\n\nWhale group needs ${fmt(WHALE_MIN, 0)}. Send /whale to link another wallet.`);
+      const fn = info.founders; return reply(`<b>Your herd rank: ${t || "none yet"}${fn > 0 ? ` · ${FOUNDER}` : ""}</b>${fn > 0 ? `\n🏹 ${fn} Hooded 20 NFT${fn > 1 ? "s" : ""} found. Founders get the Whale group.` : ""}\nTotal <b>${fmt(info.total, 0)}</b> $STAG across ${info.addrs.length} wallet${info.addrs.length > 1 ? "s" : ""}\n${lines.join("\n")}\n\nWhale group needs ${fmt(WHALE_MIN, 0)}. Send /whale to link another wallet.`);
     }
     if (cmd === "unlink") {
       const a = (args[0] || "").toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(a)) return reply("Use: <code>/unlink 0xWallet</code>");
@@ -140,7 +151,10 @@ b.onclick=async()=>{try{
           if (!r) return json(res, 200, { ok: false, error: "link expired, send /whale again" });
           const addr = String(b.address || "").toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(addr)) return json(res, 200, { ok: false, error: "bad address" });
           let rec = ""; try { rec = ethers.verifyMessage(linkMsg(String(r.tg_id), b.nonce, b.address), String(b.signature || "")).toLowerCase(); } catch {}
-          if (rec !== addr) return json(res, 200, { ok: false, error: "signature does not match" });
+          if (rec !== addr) { // smart-contract wallets (Safe etc.) sign via EIP-1271
+            let ok1271 = false; try { if ((await rpc.getCode(addr)).length > 2) { const c = new ethers.Contract(addr, ["function isValidSignature(bytes32,bytes) view returns (bytes4)"], rpc); ok1271 = (await c.isValidSignature(ethers.hashMessage(linkMsg(String(r.tg_id), b.nonce, b.address)), String(b.signature || ""))) === "0x1626ba7e"; } } catch {}
+            if (!ok1271) return json(res, 200, { ok: false, error: "signature does not match" });
+          }
           await q("insert into wallet_links(tg_id, address) values ($1,$2) on conflict do nothing", [r.tg_id, addr]);
           const info = await evaluate(Number(r.tg_id)); await refreshTiers();
           dm(Number(r.tg_id), `✅ <b>Wallet linked:</b> <code>${short(addr)}</code>\nTotal <b>${fmt(info?.total || 0, 0)}</b> $STAG across ${info?.addrs.length || 1} wallet(s).\nHerd rank: <b>${info?.tier || "none yet"}</b>${WHALE_CHAT ? `\n\nWhale group needs ${fmt(WHALE_MIN, 0)}.` : ""}`);
@@ -176,5 +190,5 @@ b.onclick=async()=>{try{
   }
   async function topArchers(limit = 5) { return q("select name, max(score) as s from game_scores where day=current_date group by tg_id, name order by s desc limit $1", [limit]); }
 
-  return { startWeb, command, tierOf, refreshTiers, sweep, topArchers, tierFor, hasDb: !!DB, q };
+  return { founderCount, startWeb, command, tierOf, refreshTiers, sweep, topArchers, tierFor, hasDb: !!DB, q };
 }
