@@ -239,8 +239,8 @@ export function initExtras(X) {
       const prev = await stGet("compPostMsg");
       const fd = new FormData(); fd.append("chat_id", chat); fd.append("caption", await compText(c)); fd.append("parse_mode", "HTML");
       fd.append("reply_markup", JSON.stringify({ inline_keyboard: [[{ text: "Buy $STAG", url: BUY, style: "success" }]] }));
-      fd.append("photo", new Blob([readFileSync(path.join(DIR, "comp.jpg"))], { type: "image/jpeg" }), "comp.jpg");
-      const r = await (await fetch(`${api}/sendPhoto`, { method: "POST", body: fd })).json();
+      fd.append("animation", new Blob([readFileSync(path.join(DIR, "comp.mp4"))], { type: "video/mp4" }), "comp.mp4");
+      const r = await (await fetch(`${api}/sendAnimation`, { method: "POST", body: fd })).json();
       if (r.ok) { await stSet("compPostMsg", r.result.message_id); if (prev) tgPost("deleteMessage", { chat_id: chat, message_id: Number(prev) }); log("comp post sent"); } else log("comp post err:", r.description);
     } catch (e) { log("comp post err:", e.message); }
   }
