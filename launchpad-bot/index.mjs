@@ -239,15 +239,33 @@ async function sendSongReply(api, clip, replyTo, chatId = CFG.tgChat) {
     if (j.ok) { const id = j.result?.audio?.file_id; if (id) AUDIO_IDS[clip.n] = id; } else log("tg audio err:", j.description);
   } catch (e) { log("tg audio send err:", e.message); }
 }
+// ---- Entrance card: a holder's own animated Hooded 20 plays as the alert when their wallet buys (Telegram autoplays muted video, so the visual does the work) ----
+const HOODED_NFT = process.env.HOODED_NFT || "0x4384cB362D908d36266bDF3C31F18DB95EB127dc";
+let HOODED_META = {}; try { HOODED_META = JSON.parse(readFileSync(path.join(DIR, "nft", "hooded.json"), "utf8")); } catch {}
+let HOODED_OWNERS = new Map(); const ANIM_IDS = {};
+const RARITY = ["Mythic", "Legendary", "Epic", "Rare", "Uncommon", "Common"];
+async function refreshHooded() {
+  try {
+    const c = new ethers.Contract(HOODED_NFT, ["function ownerOf(uint256) view returns (address)"], provider); const m = new Map();
+    for (let id = 1; id <= 20; id++) { try { const o = (await c.ownerOf(id)).toLowerCase(); if (!m.has(o)) m.set(o, []); m.get(o).push(id); } catch {} }
+    HOODED_OWNERS = m; log(`hooded owners: ${m.size} wallets`);
+  } catch (e) { log("hooded refresh err:", e.message); }
+}
+function hoodedFor(addr) { // the holder's rarest Hooded 20
+  const ids = HOODED_OWNERS.get((addr || "").toLowerCase()); if (!ids || !ids.length) return 0;
+  return [...ids].sort((x, y) => RARITY.indexOf(HOODED_META[x]?.rarity) - RARITY.indexOf(HOODED_META[y]?.rarity) || x - y)[0];
+}
 async function sendTelegram(a) {
   if (!CFG.tg || !CFG.tgChat) return;
   const sym = esc(META.symbol);
+  const hid = hoodedFor(a.buyer);
   const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
   const lines = [
     process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
     a.late ? `<i>⏪ Posted late: the bot was offline when this buy happened</i>` : "",
     a.ex?.record ? `<b>🏆 NEW BIGGEST BUY</b>` : "",
     a.ex?.herd ? `<b>${a.ex.herd}</b> just bought` : "",
+    hid ? `🏹 <b>Hooded 20 #${hid} · ${esc(HOODED_META[hid]?.title || "")}</b> (${esc(HOODED_META[hid]?.rarity || "")}) enters the forest` : "",
     a.tier ? `<b>${a.tier}</b>` : "",
     `<b>$${sym} · BUY</b>`,
     `${em("COIN", "💵")} <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
@@ -277,6 +295,19 @@ async function sendTelegram(a) {
   const vfile = clip ? path.join(DIR, "clips", clip.n + ".mp4") : path.join(DIR, CFG.videoFile);
   const vid = clip ? VIDEO_IDS[clip.n] : VIDEO_ID;
   try {
+    if (hid) {
+      const af = path.join(DIR, "nft", `h${hid}.mp4`);
+      if (ANIM_IDS[hid] || existsSync(af)) {
+        try {
+          let res;
+          if (ANIM_IDS[hid]) res = await fetch(`${api}/sendAnimation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, animation: ANIM_IDS[hid], caption, parse_mode: "HTML", reply_markup: buttons(a, clip) }) });
+          else { const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(buttons(a, clip))); fd.append("animation", new Blob([readFileSync(af)], { type: "video/mp4" }), `hooded${hid}.mp4`); res = await fetch(`${api}/sendAnimation`, { method: "POST", body: fd }); }
+          const j = await res.json();
+          if (j.ok) { const fid = j.result?.animation?.file_id || j.result?.video?.file_id; if (fid) ANIM_IDS[hid] = fid; if (clip) await sendSongReply(api, clip, j.result.message_id); return; }
+          log("tg animation err:", j.description);
+        } catch (e) { log("tg animation send err:", e.message); }
+      }
+    }
     if (vid || existsSync(vfile)) {
       let res;
       if (vid) {
@@ -466,6 +497,7 @@ async function connectRpc() {
 async function main() {
   const head = await connectRpc();   // blocks (with retries) until the chain answers
   await loadMeta();
+  refreshHooded(); setInterval(refreshHooded, 600000);
   await backfillStats(head);
   if (process.env.EXTRAS !== "0" && CFG.tg && CFG.tgChat) {
     EX = initExtras({ provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY,
