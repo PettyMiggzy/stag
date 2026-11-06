@@ -239,33 +239,63 @@ async function sendSongReply(api, clip, replyTo, chatId = CFG.tgChat) {
     if (j.ok) { const id = j.result?.audio?.file_id; if (id) AUDIO_IDS[clip.n] = id; } else log("tg audio err:", j.description);
   } catch (e) { log("tg audio send err:", e.message); }
 }
-// ---- Entrance card: a holder's own animated Hooded 20 plays as the alert when their wallet buys (Telegram autoplays muted video, so the visual does the work) ----
-const HOODED_NFT = process.env.HOODED_NFT || "0x4384cB362D908d36266bDF3C31F18DB95EB127dc";
-let HOODED_META = {}; try { HOODED_META = JSON.parse(readFileSync(path.join(DIR, "nft", "hooded.json"), "utf8")); } catch {}
-let HOODED_OWNERS = new Map(); const ANIM_IDS = {};
-const RARITY = ["Mythic", "Legendary", "Epic", "Rare", "Uncommon", "Common"];
+// ---- Entrance card: a holder's own animated NFT plays as the alert when their wallet buys (Telegram autoplays muted video, so the visual does the work) ----
+// Collections: Hooded 20 (h), WANTED (w), Sherwood Saints (s). A wallet that holds several rotates through them, rarest first.
+const NFT_COLS = [
+  { k: "h", addr: process.env.HOODED_NFT || "0x4384cB362D908d36266bDF3C31F18DB95EB127dc", n: 20, label: "Hooded 20", em: "🏹" },
+  { k: "w", addr: "0x35c57109217319Df9feF0499F56b3f6a68d50931", n: 21, label: "WANTED", em: "🤠" },
+  { k: "s", addr: "0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327", n: 5, label: "Sherwood Saint", em: "😇" },
+];
+const SAINTS_VAULT = "0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c";
+let NFT_META = {}; try { NFT_META = JSON.parse(readFileSync(path.join(DIR, "nft", "collections.json"), "utf8")); } catch {}
+let NFT_OWNERS = new Map(); const ANIM_IDS = {}; const NFT_ROT = new Map();
+const RARITY = ["Mythic", "Legendary", "Saint", "Epic", "Rare", "Uncommon", "Common"];
+const vaultStakers = new Map(); let vaultFrom = 20000000; // Saints sit inside the Vault while staked: the staker is whoever sent it
+async function scanVaultStakers() {
+  try {
+    const head = await provider.getBlockNumber(); const pad = "0x" + SAINTS_VAULT.slice(2).toLowerCase().padStart(64, "0");
+    while (vaultFrom <= head) {
+      const to = Math.min(vaultFrom + 9000000, head);
+      const ls = await provider.send("eth_getLogs", [{ address: NFT_COLS[2].addr, topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", null, pad], fromBlock: "0x" + vaultFrom.toString(16), toBlock: "0x" + to.toString(16) }]);
+      for (const l of ls) vaultStakers.set(parseInt(l.topics[3], 16), ("0x" + l.topics[1].slice(-40)).toLowerCase());
+      vaultFrom = to + 1;
+    }
+  } catch (e) { log("vault stakers err:", e.message); }
+}
 async function refreshHooded() {
   try {
-    const c = new ethers.Contract(HOODED_NFT, ["function ownerOf(uint256) view returns (address)"], provider); const m = new Map();
-    for (let id = 1; id <= 20; id++) { try { const o = (await c.ownerOf(id)).toLowerCase(); if (!m.has(o)) m.set(o, []); m.get(o).push(id); } catch {} }
-    HOODED_OWNERS = m; log(`hooded owners: ${m.size} wallets`);
-  } catch (e) { log("hooded refresh err:", e.message); }
+    const m = new Map(); await scanVaultStakers();
+    for (const col of NFT_COLS) {
+      const c = new ethers.Contract(col.addr, ["function ownerOf(uint256) view returns (address)"], provider);
+      for (let id = 1; id <= col.n; id++) {
+        try {
+          let o = (await c.ownerOf(id)).toLowerCase();
+          if (o === SAINTS_VAULT.toLowerCase()) o = vaultStakers.get(id) || "";
+          if (!o) continue;
+          if (!m.has(o)) m.set(o, []); m.get(o).push({ k: col.k, id });
+        } catch {}
+      }
+    }
+    NFT_OWNERS = m; log(`nft holders: ${m.size} wallets`);
+  } catch (e) { log("nft refresh err:", e.message); }
 }
-function hoodedFor(addr) { // the holder's rarest Hooded 20
-  const ids = HOODED_OWNERS.get((addr || "").toLowerCase()); if (!ids || !ids.length) return 0;
-  return [...ids].sort((x, y) => RARITY.indexOf(HOODED_META[x]?.rarity) - RARITY.indexOf(HOODED_META[y]?.rarity) || x - y)[0];
+const nftRank = (x) => { const r = RARITY.indexOf(NFT_META[x.k]?.[x.id]?.rarity); return (r < 0 ? 99 : r) * 1000 + NFT_COLS.findIndex((c) => c.k === x.k) * 100 + x.id; };
+function pickNft(addr) { // rotate through this wallet's NFTs so the alert isn't always the same one
+  const list = NFT_OWNERS.get((addr || "").toLowerCase()); if (!list || !list.length) return null;
+  const sorted = [...list].sort((x, y) => nftRank(x) - nftRank(y)); const i = NFT_ROT.get(addr.toLowerCase()) || 0; NFT_ROT.set(addr.toLowerCase(), i + 1);
+  const x = sorted[i % sorted.length]; const col = NFT_COLS.find((c) => c.k === x.k); return { ...x, col, key: `${x.k}${x.id}`, meta: NFT_META[x.k]?.[x.id] || {} };
 }
 async function sendTelegram(a) {
   if (!CFG.tg || !CFG.tgChat) return;
   const sym = esc(META.symbol);
-  const hid = hoodedFor(a.buyer);
+  const pk = pickNft(a.buyer);
   const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
   const lines = [
     process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
     a.late ? `<i>⏪ Posted late: the bot was offline when this buy happened</i>` : "",
     a.ex?.record ? `<b>🏆 NEW BIGGEST BUY</b>` : "",
     a.ex?.herd ? `<b>${a.ex.herd}</b> just bought` : "",
-    hid ? `🏹 <b>Hooded 20 #${hid} · ${esc(HOODED_META[hid]?.title || "")}</b> (${esc(HOODED_META[hid]?.rarity || "")}) enters the forest` : "",
+    pk ? `${pk.col.em} <b>${pk.col.label} #${pk.id} · ${esc(pk.meta.title || "")}</b>${pk.meta.rarity ? ` (${esc(pk.meta.rarity)})` : ""} enters the forest` : "",
     a.tier ? `<b>${a.tier}</b>` : "",
     `<b>$${sym} · BUY</b>`,
     `${em("COIN", "💵")} <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`,
@@ -295,15 +325,15 @@ async function sendTelegram(a) {
   const vfile = clip ? path.join(DIR, "clips", clip.n + ".mp4") : path.join(DIR, CFG.videoFile);
   const vid = clip ? VIDEO_IDS[clip.n] : VIDEO_ID;
   try {
-    if (hid) {
-      const af = path.join(DIR, "nft", `h${hid}.mp4`);
-      if (ANIM_IDS[hid] || existsSync(af)) {
+    if (pk) {
+      const af = path.join(DIR, "nft", `${pk.key}.mp4`);
+      if (ANIM_IDS[pk.key] || existsSync(af)) {
         try {
           let res;
-          if (ANIM_IDS[hid]) res = await fetch(`${api}/sendAnimation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, animation: ANIM_IDS[hid], caption, parse_mode: "HTML", reply_markup: buttons(a, clip) }) });
-          else { const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(buttons(a, clip))); fd.append("animation", new Blob([readFileSync(af)], { type: "video/mp4" }), `hooded${hid}.mp4`); res = await fetch(`${api}/sendAnimation`, { method: "POST", body: fd }); }
+          if (ANIM_IDS[pk.key]) res = await fetch(`${api}/sendAnimation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, animation: ANIM_IDS[pk.key], caption, parse_mode: "HTML", reply_markup: buttons(a, clip) }) });
+          else { const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(buttons(a, clip))); fd.append("animation", new Blob([readFileSync(af)], { type: "video/mp4" }), `${pk.key}.mp4`); res = await fetch(`${api}/sendAnimation`, { method: "POST", body: fd }); }
           const j = await res.json();
-          if (j.ok) { const fid = j.result?.animation?.file_id || j.result?.video?.file_id; if (fid) ANIM_IDS[hid] = fid; if (clip) await sendSongReply(api, clip, j.result.message_id); return; }
+          if (j.ok) { const fid = j.result?.animation?.file_id || j.result?.video?.file_id; if (fid) ANIM_IDS[pk.key] = fid; if (clip) await sendSongReply(api, clip, j.result.message_id); return; }
           log("tg animation err:", j.description);
         } catch (e) { log("tg animation send err:", e.message); }
       }

@@ -21,7 +21,7 @@ export function initWhale(X) {
   const bal = (a) => Number(ethers.formatUnits(ST.bal.get(a.toLowerCase()) || 0n, 18));
   // Founders pass: holding a Hooded 20 NFT (the original collection) counts as the top herd rank and opens the Hood Rich Club.
   // Any of these collections gets you in free: The Hooded 20, Sherwood Saints (add WANTED etc. with FOUNDER_NFTS=addr1,addr2,...).
-  const FOUNDER_NFTS = (process.env.FOUNDER_NFTS || "0x4384cB362D908d36266bDF3C31F18DB95EB127dc,0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327").split(",").map((x) => x.trim()).filter(Boolean);
+  const FOUNDER_NFTS = (process.env.FOUNDER_NFTS || "0x4384cB362D908d36266bDF3C31F18DB95EB127dc,0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327,0x35c57109217319Df9feF0499F56b3f6a68d50931").split(",").map((x) => x.trim()).filter(Boolean);
   const rpc = new ethers.JsonRpcProvider(CFG.rpcHttp, undefined, { staticNetwork: true });
   const nfts = FOUNDER_NFTS.map((a) => new ethers.Contract(a, ["function balanceOf(address) view returns (uint256)"], rpc));
   const fCache = new Map(); // address -> { n, at }
@@ -81,7 +81,7 @@ export function initWhale(X) {
         } else if (!pass && m) {
           await tgPost("banChatMember", { chat_id: WHALE_CHAT, user_id: tg }); await tgPost("unbanChatMember", { chat_id: WHALE_CHAT, user_id: tg, only_if_banned: true });
           await q("delete from whale_members where tg_id=$1", [tg]);
-          await dm(tg, `Your linked wallets now hold ${fmt(total, 0)} $STAG, below the ${fmt(WHALE_MIN, 0)} needed for the Hood Rich Club (and no Hooded 20 / Sherwood Saints NFT is linked), so I removed you. Buy back in and send /hoodrich to rejoin.`);
+          await dm(tg, `Your linked wallets now hold ${fmt(total, 0)} $STAG, below the ${fmt(WHALE_MIN, 0)} needed for the Hood Rich Club (and no Hooded 20 / Sherwood Saints / WANTED NFT is linked), so I removed you. Buy back in and send /hoodrich to rejoin.`);
         } else if (m) await q("update whale_members set last_ok=now() where tg_id=$1", [tg]);
       }
       if (process.env.TAG_CHAT_ID && tier) tgPost("setChatMemberTag", { chat_id: process.env.TAG_CHAT_ID, user_id: tg, tag: tier.replace(/^\S+\s/, "") }).then((r) => { if (!r.ok) log("tag err:", r.description); });
@@ -97,7 +97,7 @@ export function initWhale(X) {
     if (cmd === "whale" || cmd === "ballerz" || cmd === "hoodrich" || (cmd === "start" && (args[0] === "whale" || args[0] === "ballerz" || args[0] === "hoodrich")) || cmd === "link") {
       if (priv) { const ok = await sendLinkFlow(tg); return ok ? null : reply("Couldn't send the link. Try again."); }
       const ok = await sendLinkFlow(tg);
-      return reply(ok ? `👑 <b>Hood Rich Club access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG (across any wallets you link) or any Hooded 20 / Sherwood Saints NFT to get in.\nI sent you a DM with the link to verify.` : `👑 <b>Hood Rich Club access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG across your wallets. Tap below, press Start, then send /hoodrich again.`, ok ? {} : { reply_markup: { inline_keyboard: [[{ text: "Start the bot", url: `https://t.me/${BOT_USER}?start=whale`, style: "primary" }]] } });
+      return reply(ok ? `👑 <b>Hood Rich Club access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG (across any wallets you link) or any Hooded 20 / Sherwood Saints / WANTED NFT to get in.\nI sent you a DM with the link to verify.` : `👑 <b>Hood Rich Club access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG across your wallets. Tap below, press Start, then send /hoodrich again.`, ok ? {} : { reply_markup: { inline_keyboard: [[{ text: "Start the bot", url: `https://t.me/${BOT_USER}?start=whale`, style: "primary" }]] } });
     }
     if (cmd === "wallets" || cmd === "rank") {
       const info = await totalFor(tg);
