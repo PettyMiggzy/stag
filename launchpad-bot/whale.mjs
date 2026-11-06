@@ -149,7 +149,7 @@ b.onclick=async()=>{try{
         const u = new URL(req.url, "http://x");
         if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
         if (u.pathname === "/verify") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
-        if (u.pathname === "/api/claimstats") { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=10", "access-control-allow-origin": "*" }); return res.end(JSON.stringify(claimStatsJson())); }
+        if (u.pathname === "/api/claimstats") { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=10", "access-control-allow-origin": "*" }); return res.end(JSON.stringify(CS.ready || !CLAIM_CACHE ? claimStatsJson() : { ...CLAIM_CACHE, ethUsd: Number((ethUsd && ethUsd()) || CLAIM_CACHE.ethUsd || 0), cached: true })); }
         if (u.pathname === "/api/nonce") { const [r] = await q("select tg_id from link_nonces where nonce=$1 and expires_at>now()", [u.searchParams.get("n") || ""]); return json(res, 200, r ? { ok: true, tg: String(r.tg_id) } : { ok: false }); }
         if (u.pathname === "/api/verify" && req.method === "POST") {
           const b = await body(req); const [r] = await q("select tg_id from link_nonces where nonce=$1 and expires_at>now()", [String(b.nonce || "")]);
@@ -239,12 +239,16 @@ b.onclick=async()=>{try{
         p.claimableWei = tot; p.claimableWallets = n;
       }
       CS.updated = Date.now(); CS.ready = true;
+      try { await q("insert into bot_state(k,v) values('claimCache',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [JSON.stringify(claimStatsJson())]); } catch {}
     } catch (e) { log("claim stats err:", e.shortMessage || e.message); } finally { csBusy = false; }
   }
   const claimStatsJson = () => ({ ready: CS.ready, updated: CS.updated, ethUsd: Number((ethUsd && ethUsd()) || 0),
     claimableWei: CPOOLS.reduce((a, p) => a + p.claimableWei, 0n).toString(), claimableWallets: CPOOLS.reduce((a, p) => a + p.claimableWallets, 0),
     claimedWei: CPOOLS.reduce((a, p) => a + p.claimedWei, 0n).toString(), claims: CPOOLS.reduce((a, p) => a + p.claims, 0),
     pools: Object.fromEntries(CPOOLS.map((p) => [p.key, { claimableWei: p.claimableWei.toString(), claimedWei: p.claimedWei.toString(), claims: p.claims }])) });
+  // keep the last known totals so a restart never blanks the claim page while the first scan runs
+  let CLAIM_CACHE = null;
+  (async () => { try { const [r] = await q("select v from bot_state where k='claimCache'"); if (r) CLAIM_CACHE = JSON.parse(r.v); } catch {} })();
   setTimeout(refreshClaims, 20000); setInterval(refreshClaims, 60000);
 
   // ---- Hood Rich Club recruitment post: every 4h in the main group, replaces its own previous post. Off until bot_state.clubPromoOn = '1'. ----
