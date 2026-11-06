@@ -304,7 +304,7 @@ async function sendTelegram(a) {
       await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: buttons(a, clip) }) });
     }
-  } catch (e) { log("tg send err:", e.message); }
+  } catch (e) { log("tg send err:", e.message); if ((a._tries = (a._tries || 0) + 1) < 4) { await sleep(3000 * a._tries); return sendTelegram(a); } log("tg send gave up:", a.tx); }
 }
 
 async function sendDiscord(a) {
