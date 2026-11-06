@@ -1,6 +1,7 @@
 // Wallet linking (sign a message, no gas, no approvals), Herd ranks, whale-group gate, and the arcade score API.
 // A holder links one or more wallets by signing a message. Balances come from the on-chain Transfer logs the bot already tracks.
 import http from "node:http";
+import { readFileSync } from "node:fs";
 import crypto from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import { ethers } from "ethers";
@@ -193,6 +194,28 @@ b.onclick=async()=>{try{
   }
   async function topArchers(limit = 5) { return q("select name, max(score) as s from game_scores where day=current_date group by tg_id, name order by s desc limit $1", [limit]); }
 
+  // ---- Hood Rich Club recruitment post: every 4h in the main group, replaces its own previous post. Off until bot_state.clubPromoOn = '1'. ----
+  const PROMO_MS = (parseFloat(process.env.CLUB_PROMO_HOURS || "4") || 4) * 3600e3;
+  const stGet = async (k) => { const [r] = await q("select v from bot_state where k=$1", [k]); return r ? r.v : null; };
+  const stSet = async (k, v) => { await q("insert into bot_state(k,v) values($1,$2) on conflict(k) do update set v=excluded.v, updated_at=now()", [k, String(v)]); };
+  const PROMO_CAPTION = `👑 <b>HOOD RICH CLUB</b>\nThe private room for the herd's biggest holders.\n\nYou're in if you have:\n• <b>10,000,000+ $STAG</b> across your linked wallets, or\n• <b>any Hooded 20 or Sherwood Saints NFT</b>: free entry\n\nTap the button, link your wallet (a signature only: no gas, no approvals, no access to funds) and I'll DM your invite.`;
+  async function clubPromo() {
+    if (!DB || !CFG.tg || !CFG.tgChat) return;
+    try {
+      if ((await stGet("clubPromoOn")) !== "1") return;
+      const last = parseInt((await stGet("clubPromoAt")) || "0", 10);
+      if (Date.now() - last < PROMO_MS) return;
+      await stSet("clubPromoAt", Date.now()); // claim the slot first so a restart or two instances never double-post
+      const prev = await stGet("clubPromoMsg");
+      const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", PROMO_CAPTION); fd.append("parse_mode", "HTML");
+      fd.append("reply_markup", JSON.stringify({ inline_keyboard: [[{ text: "👑 Join the Hood Rich Club", url: `https://t.me/${BOT_USER}?start=hoodrich`, style: "success" }]] }));
+      fd.append("photo", new Blob([readFileSync(new URL("./clubpromo.jpg", import.meta.url))], { type: "image/jpeg" }), "club.jpg");
+      const r = await (await fetch(`https://api.telegram.org/bot${CFG.tg}/sendPhoto`, { method: "POST", body: fd })).json();
+      if (r.ok) { await stSet("clubPromoMsg", r.result.message_id); if (prev) tgPost("deleteMessage", { chat_id: CFG.tgChat, message_id: Number(prev) }); log("club promo posted"); }
+      else log("club promo err:", r.description);
+    } catch (e) { log("club promo err:", e.message); }
+  }
+  setInterval(clubPromo, 10 * 60 * 1000); setTimeout(clubPromo, 90 * 1000);
   loadChat();
   return { founderCount, startWeb, command, tierOf, refreshTiers, sweep, topArchers, tierFor, hasDb: !!DB, q };
 }
