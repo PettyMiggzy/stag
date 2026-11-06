@@ -51,6 +51,7 @@ button{font:inherit;cursor:pointer}
 .pool{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:12px 0;align-items:center}
 .pool .a{flex:none;width:92px;height:92px;border-radius:16px;overflow:hidden;padding:3px;background:conic-gradient(from 200deg,var(--gold),var(--gold2),#fff0b0,var(--gold2),var(--gold))}
 .pool .a img{width:100%;height:100%;object-fit:cover;border-radius:13px;display:block}
+.pool .a.duo{display:grid;grid-template-columns:1fr 1fr;gap:3px}.pool .a.duo img{border-radius:10px}
 .pool .b{flex:1;min-width:0}
 .pool h2{font-size:17px;font-weight:800}
 .pool .sub{color:var(--mut);font-size:13px;margin:1px 0 6px}
@@ -70,23 +71,24 @@ a{color:var(--g)}
 <div class="top"><div class="brand"><img src="/icon-192.png" alt=""><b>$STAG</b></div><div class="live off" id="live"><i></i><span id="livet">CONNECTING</span></div></div>
 
 <div class="hero"><div class="c l"><img src="art/s1.webp" alt="Sherwood Saint"></div><div class="c r"><img src="art/h7.webp" alt="Hooded 20"></div><div class="c m"><img src="art/h1.webp" alt="Hooded 20 #1 Golden Sovereign"></div>
-<div class="cap"><span>THE HOODED 20 &middot; SHERWOOD SAINTS</span></div></div>
+<div class="cap"><span>HOODED 20 &middot; SAINTS &middot; WANTED</span></div></div>
 
 <h1>Old staking rewards.<br><span>Still yours.</span></h1>
-<p class="lead">If you ever staked a <b>Hooded 20</b> or <b>Sherwood Saint</b>, the ETH you earned is still on-chain, waiting for you. Connect the wallet you staked with and claim it.</p>
+<p class="lead">If you ever staked a <b>Hooded 20</b>, a <b>Sherwood Saint</b> or a <b>WANTED</b> poster, the ETH you earned is still on-chain, waiting for you. Connect the wallet you staked with and claim it.</p>
 
 <div class="stats">
 <div class="stat"><label>Waiting to be claimed</label><div class="n"><span id="s1">&ndash;</span><small>ETH</small></div><div class="u" id="s1u"></div><div class="s" id="s1s">live from the chain</div></div>
 <div class="stat"><label>Claimed so far</label><div class="n"><span id="s2">&ndash;</span><small>ETH</small></div><div class="u" id="s2u"></div><div class="s" id="s2s">lifetime total</div></div>
 </div>
 
-<div class="note"><b>New here?</b> $STAG relaunched on Robinhood Chain. This page is only for the original NFT staking rewards: real ETH that was earned and never collected. Nothing to buy, nothing to approve. It only calls the contract's own <code>claim()</code>, and you pay a tiny network fee.</div>
+<div class="note"><b>New here?</b> $STAG relaunched on Robinhood Chain. This page is only for the original NFT staking rewards (Hooded 20, Saints and WANTED): real ETH that was earned and never collected. Nothing to buy, nothing to approve. It only calls the contract's own <code>claim()</code>, and you pay a tiny network fee.</div>
 
 <button class="btn gold" id="connect">Connect wallet</button>
 <div class="acct" id="acct"></div>
+<button class="btn gold" id="all" style="display:none;margin-bottom:6px">Claim everything</button>
 
 <div class="pool"><div class="a"><img src="art/h1.webp" alt=""></div><div class="b"><h2>Hooded 20 staking</h2><div class="sub">Rewards earned by staked Hooded 20 NFTs</div><div class="amt" id="a1">&ndash;<small>ETH</small></div><button class="btn" id="c1" disabled>Claim</button></div></div>
-<div class="pool"><div class="a"><img src="art/s1.webp" alt=""></div><div class="b"><h2>Sherwood Saints Vault</h2><div class="sub">Rewards earned by staked Sherwood Saints</div><div class="amt" id="a2">&ndash;<small>ETH</small></div><button class="btn" id="c2" disabled>Claim</button></div></div>
+<div class="pool"><div class="a duo"><img src="art/s1.webp" alt=""><img src="art/w3.webp" alt=""></div><div class="b"><h2>Saints &amp; WANTED Vault</h2><div class="sub">Rewards earned by staked Sherwood Saints and WANTED posters</div><div class="amt" id="a2">&ndash;<small>ETH</small></div><button class="btn" id="c2" disabled>Claim</button></div></div>
 <div id="msg"></div>
 
 <div class="strip"><img src="art/h2.webp" alt=""><img src="art/h3.webp" alt=""><img src="art/h4.webp" alt=""><img src="art/h5.webp" alt=""><img src="art/h6.webp" alt=""><img src="art/s3.webp" alt=""></div>
@@ -96,7 +98,7 @@ a{color:var(--g)}
 
 <div class="foot">Contracts (Robinhood Chain, 4663):<br>
 Hooded 20 staking <a id="l1" target="_blank" rel="noopener"><code>0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF</code></a><br>
-Sherwood Saints Vault <a id="l2" target="_blank" rel="noopener"><code>0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c</code></a><br><br>
+Saints &amp; WANTED Vault <a id="l2" target="_blank" rel="noopener"><code>0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c</code></a><br><br>
 This page never asks for approvals, signatures, seed phrases or private keys. Only the wallet that earned the rewards can claim them. Totals are read directly from on-chain events. Not financial advice.</div>
 </main>
 <script>
@@ -113,7 +115,7 @@ const pad=a=>a.slice(2).toLowerCase().padStart(64,'0');
 async function rpc(method,params){const r=await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error)throw new Error(j.error.message);return j.result}
 async function earned(pool,a){return BigInt(await rpc('eth_call',[{to:pool.to,data:'0x008cc262'+pad(a)},'latest']))}
 async function show(a,canClaim){let total=0n;for(const p of POOLS){try{const e=await earned(p,a);total+=e;lastE[p.id]=e;p.shown=true;$('a'+p.id).innerHTML=amtHtml(e);$('c'+p.id).disabled=!(canClaim&&e>0n)}catch(x){$('a'+p.id).innerHTML='?<small>ETH</small>';$('c'+p.id).disabled=true}}
- if(total===0n)msg('Nothing to claim for this wallet.','');else msg(canClaim?'Press Claim on each pool that shows an amount.':'That wallet has rewards waiting. Connect it to claim.','ok')}
+ $('all').style.display=(canClaim&&total>0n)?'block':'none';if(total===0n)msg('Nothing to claim for this wallet.','');else msg(canClaim?'Press Claim on each pool that shows an amount.':'That wallet has rewards waiting. Connect it to claim.','ok')}
 async function ensureChain(){const e=window.ethereum;const id=await e.request({method:'eth_chainId'});if(id===CHAIN)return;
  try{await e.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN}]})}catch(x){if(x.code===4902||/Unrecognized|not added/i.test(x.message||'')){await e.request({method:'wallet_addEthereumChain',params:[{chainId:CHAIN,chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:[RPC],blockExplorerUrls:[EXP]}]})}else throw x}}
 $('connect').onclick=async()=>{try{if(!window.ethereum){msg('No wallet found. Open this page inside your wallet app’s browser (MetaMask, Rabby, Coinbase Wallet…).','err');return}
@@ -124,6 +126,7 @@ async function claim(pool){try{if(!acct)return;await ensureChain();$('c'+pool.id
  msg('Sent. Waiting for confirmation… '+EXP+'/tx/'+h,'');for(let i=0;i<60;i++){const r=await rpc('eth_getTransactionReceipt',[h]);if(r){if(r.status==='0x1'){msg('Claimed. The ETH is in your wallet.','ok')}else msg('The transaction failed. Nothing was taken from you.','err');break}await new Promise(s=>setTimeout(s,2000))}
  await show(acct,true);pollStats()}catch(e){msg(e.code===4001?'Cancelled.':(e.message||String(e)),'err');await show(acct,true)}}
 POOLS.forEach(p=>$('c'+p.id).onclick=()=>claim(p));
+$('all').onclick=async()=>{for(const p of POOLS){if(lastE[p.id]>0n)await claim(p)}};
 $('look').onclick=async()=>{const a=$('addr').value.trim();if(!/^0x[0-9a-fA-F]{40}$/.test(a)){msg('Paste a full wallet address (0x…).','err');return}msg('Checking…','');await show(a,false)};
 // live totals: smooth count-up, refreshed every 15s
 const cur={s1:0,s2:0};
