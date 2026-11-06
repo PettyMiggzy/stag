@@ -130,6 +130,12 @@ export function initExtras(X) {
       if (["price", "mc", "stats", "stag", "p"].includes(cmd)) return reply(marketText(await market()));
       if (cmd === "bonding" || cmd === "grad") { const m = await market(); return reply(`🎯 <b>Bonding</b> ${fmt(m.bondEth, 2)} / ${fmt(BOND, 1)} ETH (${fmt(m.bondPct, 1)}%)\n${bar(m.bondPct, 12)}\n⏳ ${fmt(Math.max(0, BOND - m.bondEth), 2)} ETH (~${usd(Math.max(0, BOND - m.bondEth) * m.ethUsd)}) left to graduate`); }
       if (cmd === "holders") { const m = await market(); return reply(`👥 <b>${fmt(m.holders, 0)}</b> holders of $STAG`); }
+      if (cmd === "comp" || cmd === "contest") { const c = await compGet(); if (!c || !c.on) return reply(c && c.endedAt ? await compText(c, true) : "No buy comp is running right now. 🦌"); return reply(await compText(c)); }
+      if ((cmd === "compstart" || cmd === "compend") && String(msg.from.id) === ADMIN_TG) {
+        if (cmd === "compend") { const c = await compGet(); if (c) { c.endTs = Date.now() - 1; await compSet(c); await compCheckEnd(); } return; }
+        const days = parseFloat(args[0]) || 7, minEth = parseFloat(args[1]) || 0.005; const head = await provider.getBlockNumber(); const now = Date.now();
+        await compSet({ on: true, startBlock: head, startTs: now, endTs: now + days * 86400000, minEth, prize: args.slice(2).join(" ") || "Hooded 20 #1 · Golden Sovereign (Mythic)" }); return reply(`Comp started: ${days} days, min ${minEth} ETH.`);
+      }
       if (cmd === "top" || cmd === "leaderboard") return reply(await leaderboardText("🏆 TOP BUYERS · 24H"));
       if (cmd === "last") { const m = await market(); const l = ST.buys[ST.buys.length - 1]; return reply(l ? `🕒 Last buy: <b>${fmt(l.eth, 3)} ETH</b> (${usd(l.eth * m.ethUsd)}) · ${fmt((m.head - l.block) / (BLOCKS_PER_DAY / 86400), 0)}s ago · <a href="${CFG.explorer}/tx/${l.tx}">Tx</a>` : "No buys yet."); }
       if (cmd === "me") {
@@ -190,6 +196,55 @@ export function initExtras(X) {
     } catch (e) { log("dash err:", e.message); }
   }
 
+  // ---------- buy competition (/comp): biggest total of qualifying buys wins; state in bot_state.comp ----------
+  const ADMIN_TG = String(process.env.ADMIN_TG_ID || "6820752140");
+  const COMP_EXCLUDE = new Set(["0xb6a5059356332a0b222e9d21b1f72f3617d12516", ...(process.env.COMP_EXCLUDE || "").toLowerCase().split(",").map((x) => x.trim()).filter(Boolean)]);
+  const compGet = async () => { try { const [r] = await W.q("select v from bot_state where k='comp'"); return r ? JSON.parse(r.v) : null; } catch { return null; } };
+  const compSet = async (o) => { await W.q("insert into bot_state(k,v) values('comp',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [JSON.stringify(o)]); };
+  async function compRows(c) {
+    const win = ST.buys.filter((b) => b.block >= c.startBlock && b.eth >= c.minEth);
+    for (let i = 0; i < win.length; i += 6) await Promise.all(win.slice(i, i + 6).map((b) => buyerOf(b.tx)));
+    const map = new Map();
+    for (const b of win) { const w = BUYER.get(b.tx); if (!w || COMP_EXCLUDE.has(w) || w === (TEAM || "x") || isTeam(b.tx)) continue; const e = map.get(w) || { eth: 0, n: 0, tok: 0 }; e.eth += b.eth; e.n++; e.tok += b.tok; map.set(w, e); }
+    const dec = X.META().decimals;
+    return [...map.entries()].map(([w, e]) => { const bal = Number(ethers.formatUnits(ST.bal.get(w) || 0n, dec)); return { w, ...e, bal, ok: bal >= e.tok * 0.9 }; }).sort((a, b) => b.eth - a.eth);
+  }
+  async function compText(c, final = false) {
+    const rows = await compRows(c); const m = await market(); const elig = rows.filter((r) => r.ok); const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+    const lines = elig.slice(0, 5).map((r, i) => `${medals[i]} <a href="${CFG.explorer}/address/${r.w}">${short(r.w)}</a> · <b>${fmt(r.eth, 3)} ETH</b> (${usd(r.eth * m.ethUsd)}) · ${r.n} buy${r.n > 1 ? "s" : ""}`);
+    const out = rows.filter((r) => !r.ok).length;
+    const head = final ? `🏁 <b>BUY COMP FINAL RESULT</b>` : `🏆 <b>BUY COMP · WEEKLY BIGGEST BUYER</b>`;
+    const body = lines.length ? lines.join("\n") : "No qualifying buys yet. Be the first. 🦌";
+    const win = final && elig[0] ? `\n\n🎉 <b>Winner: <a href="${CFG.explorer}/address/${elig[0].w}">${short(elig[0].w)}</a></b>\nPrize: <b>${c.prize}</b>` : "";
+    const rules = `\n\n<b>Prize:</b> ${c.prize}\n<b>Rules:</b> every single buy of <b>${c.minEth} ETH or more</b> counts toward your total. Biggest total wins. You must still hold <b>90%+</b> of what you bought during the comp, so no buy-and-dump. Team wallets are excluded.${out ? `\n<i>${out} wallet${out > 1 ? "s" : ""} not counted for selling.</i>` : ""}`;
+    const when = final ? "" : `\n⏳ Ends <tg-time unix="${Math.floor(c.endTs / 1000)}" format="r">soon</tg-time>`;
+    return `${head}\n${body}${win}${final ? "" : rules}${when}`;
+  }
+  let compTimer = null;
+  async function compCheckEnd() {
+    const c = await compGet(); if (!c || !c.on || Date.now() < c.endTs) return;
+    c.on = false; c.endedAt = Date.now(); await compSet(c);
+    try { await sendText(await compText(c, true), { reply_markup: links() }); } catch (e) { log("comp end err:", e.message); }
+    log("comp ended");
+  }
+
+  // every ~5h while a comp is on (and bot_state.compPostOn = '1'): banner + live standings, replacing the previous post
+  const stGet = async (k) => { try { const [r] = await W.q("select v from bot_state where k=$1", [k]); return r ? r.v : null; } catch { return null; } };
+  const stSet = async (k, v) => { try { await W.q("insert into bot_state(k,v) values($1,$2) on conflict(k) do update set v=excluded.v, updated_at=now()", [k, String(v)]); } catch {} };
+  async function compPost() {
+    try {
+      const c = await compGet(); if (!c || !c.on || (await stGet("compPostOn")) !== "1") return;
+      const every = (parseFloat(process.env.COMP_POST_HOURS || "5") || 5) * 3600e3; const last = parseInt((await stGet("compPostAt")) || "0", 10);
+      if (Date.now() - last < every) return; await stSet("compPostAt", Date.now());
+      const prev = await stGet("compPostMsg");
+      const fd = new FormData(); fd.append("chat_id", chat); fd.append("caption", await compText(c)); fd.append("parse_mode", "HTML");
+      fd.append("reply_markup", JSON.stringify({ inline_keyboard: [[{ text: "Buy $STAG", url: BUY, style: "success" }]] }));
+      fd.append("photo", new Blob([readFileSync(path.join(DIR, "comp.jpg"))], { type: "image/jpeg" }), "comp.jpg");
+      const r = await (await fetch(`${api}/sendPhoto`, { method: "POST", body: fd })).json();
+      if (r.ok) { await stSet("compPostMsg", r.result.message_id); if (prev) tgPost("deleteMessage", { chat_id: chat, message_id: Number(prev) }); log("comp post sent"); } else log("comp post err:", r.description);
+    } catch (e) { log("comp post err:", e.message); }
+  }
+
   // ---------- milestones ----------
   const TIERS = [25, 50, 75, 90, 100];
   let lastTier = -1; let lastHolderMs = 0; let lastMcTier = -1; let lastAth = 0; let lastAthPost = 0;
@@ -245,7 +300,7 @@ export function initExtras(X) {
         else log("dashboard off");
       } catch (e) { log("dashboard cleanup err:", e.message); }
     })();
-    watchMilestones(); setInterval(watchMilestones, 30000);
+    watchMilestones(); setInterval(watchMilestones, 30000); setInterval(compCheckEnd, 60000); setInterval(compPost, 10 * 60000); setTimeout(compPost, 120000);
     setInterval(dailyCheck, 60000);
     log("extras ready: commands, milestones, leaderboard (dashboard off)");
   }
