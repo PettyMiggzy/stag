@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claim Old Staking Rewards · $STAG</title>
+<meta name="description" content="ETH rewards earned by Hooded 20 and Sherwood Saints stakers are still claimable on-chain. Live totals, one-tap claim.">
+<meta property="og:title" content="Old $STAG staking rewards: still claimable"><meta property="og:image" content="https://stagwifhood.fun/claim/art/h1.webp">
+<link rel="icon" href="/favicon-32.png">
+<style>
+:root{--bg:#050a07;--card:#0b130e;--line:#1b3324;--ink:#eaf3e6;--mut:#8fa796;--g:#39ff88;--gold:#f6d97a;--gold2:#b8892a}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:radial-gradient(1100px 600px at 50% -8%,#14402b 0%,transparent 70%),radial-gradient(700px 500px at 90% 40%,#1a2a12 0%,transparent 70%),var(--bg)}
+main{max-width:680px;margin:0 auto;padding:22px 16px 70px}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px}.brand img{width:40px;height:40px;border-radius:50%;border:2px solid var(--gold)}
+.brand b{font-weight:900;letter-spacing:3px;color:var(--g)}
+.live{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:2px;color:var(--g)}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--g);box-shadow:0 0 12px var(--g)}
+.live.off{color:var(--mut)}.live.off i{background:#4a5a4f;box-shadow:none}
+/* hero art */
+.hero{position:relative;height:330px;margin:6px 0 20px}
+.hero .c{position:absolute;border-radius:22px;overflow:hidden;padding:5px;background:conic-gradient(from 200deg,var(--gold),var(--gold2),#fff0b0,var(--gold2),var(--gold));box-shadow:0 30px 70px rgba(0,0,0,.7)}
+.hero .c img{display:block;width:100%;height:100%;object-fit:cover;border-radius:17px}
+.hero .m{left:50%;top:0;width:262px;height:262px;transform:translateX(-50%);z-index:3;box-shadow:0 30px 80px rgba(0,0,0,.8),0 0 90px rgba(57,255,136,.22)}
+.hero .l{left:calc(50% - 235px);top:50px;width:190px;height:190px;z-index:2;filter:brightness(.82)}
+.hero .r{right:calc(50% - 235px);top:50px;width:190px;height:190px;z-index:2;filter:brightness(.82)}
+.hero .cap{position:absolute;left:0;right:0;bottom:0;text-align:center;z-index:4}
+.hero .cap span{display:inline-block;padding:9px 18px;border-radius:999px;background:rgba(5,12,8,.92);border:1px solid var(--line);font-size:12.5px;font-weight:800;letter-spacing:2.2px;color:var(--gold)}
+@media(max-width:560px){.hero{height:290px}.hero .m{width:230px;height:230px}.hero .l{left:calc(50% - 168px);width:150px;height:150px;top:62px}.hero .r{right:calc(50% - 168px);width:150px;height:150px;top:62px}}
+h1{font-size:40px;line-height:1;font-weight:900;letter-spacing:-1.5px;text-align:center;margin:8px 0 12px}
+h1 span{background:linear-gradient(180deg,#fff0b0,var(--gold) 45%,var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:#cfe0d4;font-size:16.5px;line-height:1.5;text-align:center;margin:0 auto 22px;max-width:520px}
+/* live stats */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.stat{background:linear-gradient(180deg,#0e1a13,#09110c);border:1px solid var(--line);border-radius:20px;padding:16px 16px 14px;position:relative;overflow:hidden}
+.stat:before{content:"";position:absolute;inset:0;background:radial-gradient(240px 120px at 50% -20%,rgba(246,217,122,.16),transparent 70%)}
+.stat label{position:relative;display:block;font-size:11.5px;font-weight:800;letter-spacing:2px;color:var(--mut);text-transform:uppercase;margin-bottom:6px}
+.stat .n{position:relative;font-size:34px;font-weight:900;letter-spacing:-1px;line-height:1;background:linear-gradient(180deg,#fff,#f6d97a);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.stat .n small{font-size:14px;color:var(--mut);-webkit-text-fill-color:var(--mut);font-weight:700;letter-spacing:0;margin-left:4px}
+.stat .s{position:relative;font-size:12.5px;color:var(--mut);margin-top:6px}
+.note{background:#0a1a11;border:1px solid var(--line);border-radius:16px;padding:14px 16px;color:#b7cbbd;font-size:14.5px;line-height:1.5;margin:14px 0 18px}
+.note b{color:#fff}
+button{font:inherit;cursor:pointer}
+.btn{display:block;width:100%;padding:16px;border-radius:14px;border:0;background:var(--g);color:#04140a;font-weight:900;font-size:17px;letter-spacing:.3px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.gold{background:linear-gradient(180deg,#fff0b0,var(--gold) 45%,var(--gold2));color:#1b1203}
+.btn.alt{background:transparent;border:2px solid var(--g);color:var(--g)}
+.acct{display:none;margin:12px 0;padding:12px 14px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:14px;color:var(--mut)}
+.acct code{color:#fff}
+.pool{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:12px 0;align-items:center}
+.pool .a{flex:none;width:92px;height:92px;border-radius:16px;overflow:hidden;padding:3px;background:conic-gradient(from 200deg,var(--gold),var(--gold2),#fff0b0,var(--gold2),var(--gold))}
+.pool .a img{width:100%;height:100%;object-fit:cover;border-radius:13px;display:block}
+.pool .b{flex:1;min-width:0}
+.pool h2{font-size:17px;font-weight:800}
+.pool .sub{color:var(--mut);font-size:13px;margin:1px 0 6px}
+.pool .amt{font-size:30px;font-weight:900;letter-spacing:-1px;margin-bottom:10px;font-variant-numeric:tabular-nums}.pool .amt small{font-size:14px;color:var(--mut);font-weight:700;margin-left:4px;letter-spacing:0}
+.pool .btn{padding:12px;font-size:15px;border-radius:12px}
+#msg{margin-top:12px;font-size:14.5px;line-height:1.45;word-break:break-word;min-height:20px}
+#msg.err{color:#ff8a8a}#msg.ok{color:var(--g)}
+.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:26px 0 6px}
+.strip img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;border:2px solid #2a3d2f;display:block}
+.cap2{text-align:center;color:var(--mut);font-size:12.5px;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;text-transform:uppercase}
+a{color:var(--g)}
+.lookup{margin-top:24px}.lookup label{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
+.lookup input{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:#08100c;color:var(--ink);font:inherit;margin-bottom:10px}
+.foot{margin-top:26px;color:var(--mut);font-size:12.5px;line-height:1.55}
+.foot code{color:#bcd0c2;word-break:break-all}
+</style></head><body><main>
+<div class="top"><div class="brand"><img src="/icon-192.png" alt=""><b>$STAG</b></div><div class="live off" id="live"><i></i><span id="livet">CONNECTING</span></div></div>
+
+<div class="hero"><div class="c l"><img src="art/s1.webp" alt="Sherwood Saint"></div><div class="c r"><img src="art/h7.webp" alt="Hooded 20"></div><div class="c m"><img src="art/h1.webp" alt="Hooded 20 #1 Golden Sovereign"></div>
+<div class="cap"><span>THE HOODED 20 &middot; SHERWOOD SAINTS</span></div></div>
+
+<h1>Old staking rewards.<br><span>Still yours.</span></h1>
+<p class="lead">If you ever staked a <b>Hooded 20</b> or <b>Sherwood Saint</b>, the ETH you earned is still on-chain, waiting for you. Connect the wallet you staked with and claim it.</p>
+
+<div class="stats">
+<div class="stat"><label>Waiting to be claimed</label><div class="n"><span id="s1">&ndash;</span><small>ETH</small></div><div class="s" id="s1s">live from the chain</div></div>
+<div class="stat"><label>Claimed so far</label><div class="n"><span id="s2">&ndash;</span><small>ETH</small></div><div class="s" id="s2s">lifetime total</div></div>
+</div>
+
+<div class="note"><b>New here?</b> $STAG relaunched on Robinhood Chain. This page is only for the original NFT staking rewards: real ETH that was earned and never collected. Nothing to buy, nothing to approve. It only calls the contract's own <code>claim()</code>, and you pay a tiny network fee.</div>
+
+<button class="btn gold" id="connect">Connect wallet</button>
+<div class="acct" id="acct"></div>
+
+<div class="pool"><div class="a"><img src="art/h1.webp" alt=""></div><div class="b"><h2>Hooded 20 staking</h2><div class="sub">Rewards earned by staked Hooded 20 NFTs</div><div class="amt" id="a1">&ndash;<small>ETH</small></div><button class="btn" id="c1" disabled>Claim</button></div></div>
+<div class="pool"><div class="a"><img src="art/s1.webp" alt=""></div><div class="b"><h2>Sherwood Saints Vault</h2><div class="sub">Rewards earned by staked Sherwood Saints</div><div class="amt" id="a2">&ndash;<small>ETH</small></div><button class="btn" id="c2" disabled>Claim</button></div></div>
+<div id="msg"></div>
+
+<div class="strip"><img src="art/h2.webp" alt=""><img src="art/h3.webp" alt=""><img src="art/h4.webp" alt=""><img src="art/h5.webp" alt=""><img src="art/h6.webp" alt=""><img src="art/s3.webp" alt=""></div>
+
+<div class="lookup"><label>Just checking? Look up any wallet (read-only, no connection needed)</label>
+<input id="addr" placeholder="0x…" autocomplete="off" spellcheck="false"><button class="btn alt" id="look">Check balance</button></div>
+
+<div class="foot">Contracts (Robinhood Chain, 4663):<br>
+Hooded 20 staking <a id="l1" target="_blank" rel="noopener"><code>0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF</code></a><br>
+Sherwood Saints Vault <a id="l2" target="_blank" rel="noopener"><code>0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c</code></a><br><br>
+This page never asks for approvals, signatures, seed phrases or private keys. Only the wallet that earned the rewards can claim them. Totals are read directly from on-chain events. Not financial advice.</div>
+</main>
+<script>
+const RPC='https://rpc.mainnet.chain.robinhood.com',CHAIN='0x1237',EXP='https://robinhoodchain.blockscout.com',API='https://buybot.stagwifhood.fun/api/claimstats';
+const POOLS=[{id:1,to:'0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF'},{id:2,to:'0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c'}];
+const $=i=>document.getElementById(i);let acct=null;
+$('l1').href=EXP+'/address/'+POOLS[0].to;$('l2').href=EXP+'/address/'+POOLS[1].to;
+const msg=(t,c)=>{$('msg').textContent=t;$('msg').className=c||''};
+const eth=w=>{const n=Number(w)/1e18;return n===0?'0':n<0.00001?'<0.00001':n.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')};
+const pad=a=>a.slice(2).toLowerCase().padStart(64,'0');
+async function rpc(method,params){const r=await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error)throw new Error(j.error.message);return j.result}
+async function earned(pool,a){return BigInt(await rpc('eth_call',[{to:pool.to,data:'0x008cc262'+pad(a)},'latest']))}
+async function show(a,canClaim){let total=0n;for(const p of POOLS){try{const e=await earned(p,a);total+=e;$('a'+p.id).innerHTML=eth(e)+'<small>ETH</small>';$('c'+p.id).disabled=!(canClaim&&e>0n)}catch(x){$('a'+p.id).innerHTML='?<small>ETH</small>';$('c'+p.id).disabled=true}}
+ if(total===0n)msg('Nothing to claim for this wallet.','');else msg(canClaim?'Press Claim on each pool that shows an amount.':'That wallet has rewards waiting. Connect it to claim.','ok')}
+async function ensureChain(){const e=window.ethereum;const id=await e.request({method:'eth_chainId'});if(id===CHAIN)return;
+ try{await e.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN}]})}catch(x){if(x.code===4902||/Unrecognized|not added/i.test(x.message||'')){await e.request({method:'wallet_addEthereumChain',params:[{chainId:CHAIN,chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:[RPC],blockExplorerUrls:[EXP]}]})}else throw x}}
+$('connect').onclick=async()=>{try{if(!window.ethereum){msg('No wallet found. Open this page inside your wallet app’s browser (MetaMask, Rabby, Coinbase Wallet…).','err');return}
+ const [a]=await window.ethereum.request({method:'eth_requestAccounts'});await ensureChain();acct=a;$('acct').style.display='block';$('acct').innerHTML='Connected: <code>'+a.slice(0,6)+'…'+a.slice(-4)+'</code>';$('connect').textContent='Switch wallet';await show(a,true)}catch(e){msg(e.message||String(e),'err')}};
+if(window.ethereum&&window.ethereum.on)window.ethereum.on('accountsChanged',a=>{if(a&&a[0]){acct=a[0];$('acct').style.display='block';$('acct').innerHTML='Connected: <code>'+a[0].slice(0,6)+'…'+a[0].slice(-4)+'</code>';show(a[0],true)}});
+async function claim(pool){try{if(!acct)return;await ensureChain();$('c'+pool.id).disabled=true;msg('Confirm in your wallet…','');
+ const h=await window.ethereum.request({method:'eth_sendTransaction',params:[{from:acct,to:pool.to,data:'0x4e71d92d'}]});
+ msg('Sent. Waiting for confirmation… '+EXP+'/tx/'+h,'');for(let i=0;i<60;i++){const r=await rpc('eth_getTransactionReceipt',[h]);if(r){if(r.status==='0x1'){msg('Claimed. The ETH is in your wallet.','ok')}else msg('The transaction failed. Nothing was taken from you.','err');break}await new Promise(s=>setTimeout(s,2000))}
+ await show(acct,true);pollStats()}catch(e){msg(e.code===4001?'Cancelled.':(e.message||String(e)),'err');await show(acct,true)}}
+POOLS.forEach(p=>$('c'+p.id).onclick=()=>claim(p));
+$('look').onclick=async()=>{const a=$('addr').value.trim();if(!/^0x[0-9a-fA-F]{40}$/.test(a)){msg('Paste a full wallet address (0x…).','err');return}msg('Checking…','');await show(a,false)};
+// live totals: smooth count-up, refreshed every 15s
+const cur={s1:0,s2:0};
+function tween(id,to){const from=cur[id];const t0=performance.now();const d=900;(function f(t){const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);const v=from+(to-from)*e;$(id).textContent=v===0?'0':v.toFixed(5);if(k<1)requestAnimationFrame(f);else cur[id]=to})(t0)}
+async function pollStats(){try{const r=await fetch(API,{cache:'no-store'});const j=await r.json();if(!j.ready)throw new Error('warming up');
+ tween('s1',Number(j.claimableWei)/1e18);tween('s2',Number(j.claimedWei)/1e18);
+ $('s1s').textContent=j.claimableWallets+' wallet'+(j.claimableWallets===1?'':'s')+' with rewards waiting';$('s2s').textContent=j.claims+' claim'+(j.claims===1?'':'s')+' so far';
+ $('live').className='live';$('livet').textContent='LIVE'}catch(e){$('live').className='live off';$('livet').textContent='OFFLINE'}}
+pollStats();setInterval(pollStats,15000);
+</script></body></html>

@@ -1,0 +1,59 @@
+{
+  "name": "WANTED #20 — COPPER ARROW",
+  "symbol": "WANTED",
+  "description": "COPPER ARROW. Wanted DEAD OR ALIVE contempt of sheriff. A 1/1 animated WANTED poster of Sherwood with a bounty of 2,000 $STAG on its head — claimable on-chain by the holder. One of WANTED: 21 outlaws of $STAGWIFHOOD on Robinhood Chain. Hold it, stake it in the Sherwood Vault, and claim the bounty. By order of the Sheriff of Nottingham.",
+  "image": "https://stagwifhood.fun/assets/nft/wanted/img/20.jpg",
+  "animation_url": "https://stagwifhood.fun/assets/nft/wanted/anim/20.mp4",
+  "external_url": "https://stagwifhood.fun",
+  "attributes": [
+    {
+      "trait_type": "Reward",
+      "value": "2,000 $STAG"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "RARE"
+    },
+    {
+      "trait_type": "Crime",
+      "value": "Contempt Of Sheriff"
+    },
+    {
+      "trait_type": "Weapon",
+      "value": "Longbow"
+    },
+    {
+      "trait_type": "Outlaw",
+      "value": "COPPER ARROW"
+    },
+    {
+      "trait_type": "Class",
+      "value": "Original Outlaw"
+    },
+    {
+      "trait_type": "Animated",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "1 of 1"
+    },
+    {
+      "trait_type": "Collection",
+      "value": "WANTED"
+    },
+    {
+      "trait_type": "Chain",
+      "value": "Robinhood Chain"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 20
+    }
+  ],
+  "properties": {
+    "category": "video",
+    "bounty_stag": 2000,
+    "rarity": "RARE"
+  }
+}

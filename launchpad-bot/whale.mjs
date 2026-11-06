@@ -149,6 +149,7 @@ b.onclick=async()=>{try{
         const u = new URL(req.url, "http://x");
         if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
         if (u.pathname === "/verify") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
+        if (u.pathname === "/api/claimstats") { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=10", "access-control-allow-origin": "*" }); return res.end(JSON.stringify(claimStatsJson())); }
         if (u.pathname === "/api/nonce") { const [r] = await q("select tg_id from link_nonces where nonce=$1 and expires_at>now()", [u.searchParams.get("n") || ""]); return json(res, 200, r ? { ok: true, tg: String(r.tg_id) } : { ok: false }); }
         if (u.pathname === "/api/verify" && req.method === "POST") {
           const b = await body(req); const [r] = await q("select tg_id from link_nonces where nonce=$1 and expires_at>now()", [String(b.nonce || "")]);
@@ -193,6 +194,43 @@ b.onclick=async()=>{try{
     }).listen(+process.env.PORT || 3000);
   }
   async function topArchers(limit = 5) { return q("select name, max(score) as s from game_scores where day=current_date group by tg_id, name order by s desc limit $1", [limit]); }
+
+  // ---- old staking rewards: live totals (claimable now + lifetime claimed), read straight from chain events ----
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const CLAIMED_T = "0xd8138f8a3f377c5259ca548e70e4c2de94f129f5a11036a15b69513cba2b426a"; // Claimed(address indexed user, uint256 ethAmount)
+  const CPOOLS = [{ key: "hooded", to: "0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF" }, { key: "vault", to: "0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c" }]
+    .map((p) => ({ ...p, from: 20000000, users: new Set(), claimedWei: 0n, claims: 0, claimableWei: 0n, claimableWallets: 0, last: 0 }));
+  const CS = { ready: false, updated: 0 };
+  const rcall = async (method, params) => { for (let i = 0; i < 6; i++) { try { return await rpc.send(method, params); } catch (e) { if (i === 5) throw e; await wait(1500 * (i + 1)); } } };
+  let csBusy = false;
+  async function refreshClaims() {
+    if (csBusy) return; csBusy = true;
+    try {
+      const head = Number(await rcall("eth_blockNumber", [])) || await rpc.getBlockNumber();
+      for (const p of CPOOLS) {
+        let f = p.from;
+        while (f <= head) {
+          const t = Math.min(f + 9000000, head);
+          const logs = await rcall("eth_getLogs", [{ address: p.to, fromBlock: "0x" + f.toString(16), toBlock: "0x" + t.toString(16) }]);
+          for (const l of logs) {
+            if (l.topics[1]) p.users.add("0x" + l.topics[1].slice(-40));
+            if (l.topics[0] === CLAIMED_T) { p.claimedWei += BigInt(l.data); p.claims++; p.last = Math.max(p.last, parseInt(l.blockNumber, 16)); }
+          }
+          f = t + 1;
+        }
+        p.from = f;
+        let tot = 0n, n = 0;
+        for (const u of p.users) { const e = BigInt(await rcall("eth_call", [{ to: p.to, data: "0x008cc262" + u.slice(2).padStart(64, "0") }, "latest"])); if (e > 0n) { tot += e; n++; } }
+        p.claimableWei = tot; p.claimableWallets = n;
+      }
+      CS.updated = Date.now(); CS.ready = true;
+    } catch (e) { log("claim stats err:", e.shortMessage || e.message); } finally { csBusy = false; }
+  }
+  const claimStatsJson = () => ({ ready: CS.ready, updated: CS.updated,
+    claimableWei: CPOOLS.reduce((a, p) => a + p.claimableWei, 0n).toString(), claimableWallets: CPOOLS.reduce((a, p) => a + p.claimableWallets, 0),
+    claimedWei: CPOOLS.reduce((a, p) => a + p.claimedWei, 0n).toString(), claims: CPOOLS.reduce((a, p) => a + p.claims, 0),
+    pools: Object.fromEntries(CPOOLS.map((p) => [p.key, { claimableWei: p.claimableWei.toString(), claimedWei: p.claimedWei.toString(), claims: p.claims }])) });
+  setTimeout(refreshClaims, 20000); setInterval(refreshClaims, 60000);
 
   // ---- Hood Rich Club recruitment post: every 4h in the main group, replaces its own previous post. Off until bot_state.clubPromoOn = '1'. ----
   const PROMO_MS = (parseFloat(process.env.CLUB_PROMO_HOURS || "4") || 4) * 3600e3;
