@@ -7,7 +7,7 @@ import { neon } from "@neondatabase/serverless";
 import { ethers } from "ethers";
 
 export function initWhale(X) {
-  const { CFG, ST, fmt, short, log, tgPost } = X;
+  const { CFG, ST, fmt, short, log, tgPost, ethUsd } = X;
   const DB = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null; // HTTPS driver, no TCP port needed
   const q = async (sql, args = []) => { if (!DB) throw new Error("no database"); return await DB.query(sql, args); };
   const WHALE_MIN = parseFloat(process.env.WHALE_MIN || "10000000");
@@ -226,7 +226,7 @@ b.onclick=async()=>{try{
       CS.updated = Date.now(); CS.ready = true;
     } catch (e) { log("claim stats err:", e.shortMessage || e.message); } finally { csBusy = false; }
   }
-  const claimStatsJson = () => ({ ready: CS.ready, updated: CS.updated,
+  const claimStatsJson = () => ({ ready: CS.ready, updated: CS.updated, ethUsd: Number((ethUsd && ethUsd()) || 0),
     claimableWei: CPOOLS.reduce((a, p) => a + p.claimableWei, 0n).toString(), claimableWallets: CPOOLS.reduce((a, p) => a + p.claimableWallets, 0),
     claimedWei: CPOOLS.reduce((a, p) => a + p.claimedWei, 0n).toString(), claims: CPOOLS.reduce((a, p) => a + p.claims, 0),
     pools: Object.fromEntries(CPOOLS.map((p) => [p.key, { claimableWei: p.claimableWei.toString(), claimedWei: p.claimedWei.toString(), claims: p.claims }])) });

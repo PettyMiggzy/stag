@@ -36,6 +36,8 @@ h1 span{background:linear-gradient(180deg,#fff0b0,var(--gold) 45%,var(--gold2));
 .stat label{position:relative;display:block;font-size:11.5px;font-weight:800;letter-spacing:2px;color:var(--mut);text-transform:uppercase;margin-bottom:6px}
 .stat .n{position:relative;font-size:34px;font-weight:900;letter-spacing:-1px;line-height:1;background:linear-gradient(180deg,#fff,#f6d97a);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
 .stat .n small{font-size:14px;color:var(--mut);-webkit-text-fill-color:var(--mut);font-weight:700;letter-spacing:0;margin-left:4px}
+.stat .u{position:relative;font-size:15px;font-weight:800;color:var(--g);margin-top:4px;font-variant-numeric:tabular-nums;min-height:19px}
+.usd{font-size:14px;font-weight:800;color:var(--g);font-style:normal;letter-spacing:0;margin-left:8px;white-space:nowrap}
 .stat .s{position:relative;font-size:12.5px;color:var(--mut);margin-top:6px}
 .note{background:#0a1a11;border:1px solid var(--line);border-radius:16px;padding:14px 16px;color:#b7cbbd;font-size:14.5px;line-height:1.5;margin:14px 0 18px}
 .note b{color:#fff}
@@ -74,8 +76,8 @@ a{color:var(--g)}
 <p class="lead">If you ever staked a <b>Hooded 20</b> or <b>Sherwood Saint</b>, the ETH you earned is still on-chain, waiting for you. Connect the wallet you staked with and claim it.</p>
 
 <div class="stats">
-<div class="stat"><label>Waiting to be claimed</label><div class="n"><span id="s1">&ndash;</span><small>ETH</small></div><div class="s" id="s1s">live from the chain</div></div>
-<div class="stat"><label>Claimed so far</label><div class="n"><span id="s2">&ndash;</span><small>ETH</small></div><div class="s" id="s2s">lifetime total</div></div>
+<div class="stat"><label>Waiting to be claimed</label><div class="n"><span id="s1">&ndash;</span><small>ETH</small></div><div class="u" id="s1u"></div><div class="s" id="s1s">live from the chain</div></div>
+<div class="stat"><label>Claimed so far</label><div class="n"><span id="s2">&ndash;</span><small>ETH</small></div><div class="u" id="s2u"></div><div class="s" id="s2s">lifetime total</div></div>
 </div>
 
 <div class="note"><b>New here?</b> $STAG relaunched on Robinhood Chain. This page is only for the original NFT staking rewards: real ETH that was earned and never collected. Nothing to buy, nothing to approve. It only calls the contract's own <code>claim()</code>, and you pay a tiny network fee.</div>
@@ -100,14 +102,17 @@ This page never asks for approvals, signatures, seed phrases or private keys. On
 <script>
 const RPC='https://rpc.mainnet.chain.robinhood.com',CHAIN='0x1237',EXP='https://robinhoodchain.blockscout.com',API='https://buybot.stagwifhood.fun/api/claimstats';
 const POOLS=[{id:1,to:'0x2faA6672546912e7cDec4E1AaCF1eeF52bA524fF'},{id:2,to:'0x9eeE6eFe6540C3e3AC515D052c99ad4b389a344c'}];
-const $=i=>document.getElementById(i);let acct=null;
+const $=i=>document.getElementById(i);let acct=null,PX=0;const lastE={1:0n,2:0n};
 $('l1').href=EXP+'/address/'+POOLS[0].to;$('l2').href=EXP+'/address/'+POOLS[1].to;
 const msg=(t,c)=>{$('msg').textContent=t;$('msg').className=c||''};
 const eth=w=>{const n=Number(w)/1e18;return n===0?'0':n<0.00001?'<0.00001':n.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')};
+const usdOf=w=>PX?(Number(w)/1e18*PX).toLocaleString('en-US',{style:'currency',currency:'USD'}):'';
+const amtHtml=w=>eth(w)+'<small>ETH</small>'+(PX&&w>0n?'<em class="usd">≈ '+usdOf(w)+'</em>':'');
+const renderPools=()=>POOLS.forEach(p=>{if(p.shown)$('a'+p.id).innerHTML=amtHtml(lastE[p.id])});
 const pad=a=>a.slice(2).toLowerCase().padStart(64,'0');
 async function rpc(method,params){const r=await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error)throw new Error(j.error.message);return j.result}
 async function earned(pool,a){return BigInt(await rpc('eth_call',[{to:pool.to,data:'0x008cc262'+pad(a)},'latest']))}
-async function show(a,canClaim){let total=0n;for(const p of POOLS){try{const e=await earned(p,a);total+=e;$('a'+p.id).innerHTML=eth(e)+'<small>ETH</small>';$('c'+p.id).disabled=!(canClaim&&e>0n)}catch(x){$('a'+p.id).innerHTML='?<small>ETH</small>';$('c'+p.id).disabled=true}}
+async function show(a,canClaim){let total=0n;for(const p of POOLS){try{const e=await earned(p,a);total+=e;lastE[p.id]=e;p.shown=true;$('a'+p.id).innerHTML=amtHtml(e);$('c'+p.id).disabled=!(canClaim&&e>0n)}catch(x){$('a'+p.id).innerHTML='?<small>ETH</small>';$('c'+p.id).disabled=true}}
  if(total===0n)msg('Nothing to claim for this wallet.','');else msg(canClaim?'Press Claim on each pool that shows an amount.':'That wallet has rewards waiting. Connect it to claim.','ok')}
 async function ensureChain(){const e=window.ethereum;const id=await e.request({method:'eth_chainId'});if(id===CHAIN)return;
  try{await e.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN}]})}catch(x){if(x.code===4902||/Unrecognized|not added/i.test(x.message||'')){await e.request({method:'wallet_addEthereumChain',params:[{chainId:CHAIN,chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:[RPC],blockExplorerUrls:[EXP]}]})}else throw x}}
@@ -124,7 +129,7 @@ $('look').onclick=async()=>{const a=$('addr').value.trim();if(!/^0x[0-9a-fA-F]{4
 const cur={s1:0,s2:0};
 function tween(id,to){const from=cur[id];const t0=performance.now();const d=900;(function f(t){const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);const v=from+(to-from)*e;$(id).textContent=v===0?'0':v.toFixed(5);if(k<1)requestAnimationFrame(f);else cur[id]=to})(t0)}
 async function pollStats(){try{const r=await fetch(API,{cache:'no-store'});const j=await r.json();if(!j.ready)throw new Error('warming up');
- tween('s1',Number(j.claimableWei)/1e18);tween('s2',Number(j.claimedWei)/1e18);
+ PX=Number(j.ethUsd)||0;tween('s1',Number(j.claimableWei)/1e18);tween('s2',Number(j.claimedWei)/1e18);$('s1u').textContent=PX?'≈ '+usdOf(j.claimableWei):'';$('s2u').textContent=PX?'≈ '+usdOf(j.claimedWei):'';renderPools();
  $('s1s').textContent=j.claimableWallets+' wallet'+(j.claimableWallets===1?'':'s')+' with rewards waiting';$('s2s').textContent=j.claims+' claim'+(j.claims===1?'':'s')+' so far';
  $('live').className='live';$('livet').textContent='LIVE'}catch(e){$('live').className='live off';$('livet').textContent='OFFLINE'}}
 pollStats();setInterval(pollStats,15000);

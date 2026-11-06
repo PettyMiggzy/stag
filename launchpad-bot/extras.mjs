@@ -19,7 +19,7 @@ export function initExtras(X) {
     [{ text: "🏹 Play Stag Shot", url: process.env.MINIAPP_URL || "https://stagwifhood.fun/play/", style: "success" }, { text: "🎵 Records", url: "https://records.stagwifhood.fun", style: "primary" }],
   ] });
 
-  const W = initWhale({ CFG, ST, fmt, short, log, tgPost });
+  const W = initWhale({ CFG, ST, fmt, short, log, tgPost, ethUsd: X.ethUsd });
   // ---------- buyer lookup (cached) ----------
   const BUYER = new Map();
   let TEAM = "";
