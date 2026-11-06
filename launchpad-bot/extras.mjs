@@ -234,7 +234,7 @@ export function initExtras(X) {
   async function compPost() {
     try {
       const c = await compGet(); if (!c || !c.on || (await stGet("compPostOn")) !== "1") return;
-      const every = (parseFloat(process.env.COMP_POST_HOURS || "5") || 5) * 3600e3; const last = parseInt((await stGet("compPostAt")) || "0", 10);
+      const every = (parseFloat((await stGet("compPostHours")) || process.env.COMP_POST_HOURS || "6") || 6) * 3600e3; // default 6h; change live with bot_state.compPostHours const last = parseInt((await stGet("compPostAt")) || "0", 10);
       if (Date.now() - last < every) return; await stSet("compPostAt", Date.now());
       const prev = await stGet("compPostMsg");
       const fd = new FormData(); fd.append("chat_id", chat); fd.append("caption", await compText(c)); fd.append("parse_mode", "HTML");
