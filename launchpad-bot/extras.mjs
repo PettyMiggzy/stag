@@ -138,7 +138,7 @@ export function initExtras(X) {
         return reply(bal > 0 ? `👛 <b>${short(a)}</b>\nHolds <b>${fmt(bal, 0)}</b> $STAG (${usd(bal * m.priceUsd)})\nRank <b>#${rank}</b> of ${fmt(m.holders, 0)} holders` : `👛 ${short(a)} holds no $STAG yet.`);
       }
       if (cmd === "song") { const c = X.CLIPS(); if (!c.length) return; const k = c[Math.floor(Math.random() * c.length)]; return X.sendSong(msg.chat.id, k, msg.message_id); }
-      if (["whale", "link", "wallets", "rank", "unlink"].includes(cmd) || (cmd === "start" && args[0] === "whale")) return W.command(msg, cmd, args, reply);
+      if (["whale", "ballerz", "link", "wallets", "rank", "unlink"].includes(cmd) || (cmd === "start" && (args[0] === "whale" || args[0] === "ballerz"))) return W.command(msg, cmd, args, reply);
       if (cmd === "diamond" || cmd === "diamonds") {
         const head = await provider.getBlockNumber();
         let c = [...ST.first.entries()].filter(([a, b]) => (ST.bal.get(a) || 0n) > 0n && a !== CFG.pool && !ST.out.has(a)).sort((x, y) => x[1] - y[1]).slice(0, 12);

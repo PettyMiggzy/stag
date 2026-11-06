@@ -136,6 +136,14 @@ async function loadMeta() {
   } catch (e) { log("meta load failed, using defaults:", e.message); }
 }
 
+// Last scanned block is also kept in the database, so a rebuild or an outage never loses buys: on restart the bot resumes from there and posts what it missed.
+let DBQ = null;
+try { if (process.env.DATABASE_URL) { const { neon } = await import("@neondatabase/serverless"); const sql = neon(process.env.DATABASE_URL); DBQ = (q, a = []) => sql.query(q, a); await DBQ("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); } } catch (e) { console.error("db state off:", e.message); DBQ = null; }
+const dbGetLast = async () => { try { const [r] = await DBQ("select v from bot_state where k='lastBlock'"); return r ? parseInt(r.v, 10) : 0; } catch { return 0; } };
+const dbSetLast = async (n) => { try { await DBQ("insert into bot_state(k,v) values('lastBlock',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [String(n)]); } catch (e) { log("db state save fail:", e.message); } };
+// One-time catch-up after the 2026-11-05 outage (last alert posted before it was ~block 106661119). Used only when the database has no saved block yet.
+const ONE_TIME_CATCHUP_BLOCK = 106661119;
+let CUR_HEAD = 0;
 function loadState() {
   try { return JSON.parse(readFileSync(STATE_FILE, "utf8")); } catch { return {}; }
 }
@@ -237,6 +245,7 @@ async function sendTelegram(a) {
   const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
   const lines = [
     process.env.ALERT_TAG ? `<b>🧪 ${esc(process.env.ALERT_TAG)}</b>` : "",
+    a.late ? `<i>⏪ Posted late: the bot was offline when this buy happened</i>` : "",
     a.ex?.record ? `<b>🏆 NEW BIGGEST BUY</b>` : "",
     a.ex?.herd ? `<b>${a.ex.herd}</b> just bought` : "",
     a.tier ? `<b>${a.tier}</b>` : "",
@@ -334,6 +343,7 @@ async function announce(raw) {
   const a = buildAlert(raw);
   log(`BUY ${fmt(a.eth, 4)} ETH → ${fmt(a.tokens, 0)} ${META.symbol} by ${short(a.buyer)}  ${a.txUrl}`);
   await Promise.all([sendTelegram(a), sendDiscord(a)]);
+  if (a.late) await sleep(4000); // catching up: stay well under Telegram's per-group rate limit
 }
 
 
@@ -437,7 +447,7 @@ async function scan(fromBlock, toBlock) {
     try { bondEth = Number(ethers.formatEther(await provider.getBalance(CFG.pool))); } catch {}
     const px = tokens > 0 && eth > 0 && ETHUSD ? (eth / tokens) * ETHUSD : 0;
     const ex = EX ? await EX.cardExtras(lg.transactionHash, lg.blockNumber, buyer, eth) : {};
-    await announce({ buyer, tokens, eth, holds, posPct, isNew, ex, holdsUsd: px * holds, bondEth, st: statsFor(lg.transactionHash, lg.blockNumber, tokens > 0 && eth > 0 ? eth / tokens : 0), tx: lg.transactionHash, block: lg.blockNumber });
+    await announce({ buyer, tokens, eth, holds, posPct, isNew, ex, holdsUsd: px * holds, bondEth, st: statsFor(lg.transactionHash, lg.blockNumber, tokens > 0 && eth > 0 ? eth / tokens : 0), tx: lg.transactionHash, block: lg.blockNumber, late: CUR_HEAD && CUR_HEAD - lg.blockNumber > 6000 });
   }
 }
 
@@ -473,22 +483,27 @@ async function main() {
     try { const team = startTeamBuyer({ provider, CFG, ST, log, ethUsd: () => ETHUSD, BLOCKS_PER_DAY, buyerCached: (tx) => EX.buyerCached(tx) }); if (team) EX.setTeam(team); } catch (e) { log("team buyer init err:", e.message); }
   }
   const st = loadState();
-  let last = st.lastBlock || CFG.startBlock || head; // default: start now (don't spam history)
+  let dbLast = DBQ ? await dbGetLast() : 0;
+  if (DBQ && !dbLast && !CFG.startBlock && !st.lastBlock) { dbLast = ONE_TIME_CATCHUP_BLOCK; await dbSetLast(dbLast); log(`one-time catch-up: scanning from block ${dbLast}`); }
+  let last = dbLast || st.lastBlock || CFG.startBlock || head; // default: start now (don't spam history)
+  let lastDbSave = 0;
   log(`starting at block ${last} (head ${head}); poll every ${CFG.pollMs}ms`);
 
   async function tick() {
     try {
       const h = await withTimeout(provider.getBlockNumber(), 12000, "RPC getBlockNumber");
       if (h > last) {
+        CUR_HEAD = h;
         // scan in chunks of 2000 to be RPC-friendly
         let from = last + 1;
         while (from <= h) {
           const to = Math.min(from + 1999, h);
           await scan(from, to);
           from = to + 1;
+          if (DBQ && Date.now() - lastDbSave > 20000) { lastDbSave = Date.now(); await dbSetLast(to); }
         }
         last = h;
-        saveState({ lastBlock: last });
+        saveState({ lastBlock: last }); if (DBQ) { lastDbSave = Date.now(); await dbSetLast(last); }
       }
     } catch (e) { log("tick err:", e.message); }
     setTimeout(tick, CFG.pollMs);
