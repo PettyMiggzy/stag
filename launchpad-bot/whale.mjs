@@ -207,6 +207,8 @@ b.onclick=async()=>{try{
     if (csBusy) return; csBusy = true;
     try {
       const head = Number(await rcall("eth_blockNumber", [])) || await rpc.getBlockNumber();
+      const VCOLS = ["0x5c309bC7D137cA4c5AC450B68D1A1d896eF28327", "0x35c57109217319Df9feF0499F56b3f6a68d50931"]; // Sherwood Saints + WANTED, the collections the Vault accepts
+      const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
       for (const p of CPOOLS) {
         let f = p.from;
         while (f <= head) {
@@ -219,6 +221,12 @@ b.onclick=async()=>{try{
           f = t + 1;
         }
         p.from = f;
+        if (p.key === "vault") { // the Vault emits almost no events of its own: stakers are whoever sent it an NFT, plus anyone who stakes in the other pool
+          const vpad = "0x" + p.to.slice(2).toLowerCase().padStart(64, "0"); let g = p.colFrom || 20000000;
+          while (g <= head) { const t2 = Math.min(g + 9000000, head); for (const c of VCOLS) { const ls = await rcall("eth_getLogs", [{ address: c, topics: [TRANSFER, null, vpad], fromBlock: "0x" + g.toString(16), toBlock: "0x" + t2.toString(16) }]); for (const l of ls) if (l.topics[1]) p.users.add("0x" + l.topics[1].slice(-40)); } g = t2 + 1; }
+          p.colFrom = g;
+          for (const q of CPOOLS) if (q.key !== "vault") for (const u of q.users) p.users.add(u);
+        }
         let tot = 0n, n = 0;
         for (const u of p.users) { const e = BigInt(await rcall("eth_call", [{ to: p.to, data: "0x008cc262" + u.slice(2).padStart(64, "0") }, "latest"])); if (e > 0n) { tot += e; n++; } }
         p.claimableWei = tot; p.claimableWallets = n;
