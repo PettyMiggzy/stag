@@ -90,6 +90,22 @@ export function initWhale(X) {
   }
   async function sweep() { try { await loadChat(); const ids = await q("select distinct tg_id from wallet_links"); for (const r of ids) await evaluate(Number(r.tg_id)); await refreshTiers(); } catch (e) { log("sweep err:", e.message); } }
 
+  // ---- holder perks: a verifiable discount code for the real businesses (StagR, Junk Junkies), by $STAG tier / NFT ----
+  const PERKS_DEFAULT = { tiers: { "🍃 Fawn": 3, "🐂 Buck": 5, "🦌 Stag": 8, "👑 Royal Stag": 10 }, nft: 10, applies: "StagR subscriptions and Junk Junkies jobs", live: false };
+  async function perksConfig() { try { const [r] = await q("select v from bot_state where k='perksConfig'"); return r ? { ...PERKS_DEFAULT, ...JSON.parse(r.v) } : PERKS_DEFAULT; } catch { return PERKS_DEFAULT; } }
+  async function ensureCode(tg) {
+    await q("create table if not exists perk_codes(code text primary key, tg_id bigint unique not null, created_at timestamptz default now())");
+    const [r] = await q("select code from perk_codes where tg_id=$1", [tg]); if (r) return r.code;
+    for (let i = 0; i < 8; i++) { const code = "STAG-" + crypto.randomBytes(3).toString("hex").toUpperCase(); try { await q("insert into perk_codes(code, tg_id) values ($1,$2)", [code, tg]); return code; } catch {} }
+    return null;
+  }
+  async function perkFor(tg) { // current discount for this member, from live balances
+    const cfg = await perksConfig(); const { addrs, total, founders } = await totalFor(tg); const tier = tierFor(total);
+    let pct = tier ? (cfg.tiers[tier] || 0) : 0; let why = tier || "";
+    if (founders > 0 && cfg.nft > pct) { pct = cfg.nft; why = tier ? `${tier} + Founder NFT` : "Founder NFT"; }
+    return { pct, why, wallets: addrs.length, cfg };
+  }
+
   // ---- bot commands (called from extras) ----
   async function command(msg, cmd, args, reply) {
     const tg = msg.from.id; const priv = msg.chat.type === "private";
@@ -98,6 +114,14 @@ export function initWhale(X) {
       if (priv) { const ok = await sendLinkFlow(tg); return ok ? null : reply("Couldn't send the link. Try again."); }
       const ok = await sendLinkFlow(tg);
       return reply(ok ? `👑 <b>Hood Rich Club access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG (across any wallets you link) or any Hooded 20 / Sherwood Saints / WANTED NFT to get in.\nI sent you a DM with the link to verify.` : `👑 <b>Hood Rich Club access</b>\nHold ${fmt(WHALE_MIN, 0)}+ $STAG across your wallets. Tap below, press Start, then send /hoodrich again.`, ok ? {} : { reply_markup: { inline_keyboard: [[{ text: "Start the bot", url: `https://t.me/${BOT_USER}?start=whale`, style: "primary" }]] } });
+    }
+    if (cmd === "perks" || cmd === "discount") {
+      if (!priv) return reply("Send /perks to me in a private chat so your code stays yours.");
+      const info = await totalFor(tg); if (!info.addrs.length) return reply("Link a wallet first: send /hoodrich and follow the link. Then /perks shows your discount.");
+      const p = await perkFor(tg); const cfgLive = p.cfg.live;
+      if (!p.pct) return reply(`<b>Your perks</b>\nYou hold ${fmt(info.total, 0)} $STAG across ${info.addrs.length} wallet${info.addrs.length > 1 ? "s" : ""}. Hold 100,000+ $STAG, or a Hooded 20 / WANTED / Saints NFT, to unlock a discount on ${p.cfg.applies}.`);
+      const code = await ensureCode(tg);
+      return reply(`<b>Your perks · ${p.why}</b>\n<b>${p.pct}% off</b> ${p.cfg.applies}\n\nYour code: <code>${code}</code>\nShow it at booking. It is checked live against your wallet, so the discount follows what you hold.${cfgLive ? "" : "\n\n<i>Perks are rolling out. If a business has not switched them on yet, hold onto your code.</i>"}`);
     }
     if (cmd === "wallets" || cmd === "rank") {
       const info = await totalFor(tg);
@@ -150,6 +174,12 @@ b.onclick=async()=>{try{
         if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
         if (u.pathname === "/verify") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
         if (u.pathname === "/api/claimstats") { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=10", "access-control-allow-origin": "*" }); return res.end(JSON.stringify(CS.ready || !CLAIM_CACHE ? claimStatsJson() : { ...CLAIM_CACHE, ethUsd: Number((ethUsd && ethUsd()) || CLAIM_CACHE.ethUsd || 0), cached: true })); }
+        if (u.pathname === "/api/perk") { // staff check: a code in, tier + discount out. No wallet or Telegram details leave the server.
+          const code = String(u.searchParams.get("code") || "").trim().toUpperCase(); const hdr = { "content-type": "application/json", "access-control-allow-origin": "*", "cache-control": "no-store" };
+          if (!/^STAG-[0-9A-F]{6}$/.test(code)) { res.writeHead(200, hdr); return res.end(JSON.stringify({ valid: false })); }
+          const [r] = await q("select tg_id from perk_codes where code=$1", [code]); if (!r) { res.writeHead(200, hdr); return res.end(JSON.stringify({ valid: false })); }
+          const p = await perkFor(Number(r.tg_id)); res.writeHead(200, hdr); return res.end(JSON.stringify({ valid: p.pct > 0, pct: p.pct, tier: p.why, applies: p.cfg.applies, live: p.cfg.live }));
+        }
         if (u.pathname === "/api/nonce") { const [r] = await q("select tg_id from link_nonces where nonce=$1 and expires_at>now()", [u.searchParams.get("n") || ""]); return json(res, 200, r ? { ok: true, tg: String(r.tg_id) } : { ok: false }); }
         if (u.pathname === "/api/verify" && req.method === "POST") {
           const b = await body(req); const [r] = await q("select tg_id from link_nonces where nonce=$1 and expires_at>now()", [String(b.nonce || "")]);

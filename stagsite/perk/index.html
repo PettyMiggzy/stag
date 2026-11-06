@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check a $STAG holder code</title><meta name="robots" content="noindex">
+<link rel="icon" href="/favicon-32.png">
+<style>
+:root{--bg:#060a08;--card:#0d1511;--line:#1d3326;--ink:#eaf3e6;--mut:#8fa796;--g:#39ff88;--gold:#f6d97a}
+*{box-sizing:border-box;margin:0}html,body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{min-height:100vh;background:radial-gradient(900px 500px at 50% -10%,#123824,transparent 70%),var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.c{max-width:440px;width:100%}.brand{display:flex;align-items:center;gap:10px;margin-bottom:18px}.brand img{width:38px;height:38px;border-radius:50%;border:2px solid var(--gold)}.brand b{letter-spacing:3px;color:var(--g)}
+h1{font-size:30px;line-height:1.05;font-weight:900;letter-spacing:-1px;margin-bottom:8px}p{color:#b7cbbd;font-size:15px;line-height:1.5;margin-bottom:16px}
+input{width:100%;padding:16px;border-radius:14px;border:2px solid var(--line);background:#08100c;color:var(--ink);font:inherit;font-size:22px;letter-spacing:3px;text-transform:uppercase;text-align:center;margin-bottom:12px}
+button{display:block;width:100%;padding:16px;border-radius:14px;border:0;background:var(--g);color:#04140a;font:inherit;font-weight:900;font-size:17px;cursor:pointer}
+#r{margin-top:18px;border-radius:18px;padding:18px;display:none;border:2px solid var(--line);background:var(--card)}
+#r.ok{display:block;border-color:var(--g);box-shadow:0 0 30px rgba(57,255,136,.2)}#r.no{display:block;border-color:#8a3a3a}
+#r .pct{font-size:56px;font-weight:900;letter-spacing:-2px;background:linear-gradient(180deg,#fff,#f6d97a);-webkit-background-clip:text;background-clip:text;color:transparent}
+#r .t{color:var(--g);font-weight:800;margin-top:2px}#r .s{color:var(--mut);font-size:14px;margin-top:8px}
+</style></head><body><div class="c">
+<div class="brand"><img src="/icon-192.png" alt=""><b>$STAG</b></div>
+<h1>Check a holder code</h1><p>A $STAG holder shows a code like <b>STAG-1A2B3C</b>. Type it here. The discount is checked live against what they hold.</p>
+<input id="code" placeholder="STAG-XXXXXX" maxlength="11" autocomplete="off" autocapitalize="characters"><button id="go">Check</button>
+<div id="r"></div></div>
+<script>
+const $=i=>document.getElementById(i);
+async function check(){const code=$('code').value.trim();const r=$('r');r.className='';r.style.display='none';
+ try{const j=await (await fetch('https://buybot.stagwifhood.fun/api/perk?code='+encodeURIComponent(code),{cache:'no-store'})).json();
+  if(j.valid){r.className='ok';r.innerHTML='<div class="pct">'+j.pct+'% OFF</div><div class="t">'+j.tier+'</div><div class="s">Applies to: '+j.applies+'.'+(j.live?'':' (Perks are not switched on yet.)')+'</div>'}
+  else{r.className='no';r.innerHTML='<div class="t" style="color:#ff8a8a">Not valid</div><div class="s">The code is wrong, or this person no longer holds enough $STAG.</div>'}}
+ catch(e){r.className='no';r.innerHTML='<div class="s">Could not check right now. Try again.</div>'}}
+$('go').onclick=check;$('code').addEventListener('keydown',e=>{if(e.key==='Enter')check()});
+</script></body></html>
