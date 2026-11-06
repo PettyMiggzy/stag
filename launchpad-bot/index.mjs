@@ -285,6 +285,7 @@ function pickNft(addr) { // rotate through this wallet's NFTs so the alert isn't
   const sorted = [...list].sort((x, y) => nftRank(x) - nftRank(y)); const i = NFT_ROT.get(addr.toLowerCase()) || 0; NFT_ROT.set(addr.toLowerCase(), i + 1);
   const x = sorted[i % sorted.length]; const col = NFT_COLS.find((c) => c.k === x.k); return { ...x, col, key: `${x.k}${x.id}`, meta: NFT_META[x.k]?.[x.id] || {} };
 }
+const SONG_REPLY = process.env.SONG_REPLY === "1"; // the separate 'tap to play' song message after each buy: off unless SONG_REPLY=1
 async function sendTelegram(a) {
   if (!CFG.tg || !CFG.tgChat) return;
   const sym = esc(META.symbol);
@@ -333,7 +334,7 @@ async function sendTelegram(a) {
           if (ANIM_IDS[pk.key]) res = await fetch(`${api}/sendAnimation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, animation: ANIM_IDS[pk.key], caption, parse_mode: "HTML", reply_markup: buttons(a, clip) }) });
           else { const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(buttons(a, clip))); fd.append("animation", new Blob([readFileSync(af)], { type: "video/mp4" }), `${pk.key}.mp4`); res = await fetch(`${api}/sendAnimation`, { method: "POST", body: fd }); }
           const j = await res.json();
-          if (j.ok) { const fid = j.result?.animation?.file_id || j.result?.video?.file_id; if (fid) ANIM_IDS[pk.key] = fid; if (clip) await sendSongReply(api, clip, j.result.message_id); return; }
+          if (j.ok) { const fid = j.result?.animation?.file_id || j.result?.video?.file_id; if (fid) ANIM_IDS[pk.key] = fid; if (clip && SONG_REPLY) await sendSongReply(api, clip, j.result.message_id); return; }
           log("tg animation err:", j.description);
         } catch (e) { log("tg animation send err:", e.message); }
       }
@@ -353,7 +354,7 @@ async function sendTelegram(a) {
       const j = await res.json();
       if (j.ok) {
         const fid = j.result?.video?.file_id; if (fid) { if (clip) VIDEO_IDS[clip.n] = fid; else VIDEO_ID = fid; }
-        if (clip) await sendSongReply(api, clip, j.result.message_id);
+        if (clip && SONG_REPLY) await sendSongReply(api, clip, j.result.message_id);
         return;
       }
       log("tg video err:", j.description);
