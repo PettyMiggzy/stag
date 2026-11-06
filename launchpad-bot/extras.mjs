@@ -236,10 +236,18 @@ export function initExtras(X) {
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();
-    updateDashboard(); setInterval(updateDashboard, 3600000);
+    (async () => { // dashboard is OFF unless bot_state.dashboardOn = '1'; when off, take down the pinned one
+      let on = false; try { const [r] = await W.q("select v from bot_state where k='dashboardOn'"); on = !!r && r.v === "1"; } catch {}
+      if (on) { updateDashboard(); setInterval(updateDashboard, 3600000); return; }
+      try {
+        const c = await tgPost("getChat", { chat_id: chat }); const pm = c.result?.pinned_message;
+        if (pm?.from?.is_bot && pm.text?.includes("LIVE DASHBOARD")) { await tgPost("unpinChatMessage", { chat_id: chat, message_id: pm.message_id }); const d = await tgPost("deleteMessage", { chat_id: chat, message_id: pm.message_id }); log("dashboard removed:", d.ok ? "deleted" : d.description); }
+        else log("dashboard off");
+      } catch (e) { log("dashboard cleanup err:", e.message); }
+    })();
     watchMilestones(); setInterval(watchMilestones, 30000);
     setInterval(dailyCheck, 60000);
-    log("extras ready: commands, dashboard, milestones, leaderboard");
+    log("extras ready: commands, milestones, leaderboard (dashboard off)");
   }
   return { start, cardExtras, market, leaderboardText, isTeam, buyerCached: (tx) => BUYER.get(tx), setTeam: (a) => { TEAM = (a || "").toLowerCase(); } };
 }
