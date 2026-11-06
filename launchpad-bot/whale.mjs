@@ -221,6 +221,13 @@ b.onclick=async()=>{try{
           f = t + 1;
         }
         p.from = f;
+        if (p.key === "hooded") { // also ask the contract directly: who has each Hooded 20 staked, and who owns them
+          for (let id = 1; id <= 20; id++) {
+            const pid = id.toString(16).padStart(64, "0");
+            try { const r = await rcall("eth_call", [{ to: p.to, data: "0x61138db8" + pid }, "latest"]); if (r && r.length >= 42) p.users.add("0x" + r.slice(-40)); } catch {}
+            try { const r = await rcall("eth_call", [{ to: "0x4384cB362D908d36266bDF3C31F18DB95EB127dc", data: "0x6352211e" + pid }, "latest"]); if (r && r.length >= 42) p.users.add("0x" + r.slice(-40)); } catch {}
+          }
+        }
         if (p.key === "vault") { // the Vault emits almost no events of its own: stakers are whoever sent it an NFT, plus anyone who stakes in the other pool
           const vpad = "0x" + p.to.slice(2).toLowerCase().padStart(64, "0"); let g = p.colFrom || 20000000;
           while (g <= head) { const t2 = Math.min(g + 9000000, head); for (const c of VCOLS) { const ls = await rcall("eth_getLogs", [{ address: c, topics: [TRANSFER, null, vpad], fromBlock: "0x" + g.toString(16), toBlock: "0x" + t2.toString(16) }]); for (const l of ls) if (l.topics[1]) p.users.add("0x" + l.topics[1].slice(-40)); } g = t2 + 1; }
