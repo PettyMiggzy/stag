@@ -10,7 +10,9 @@ export function initWhale(X) {
   const DB = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null; // HTTPS driver, no TCP port needed
   const q = async (sql, args = []) => { if (!DB) throw new Error("no database"); return await DB.query(sql, args); };
   const WHALE_MIN = parseFloat(process.env.WHALE_MIN || "10000000");
-  const WHALE_CHAT = process.env.WHALE_CHAT_ID || "";
+  let WHALE_CHAT = process.env.WHALE_CHAT_ID || ""; // the Hood Rich Club chat id: env wins, else bot_state in the database (so it can be set without touching env vars)
+  async function loadChat() { if (!DB || process.env.WHALE_CHAT_ID) return; try { await q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); const [r] = await q("select v from bot_state where k='whaleChat'"); if (r && r.v && r.v !== WHALE_CHAT) { WHALE_CHAT = r.v; log("club chat id:", WHALE_CHAT); } } catch (e) { log("club chat load err:", e.message); } }
+  const migrateChat = async (resp) => { const to = resp?.parameters?.migrate_to_chat_id; if (!to) return false; WHALE_CHAT = String(to); try { await q("insert into bot_state(k,v) values('whaleChat',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [WHALE_CHAT]); } catch {} log("club chat upgraded to supergroup:", WHALE_CHAT); return true; };
   const PUBLIC = (process.env.PUBLIC_URL || "https://buybot.stagwifhood.fun").replace(/\/$/, "");
   const BOT_USER = process.env.BOT_USERNAME || "stagzbuybot";
   const TIERS = [[WHALE_MIN, "👑 Royal Stag"], [5_000_000, "🦌 Stag"], [1_000_000, "🐂 Buck"], [100_000, "🍃 Fawn"]].sort((a, b) => b[0] - a[0]);
@@ -74,7 +76,7 @@ export function initWhale(X) {
           if (inv.ok) {
             await q("insert into whale_members(tg_id) values ($1) on conflict do nothing", [tg]);
             await dm(tg, `👑 <b>Verified: ${founders > 0 ? `${founders} Founder NFT${founders > 1 ? "s" : ""}` : `${fmt(total, 0)} $STAG`}</b>\nWelcome to the Hood Rich Club, you're in. This invite works once and expires in 1 hour.`, { reply_markup: { inline_keyboard: [[{ text: "👑 Join the Hood Rich Club", url: inv.result.invite_link }]] } });
-          } else log("whale invite err:", inv.description);
+          } else { log("club invite err:", inv.description); await migrateChat(inv); }
         } else if (!pass && m) {
           await tgPost("banChatMember", { chat_id: WHALE_CHAT, user_id: tg }); await tgPost("unbanChatMember", { chat_id: WHALE_CHAT, user_id: tg, only_if_banned: true });
           await q("delete from whale_members where tg_id=$1", [tg]);
@@ -85,7 +87,7 @@ export function initWhale(X) {
       return { addrs, total, tier };
     } catch (e) { log("evaluate err:", e.message); }
   }
-  async function sweep() { try { const ids = await q("select distinct tg_id from wallet_links"); for (const r of ids) await evaluate(Number(r.tg_id)); await refreshTiers(); } catch (e) { log("sweep err:", e.message); } }
+  async function sweep() { try { await loadChat(); const ids = await q("select distinct tg_id from wallet_links"); for (const r of ids) await evaluate(Number(r.tg_id)); await refreshTiers(); } catch (e) { log("sweep err:", e.message); } }
 
   // ---- bot commands (called from extras) ----
   async function command(msg, cmd, args, reply) {
@@ -191,5 +193,6 @@ b.onclick=async()=>{try{
   }
   async function topArchers(limit = 5) { return q("select name, max(score) as s from game_scores where day=current_date group by tg_id, name order by s desc limit $1", [limit]); }
 
+  loadChat();
   return { founderCount, startWeb, command, tierOf, refreshTiers, sweep, topArchers, tierFor, hasDb: !!DB, q };
 }
