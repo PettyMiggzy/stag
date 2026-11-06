@@ -216,7 +216,7 @@ export function initExtras(X) {
     const head = final ? `🏁 <b>BUY COMP FINAL RESULT</b>` : `🏆 <b>BUY COMP · WEEKLY BIGGEST BUYER</b>`;
     const body = lines.length ? lines.join("\n") : "No qualifying buys yet. Be the first. 🦌";
     const win = final && elig[0] ? `\n\n🎉 <b>Winner: <a href="${CFG.explorer}/address/${elig[0].w}">${short(elig[0].w)}</a></b>\nPrize: <b>${c.prize}</b>` : "";
-    const rules = `\n\n<b>Prize:</b> ${c.prize}\n<b>Rules:</b> every single buy of <b>${c.minEth} ETH or more</b> counts toward your total. Biggest total wins. You must still hold <b>90%+</b> of what you bought during the comp, so no buy-and-dump. Team wallets are excluded.${out ? `\n<i>${out} wallet${out > 1 ? "s" : ""} not counted for selling.</i>` : ""}`;
+    const rules = `\n\n🏆 <b>Prize:</b> <b>${c.prize}</b>\n🟢 Every buy of <b>${c.minEth} ETH or more</b> counts toward your total\n🟡 <b>Biggest total wins</b>\n🔵 You must still hold <b>90%+</b> of what you bought, so no buy-and-dump\n⚪ Team wallets are excluded${out ? `\n<i>${out} wallet${out > 1 ? "s" : ""} not counted for selling.</i>` : ""}`;
     const when = final ? "" : `\n⏳ Ends <tg-time unix="${Math.floor(c.endTs / 1000)}" format="r">soon</tg-time>`;
     return `${head}\n${body}${win}${final ? "" : rules}${when}`;
   }
