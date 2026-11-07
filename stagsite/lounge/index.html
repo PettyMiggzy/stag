@@ -523,7 +523,9 @@ composer.addPass(new OutputPass());
 /* ---------- loop ---------- */
 // SAFE MODE: the plain renderer (no glow pass, no mirror floor). Some graphics drivers drop part of the fancy pipeline and leave a big black area; we watch for that and switch by ourselves, and there is a manual button too.
 let SAFE=false;try{SAFE=localStorage.getItem('loungeSafe')==='1';}catch(e){}
-function applySafe(){if(REFL)REFL.visible=!SAFE;floor.material.transparent=!SAFE&&!LOW;floor.material.opacity=SAFE||LOW?1:.9;floor.material.needsUpdate=true;}
+const FLAGS={reflector:true,bloom:true,beams:true,shadows:true,videos:true,env:true};window.__flags=FLAGS;const ENV0=scene.environment;
+function applyFlags(){if(REFL)REFL.visible=!SAFE&&FLAGS.reflector;for(const r of rigs)r.bm.visible=FLAGS.beams;for(const o of screenObjs)o.g.visible=FLAGS.videos;scene.environment=FLAGS.env?ENV0:null;if(renderer.shadowMap.enabled!==FLAGS.shadows){renderer.shadowMap.enabled=FLAGS.shadows;scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(m=>m.needsUpdate=true);});}}
+function applySafe(){applyFlags();if(REFL)REFL.visible=!SAFE&&FLAGS.reflector;floor.material.transparent=!SAFE&&!LOW;floor.material.opacity=SAFE||LOW?1:.9;floor.material.needsUpdate=true;}
 function setSafe(on,remember){SAFE=!!on;applySafe();if(remember){try{localStorage.setItem('loungeSafe',on?'1':'0');}catch(e){}}console.warn('display mode:',on?'safe (plain render)':'full');}
 let probeN=0,probeBad=0;
 function probeFrame(){ // read a few pixels of the frame just drawn: a lit room never has a dead-black middle with bright edges
@@ -587,18 +589,19 @@ function mergeStatic(){
 }
 mergeStatic();
 {const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material)return;for(const m of [].concat(o.material)){if(seen.has(m)||!m.isMeshStandardMaterial||m.userData.envSet)continue;seen.add(m);if(m.envMapIntensity===1)m.envMapIntensity=.12;}});floor.material.envMap=scene.environment;floor.material.envMapIntensity=.025;floor.material.roughness=.2;floor.material.emissive=new THREE.Color(0xa07c86);floor.material.emissiveMap=floor.material.map;floor.material.emissiveIntensity=1.5;floor.material.color.setScalar(2.6);floor.material.needsUpdate=true;}
-window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+window.__lounge={applyFlags,FLAGS,THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await Promise.all([setupDancer(),loadStudioProps()]);
   for(const v of videos){try{await v.play();}catch(e){}}
   document.getElementById('load').style.opacity=0;setTimeout(()=>document.getElementById('load').remove(),900);
   applySafe();window.__videos=videos;window.__ready=true;
+  if(Q.has('diag'))import('./diag.js').catch(e=>console.error('diag failed',e));
   if(!CAP){ import('./live.js').catch(e=>console.error('live layer failed',e));
     let last=performance.now();
     const loop=now=>{
       const dt=Math.min(.05,(now-last)/1000);last=now;stepWorld(dt);
       if(window.__lounge.hooks.tick)window.__lounge.hooks.tick(dt);else if(!orbit)placeCam(tAbs);else orbit.update();
-      culling(dt);governor(dt);if(window.__archTick)window.__archTick(camera.position);if(SAFE)renderer.render(scene,camera);else composer.render();probeFrame();requestAnimationFrame(loop);
+      culling(dt);governor(dt);if(window.__archTick)window.__archTick(camera.position);if(SAFE||!FLAGS.bloom)renderer.render(scene,camera);else composer.render();probeFrame();requestAnimationFrame(loop);
     };requestAnimationFrame(loop);
   }
 }
