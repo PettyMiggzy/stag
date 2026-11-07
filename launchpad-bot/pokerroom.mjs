@@ -3,7 +3,9 @@
 import { Table, bestHand } from "./poker.mjs";
 
 const START_CHIPS = 10000, TOPUP_BELOW = 2000, TOPUP_TO = 5000, MIN_BUY = 400, MAX_BUY = 5000, TURN_MS = parseInt(process.env.POKER_TURN_MS || "25000", 10), NEXT_HAND_MS = parseInt(process.env.POKER_NEXT_MS || "6500", 10), SEATS = 9;
+export const TOPUP_LEVEL = 2000;
 const day = () => new Date().toISOString().slice(0, 10);
+export const todayStr = day;
 const weekKey = () => { const d = new Date(); const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); const n = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - n); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${Math.ceil(((t - y0) / 864e5 + 1) / 7)}`; };
 
 // ---- chip balances (memory cache, saved to the database when there is one) ----
@@ -12,7 +14,7 @@ export async function initChips(q) {
   Q = q; if (!Q) return;
   try { await Q("create table if not exists poker_chips(addr text primary key, chips bigint not null, net_week bigint not null default 0, week text, topup_day text, name text, updated_at timestamptz default now())"); ready = true; } catch (e) { console.log("poker chips table err:", e.message); }
 }
-async function chipsFor(addr, name) {
+export async function chipsFor(addr, name) {
   let c = cache.get(addr);
   if (!c) {
     c = { addr, chips: START_CHIPS, net: 0, week: weekKey(), topup: day(), name };
@@ -24,7 +26,7 @@ async function chipsFor(addr, name) {
   if (c.chips < TOPUP_BELOW && c.topup !== day()) { c.chips = TOPUP_TO; c.topup = day(); } // one free top-up a day if you are nearly out
   return c;
 }
-async function saveChips(c) { if (!Q || !ready) return; try { await Q("insert into poker_chips(addr, chips, net_week, week, topup_day, name, updated_at) values ($1,$2,$3,$4,$5,$6, now()) on conflict(addr) do update set chips=excluded.chips, net_week=excluded.net_week, week=excluded.week, topup_day=excluded.topup_day, name=excluded.name, updated_at=now()", [c.addr, c.chips, c.net, c.week, c.topup, c.name]); } catch {} }
+export async function saveChips(c) { if (!Q || !ready) return; try { await Q("insert into poker_chips(addr, chips, net_week, week, topup_day, name, updated_at) values ($1,$2,$3,$4,$5,$6, now()) on conflict(addr) do update set chips=excluded.chips, net_week=excluded.net_week, week=excluded.week, topup_day=excluded.topup_day, name=excluded.name, updated_at=now()", [c.addr, c.chips, c.net, c.week, c.topup, c.name]); } catch {} }
 export async function pokerLeaders(limit = 10) {
   const rows = [...cache.values()].filter((c) => c.week === weekKey());
   let db = []; if (Q && ready) { try { db = await Q("select addr, name, net_week from poker_chips where week=$1 order by net_week desc limit $2", [weekKey(), limit]); } catch {} }

@@ -2,6 +2,7 @@
 // Loaded by index.html in normal (non-capture) mode. Nothing here moves money: sign-in is a plain message signature.
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { initCasino } from './casino.js';
 const L = window.__lounge;
 const { THREE, scene, camera, M, STAGE_Y } = L;
 const Q = new URLSearchParams(location.search);
@@ -176,7 +177,7 @@ function makeAvatar(info) {
 }
 // ---- house guests: a few extras (clearly labelled) who wander between the bar, the floor and the stage rail so the room is never empty
 const GUESTS = []; const GBAR = [[-4.2, -11.5], [-2.5, -11.5], [0.8, -11.5], [2.5, -11.5], [4.2, -11.5]];
-const GFLOOR = [[-3.0, -6.8], [3.0, -6.8], [-4.8, -1.5], [4.8, -1.5], [-3.6, 3.2], [3.6, 3.2], [0, -8.6], [-1.6, 0.5], [1.6, 0.5]];
+const GFLOOR = [[-3.0, -6.8], [3.0, -6.8], [-4.8, -1.5], [4.8, -1.5], [-3.6, 3.2], [2.4, 3.0], [0, -8.6], [-1.6, 0.5], [1.6, 0.5]];
 const GTINT = [[1, .8, .75], [.8, .9, 1], [.85, 1, .85], [1, .95, .7], [.95, .8, 1]];
 function guestPick(g) { const u = g.userData; const atBar = Math.random() < .45; const L2 = atBar ? GBAR : GFLOOR; const s = L2[Math.floor(Math.random() * L2.length)]; u.gx = s[0] + (Math.random() - .5) * .3; u.gz = s[1]; u.bar = atBar; u.arrived = false; }
 function guestsInit() {
@@ -253,6 +254,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
     else if (m.t === 'denied') { denied = true; say('sys', '', m.why || 'Disconnected.'); sessionStorage.removeItem('lounge'); ws = null; }
     else if (m.t === 'voice') voiceReady(m);
     else if (m.t === 'poker') pkUpdate(m);
+    else if (m.t === 'cg') CG.onMsg(m);
     else if (m.t === 'pokererr') say('sys', '', m.why);
     else if (m.t === 'pokerleft') pkLeft(m);
     else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
@@ -261,6 +263,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
   ws.onclose = () => { if (ws !== mine || denied) return; say('sys', '', retries ? 'Still trying to reconnect…' : 'Connection lost. Reconnecting…'); PK.seat = -1; PK.watching = false; setTimeout(() => { if (!denied) openSocket(); }, Math.min(8000, 1000 * 2 ** retries++)); };
 }
 const sendWs = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+const CG = initCasino({ L, sendWs, pos, $, say, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
 
 /* ---------- controls ---------- */
 const STAGE = { x0: -2.5, x1: 2.5, z0: -9.8, z1: 3.5 };
@@ -350,7 +353,7 @@ L.hooks.tick = (dt) => {
   sendAcc += dt; if (sendAcc > .1) { sendAcc = 0; sendWs({ t: 'pos', x: pos.x, z: pos.z, ry: pos.ry, a: pos.anim }); }
   for (const a of others.values()) { const v = a.userData; a.position.x += (v.tx - a.position.x) * Math.min(1, dt * 9); a.position.z += (v.tz - a.position.z) * Math.min(1, dt * 9); a.rotation.y += ((v.try - a.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 10); }
   lodT += dt; if (lodT > .5) { lodT = 0; const arr = [...others.values()].map((a) => [a, Math.hypot(a.position.x - pos.x, a.position.z - pos.z)]).sort((x, y) => x[1] - y[1]); arr.forEach(([a, d], i) => { a.userData.near = i < 18 && d < 22; a.userData.tag.visible = d < 16; }); }
-  guestTick(dt);
+  guestTick(dt); CG.tick(dt);
   frameN++;
   for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); if (v.near !== false || frameN % 4 === 0) v.mixer.update(v.near !== false ? dt : dt * 4); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
@@ -433,14 +436,19 @@ const NPC_DEFS = [
     routine: [{ p: null, a: 'pose', t: [16, 24] }, { p: null, a: 'idle', t: [5, 9] }], greet: true },
   { id: 'patrol', name: 'Security', file: 'patrol', x: -5.5, z: 8, ry: 0, h: 2.25, reach: 3.0, anims: ['idle', 'chat', 'look', 'agree', 'wave', 'walk'],
     routine: [
-      { p: [-5.5, 8], a: 'look', t: [5, 8] }, { p: [-5.5, -4], a: 'chat', t: [5, 8] }, { p: [-5.5, -10.2], a: 'look', t: [6, 9] },
-      { p: [5.5, -10.2], a: 'agree', t: [5, 8] }, { p: [5.5, -4], a: 'look', t: [5, 8] }, { p: [5.5, 8], a: 'chat', t: [6, 9] },
+      { p: [-3.2, 8], a: 'look', t: [5, 8] }, { p: [-5.5, -4], a: 'chat', t: [5, 8] }, { p: [-5.5, -10.2], a: 'look', t: [6, 9] },
+      { p: [5.5, -10.2], a: 'agree', t: [5, 8] }, { p: [5.5, -4], a: 'look', t: [5, 8] }, { p: [3.0, 1.6], a: 'look', t: [2, 3] }, { p: [3.0, 8], a: 'chat', t: [6, 9] },
     ], hello: ['hi', 'classy', 'enjoy', 'safe'] },
+  // the casino tables: a blackjack dealer and a roulette croupier
+  { id: 'bj', name: 'Vince', file: 'bj', x: 9.4, z: 7.8, ry: 0, h: 1.8, reach: 0, hello: ['hi'], anims: ['idle', 'chat', 'agree', 'look', 'wave'],
+    routine: [{ p: null, face: 0, a: 'idle', t: [6, 9] }, { p: null, face: .3, a: 'look', t: [3, 5] }, { p: null, face: 0, a: 'agree', t: [3, 4] }, { p: null, face: -.3, a: 'look', t: [3, 5] }] },
+  { id: 'rl', name: 'Mina', file: 'rl', x: 6.9, z: 4.75, ry: 0, h: 1.75, reach: 0, hello: ['hi'], anims: ['idle', 'chat', 'agree', 'look', 'wave'],
+    routine: [{ p: null, face: 0, a: 'idle', t: [6, 9] }, { p: null, face: .35, a: 'look', t: [3, 5] }, { p: null, face: 0, a: 'chat', t: [3, 4] }, { p: null, face: -.35, a: 'look', t: [3, 5] }] },
   // the vocal booth: a recording artist works on a demo; he fades out whenever a real person steps into the booth or goes on air
   { id: 'artist', name: 'Artist', file: 'artist', x: -9.6, z: 12.6, ry: Math.PI, h: 1.8, reach: 0, anims: ['idle', 'rap1', 'rap2', 'bounce', 'nod'],
     routine: [{ p: null, face: Math.PI, a: 'rap1', t: [8, 12] }, { p: null, face: Math.PI, a: 'bounce', t: [5, 8] }, { p: null, face: Math.PI, a: 'rap2', t: [8, 12] }, { p: null, face: Math.PI, a: 'nod', t: [3, 5] }] },
   // the card room: the dealer stands at the end of the table and calls each street
-  { id: 'dealer', name: 'Charlotte', file: 'dealer', x: 10.45, z: 10.6, ry: -Math.PI / 2, h: 1.75, reach: 3.2, anims: ['idle', 'chat', 'agree', 'look', 'wave'], hello: ['hi'],
+  { id: 'dealer', name: 'Charlotte', file: 'dealer', x: 9.2, z: 12.7, ry: -Math.PI / 2, h: 1.75, reach: 3.2, anims: ['idle', 'chat', 'agree', 'look', 'wave'], hello: ['hi'],
     routine: [{ p: null, face: -Math.PI / 2, a: 'idle', t: [6, 9] }, { p: null, face: -Math.PI * .55, a: 'look', t: [3, 5] }, { p: null, face: -Math.PI / 2, a: 'agree', t: [3, 4] }, { p: null, face: -Math.PI * .45, a: 'look', t: [3, 5] }] },
   // the bar: the bartender works the back bar and chats; a regular nurses a drink at the counter
   { id: 'bar', name: 'Marco', file: 'bar', x: -2.2, z: -14.25, ry: 0, h: 1.9, reach: 3.6, anims: ['idle', 'chat', 'wave', 'look', 'agree', 'drink', 'walk'],
@@ -468,7 +476,7 @@ async function loadNpcs() {
         const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
       const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
       const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
-      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', dealer: 'Dealer', artist: 'Recording a demo' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
+      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', dealer: 'Poker dealer', artist: 'Recording a demo', bj: 'Blackjack dealer', rl: 'Roulette croupier' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
     } catch (e) { console.warn('npc failed', d.file, e); }
   }
   try { const gm = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffa040, emissiveIntensity: .9, transparent: true, opacity: .85 }); for (const [x, z] of [[-1.5, -12.95], [-1.95, -13.3], [1.2, -13.0]]) { const g = new THREE.Mesh(new THREE.CylinderGeometry(.045, .035, .12, 14), gm); g.position.set(x, 1.2, z); scene.add(g); } } catch (e) {}
