@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { initWhale } from "./whale.mjs";
+import { initBurn } from "./burn.mjs";
 
 export function initExtras(X) {
   const { provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY } = X;
@@ -120,6 +121,11 @@ export function initExtras(X) {
     return out;
   }
 
+  // ---------- burn counter ----------
+  const BURN = initBurn({ provider, ethers, CFG, q: W.q, log, fmt, usd, tgPost, chat, market, adminTg: process.env.ADMIN_TG_ID || "6820752140",
+    stGet: async (k) => { try { const [r] = await W.q("select v from bot_state where k=$1", [k]); return r ? r.v : null; } catch { return null; } },
+    stSet: async (k, v) => { try { await W.q("insert into bot_state(k,v) values($1,$2) on conflict(k) do update set v=excluded.v, updated_at=now()", [k, String(v)]); } catch {} } });
+
   // ---------- commands ----------
   let offset = 0;
   async function handle(msg) {
@@ -135,6 +141,11 @@ export function initExtras(X) {
         if (cmd === "compend") { const c = await compGet(); if (c) { c.endTs = Date.now() - 1; await compSet(c); await compCheckEnd(); } return; }
         const days = parseFloat(args[0]) || 7, minEth = parseFloat(args[1]) || 0.005; const head = await provider.getBlockNumber(); const now = Date.now();
         await compSet({ on: true, startBlock: head, startTs: now, endTs: now + days * 86400000, minEth, prize: args.slice(2).join(" ") || "Hooded 20 #1 · Golden Sovereign (Mythic)" }); return reply(`Comp started: ${days} days, min ${minEth} ETH.`);
+      }
+      if (cmd === "burn" || cmd === "burned" || cmd === "burns") return reply(await BURN.text());
+      if ((cmd === "burndraft" || cmd === "burnpost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM
+        if (cmd === "burndraft") { await BURN.sync(); return reply("<b>Draft of the daily burn post:</b>\n\n" + await BURN.text(true) + "\n\n<i>Not posted anywhere. Send /burnpost on to start posting it once a day, /burnpost off to stop.</i>"); }
+        const on = (args[0] || "").toLowerCase() === "on"; await W.q("insert into bot_state(k,v) values('burnPostOn',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [on ? "1" : "0"]); return reply(on ? "✅ Daily burn post is ON (once a day at 15:00 UTC in the main group)." : "⏹ Daily burn post is OFF.");
       }
       if (cmd === "top" || cmd === "leaderboard") return reply(await leaderboardText("🏆 TOP BUYERS · 24H"));
       if (cmd === "last") { const m = await market(); const l = ST.buys[ST.buys.length - 1]; return reply(l ? `🕒 Last buy: <b>${fmt(l.eth, 3)} ETH</b> (${usd(l.eth * m.ethUsd)}) · ${fmt((m.head - l.block) / (BLOCKS_PER_DAY / 86400), 0)}s ago · <a href="${CFG.explorer}/tx/${l.tx}">Tx</a>` : "No buys yet."); }
@@ -300,7 +311,7 @@ export function initExtras(X) {
         else log("dashboard off");
       } catch (e) { log("dashboard cleanup err:", e.message); }
     })();
-    watchMilestones(); setInterval(watchMilestones, 30000); setInterval(compCheckEnd, 60000); setInterval(compPost, 10 * 60000); setTimeout(compPost, 120000);
+    BURN.start();     watchMilestones(); setInterval(watchMilestones, 30000); setInterval(compCheckEnd, 60000); setInterval(compPost, 10 * 60000); setTimeout(compPost, 120000);
     setInterval(dailyCheck, 60000);
     log("extras ready: commands, milestones, leaderboard (dashboard off)");
   }
