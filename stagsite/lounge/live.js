@@ -250,7 +250,7 @@ function sendChat() { const i = $('#ci'); const t = i.value.trim(); if (t) sendW
 $('#send').onclick = sendChat;
 $('#drink').onclick = () => { const b = $('#bar'); b.style.display = b.style.display === 'flex' ? 'none' : 'flex'; };
 $('#bar').innerHTML = [['champagne', '🥂 Champagne'], ['whiskey', '🥃 Whiskey'], ['mojito', '🍹 Mojito'], ['gold', '✨ Gold Label']].map(([id, n]) => `<button data-d="${id}">${n} · free</button>`).join('');
-$('#bar').onclick = (e) => { const d = e.target.dataset && e.target.dataset.d; if (d) { sendWs({ t: 'drink', id: d }); if (me) { me.userData.glass.visible = true; me.userData.glass.material.emissive.setHex(DRINK_COL[d]); setTimeout(() => { if (me) me.userData.glass.visible = false; }, 60000); } $('#bar').style.display = 'none'; } };
+$('#bar').onclick = (e) => { const d = e.target.dataset && e.target.dataset.d; if (d) { sendWs({ t: 'drink', id: d }); if (NPCS.bar) { npcSay(NPCS.bar, 'pour'); NPCS.bar.greetAnim = 'agree'; NPCS.bar.greetUntil = performance.now() + 2600; } if (me) { me.userData.glass.visible = true; me.userData.glass.material.emissive.setHex(DRINK_COL[d]); setTimeout(() => { if (me) me.userData.glass.visible = false; }, 60000); } $('#bar').style.display = 'none'; } };
 
 /* ---------- voice (LiveKit, proximity volume) ---------- */
 let lkRoom = null, micOn = false, LKM = null, subT = 0;
@@ -403,6 +403,15 @@ const NPC_DEFS = [
       { p: [-5.5, 8], a: 'look', t: [5, 8] }, { p: [-5.5, -4], a: 'chat', t: [5, 8] }, { p: [-5.5, -10.2], a: 'look', t: [6, 9] },
       { p: [5.5, -10.2], a: 'agree', t: [5, 8] }, { p: [5.5, -4], a: 'look', t: [5, 8] }, { p: [5.5, 8], a: 'chat', t: [6, 9] },
     ], hello: ['hi', 'classy', 'enjoy', 'safe'] },
+  // the bar: the bartender works the back bar and chats; a regular nurses a drink at the counter
+  { id: 'bar', name: 'Marco', file: 'bar', x: -2.2, z: -14.25, ry: 0, h: 1.9, reach: 3.6, anims: ['idle', 'chat', 'wave', 'look', 'agree', 'drink', 'walk'],
+    routine: [
+      { p: [-2.2, -14.25], face: 0, a: 'chat', t: [7, 10] }, { p: [0.2, -14.25], face: Math.PI, a: 'look', t: [5, 7] }, { p: [2.4, -14.25], face: 0, a: 'agree', t: [6, 9] },
+      { p: [0.2, -14.25], face: 0, a: 'drink', t: [5, 7] }, { p: [-2.2, -14.25], face: Math.PI * .9, a: 'look', t: [4, 6] },
+    ], hello: ['hi', 'evening'] },
+  { id: 'patron', name: 'Big Mike', file: 'patron', x: -1.68, z: -12.1, ry: Math.PI, h: 1.8, reach: 2.8, anims: ['idle', 'drink', 'chat', 'look', 'agree'],
+    routine: [{ p: null, face: Math.PI, a: 'drink', t: [6, 9] }, { p: null, face: Math.PI, a: 'idle', t: [5, 8] }, { p: null, face: Math.PI * .85, a: 'chat', t: [4, 6] }, { p: null, face: Math.PI, a: 'drink', t: [7, 10] }, { p: null, face: Math.PI * 1.1, a: 'look', t: [4, 6] }], hello: ['hi'] },
+
 ];
 const NPCS = {}; let LINES = {}; let talking = null;
 const voiceVol = (npc) => { if (!me) return .6; const d = Math.hypot(npc.obj.position.x - pos.x, npc.obj.position.z - pos.z); return Math.max(.25, Math.min(1, 1.2 - d / 14)); };
@@ -412,7 +421,7 @@ async function loadNpcs() {
     try {
       const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
       const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = (d.h || 1.8) / (bb.max.y - bb.min.y);
-      g.scene.scale.multiplyScalar(sc); g.scene.position.y = -bb.min.y * sc; g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; } });
+      g.scene.scale.multiplyScalar(sc); g.scene.position.y = -bb.min.y * sc; g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; if (d.id === 'bar' && o.material && o.material.color) o.material.color.multiplyScalar(.55); } });
       const grp = new THREE.Group(); grp.add(g.scene); grp.position.set(d.x, 0, d.z); grp.rotation.y = d.ry; scene.add(grp);
       const mixer = new THREE.AnimationMixer(g.scene); const acts = {};
       for (const a of d.anims) { try { const f = await loadGLB(`./assets/npc/${d.file}_${a}.glb`); const c = f.animations[0]; if (!c) continue;
@@ -420,9 +429,10 @@ async function loadNpcs() {
         const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
       const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
       const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
-      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag);
+      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag);
     } catch (e) { console.warn('npc failed', d.file, e); }
   }
+  try { const gm = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffa040, emissiveIntensity: .9, transparent: true, opacity: .85 }); for (const [x, z] of [[-1.5, -12.95], [-1.95, -13.3], [1.2, -13.0]]) { const g = new THREE.Mesh(new THREE.CylinderGeometry(.045, .035, .12, 14), gm); g.position.set(x, 1.2, z); scene.add(g); } } catch (e) {}
   try { const b = await loadGLB('./assets/npc/djbooth.glb'); b.scene.updateMatrixWorld(true); let bb = new THREE.Box3().setFromObject(b.scene); const sz = bb.getSize(new THREE.Vector3()); b.scene.scale.multiplyScalar(2.6 / Math.max(sz.x, sz.z)); b.scene.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(b.scene); b.scene.position.set(8.6 - (bb.min.x + bb.max.x) / 2, -bb.min.y, -11.2 - (bb.min.z + bb.max.z) / 2); scene.add(b.scene); } catch (e) { console.warn('dj booth model missing'); }
 }
 function npcPlay(n, name) { const a = n.acts[name] || n.acts[n.base] || n.acts.idle; if (!a || n.curName === name) return; a.reset().play(); if (n.cur && n.cur !== a) n.cur.crossFadeTo(a, .3, false); n.cur = a; n.curName = name; }
@@ -483,6 +493,12 @@ function openTalk(n) {
   } else if (n.id === 'door') {
     sub.textContent = 'Members only. Anything you need to know?'; npcSay(n, 'info');
     add('How do I get in?', () => { sub.textContent = '10,000,000 $STAG across your linked wallets, or a Hooded 20, Sherwood Saints or WANTED NFT.'; npcSay(n, 'info'); }); add('Thanks', () => { npcSay(n, 'thanks'); n.greetAnim = 'wave'; n.greetUntil = performance.now() + 2200; closeTalk(); });
+  } else if (n.id === 'bar') {
+    sub.textContent = "Evening. What can I get you? It's all on the house right now."; npcSay(n, 'greet');
+    add('🍸 See the menu', () => { npcSay(n, 'menu'); $('#bar').style.display = 'flex'; closeTalk(); }); add('Just looking', () => { npcSay(n, 'thanks'); closeTalk(); });
+  } else if (n.id === 'patron') {
+    sub.textContent = 'Pull up a stool, friend.'; npcSay(n, 'hi');
+    add('🥂 Cheers', () => { npcSay(n, 'cheers'); n.greetAnim = 'drink'; n.greetUntil = performance.now() + 2600; }); add('Any tips?', () => { sub.textContent = 'Try the pink one. Trust me.'; npcSay(n, 'tip'); }); add('Enjoy', () => { npcSay(n, 'enjoy'); closeTalk(); });
   } else {
     sub.textContent = 'Evening. Everything good?'; npcSay(n, 'hi');
     add('All good', () => { npcSay(n, 'enjoy'); closeTalk(); }); add('Is this place safe?', () => { sub.textContent = 'Nobody gets past the door without making the list.'; npcSay(n, 'safe'); });
