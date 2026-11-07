@@ -1,6 +1,7 @@
 // Hood Rich Club lounge: wallet-gated multiplayer room. HTTP login (sign a message, no gas), a WebSocket for presence + chat,
 // and LiveKit voice passes. Everything is free to use for now. No wallet balances or Telegram details are ever sent to other players.
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
 import { WebSocketServer } from "ws";
 import { ethers } from "ethers";
 
@@ -84,6 +85,17 @@ export function initLounge(X) {
     if (rooms.length >= MAX_ROOMS) return null;
     const r = { n: rooms.length + 1, players: new Map(), tick: 0 }; rooms.push(r); return r;
   }
+  // ---- DJ: one shared playlist for the whole lounge, clocked by the server. Every client plays the same clip at the same point in it. ----
+  let TRACKS = []; try { TRACKS = readFileSync(new URL("./clips/titles.txt", import.meta.url), "utf8").split("\n").filter(Boolean).map((l) => { const [n, ...t] = l.split("|"); return { n: n.trim(), title: t.join("|").trim(), dur: 40 }; }); } catch {}
+  const dj = { idx: 0, start: Date.now(), votes: new Map() }; // votes: addr -> track index
+  const tally = () => { const c = {}; for (const i of dj.votes.values()) c[i] = (c[i] || 0) + 1; return c; };
+  const djState = () => ({ idx: dj.idx, start: dj.start, now: Date.now(), dur: (TRACKS[dj.idx] || { dur: 40 }).dur, titles: TRACKS.map((t) => t.title), nums: TRACKS.map((t) => t.n), votes: tally() });
+  const broadcastAll = (o) => { const m = JSON.stringify(o); for (const r of rooms) for (const p of r.players.values()) if (p.ws.readyState === 1) p.ws.send(m); };
+  setInterval(() => { // when a track ends, the most-voted track plays next, otherwise the next in order
+    if (!TRACKS.length) return; const cur = TRACKS[dj.idx]; if (Date.now() < dj.start + cur.dur * 1000) return;
+    const c = tally(); let next = (dj.idx + 1) % TRACKS.length, best = 0; for (const [i, n] of Object.entries(c)) if (n > best && +i !== dj.idx) { best = n; next = +i; }
+    dj.idx = next; dj.start = Date.now(); dj.votes = new Map(); broadcastAll({ t: "dj", ...djState(), changed: true });
+  }, 1000);
   function attach(server) {
     server.on("upgrade", (req, sock, head) => {
       if ((req.url || "").split("?")[0] !== "/ws/lounge") return; // other upgrades are not ours
@@ -103,7 +115,7 @@ export function initLounge(X) {
         const name = clean(m.name, 16) || s.a.slice(0, 6) + "…" + s.a.slice(-4);
         me = { id: HEX(4), addr: s.a, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws, room };
         room.players.set(s.a, me); byAddr.set(s.a, me); clearTimeout(joinTimer);
-        send(ws, { t: "welcome", id: me.id, room: room.n, cap: ROOM_CAP, epoch: EPOCH, now: Date.now(), players: [...room.players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
+        send(ws, { t: "welcome", id: me.id, room: room.n, cap: ROOM_CAP, epoch: EPOCH, now: Date.now(), dj: djState(), players: [...room.players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
         allIn(room, { t: "join", p: pub(me) }, me.id); log("lounge: join", name, s.tier, "room", room.n, "online", room.players.size); return;
       }
       if (m.t === "pos") { me.x = num(m.x, -11, 11, me.x); me.z = num(m.z, -14.5, 14.5, me.z); me.ry = num(m.ry, -7, 7, me.ry); me.anim = ["idle", "walk", "wave"].includes(m.a) ? m.a : "idle"; me.moved = true; }
@@ -113,6 +125,9 @@ export function initLounge(X) {
       } else if (m.t === "drink") {
         if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id; me.moved = true;
         allIn(me.room, { t: "sys", text: `${DRINKS[m.id]} for ${me.name}` }); setTimeout(() => { if (me) { me.drink = ""; me.moved = true; } }, 60000);
+      } else if (m.t === "djvote") {
+        const i = Math.floor(Number(m.i)); if (!(i >= 0 && i < TRACKS.length) || i === dj.idx || Date.now() - (me.lastVote || 0) < 800) return; me.lastVote = Date.now();
+        dj.votes.set(me.addr, i); broadcastAll({ t: "dj", ...djState() }); send(ws, { t: "djack", i });
       } else if (m.t === "rec") {
         if (Date.now() - (me.lastRec || 0) < 1500) return; me.lastRec = Date.now(); me.rec = !!m.on; allIn(me.room, { t: "rec", id: me.id, name: me.name, on: me.rec }, me.id);
       } else if (m.t === "voice") {

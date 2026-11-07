@@ -41,7 +41,12 @@ body.touch #joy{display:block}
 #studio .rec{background:#7a1020!important;color:#fff!important;border-color:#ff5a6a!important}
 #studio small{display:block;opacity:.75;line-height:1.4;margin-top:6px}
 #sc{font:700 40px Georgia,serif;text-align:center;color:#ff6a7a;height:44px}
-@media (max-width:640px){#chat{bottom:176px}}
+#talkp,#djp{position:fixed;left:50%;transform:translateX(-50%);bottom:130px;width:min(380px,calc(100vw - 24px));z-index:13;display:none;color:#f3e7c9;border:1px solid rgba(233,201,122,.45);border-radius:14px;padding:14px;background:rgba(14,6,14,.93);font-size:14px}
+#talkp h3,#djp h3{margin:0 0 6px;font:700 15px Georgia,serif;letter-spacing:.2em;color:#e9c97a}
+#tpSub{min-height:38px;line-height:1.4;margin-bottom:8px;color:#fff}
+#tpBtns{display:flex;gap:6px;flex-wrap:wrap}#tpBtns button,.dj-t{padding:9px 12px;border-radius:10px;border:1px solid rgba(233,201,122,.45);background:rgba(30,12,28,.9);color:#e9c97a;font-size:14px;cursor:pointer}
+#djNow{margin:2px 0 8px;color:#fff}.dj-t{display:flex;justify-content:space-between;width:100%;box-sizing:border-box;margin:4px 0;text-align:left}.dj-t.on{background:#4a2a08;color:#fff}.dj-t b{color:#ffb6d9}
+@media (max-width:640px){#chat{bottom:176px}#talkp,#djp{bottom:150px}}
 `;
 document.head.appendChild(css);
 const ui = document.createElement('div');
@@ -66,7 +71,9 @@ ui.innerHTML = `
   <div class="r"><button id="srec">● Record</button><button id="splay" disabled>▶ Play</button></div>
   <div class="r"><a class="dl" id="sdl" style="display:none" download>⬇ Download take</a></div>
   <small>Use headphones, or the beat will bleed into your mic. Nothing is uploaded or saved: your take lives on this device until you download it.</small></div>
-<div id="dock"><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
+<div id="talkp"><h3 id="tpName"></h3><div id="tpSub"></div><div id="tpBtns"></div></div>
+<div id="djp"><h3>DJ BOOTH</h3><div id="djNow"></div><div id="djList"></div><small style="opacity:.75">Tap a track to vote. The most votes plays next.</small></div>
+<div id="dock"><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
 <div id="joy"><i></i></div>`;
 document.body.appendChild(ui);
 if ('ontouchstart' in window) document.body.classList.add('touch');
@@ -163,6 +170,7 @@ const others = new Map(); // id -> avatar
 let me = null, ws = null, myId = null;
 const pos = { x: 0, z: 12, ry: Math.PI, yaw: 0, anim: 'idle' };
 const keys = {};
+if (Q.has('debug')) L.setCam = (a) => { L.camOverride = a; };
 if (Q.has('debug')) L.teleport = (x, z) => { pos.x = x; pos.z = z; }; // test hook only, never on in normal use
 
 /* ---------- network ---------- */
@@ -175,12 +183,12 @@ function say(cls, who, text, col) {
 }
 function updateTop() { $('#top').textContent = `Hood Rich Club · ${SELF.tier || ''} · Lounge ${SELF.room || 1} · ${others.size + 1} in the room`; }
 async function connect() {
-  await AVP; ws = new WebSocket(WS_URL);
+  await AVP; loadNpcs(); ws = new WebSocket(WS_URL);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', token: TOKEN, name: SELF.req || '', room: Q.get('room') || 0 }));
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.t === 'welcome') {
-      myId = m.id; SELF.name = m.you.name; SELF.room = m.room; if (L.syncDance) L.syncDance((m.now - m.epoch) / 1000);
+      if (m.dj) djSync(m.dj); myId = m.id; SELF.name = m.you.name; SELF.room = m.room; if (L.syncDance) L.syncDance((m.now - m.epoch) / 1000);
       me = makeAvatar({ ...m.you, x: pos.x, z: pos.z, ry: pos.ry }); me.userData.mine = true;
       for (const p of m.players) others.set(p.id, makeAvatar(p));
       updateTop(); say('sys', '', 'Welcome to the Hood Rich Club.');
@@ -196,6 +204,7 @@ async function connect() {
     else if (m.t === 'sys') say('sys', '', m.text);
     else if (m.t === 'denied') { say('sys', '', m.why || 'Disconnected.'); sessionStorage.removeItem('lounge'); ws = null; }
     else if (m.t === 'voice') voiceReady(m);
+    else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
     else if (m.t === 'rec') { if (m.on) recorders.add(m.id); else recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); if (m.on) say('sys', '', `${m.name} is recording in the studio`); }
   };
   ws.onclose = () => { if (ws) say('sys', '', 'Connection lost. Reload to rejoin.'); };
@@ -283,7 +292,8 @@ L.hooks.tick = (dt) => {
   const camD = inRoom() ? 2.3 : 4.2; const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
   camT.set(Math.max(-11.3, Math.min(11.3, cx)), inRoom() ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
-  voiceTick(); subscribeNearby(dt); studioTick();
+  if (L.camOverride) { const c = L.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); }
+  voiceTick(); subscribeNearby(dt); studioTick(); npcTick(dt); djTick(dt);
 };
 
 /* ---------- studio: record over a beat, entirely in the browser. Nothing is uploaded or stored. ---------- */
@@ -301,7 +311,9 @@ async function startTake() {
     const dest = ST.ctx.createMediaStreamDestination();
     ST.beatEl = new Audio(url); ST.beatEl.loop = true; ST.beatEl.crossOrigin = 'anonymous';
     const bs = ST.ctx.createMediaElementSource(ST.beatEl); const bg = ST.ctx.createGain(); bg.gain.value = .8; bs.connect(bg); bg.connect(dest); bg.connect(ST.ctx.destination);
-    const ms = ST.ctx.createMediaStreamSource(ST.stream); const mg = ST.ctx.createGain(); mg.gain.value = 1.0; ms.connect(mg); mg.connect(dest); // the mic goes into the take, not to your speakers
+    const ms = ST.ctx.createMediaStreamSource(ST.stream); const mg = ST.ctx.createGain(); mg.gain.value = 1.0; ms.connect(mg); mg.connect(dest);
+    ST.meter = { peak: 0, voice: 0, clip: 0, n: 0 }; const an = ST.ctx.createAnalyser(); an.fftSize = 1024; ms.connect(an); const buf = new Float32Array(an.fftSize);
+    clearInterval(ST.mt); ST.mt = setInterval(() => { an.getFloatTimeDomainData(buf); let pk = 0; for (const v of buf) { const a = Math.abs(v); if (a > pk) pk = a; } const M = ST.meter; M.n++; if (pk > M.peak) M.peak = pk; if (pk > .02) M.voice++; if (pk > .98) M.clip++; }, 50); // the mic goes into the take, not to your speakers
     const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
     ST.rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined); ST.chunks = [];
     ST.rec.ondataavailable = (e) => { if (e.data.size) ST.chunks.push(e.data); };
@@ -311,6 +323,7 @@ async function startTake() {
       ST.stream.getTracks().forEach((t) => t.stop());
     };
     if (lkRoom && micOn) { await lkRoom.localParticipant.setMicrophoneEnabled(false); ST.voiceWas = true; }
+    if (ENG.session) engSay('countin');
     for (const n of [3, 2, 1]) { $('#sc').textContent = n; await new Promise((r) => setTimeout(r, 800)); }
     $('#sc').textContent = ''; ST.rec.start(250); await ST.beatEl.play(); ST.on = true; sendWs({ t: 'rec', on: true });
     $('#srec').textContent = '■ Stop'; $('#srec').classList.add('rec');
@@ -319,6 +332,7 @@ async function startTake() {
 function stopTake() {
   if (!ST.on) return; ST.on = false; try { ST.rec.stop(); } catch {} try { ST.beatEl.pause(); } catch {}
   $('#srec').textContent = '● Record'; $('#srec').classList.remove('rec'); sendWs({ t: 'rec', on: false });
+  clearInterval(ST.mt); if (ENG.session) engFeedback();
   if (ST.voiceWas && lkRoom) { lkRoom.localParticipant.setMicrophoneEnabled(true); ST.voiceWas = false; }
 }
 $('#srec').onclick = () => { if (ST.on) stopTake(); else startTake(); };
@@ -330,6 +344,100 @@ function studioTick() { // the studio button shows only inside the studio; leavi
   const inside = !!me && inRoom(); $('#studioBtn').style.display = inside ? 'inline-block' : 'none';
   if (!inside) { if (ST.on) stopTake(); $('#studio').style.display = 'none'; }
 }
+
+/* ---------- NPCs (studio engineer, DJ) and the shared DJ playlist ---------- */
+const NPC_DEFS = [
+  { id: 'eng', name: 'Engineer', file: 'engineer', x: -9.15, z: 7.05, ry: 0, anims: ['idle', 'talk', 'wave', 'agree', 'listen'], reach: 2.8 },
+  { id: 'dj', name: 'DJ', file: 'dj', x: 8.6, z: -12.3, ry: 0, anims: ['groove', 'idle', 'wave', 'bass'], reach: 3.4 },
+];
+const NPCS = {}; let LINES = {}; let talking = null;
+const voiceVol = (npc) => { if (!me) return .6; const d = Math.hypot(npc.obj.position.x - pos.x, npc.obj.position.z - pos.z); return Math.max(.25, Math.min(1, 1.2 - d / 14)); };
+async function loadNpcs() {
+  try { LINES = await (await fetch('./assets/npc/voices/lines.json')).json(); } catch {}
+  for (const d of NPC_DEFS) {
+    try {
+      const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
+      const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = 1.8 / (bb.max.y - bb.min.y);
+      g.scene.scale.multiplyScalar(sc); g.scene.position.y = -bb.min.y * sc; g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; } });
+      const grp = new THREE.Group(); grp.add(g.scene); grp.position.set(d.x, 0, d.z); grp.rotation.y = d.ry; scene.add(grp);
+      const mixer = new THREE.AnimationMixer(g.scene); const acts = {};
+      for (const a of d.anims) { try { const f = await loadGLB(`./assets/npc/${d.file}_${a}.glb`); const c = f.animations[0]; if (!c) continue;
+        for (const tr of c.tracks) if (tr.name.endsWith('.position') && tr.name.indexOf('Hips') >= 0) { const v = tr.values; const x0 = v[0], z0 = v[2]; for (let i = 0; i < v.length; i += 3) { v[i] -= x0; v[i + 2] -= z0; } }
+        const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
+      const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
+      const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0 }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
+      const tag = nameTag(d.name + '  ·  ' + (d.id === 'dj' ? 'Resident DJ' : 'Studio engineer'), 0xe9c97a); tag.position.y = 2.2; grp.add(tag);
+    } catch (e) { console.warn('npc failed', d.file, e); }
+  }
+  try { const b = await loadGLB('./assets/npc/djbooth.glb'); b.scene.updateMatrixWorld(true); let bb = new THREE.Box3().setFromObject(b.scene); const sz = bb.getSize(new THREE.Vector3()); b.scene.scale.multiplyScalar(2.6 / Math.max(sz.x, sz.z)); b.scene.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(b.scene); b.scene.position.set(8.6 - (bb.min.x + bb.max.x) / 2, -bb.min.y, -11.2 - (bb.min.z + bb.max.z) / 2); scene.add(b.scene); } catch (e) { console.warn('dj booth model missing'); }
+}
+function npcPlay(n, name) { const a = n.acts[name] || n.acts[n.base] || n.acts.idle; if (!a || n.curName === name) return; a.reset().play(); if (n.cur && n.cur !== a) n.cur.crossFadeTo(a, .3, false); n.cur = a; n.curName = name; }
+function npcSay(n, key) { // play a pre-recorded line, show it as a subtitle, and have the NPC talk while it plays
+  const text = (LINES[n.id] || {})[key]; if (!text) return null; say('', n.name, text, 0xe9c97a);
+  const a = new Audio(`./assets/npc/voices/${n.id}_${key}.mp3`); a.volume = voiceVol(n); n.talkUntil = performance.now() + 4500; a.onloadedmetadata = () => { n.talkUntil = performance.now() + a.duration * 1000 + 200; };
+  a.play().catch(() => {}); return a;
+}
+const engSay = (k) => { const n = NPCS.eng; return n ? npcSay(n, k) : null; };
+const ENG = { session: false };
+function engFeedback() { // simple, honest feedback from what the mic actually did during the take
+  const M = ST.meter || { n: 1, voice: 0, clip: 0, peak: 0 }; let key = 'good';
+  if (M.voice < Math.max(3, M.n * .06)) key = 'silent'; else if (M.clip >= 3) key = 'clip'; else if (M.peak < .22) key = 'quiet';
+  setTimeout(() => { const a = engSay(key); if (a) a.onended = () => setTimeout(() => engSay('save'), 600); }, 700);
+}
+function npcTick(dt) {
+  const now = performance.now(); let near = null, nd = 99;
+  for (const n of Object.values(NPCS)) {
+    const d = Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z);
+    if (d < 30) n.mixer.update(dt);
+    const speaking = now < n.talkUntil; if (n.id === 'eng') npcPlay(n, speaking ? (n.acts.talk ? 'talk' : 'idle') : 'idle'); else npcPlay(n, speaking && n.acts.wave ? 'wave' : n.base);
+    if ((speaking || talking === n) && d < 8) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += ((t - n.obj.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 6); }
+    else if (talking !== n) n.obj.rotation.y += ((n.ry - n.obj.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 3);
+    if (d < n.reach && d < nd) { near = n; nd = d; }
+  }
+  const btn = $('#talkBtn'); if (near) { btn.style.display = 'inline-block'; btn.textContent = '💬 Talk to ' + near.name; btn.dataset.n = near.id; } else { btn.style.display = 'none'; if (talking && !ST.on) closeTalk(); }
+}
+function openTalk(n) {
+  talking = n; $('#tpName').textContent = n.name.toUpperCase(); const b = $('#tpBtns'); b.innerHTML = ''; const sub = $('#tpSub');
+  const add = (label, fn) => { const x = document.createElement('button'); x.textContent = label; x.onclick = fn; b.appendChild(x); };
+  if (n.id === 'eng') {
+    sub.textContent = "Welcome to the studio. Want to cut a track?"; const a = engSay('greet');
+    add('🎙 Book a session', () => { ENG.session = true; const a2 = engSay('pickbeat'); $('#studio').style.display = 'block'; sub.textContent = 'Pick a beat in the Studio panel, then hit Record. I count you in. Nothing is saved or uploaded.'; });
+    add('Just looking', closeTalk);
+  } else {
+    sub.textContent = "What's good. I take requests all night."; npcSay(n, 'greet');
+    add('🎧 Vote for the next track', () => { npcSay(n, 'ask'); openDj(); }); add('Close', closeTalk);
+  }
+}
+function closeTalk() { talking = null; $('#talkp').style.display = 'none'; ENG.session = false; }
+$('#talkBtn').onclick = () => { const n = NPCS[$('#talkBtn').dataset.n]; if (!n) return; $('#talkp').style.display = 'block'; openTalk(n); };
+// ---- shared DJ playlist: the server says which track started when; we play it from the right point, quieter the further you are
+const DJ = { idx: -1, start: 0, dur: 40, titles: [], nums: [], votes: {}, skew: 0, audio: null, myVote: -1 };
+function djSync(m) {
+  const first = DJ.idx < 0; DJ.titles = m.titles || DJ.titles; DJ.nums = m.nums || DJ.nums; DJ.votes = m.votes || {}; DJ.skew = Date.now() - m.now; DJ.dur = m.dur;
+  if (m.idx !== DJ.idx || first) { DJ.idx = m.idx; DJ.start = m.start + DJ.skew; DJ.myVote = -1; djPlay(); }
+  djRender();
+}
+function djPlay() {
+  if (!DJ.nums.length) return; if (DJ.audio) { DJ.audio.pause(); DJ.audio = null; }
+  const a = new Audio(`./assets/music/${DJ.nums[DJ.idx]}.mp3`); a.loop = false; a.volume = 0; DJ.audio = a;
+  const go = () => { const off = Math.max(0, (Date.now() - DJ.start) / 1000); if (off < DJ.dur - .5) { try { a.currentTime = off; } catch {} } a.play().catch(() => {}); };
+  a.addEventListener('loadedmetadata', go, { once: true });
+}
+function djChanged() { const n = NPCS.dj; if (n && me && Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) < 20) npcSay(n, Math.random() < .6 ? 'next' : 'hype'); }
+function djRender() {
+  if (!DJ.titles.length) return; $('#djNow').innerHTML = `Now playing: <b style="color:#ffd34d">${esc(DJ.titles[DJ.idx] || '')}</b> · Winslow Bankz`;
+  $('#djList').innerHTML = DJ.titles.map((t, i) => `<button class="dj-t${i === DJ.idx ? ' on' : ''}" data-i="${i}">${i === DJ.idx ? '▶ ' : ''}${esc(t)} <b>${DJ.votes[i] ? DJ.votes[i] + ' vote' + (DJ.votes[i] > 1 ? 's' : '') : (DJ.myVote === i ? '✓' : '')}</b></button>`).join('');
+}
+$('#djList').onclick = (e) => { const b = e.target.closest('.dj-t'); if (!b) return; const i = +b.dataset.i; if (i === DJ.idx) return; DJ.myVote = i; sendWs({ t: 'djvote', i }); if (NPCS.dj) npcSay(NPCS.dj, 'vote'); };
+addEventListener('pointerdown', () => { if (DJ.audio && DJ.audio.paused && DJ.idx >= 0) DJ.audio.play().catch(() => {}); }, { passive: true }); // phones only start audio on a tap
+function openDj() { $('#djp').style.display = 'block'; djRender(); }
+$('#djBtn').onclick = () => { const p = $('#djp'); if (p.style.display === 'block') p.style.display = 'none'; else openDj(); };
+function djTick() { // volume follows distance to the booth; softer inside the studio and silent while you record
+  const a = DJ.audio; if (!a || !me) return; const n = NPCS.dj; const d = n ? Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) : 10;
+  let v = Math.max(.14, Math.min(.9, 1.05 - d / 22)); if (inRoom()) v *= .35; if (ST.on) v = 0; a.volume += (v - a.volume) * .1;
+  if (a.ended && DJ.idx >= 0) { /* the server will announce the next track within a second */ }
+}
+
 function enter() {
   SELF.req = $('#nm').value; $('#gate').remove(); $('#hud').style.display = 'none';
   for (const id of ['#top', '#chat', '#bar']) $(id).style.display = id === '#bar' ? 'none' : 'block';
