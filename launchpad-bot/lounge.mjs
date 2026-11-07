@@ -106,6 +106,8 @@ export function initLounge(X) {
       } else if (m.t === "drink") {
         if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id;
         const line = { t: "sys", text: `${DRINKS[m.id]} for ${me.name}` }; all(line); setTimeout(() => { if (me) me.drink = ""; }, 60000);
+      } else if (m.t === "rec") {
+        if (Date.now() - (me.lastRec || 0) < 1500) return; me.lastRec = Date.now(); me.rec = !!m.on; all({ t: "rec", id: me.id, name: me.name, on: me.rec }, me.id);
       } else if (m.t === "voice") {
         const v = await voicePass(me); send(ws, v ? { t: "voice", ...v } : { t: "voice", error: "Voice is not available right now." });
       }

@@ -34,6 +34,13 @@ css.textContent = `
 #joy{position:fixed;left:18px;bottom:120px;width:110px;height:110px;border-radius:50%;border:1px solid rgba(233,201,122,.35);background:rgba(14,6,14,.35);z-index:9;display:none;touch-action:none}
 #joy i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:rgba(233,201,122,.55)}
 body.touch #joy{display:block}
+#studio{position:fixed;right:12px;top:12px;width:min(300px,calc(100vw - 24px));z-index:12;display:none;color:#f3e7c9;border:1px solid rgba(233,201,122,.4);border-radius:14px;padding:14px;background:rgba(14,6,14,.9);font-size:14px}
+#studio h3{margin:0 0 8px;font:700 15px Georgia,serif;letter-spacing:.2em;color:#e9c97a}
+#studio select,#studio input[type=file]{width:100%;box-sizing:border-box;margin:4px 0 8px;padding:8px;border-radius:8px;border:1px solid #5a4630;background:#120a12;color:#f3e7c9}
+#studio .r{display:flex;gap:6px;margin:6px 0}#studio .r button,#studio a.dl{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(233,201,122,.45);background:rgba(30,12,28,.9);color:#e9c97a;font-size:14px;cursor:pointer;text-align:center;text-decoration:none}
+#studio .rec{background:#7a1020!important;color:#fff!important;border-color:#ff5a6a!important}
+#studio small{display:block;opacity:.75;line-height:1.4;margin-top:6px}
+#sc{font:700 40px Georgia,serif;text-align:center;color:#ff6a7a;height:44px}
 @media (max-width:640px){#chat{bottom:176px}}
 `;
 document.head.appendChild(css);
@@ -52,7 +59,14 @@ ui.innerHTML = `
 <div id="top"></div>
 <div id="chat"><div id="log"></div><div id="row"><input id="ci" maxlength="160" placeholder="Say something..." autocomplete="off"><button id="send">Send</button></div></div>
 <div id="bar"></div>
-<div id="dock"><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
+<div id="studio"><h3>STUDIO</h3>
+  <div id="sc"></div>
+  <label>Beat</label><select id="beat"><option value="trap">Trap · 140 bpm (demo)</option><option value="boombap">Boom bap · 90 bpm (demo)</option><option value="latenight">Late night · 100 bpm (demo)</option><option value="file">My own file…</option></select>
+  <input type="file" id="beatfile" accept="audio/*" style="display:none">
+  <div class="r"><button id="srec">● Record</button><button id="splay" disabled>▶ Play</button></div>
+  <div class="r"><a class="dl" id="sdl" style="display:none" download>⬇ Download take</a></div>
+  <small>Use headphones, or the beat will bleed into your mic. Nothing is uploaded or saved: your take lives on this device until you download it.</small></div>
+<div id="dock"><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
 <div id="joy"><i></i></div>`;
 document.body.appendChild(ui);
 if ('ontouchstart' in window) document.body.classList.add('touch');
@@ -149,6 +163,7 @@ const others = new Map(); // id -> avatar
 let me = null, ws = null, myId = null;
 const pos = { x: 0, z: 12, ry: Math.PI, yaw: 0, anim: 'idle' };
 const keys = {};
+if (Q.has('debug')) L.teleport = (x, z) => { pos.x = x; pos.z = z; }; // test hook only, never on in normal use
 
 /* ---------- network ---------- */
 const logEl = () => $('#log');
@@ -170,7 +185,7 @@ async function connect() {
       for (const p of m.players) others.set(p.id, makeAvatar(p));
       updateTop(); say('sys', '', 'Welcome to the Hood Rich Club.');
     } else if (m.t === 'join') { others.set(m.p.id, makeAvatar(m.p)); say('sys', '', `${m.p.name} walked in`); updateTop(); }
-    else if (m.t === 'leave') { const a = others.get(m.id); if (a) { scene.remove(a); others.delete(m.id); updateTop(); } }
+    else if (m.t === 'leave') { recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); const a = others.get(m.id); if (a) { scene.remove(a); others.delete(m.id); updateTop(); } }
     else if (m.t === 'state') {
       for (const [id, x, z, ry, an, dr] of m.s) {
         if (id === myId) continue; const a = others.get(id); if (!a) continue;
@@ -180,6 +195,7 @@ async function connect() {
     else if (m.t === 'sys') say('sys', '', m.text);
     else if (m.t === 'denied') { say('sys', '', m.why || 'Disconnected.'); sessionStorage.removeItem('lounge'); ws = null; }
     else if (m.t === 'voice') voiceReady(m);
+    else if (m.t === 'rec') { if (m.on) recorders.add(m.id); else recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); if (m.on) say('sys', '', `${m.name} is recording in the studio`); }
   };
   ws.onclose = () => { if (ws) say('sys', '', 'Connection lost. Reload to rejoin.'); };
 }
@@ -243,6 +259,8 @@ L.hooks.tick = (dt) => {
     const sp = 2.4 * dt / Math.max(1, len); const Fx = -Math.sin(pos.yaw), Fz = -Math.cos(pos.yaw), Rx = Math.cos(pos.yaw), Rz = -Math.sin(pos.yaw);
     let nx = pos.x + (Fx * f + Rx * s) * sp, nz = pos.z + (Fz * f + Rz * s) * sp;
     nx = Math.max(-11, Math.min(11, nx)); nz = Math.max(-14.5, Math.min(14.5, nz));
+    { const hit = (x, z) => L.COLLIDERS.some((c) => x > c.x0 - .28 && x < c.x1 + .28 && z > c.z0 - .28 && z < c.z1 + .28);
+      if (hit(nx, nz)) { if (!hit(nx, pos.z)) nz = pos.z; else if (!hit(pos.x, nz)) nx = pos.x; else { nx = pos.x; nz = pos.z; } } }
     if (nx > STAGE.x0 && nx < STAGE.x1 && nz > STAGE.z0 && nz < STAGE.z1) { if (!(pos.x > STAGE.x0 && pos.x < STAGE.x1 && pos.z > STAGE.z0 && pos.z < STAGE.z1)) { nx = pos.x; nz = pos.z; } } // the stage is the dancer's
     const mx = nx - pos.x, mz = nz - pos.z; if (Math.hypot(mx, mz) > 1e-4) pos.ry = Math.atan2(mx, mz);
     pos.x = nx; pos.z = nz;
@@ -254,11 +272,56 @@ L.hooks.tick = (dt) => {
   for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); v.mixer.update(dt); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
   // third-person camera behind and above, easing, never inside a wall
-  const cx = pos.x + Math.sin(pos.yaw) * 4.2, cz = pos.z + Math.cos(pos.yaw) * 4.2;
-  camT.set(Math.max(-11.3, Math.min(11.3, cx)), 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
+  const camD = inRoom() ? 2.3 : 4.2; const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
+  camT.set(Math.max(-11.3, Math.min(11.3, cx)), inRoom() ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
-  voiceTick();
+  voiceTick(); studioTick();
 };
+
+/* ---------- studio: record over a beat, entirely in the browser. Nothing is uploaded or stored. ---------- */
+const ST = { ctx: null, rec: null, beatEl: null, chunks: [], blobUrl: null, stream: null, on: false, takeUnsaved: false, playEl: null };
+const BEAT_URL = (k) => './assets/beats/' + k + '.mp3';
+const inRoom = () => { const r = L.studio.room; return pos.x > r.x0 && pos.x < r.x1 + .6 && pos.z > r.z0 && pos.z < r.z1; };
+$('#beat').onchange = () => { $('#beatfile').style.display = $('#beat').value === 'file' ? 'block' : 'none'; };
+$('#studioBtn').onclick = () => { const p = $('#studio'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; };
+async function startTake() {
+  try {
+    const sel = $('#beat').value; let url;
+    if (sel === 'file') { const f = $('#beatfile').files[0]; if (!f) { say('sys', '', 'Pick a beat file first.'); return; } url = URL.createObjectURL(f); } else url = BEAT_URL(sel);
+    ST.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const AC = window.AudioContext || window.webkitAudioContext; ST.ctx = ST.ctx || new AC(); await ST.ctx.resume();
+    const dest = ST.ctx.createMediaStreamDestination();
+    ST.beatEl = new Audio(url); ST.beatEl.loop = true; ST.beatEl.crossOrigin = 'anonymous';
+    const bs = ST.ctx.createMediaElementSource(ST.beatEl); const bg = ST.ctx.createGain(); bg.gain.value = .8; bs.connect(bg); bg.connect(dest); bg.connect(ST.ctx.destination);
+    const ms = ST.ctx.createMediaStreamSource(ST.stream); const mg = ST.ctx.createGain(); mg.gain.value = 1.0; ms.connect(mg); mg.connect(dest); // the mic goes into the take, not to your speakers
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    ST.rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined); ST.chunks = [];
+    ST.rec.ondataavailable = (e) => { if (e.data.size) ST.chunks.push(e.data); };
+    ST.rec.onstop = () => {
+      const type = ST.rec.mimeType || 'audio/webm'; const blob = new Blob(ST.chunks, { type }); if (ST.blobUrl) URL.revokeObjectURL(ST.blobUrl); ST.blobUrl = URL.createObjectURL(blob);
+      const ext = type.includes('mp4') ? 'm4a' : 'webm'; const a = $('#sdl'); a.href = ST.blobUrl; a.download = 'hood-rich-session.' + ext; a.style.display = 'block'; $('#splay').disabled = false; ST.takeUnsaved = true;
+      ST.stream.getTracks().forEach((t) => t.stop());
+    };
+    if (lkRoom && micOn) { await lkRoom.localParticipant.setMicrophoneEnabled(false); ST.voiceWas = true; }
+    for (const n of [3, 2, 1]) { $('#sc').textContent = n; await new Promise((r) => setTimeout(r, 800)); }
+    $('#sc').textContent = ''; ST.rec.start(250); await ST.beatEl.play(); ST.on = true; sendWs({ t: 'rec', on: true });
+    $('#srec').textContent = '■ Stop'; $('#srec').classList.add('rec');
+  } catch (e) { say('sys', '', 'Could not start recording: ' + ((e && e.message) || e)); $('#sc').textContent = ''; }
+}
+function stopTake() {
+  if (!ST.on) return; ST.on = false; try { ST.rec.stop(); } catch {} try { ST.beatEl.pause(); } catch {}
+  $('#srec').textContent = '● Record'; $('#srec').classList.remove('rec'); sendWs({ t: 'rec', on: false });
+  if (ST.voiceWas && lkRoom) { lkRoom.localParticipant.setMicrophoneEnabled(true); ST.voiceWas = false; }
+}
+$('#srec').onclick = () => { if (ST.on) stopTake(); else startTake(); };
+$('#splay').onclick = () => { if (!ST.blobUrl) return; if (ST.playEl && !ST.playEl.paused) { ST.playEl.pause(); $('#splay').textContent = '▶ Play'; return; } ST.playEl = new Audio(ST.blobUrl); ST.playEl.onended = () => { $('#splay').textContent = '▶ Play'; }; ST.playEl.play(); $('#splay').textContent = '■ Stop'; };
+$('#sdl').addEventListener('click', () => { ST.takeUnsaved = false; });
+addEventListener('beforeunload', (e) => { if (ST.takeUnsaved) { e.preventDefault(); e.returnValue = ''; } });
+const recorders = new Set();
+function studioTick() { // the studio button shows only inside the studio; leaving mid-take stops it
+  const inside = !!me && inRoom(); $('#studioBtn').style.display = inside ? 'inline-block' : 'none';
+  if (!inside) { if (ST.on) stopTake(); $('#studio').style.display = 'none'; }
+}
 function enter() {
   SELF.req = $('#nm').value; $('#gate').remove(); $('#hud').style.display = 'none';
   for (const id of ['#top', '#chat', '#bar']) $(id).style.display = id === '#bar' ? 'none' : 'block';

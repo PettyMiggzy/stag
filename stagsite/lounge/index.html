@@ -195,7 +195,7 @@ function booth(x,z,ry){
   return g;
 }
 const bz=[-4,1.2,6.4,11];
-for(const z of bz){booth(-9.9,z,Math.PI/2);booth(9.9,z,-Math.PI/2);}
+for(const z of bz){if(z<5)booth(-9.9,z,Math.PI/2);booth(9.9,z,-Math.PI/2);} // the left wall at the front is the studio
 // stanchions
 for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
   const x=sx*3.4;
@@ -220,6 +220,68 @@ for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
   box(6.7,.04,.04,M.pink,0,3.28,az+.1);
   const al=new THREE.PointLight(0xffd9a0,9,10,1.7);al.position.set(0,3.9,az-1.2);scene.add(al);
 }
+
+/* ---------- recording studio: glass-walled room off the club floor, window onto the club ---------- */
+const COLLIDERS=[];
+const studioState={onAir:false};
+{
+  const X0=-11.9,X1=-6.4,Z0=5.2,Z1=13.8,HT=3.6,DOOR=[8.9,10.3];
+  const glass=new THREE.MeshPhysicalMaterial({color:0xbcd8ff,transparent:true,opacity:.13,roughness:.02,metalness:0,envMapIntensity:1.6,side:THREE.DoubleSide,depthWrite:false});
+  const foam=new THREE.MeshStandardMaterial({color:0x0e0b10,roughness:.95});
+  const wood=new THREE.MeshStandardMaterial({color:0x140a08,roughness:.7,metalness:0});
+  const S=(w,h,d,m,x,y,z)=>box(w,h,d,m,x,y,z);
+  // floor + ceiling slab
+  S(X1-X0,.04,Z1-Z0,wood,(X0+X1)/2,.03,(Z0+Z1)/2);
+  S(X1-X0,.2,Z1-Z0,M.black,(X0+X1)/2,HT+.1,(Z0+Z1)/2);
+  for(const z of[Z0+1.2,(Z0+Z1)/2,Z1-1.2])S(X1-X0-.6,.04,.06,M.amber,(X0+X1)/2,HT-.02,z);
+  // glass wall facing the club (east, x=X1) with a door gap, plus glass on the north and south sides
+  const gl=(w,h,x,y,z,ry)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glass);m.position.set(x,y,z);m.rotation.y=ry;m.renderOrder=3;scene.add(m);};
+  gl(DOOR[0]-Z0,HT-.1,X1,HT/2,(Z0+DOOR[0])/2,Math.PI/2);gl(Z1-DOOR[1],HT-.1,X1,HT/2,(DOOR[1]+Z1)/2,Math.PI/2);
+  gl(X1-X0,HT-.1,(X0+X1)/2,HT/2,Z0,0);gl(X1-X0,HT-.1,(X0+X1)/2,HT/2,Z1,0);
+  // gold frame: posts, top and bottom rails
+  for(const z of[Z0,DOOR[0],DOOR[1],Z1])S(.1,HT,.1,M.gold,X1,HT/2,z);
+  for(const [a0,a1] of[[Z0,DOOR[0]],[DOOR[1],Z1]]){S(.07,.08,a1-a0,M.gold,X1,HT-.05,(a0+a1)/2);S(.07,.2,a1-a0,M.gold,X1,.1,(a0+a1)/2);}
+  S(.07,.12,DOOR[1]-DOOR[0],M.gold,X1,HT-.06,(DOOR[0]+DOOR[1])/2);
+  for(const x of[X0,X1])for(const z of[Z0,Z1])S(.1,HT,.1,M.gold,x,HT/2,z);
+  S(X1-X0,.08,.07,M.gold,(X0+X1)/2,HT-.05,Z0);S(X1-X0,.08,.07,M.gold,(X0+X1)/2,HT-.05,Z1);
+  // colliders: the glass is solid, the door gap is open
+  COLLIDERS.push({x0:X1-.15,x1:X1+.15,z0:Z0,z1:DOOR[0]},{x0:X1-.15,x1:X1+.15,z0:DOOR[1],z1:Z1},{x0:X0,x1:X1,z0:Z0-.15,z1:Z0+.15},{x0:X0,x1:X1,z0:Z1-.15,z1:Z1+.15});
+  // the back wall: acoustic panels in gold frames
+  for(let i=0;i<4;i++)for(let j=0;j<3;j++){const z=Z0+1.1+i*2.1,y=.9+j*.9;S(.08,.7,1.8,foam,X0+.06,y,z);S(.09,.04,1.86,M.gold,X0+.06,y+.37,z);S(.09,.04,1.86,M.gold,X0+.06,y-.37,z);}
+  for(const z of[Z0+.06,Z1-.06])for(let i=0;i<3;i++)for(let j=0;j<3;j++){const x=X0+1.3+i*1.7,y=.9+j*.9;S(1.5,.7,.08,foam,x,y,z);S(1.56,.04,.09,M.gold,x,y+.37,z);S(1.56,.04,.09,M.gold,x,y-.37,z);}
+  // mixing desk with glowing faders, two monitor speakers, an engineer's chair
+  const dz=7.6,dx=-8.7;
+  S(.9,.08,3.0,M.black,dx,.82,dz);S(.9,.7,2.9,wood,dx,.4,dz);
+  const faderMat=new THREE.MeshStandardMaterial({color:0xffb347,emissive:0xff9a1f,emissiveIntensity:1.4,toneMapped:false});
+  for(let i=0;i<12;i++){S(.5,.012,.05,M.black,dx+.12,.875,dz-1.2+i*.22);S(.04,.02,.1,faderMat,dx+.12+((i%3)-1)*.08,.89,dz-1.2+i*.22);S(.06,.02,.06,i%2?M.pink:M.gold,dx-.26,.89,dz-1.2+i*.22);}
+  for(const z of[dz-1.05,dz+1.05]){S(.36,.62,.3,M.black,X0+.6,1.35,z);const w=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.03,24),M.gold);w.rotation.z=Math.PI/2;w.position.set(X0+.78,1.28,z);scene.add(w);S(.1,.9,.1,M.gold,X0+.6,.45,z);}
+  const ch=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.1,24),M.velvet);ch.position.set(dx+.95,.5,dz);scene.add(ch);S(.06,.5,.06,M.gold,dx+.95,.25,dz);S(.5,.5,.1,M.velvet,dx+1.2,.95,dz);
+  // vocal booth: a small glass box in the north-west corner with a mic on a boom
+  const BX1=-9.5,BZ0=10.7;
+  gl(BX1-X0,2.6,(X0+BX1)/2,1.3,BZ0,0);gl(Z1-BZ0,2.6,BX1,1.3,(BZ0+Z1)/2,Math.PI/2);
+  S(.06,2.6,.06,M.gold,BX1,1.3,BZ0);S(BX1-X0,.06,.06,M.gold,(X0+BX1)/2,2.6,BZ0);
+  S(BX1-X0,.03,Z1-BZ0,new THREE.MeshStandardMaterial({color:0x3a0a1c,roughness:.95}),(X0+BX1)/2,.06,(BZ0+Z1)/2); // rug
+  COLLIDERS.push({x0:X0,x1:BX1,z0:BZ0-.1,z1:BZ0+.1});
+  const mx=-10.9,mz=12.3;
+  const st=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.6,10),M.gold);st.position.set(mx,.8,mz);scene.add(st);
+  const ba=new THREE.Mesh(new THREE.CylinderGeometry(.22,.26,.04,24),M.gold);ba.position.set(mx,.03,mz);scene.add(ba);
+  const mic=new THREE.Mesh(new THREE.CapsuleGeometry(.04,.12,6,12),new THREE.MeshStandardMaterial({color:0xd8a843,metalness:1,roughness:.2}));mic.position.set(mx,1.62,mz+.06);scene.add(mic);
+  const pf=new THREE.Mesh(new THREE.TorusGeometry(.1,.006,8,28),M.black);pf.position.set(mx,1.62,mz+.2);scene.add(pf);
+  const pfd=new THREE.Mesh(new THREE.CircleGeometry(.1,28),new THREE.MeshStandardMaterial({color:0x111111,transparent:true,opacity:.5,side:THREE.DoubleSide}));pfd.position.copy(pf.position);scene.add(pfd);
+  // lounge couch inside the control room
+  S(.9,.45,2.2,M.velvet,X1-1.2,.25,12.2);S(.22,.8,2.2,M.velvet,X1-.7,.6,12.2);
+  // signs facing the club: neon STUDIO above the glass, ON AIR light over the door
+  const sig=(txt,col,w,h)=>canvasTex(512,128,(g,cw,ch)=>{g.fillStyle='#090709';g.fillRect(0,0,cw,ch);g.font='700 78px Georgia,serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=col;g.shadowColor=col;g.shadowBlur=18;g.fillText(txt,cw/2,ch/2+4);});
+  const sT=sig('STUDIO','#ff6fc2'),sMat=new THREE.MeshBasicMaterial({map:sT,toneMapped:false});
+  const sg=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.6),sMat);sg.position.set(X1+.1,HT+.55,(Z0+Z1)/2);sg.rotation.y=Math.PI/2;scene.add(sg);
+  const offT=sig('ON AIR','#5a1a22'),onT=sig('ON AIR','#ff3a3a');
+  const air=new THREE.Mesh(new THREE.PlaneGeometry(1.3,.32),new THREE.MeshBasicMaterial({map:offT,toneMapped:false}));air.position.set(X1+.12,HT-.35,(DOOR[0]+DOOR[1])/2);air.rotation.y=Math.PI/2;scene.add(air);
+  const airL=new THREE.PointLight(0xff2a2a,0,7,1.8);airL.position.set(X1-.6,HT-.5,(DOOR[0]+DOOR[1])/2);scene.add(airL);
+  // warm interior light
+  for(const [x,z,c,i] of[[-9,7,0xffb36a,5],[-9,12,0xff7ab8,4]]){const l=new THREE.PointLight(c,i,9,1.6);l.position.set(x,3.1,z);scene.add(l);}
+  studioState.setOnAir=(on)=>{studioState.onAir=!!on;air.material.map=on?onT:offT;air.material.needsUpdate=true;airL.intensity=on?18:0;};
+  studioState.zone={x0:X0,x1:BX1,z0:BZ0,z1:Z1}; studioState.room={x0:X0,x1:X1,z0:Z0,z1:Z1};
+}
 /* ---------- NFT video screens ---------- */
 const videos=[];const vtex=[];
 function screen(x,y,z,ry,w,h,file){
@@ -238,7 +300,6 @@ function screen(x,y,z,ry,w,h,file){
 const SX=RW/2-.12;
 screen(-SX,3.7,-9,Math.PI/2,3.8,3.8,'h1');
 screen(-SX,3.7,-1.5,Math.PI/2,3.8,3.8,'h5');
-screen(-SX,3.7,6,Math.PI/2,3.8,3.8,'h11');
 screen(SX,3.7,-9,-Math.PI/2,3.8,3.8,'h2');
 screen(SX,3.7,-1.5,-Math.PI/2,3.8,3.8,'h8');
 screen(SX,3.7,6,-Math.PI/2,3.8,3.8,'h14');
@@ -319,10 +380,11 @@ const KEYS=[
   [9,[-2,2.0,7],[10,3.4,-1.5]],
   [13,[3.1,1.5,3.2],[0,1.25,-1.4]],
   [17,[-3.0,1.4,1.6],[0,1.25,-1.5]],
-  [21,[-1.2,1.9,-3.5],[0,2.4,-12]],
-  [24,[0,1.65,13.5],[0,2.4,-10]],
+  [21,[-2.6,1.6,7.4],[-8.5,1.5,9.2]],
+  [25,[-1.2,1.9,-3.5],[0,2.4,-12]],
+  [28,[0,1.65,13.5],[0,2.4,-10]],
 ];
-const TOTAL=24;
+const TOTAL=28;
 const sm=x=>x*x*(3-2*x);
 function camAt(t){
   t=((t%TOTAL)+TOTAL)%TOTAL;
@@ -364,7 +426,7 @@ function enableOrbit(){
 }
 renderer.domElement.addEventListener('pointerdown',()=>{if(!CAP&&!window.__lounge.hooks.tick)enableOrbit();});
 
-window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,studio:studioState,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await setupDancer();
   for(const v of videos){try{await v.play();}catch(e){}}
@@ -388,7 +450,7 @@ window.__cap={
     await new Promise(r=>setTimeout(r,0));
     await Promise.all(videos.map(v=>v.seeking?new Promise(r=>v.addEventListener('seeked',r,{once:true})):1));
     const t1=performance.now();
-    for(const t of vtex)t.needsUpdate=true;placeCam(tCam);composer.render();
+    for(const t of vtex)t.needsUpdate=true;placeCam(tCam);if(Q.has('cam')){const c=Q.get('cam').split(',').map(Number);camera.position.set(c[0],c[1],c[2]);camera.lookAt(c[3],c[4],c[5]);}composer.render();
     renderer.getContext().finish();
     return [Math.round(t1-t0),Math.round(performance.now()-t1)];
   }
