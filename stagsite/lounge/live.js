@@ -47,7 +47,7 @@ ui.innerHTML = `
   <a class="btn alt" id="mm" style="display:none" href="#">Open in MetaMask</a>
   <button class="btn alt" id="look">Just look around</button>
   <div id="msg"></div>
-  <p style="font-size:12px;opacity:.8">Opens at 100,000 $STAG, or with a Hooded 20, Sherwood Saints or WANTED NFT.</p>
+  <p style="font-size:12px;opacity:.8">Members only: 10,000,000 $STAG, or a Hooded 20, Sherwood Saints or WANTED NFT.</p>
 </div></div>
 <div id="top"></div>
 <div id="chat"><div id="log"></div><div id="row"><input id="ci" maxlength="160" placeholder="Say something..." autocomplete="off"><button id="send">Send</button></div></div>

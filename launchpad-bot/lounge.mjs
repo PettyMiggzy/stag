@@ -7,7 +7,7 @@ import { ethers } from "ethers";
 export function initLounge(X) {
   const { q, tierFor, bal, founderCount, totalFor, log, rpc, secretSeed } = X;
   const SECRET = crypto.createHash("sha256").update("lounge:" + secretSeed).digest(); // signs session tokens; derived from the bot token so no new env var is needed
-  const MIN_TOTAL = 100000; // Fawn or better, or any Founder NFT
+  const MIN_TOTAL = parseFloat(process.env.LOUNGE_MIN || process.env.WHALE_MIN || "10000000"); // same bar as the Hood Rich Club: 10M $STAG, or any Founder NFT
   const MAX_PLAYERS = 60;
   const EPOCH = Date.now();
   const HEX = (n) => crypto.randomBytes(n).toString("hex");
@@ -62,7 +62,7 @@ export function initLounge(X) {
       let rec = ""; try { rec = ethers.verifyMessage(msg, String(b.signature || "")).toLowerCase(); } catch {}
       if (rec !== a) { let ok1271 = false; try { if ((await rpc.getCode(a)).length > 2) { const c = new ethers.Contract(a, ["function isValidSignature(bytes32,bytes) view returns (bytes4)"], rpc); ok1271 = (await c.isValidSignature(ethers.hashMessage(msg), String(b.signature || ""))) === "0x1626ba7e"; } } catch {} if (!ok1271) { json(res, 200, { ok: false, error: "Signature did not match that wallet." }); return true; } }
       const r = await resolve(a);
-      if (!r.ok) { json(res, 200, { ok: false, locked: true, error: "The lounge opens at 100,000 $STAG or with a Hooded 20, Sherwood Saints or WANTED NFT. Link or add wallets with /hoodrich in the Telegram bot." }); return true; }
+      if (!r.ok) { json(res, 200, { ok: false, locked: true, error: "The lounge opens at 10,000,000 $STAG (across your linked wallets) or with a Hooded 20, Sherwood Saints or WANTED NFT. Link wallets with /hoodrich in the Telegram bot." }); return true; }
       const tier = r.tier || "Founder";
       const tok = sign({ a, tier, founder: r.founder, lvl: LEVEL[r.tier] ?? 0, exp: Date.now() + 12 * 3600e3 });
       json(res, 200, { ok: true, token: tok, tier, founder: r.founder, short: a.slice(0, 6) + "…" + a.slice(-4) }); return true;

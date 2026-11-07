@@ -204,6 +204,22 @@ for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
   const k=new THREE.Mesh(new THREE.SphereGeometry(.055,14,14),M.gold);k.position.set(x,.97,z);add(k);
 }}
 
+
+/* ---------- entrance arch: members-only sign ---------- */
+{
+  const t=canvasTex(1024,256,(g,w,h)=>{g.fillStyle='#0b0a0e';g.fillRect(0,0,w,h);
+    const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,'#a8741f');gr.addColorStop(.5,'#ffe6a0');gr.addColorStop(1,'#a8741f');
+    g.fillStyle=gr;g.textAlign='center';g.textBaseline='middle';g.font='700 70px Georgia,serif';g.fillText('MEMBERS ONLY',w/2,84);
+    g.font='600 46px Georgia,serif';g.fillText('10,000,000 $STAG  ·  OR A FOUNDER NFT',w/2,170);
+    g.strokeStyle='#d8a843';g.lineWidth=4;g.strokeRect(14,14,w-28,h-28);});
+  const sm=new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:0xffffff,emissiveIntensity:.9,metalness:.4,roughness:.35});
+  const az=10;
+  for(const sx of[-1,1]){box(.34,5.2,.34,M.gold,sx*3.3,2.6,az);box(.5,.12,.5,M.gold,sx*3.3,.06,az);}
+  box(7.3,.55,.4,M.gold,0,5.2,az);box(6.7,1.7,.12,M.black,0,4.15,az);
+  for(const [rz,ry] of [[az+.07,0],[az-.07,Math.PI]]){const m=new THREE.Mesh(new THREE.PlaneGeometry(6.5,1.6),sm);m.position.set(0,4.15,rz);m.rotation.y=ry;add(m);}
+  box(6.7,.04,.04,M.pink,0,3.28,az+.1);
+  const al=new THREE.PointLight(0xffd9a0,9,10,1.7);al.position.set(0,3.9,az-1.2);scene.add(al);
+}
 /* ---------- NFT video screens ---------- */
 const videos=[];const vtex=[];
 function screen(x,y,z,ry,w,h,file){
@@ -263,7 +279,7 @@ let dancer={mixer:null,actions:{},idx:-1,t:0,until:0,cur:null,root:null};
 async function setupDancer(){
   const g=await load('./assets/dancerC.glb');
   const root=new THREE.Group();root.add(g.scene);scene.add(root);
-  g.scene.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;if(o.material){o.material.envMapIntensity=1.2;if(o.material.map)o.material.map.anisotropy=8;}}});
+  g.scene.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;if(o.material){o.material.envMapIntensity=.45;o.material.color.setScalar(.5);o.material.roughness=.75;o.material.metalness=0;if(o.material.map)o.material.map.anisotropy=8;}}});
   root.updateMatrixWorld(true);
   const bb=new THREE.Box3().setFromObject(g.scene,true);const hgt=bb.max.y-bb.min.y;
   const sc=1.74/hgt;g.scene.scale.multiplyScalar(sc);
