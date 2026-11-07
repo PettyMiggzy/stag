@@ -95,7 +95,9 @@ function box(w,h,d,m,x,y,z,p){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d
 const RW=24,RL=32,RH=7.2,ZC=0; // x:-12..12, z:-16..16
 // mirror floor + marble overlay
 let REFL=null;
-if(!LOW){const refl=REFL=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x3c3c4a});
+let GPU_INTEL=false;try{const g=renderer.getContext(),d=g.getExtension('WEBGL_debug_renderer_info');GPU_INTEL=!!d&&/intel/i.test(g.getParameter(d.UNMASKED_RENDERER_WEBGL));}catch(e){}
+const MIRROR_OFF=Q.get('mirror')==='off';
+if(!LOW&&!MIRROR_OFF){const refl=REFL=new Reflector(new THREE.PlaneGeometry(RW,RL),{multisample:GPU_INTEL?0:4,clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x3c3c4a});
 refl.rotation.x=-Math.PI/2;add(refl);}
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({map:marble,roughness:.12,metalness:.1,transparent:!LOW,opacity:LOW?1:.9}));
 floor.rotation.x=-Math.PI/2;floor.position.y=.004;floor.receiveShadow=true;add(floor);
