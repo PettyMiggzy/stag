@@ -138,14 +138,17 @@ async function makerRun(provider, w, buyWei, token, curve, burn, masterAddr, fee
     if ((await withRetry(() => provider.getBalance(wallet.address, 'latest'), 4)) >= needBal) break;
     await sleep(750);
   }
+  // Burn mode: the curve sends the tokens straight to the dead address, so no wallet ever holds or receives them
+  // (nothing for an indexer to count as a holder) and no separate burn transaction is needed.
+  const recipient = burn ? DEAD : wallet.address;
   setStep('simulate');
   // The curve has no quote function. Simulate the buy from this wallet now and accept 90% of the answer.
-  const sim = await withRetry(() => provider.call({ from: wallet.address, to: curve, value: buyWei, data: CURVE_IFACE.encodeFunctionData('buy', [buyWei, 0n, wallet.address]) }), 3);
+  const sim = await withRetry(() => provider.call({ from: wallet.address, to: curve, value: buyWei, data: CURVE_IFACE.encodeFunctionData('buy', [buyWei, 0n, recipient]) }), 3);
   const expected = CURVE_IFACE.decodeFunctionResult('buy', sim)[0];
   const minOut = (expected * 90n) / 100n;
   setStep('buy-send');
   const nonce = await withRetry(() => provider.getTransactionCount(wallet.address, 'pending'), 8);
-  const buy = await withRetry(() => wallet.sendTransaction({ to: curve, value: buyWei, data: CURVE_IFACE.encodeFunctionData('buy', [buyWei, minOut, wallet.address]), gasLimit: BUY_GAS, nonce, ...fees }), 8);
+  const buy = await withRetry(() => wallet.sendTransaction({ to: curve, value: buyWei, data: CURVE_IFACE.encodeFunctionData('buy', [buyWei, minOut, recipient]), gasLimit: BUY_GAS, nonce, ...fees }), 8);
   setStep('buy-confirm');
   const rc = await waitReceipt(provider, buy.hash);
   if (rc.status !== 1) throw new Error('buy reverted');
