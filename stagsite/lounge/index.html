@@ -235,7 +235,7 @@ for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
 const COLLIDERS=[];
 const studioState={onAir:false};
 {
-  const X0=-11.9,X1=-6.4,Z0=5.2,Z1=13.8,HT=3.5,PART=10.0,DOOR=[6.1,7.5],BDOOR=[-8.2,-7.0];
+  const X0=-11.9,X1=-5.0,Z0=5.2,Z1=15.7,HT=3.5,PART=10.0,DOOR=[6.1,7.5],BDOOR=[-8.2,-7.0];
   const glass=new THREE.MeshPhysicalMaterial({color:0xbcd8ff,transparent:true,opacity:.12,roughness:.02,metalness:0,envMapIntensity:1.6,side:THREE.DoubleSide,depthWrite:false});
   const pyr=canvasTex(128,128,(g,w,h)=>{const c=32;for(let y=0;y<h;y+=c)for(let x=0;x<w;x+=c){const q=[[x,y,x+c,y,x+c/2,y+c/2,'#2b2b30'],[x+c,y,x+c,y+c,x+c/2,y+c/2,'#17171a'],[x+c,y+c,x,y+c,x+c/2,y+c/2,'#0b0b0d'],[x,y+c,x,y,x+c/2,y+c/2,'#232327']];for(const t of q){g.fillStyle=t[6];g.beginPath();g.moveTo(t[0],t[1]);g.lineTo(t[2],t[3]);g.lineTo(t[4],t[5]);g.closePath();g.fill();}}},[1,1]);
   const foam=new THREE.MeshStandardMaterial({map:pyr,bumpMap:pyr,bumpScale:2.5,roughness:.95,color:0xffffff});
@@ -261,7 +261,7 @@ const studioState={onAir:false};
   const trim=(w,d,x,z)=>S(w,.06,d,M.gold,x,HT-.03,z);trim(X1-X0,.1,(X0+X1)/2,Z0+.1);trim(X1-X0,.1,(X0+X1)/2,Z1-.1);trim(.1,Z1-Z0,X0+.1,(Z0+Z1)/2);trim(.1,Z1-Z0,X1-.1,(Z0+Z1)/2);
   S(X1-X0-.4,.03,.06,M.amber,(X0+X1)/2,HT-.1,Z0+.35);S(X1-X0-.4,.03,.06,M.amber,(X0+X1)/2,HT-.1,Z1-.35);S(.06,.03,Z1-Z0-.7,M.amber,X0+.35,HT-.1,(Z0+Z1)/2);
   const dl=new THREE.MeshBasicMaterial({color:0xfff1d6,toneMapped:false});
-  for(const [x,z] of[[-10.4,6.6],[-7.9,6.6],[-10.4,8.8],[-7.9,8.8],[-9.6,11.2],[-9.6,12.8]]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.02,16),dl);d.position.set(x,HT-.01,z);scene.add(d);}
+  for(const [x,z] of[[-10.4,6.6],[-7.9,6.6],[-10.4,8.8],[-7.9,8.8],[-9.6,11.2],[-9.6,12.8],[-6.2,6.6],[-6.2,8.8],[-9.6,14.4],[-7.0,12.8]]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.02,16),dl);d.position.set(x,HT-.01,z);scene.add(d);}
   // floor-level LED strips (magenta) around the room
   S(X1-X0-.3,.04,.04,M.pink,(X0+X1)/2,.09,Z0+.12);S(.04,.04,Z1-Z0-.3,M.pink,X0+.12,.09,(Z0+Z1)/2);S(X1-X0-.3,.04,.04,M.pink,(X0+X1)/2,.09,Z1-.12);
   // east wall: glass onto the club (door gap), gold posts and rails
@@ -310,7 +310,7 @@ async function loadStudioProps(){
   await Promise.all([
     put('console',{w:3.0,x:-9.15,z:8.35,ry:R.console??0}),
     put('monitor',{h:1.25,x:-11.0,z:9.55,ry:R.monitor??0}),put('monitor',{h:1.25,x:-7.3,z:9.55,ry:R.monitor??0}),
-    put('couch',{w:2.3,x:-9.15,z:5.9,ry:R.couch??0}),
+    put('couch',{w:2.3,x:-9.15,z:5.9,ry:R.couch??0}),put('couch',{w:2.3,x:-6.35,z:5.9,ry:R.couch??0}),
     put('rack',{h:1.9,x:-11.35,z:7.3,ry:R.rack??0}),
     put('mic',{h:1.75,x:-9.6,z:11.9,ry:R.mic??0}),
     put('stool',{h:.78,x:-8.6,z:12.8,ry:0}),
@@ -318,9 +318,9 @@ async function loadStudioProps(){
   ]);
 }
 /* ---------- card room: glass-walled poker room on the right side, with a felt table and six seats ---------- */
-const cardRoom={seats:[],room:{x0:6.4,x1:11.9,z0:5.2,z1:13.8},center:[9.15,9.6]};
+const cardRoom={seats:[],room:{x0:5.0,x1:11.9,z0:5.2,z1:15.7},center:[8.45,10.6]};
 {
-  const X0=6.4,X1=11.9,Z0=5.2,Z1=13.8,HT=3.5,DOOR=[6.1,7.5],CX=9.15,CZ=9.6,TA=1.5,TB=1.05,TY=.82;
+  const X0=5.0,X1=11.9,Z0=5.2,Z1=15.7,HT=3.5,DOOR=[6.1,7.5],CX=8.45,CZ=10.6,TA=1.3,TB=2.2,TY=.82;
   const glass=new THREE.MeshPhysicalMaterial({color:0xbcd8ff,transparent:true,opacity:.12,roughness:.02,metalness:0,envMapIntensity:1.6,side:THREE.DoubleSide,depthWrite:false});
   const wallM=new THREE.MeshStandardMaterial({color:0x14100f,roughness:.8});
   const carpet=new THREE.MeshStandardMaterial({color:0x2a0c16,roughness:1});
@@ -342,22 +342,28 @@ const cardRoom={seats:[],room:{x0:6.4,x1:11.9,z0:5.2,z1:13.8},center:[9.15,9.6]}
   // suit art panels on the walls
   const suit=(ch,col)=>canvasTex(256,256,(g,w,h)=>{g.fillStyle='#0b0909';g.fillRect(0,0,w,h);g.strokeStyle='#d8a843';g.lineWidth=6;g.strokeRect(10,10,w-20,h-20);g.fillStyle=col;g.font='160px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(ch,w/2,h/2+10);});
   const art=(x,z,ry,ch,col)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshStandardMaterial({map:suit(ch,col),emissiveMap:suit(ch,col),emissive:0xffffff,emissiveIntensity:.5,roughness:.6}));m.position.set(x,2.0,z);m.rotation.y=ry;m.userData.keep=true;scene.add(m);S(1.62,1.62,.05,M.gold,x,2.0,z+(ry===0?-.03:ry===Math.PI?.03:0));};
-  art(8.0,Z0+.1,0,'♠','#e9c97a');art(10.3,Z0+.1,0,'♥','#e0405a');art(8.0,Z1-.1,Math.PI,'♣','#e9c97a');art(10.3,Z1-.1,Math.PI,'♦','#e0405a');
-  for(const z of[7.4,9.6,11.8]){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.1),new THREE.MeshStandardMaterial({color:0x1d1415,roughness:.9}));m.position.set(X1-.1,1.9,z);m.rotation.y=-Math.PI/2;scene.add(m);S(.05,1.22,1.52,M.gold,X1-.06,1.9,z);}
+  art(7.35,Z0+.1,0,'♠','#e9c97a');art(9.55,Z0+.1,0,'♥','#e0405a');art(7.35,Z1-.1,Math.PI,'♣','#e9c97a');art(9.55,Z1-.1,Math.PI,'♦','#e0405a');
+  for(const z of[7.6,10.6,13.6]){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.1),new THREE.MeshStandardMaterial({color:0x1d1415,roughness:.9}));m.position.set(X1-.1,1.9,z);m.rotation.y=-Math.PI/2;scene.add(m);S(.05,1.22,1.52,M.gold,X1-.06,1.9,z);}
   // the table: oval felt top, gold rail, pedestal
   const top=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.12,56),felt);top.scale.set(TA,1,TB);top.position.set(CX,TY,CZ);top.receiveShadow=true;scene.add(top);
   const rail=new THREE.Mesh(new THREE.TorusGeometry(1,.1,14,72),new THREE.MeshStandardMaterial({color:0x1c0f0c,roughness:.5,metalness:.2}));rail.rotation.x=Math.PI/2;rail.scale.set(TA,TB,1);rail.position.set(CX,TY+.05,CZ);scene.add(rail);
   const rg=new THREE.Mesh(new THREE.TorusGeometry(1,.012,8,72),M.gold);rg.rotation.x=Math.PI/2;rg.scale.set(TA*1.0,TB*1.0,1);rg.position.set(CX,TY+.155,CZ);scene.add(rg);
   const ped=new THREE.Mesh(new THREE.CylinderGeometry(.3,.5,TY-.04,24),M.black);ped.position.set(CX,(TY-.04)/2,CZ);scene.add(ped);
   const pb=new THREE.Mesh(new THREE.CylinderGeometry(.75,.8,.05,32),M.gold);pb.position.set(CX,.06,CZ);scene.add(pb);
+  // the StagR logo on the felt: drawn onto a soft round patch the same green as the cloth
+  {const cv=document.createElement('canvas');cv.width=cv.height=512;const lt=new THREE.CanvasTexture(cv);lt.colorSpace=THREE.SRGBColorSpace;lt.anisotropy=8;
+    const dm=new THREE.MeshStandardMaterial({map:lt,color:0x6e6e6e,transparent:true,roughness:1,metalness:0,polygonOffset:true,polygonOffsetFactor:-2,depthWrite:false});
+    const dg=new THREE.Group();dg.position.set(CX,TY+.066,CZ);dg.rotation.y=Math.PI/2;scene.add(dg);
+    const dp=new THREE.Mesh(new THREE.PlaneGeometry(1.7,1.7),dm);dp.rotation.x=-Math.PI/2;dp.userData.keep=true;dp.renderOrder=2;dg.add(dp);
+    const im=new Image();im.onload=()=>{const g=cv.getContext('2d');g.clearRect(0,0,512,512);g.fillStyle='#0c5a3b';g.fillRect(0,0,512,512);g.globalCompositeOperation='lighten';g.drawImage(im,12,12,488,488);g.globalCompositeOperation='destination-in';const rg2=g.createRadialGradient(256,256,0,256,256,256);rg2.addColorStop(0,'rgba(0,0,0,1)');rg2.addColorStop(.74,'rgba(0,0,0,1)');rg2.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=rg2;g.fillRect(0,0,512,512);g.globalCompositeOperation='source-over';lt.needsUpdate=true;};im.src='./assets/stagr-logo.webp';}
   // pendant lamp over the table
   const lamp=new THREE.Mesh(new THREE.ConeGeometry(.55,.4,32,1,true),new THREE.MeshStandardMaterial({color:0x211410,roughness:.4,metalness:.5,side:THREE.DoubleSide,emissive:0xffa530,emissiveIntensity:.25}));lamp.position.set(CX,2.35,CZ);scene.add(lamp);
   S(.02,HT-2.5,.02,M.gold,CX,(HT+2.5)/2,CZ);const lb=new THREE.Mesh(new THREE.SphereGeometry(.09,12,12),dlMat());lb.position.set(CX,2.25,CZ);scene.add(lb);
   function dlMat(){return new THREE.MeshBasicMaterial({color:0xfff1d6,toneMapped:false});}
-  const pl=new THREE.PointLight(0xffc880,12,8,1.6);pl.position.set(CX,2.1,CZ);scene.add(pl);
+  const pl=new THREE.PointLight(0xffc880,15,11,1.5);pl.position.set(CX,2.1,CZ);scene.add(pl);
   // seats around the table: where a player stands or sits, and which way they face
-  for(let i=0;i<6;i++){
-    const th=(i*60+30)*Math.PI/180,sx=CX+(TA+.7)*Math.cos(th),sz=CZ+(TB+.7)*Math.sin(th);
+  for(let i=0;i<9;i++){
+    const th=(i*40+20)*Math.PI/180,sx=CX+(TA+.7)*Math.cos(th),sz=CZ+(TB+.7)*Math.sin(th);
     const ry=Math.atan2(CX-sx,CZ-sz);cardRoom.seats.push({x:sx,z:sz,ry,tx:CX+(TA-.28)*Math.cos(th),tz:CZ+(TB-.2)*Math.sin(th)});
     const st=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.08,24),M.velvet);st.position.set(sx,.5,sz);scene.add(st);
     const col=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.46,10),M.gold);col.position.set(sx,.25,sz);scene.add(col);

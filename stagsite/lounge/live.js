@@ -362,7 +362,7 @@ L.hooks.tick = (dt) => {
   }
   const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
   camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z); camClip(pos.x, pos.z, camT);
-  if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; camT.set(Math.min(11.7, Math.max(6.7, st.x + dx / l * 1.1)), 2.05, Math.min(13.6, Math.max(5.4, st.z + dz / l * 1.1))); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
+  if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; const R = L.cardRoom.room; camT.set(Math.min(R.x1 - .2, Math.max(R.x0 + .3, st.x + dx / l * 1.1)), 2.05, Math.min(R.z1 - .25, Math.max(R.z0 + .25, st.z + dz / l * 1.1))); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
   if (L.camOverride) { const c = L.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); }
   voiceTick(); subscribeNearby(dt); studioTick(); npcTick(dt); djTick(dt); cardTick();
@@ -440,7 +440,7 @@ const NPC_DEFS = [
   { id: 'artist', name: 'Artist', file: 'artist', x: -9.6, z: 12.6, ry: Math.PI, h: 1.8, reach: 0, anims: ['idle', 'rap1', 'rap2', 'bounce', 'nod'],
     routine: [{ p: null, face: Math.PI, a: 'rap1', t: [8, 12] }, { p: null, face: Math.PI, a: 'bounce', t: [5, 8] }, { p: null, face: Math.PI, a: 'rap2', t: [8, 12] }, { p: null, face: Math.PI, a: 'nod', t: [3, 5] }] },
   // the card room: the dealer stands at the end of the table and calls each street
-  { id: 'dealer', name: 'Charlotte', file: 'dealer', x: 11.2, z: 9.6, ry: -Math.PI / 2, h: 1.75, reach: 3.2, anims: ['idle', 'chat', 'agree', 'look', 'wave'], hello: ['hi'],
+  { id: 'dealer', name: 'Charlotte', file: 'dealer', x: 10.45, z: 10.6, ry: -Math.PI / 2, h: 1.75, reach: 3.2, anims: ['idle', 'chat', 'agree', 'look', 'wave'], hello: ['hi'],
     routine: [{ p: null, face: -Math.PI / 2, a: 'idle', t: [6, 9] }, { p: null, face: -Math.PI * .55, a: 'look', t: [3, 5] }, { p: null, face: -Math.PI / 2, a: 'agree', t: [3, 4] }, { p: null, face: -Math.PI * .45, a: 'look', t: [3, 5] }] },
   // the bar: the bartender works the back bar and chats; a regular nurses a drink at the counter
   { id: 'bar', name: 'Marco', file: 'bar', x: -2.2, z: -14.25, ry: 0, h: 1.9, reach: 3.6, anims: ['idle', 'chat', 'wave', 'look', 'agree', 'drink', 'walk'],

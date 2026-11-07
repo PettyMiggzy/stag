@@ -2,7 +2,7 @@
 // Everyone gets free chips and a daily top-up. House bots keep a table playable when few people are around. The weekly leaderboard is for bragging rights and club-chosen prizes.
 import { Table, bestHand } from "./poker.mjs";
 
-const START_CHIPS = 10000, TOPUP_BELOW = 2000, TOPUP_TO = 5000, MIN_BUY = 400, MAX_BUY = 5000, TURN_MS = parseInt(process.env.POKER_TURN_MS || "25000", 10), NEXT_HAND_MS = parseInt(process.env.POKER_NEXT_MS || "6500", 10), SEATS = 6;
+const START_CHIPS = 10000, TOPUP_BELOW = 2000, TOPUP_TO = 5000, MIN_BUY = 400, MAX_BUY = 5000, TURN_MS = parseInt(process.env.POKER_TURN_MS || "25000", 10), NEXT_HAND_MS = parseInt(process.env.POKER_NEXT_MS || "6500", 10), SEATS = 9;
 const day = () => new Date().toISOString().slice(0, 10);
 const weekKey = () => { const d = new Date(); const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); const n = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - n); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${Math.ceil(((t - y0) / 864e5 + 1) / 7)}`; };
 
@@ -76,9 +76,9 @@ export class PokerRoom {
   }
   reset() { clearTimeout(this.timer); clearTimeout(this.nextTimer); this.timer = null; this.nextTimer = null; this.deadline = 0; this.t = new Table({ seats: SEATS }); this.autoFolds.clear(); }
   drop(me) { this.watch.delete(me.addr); if (this.players.has(me.addr)) this.stand(me); }
-  fill() { // bots keep the table lively: 1 person -> 2 bots, 2 people -> 1 bot, 3+ -> none (bots leave between hands)
+  fill() { // bots keep the table lively: 1 person -> 3 bots, 2 -> 2, 3 -> 1, 4+ -> none (bots leave between hands)
     if (this.t.inHand()) return; const h = this.seatedHumans();
-    const want = h === 0 ? 0 : h === 1 ? 2 : h === 2 ? 1 : 0; let bots = this.t.seats.map((s, i) => (s && s.bot ? i : -1)).filter((i) => i >= 0);
+    const want = h === 0 ? 0 : h === 1 ? 3 : h === 2 ? 2 : h === 3 ? 1 : 0; let bots = this.t.seats.map((s, i) => (s && s.bot ? i : -1)).filter((i) => i >= 0);
     while (bots.length > want) { const i = bots.pop(); this.t.seats[i] = null; }
     for (let i = 0; bots.length < want && i < SEATS; i++) if (!this.t.seats[i]) { this.botN++; this.t.sit(i, { addr: "bot" + this.botN, name: ["Rack", "Velvet", "Antler", "Chip", "Gold"][this.botN % 5] + " (house)" }, 2000); this.t.seats[i].bot = true; bots.push(i); }
     for (const s of this.t.seats) if (s && s.bot && s.stack < this.t.bb * 10) s.stack = 2000; // house bots always have chips
