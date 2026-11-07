@@ -6,7 +6,7 @@ import { ethers } from "ethers";
 export function startTeamBuyer(X) {
   const { provider, CFG, ST, log } = X;
   const key = process.env.TEAM_KEY;
-  if (!key) return null;
+  if (!key || String(process.env.TEAM_BUYER || "").toLowerCase() === "off") return null; // TEAM_BUYER=off switches it off and keeps the key saved
   const wallet = new ethers.Wallet(key, provider);
   const usdPerHour = Math.min(5, parseFloat(process.env.TEAM_USD_PER_HOUR || "1") || 1); // capped at $5/hour
   const INTERVAL_MS = 3600 * 1000; // fixed: one buy per hour
