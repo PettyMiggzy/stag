@@ -8,7 +8,7 @@ const box = document.createElement('div');
 box.style.cssText = 'position:fixed;right:8px;top:8px;z-index:99999;width:min(300px,86vw);max-height:92vh;overflow:auto;background:rgba(0,0,0,.82);color:#e9c97a;font:12px/1.35 system-ui,sans-serif;padding:10px;border:1px solid #e9c97a;border-radius:10px';
 box.innerHTML = '<b>Display check</b> <button id="dgx" style="float:right">hide</button><div id="dgi" style="margin:6px 0;color:#fff"></div><div id="dgf"></div>' +
   '<div style="margin:8px 0">Walk to where the black box shows. Untick one thing at a time; when the box disappears, that is the cause.</div>' +
-  '<button id="dgm">⚠ Black box is showing now (mark it)</button> <button id="dgs">Safe mode</button> <button id="dgc">Copy report</button><textarea id="dgt" style="display:none;width:100%;height:120px;margin-top:6px"></textarea>';
+  '<button id="dgm">⚠ Black box is showing now (mark it)</button> <button id="dgs">Safe mode</button> <button id="dgc">Copy report</button><button id="dgg" style="display:block;margin:6px 0;font-weight:700">▶ Guided test (easiest)</button><div id="dgq" style="color:#fff;margin:4px 0"></div><textarea id="dgt" style="display:none;width:100%;height:120px;margin-top:6px"></textarea>';
 document.body.appendChild(box);
 const q = (s) => box.querySelector(s);
 q('#dgx').onclick = () => { box.style.display = 'none'; };
@@ -18,6 +18,16 @@ for (const k of Object.keys(names)) { const l = document.createElement('label');
 q('#dgs').onclick = () => L.setSafe(!L.isSafe(), true);
 const snap = () => { const p = cam.position, e = new L.THREE.Euler().setFromQuaternion(cam.quaternion, 'YXZ'); return { cam: [p.x, p.y, p.z].map((v) => +v.toFixed(2)), yawDeg: Math.round(e.y * 180 / Math.PI), pitchDeg: Math.round(e.x * 180 / Math.PI), flags: { ...F }, safe: L.isSafe() }; };
 q('#dgm').onclick = () => { marks.push(snap()); q('#dgm').textContent = '⚠ Marked (' + marks.length + '). Mark again at another spot'; };
-const report = () => JSON.stringify({ gpu, vendor, ua: navigator.userAgent, dpr: devicePixelRatio, canvas: [R.domElement.width, R.domElement.height], webgl2: !!window.WebGL2RenderingContext && gl instanceof WebGL2RenderingContext, maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE), fps: +fps.toFixed(1), calls: R.info.render.calls, tris: R.info.render.triangles, textures: R.info.memory.textures, now: snap(), blackBoxMarks: marks }, null, 1);
+const guided = {}; let gi = -1;
+const keys = Object.keys(names);
+function gstep() {
+  for (const k of keys) F[k] = true; L.applyFlags(); const dq = q('#dgq');
+  if (gi >= keys.length) { dq.textContent = 'Done. Press Copy report and send it. Everything is switched back on.'; return; }
+  const k = keys[gi]; F[k] = false; L.applyFlags();
+  dq.innerHTML = 'Step ' + (gi + 1) + '/' + keys.length + ': <b>' + names[k] + '</b> is now OFF. Stand where the black box shows. Is the black box gone?<br><button id="gy">Yes, gone</button> <button id="gn">No, still there</button> <button id="gx">No box here</button>';
+  q('#gy').onclick = () => { guided[k] = 'box gone when OFF'; gi++; gstep(); }; q('#gn').onclick = () => { guided[k] = 'box still there'; gi++; gstep(); }; q('#gx').onclick = () => { guided[k] = 'no box at this spot'; gi++; gstep(); };
+}
+q('#dgg').onclick = () => { gi = 0; q('#dgm').click(); gstep(); };
+const report = () => JSON.stringify({ gpu, vendor, ua: navigator.userAgent, dpr: devicePixelRatio, canvas: [R.domElement.width, R.domElement.height], webgl2: !!window.WebGL2RenderingContext && gl instanceof WebGL2RenderingContext, maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE), fps: +fps.toFixed(1), calls: R.info.render.calls, tris: R.info.render.triangles, textures: R.info.memory.textures, now: snap(), blackBoxMarks: marks, guidedTest: guided }, null, 1);
 q('#dgc').onclick = async () => { const t = report(); try { await navigator.clipboard.writeText(t); q('#dgc').textContent = 'Copied!'; } catch (e) { const ta = q('#dgt'); ta.style.display = 'block'; ta.value = t; ta.select(); q('#dgc').textContent = 'Select all + copy below'; } };
 (function tick() { n++; const now = performance.now(); if (now - t0 > 1000) { fps = n * 1000 / (now - t0); n = 0; t0 = now; q('#dgi').textContent = 'GPU: ' + gpu + ' · ' + fps.toFixed(0) + ' fps · ' + R.info.render.calls + ' draws · ' + (L.isSafe() ? 'SAFE mode' : 'full'); } requestAnimationFrame(tick); })();
