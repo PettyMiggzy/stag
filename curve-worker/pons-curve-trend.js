@@ -31,7 +31,9 @@ const CHAIN_ID = 4663;
 const DEAD = '0x000000000000000000000000000000000000dEaD';
 const FACTORY = '0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e';   // Pons V2 launch factory (docs.ponsfamily.com/v2)
 const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11';
-const BUY_GAS = 260000n, BURN_GAS = 90000n, SWEEP_GAS = 21000n;
+// Plain transfers: the chain's estimate is 21,000, but funding sends failed with 'intrinsic gas too low' at that limit,
+// so transfers get 35,000. Unused gas is refunded, so this only raises the reserve, not the cost.
+const BUY_GAS = 260000n, BURN_GAS = 90000n, SWEEP_GAS = 35000n, TRANSFER_GAS = 35000n;
 const TRANSFER = ethers.id('Transfer(address,address,uint256)');
 const PHASES = ['NotGraduated', 'Swept', 'PoolCreated', 'Rescued'];
 
@@ -303,7 +305,7 @@ async function main() {
     try {
       let nonce = await withRetry(() => provider.getTransactionCount(master.address, 'pending'), 6);
       const sent = [];
-      for (let i = 0; i < size; i++) sent.push(await withRetry(() => master.sendTransaction({ to: wallets[i].address, value: fundEach[i], gasLimit: 21000n, nonce: nonce++, ...f }), 3));
+      for (let i = 0; i < size; i++) sent.push(await withRetry(() => master.sendTransaction({ to: wallets[i].address, value: fundEach[i], gasLimit: TRANSFER_GAS, nonce: nonce++, ...f }), 3));
       await Promise.all(sent.map(t => waitReceipt(provider, t.hash)));
     } catch (e) { console.error(`❌ funding failed: ${errText(e)} (wallets are in the ledger; run --recover)`); process.exit(1); }
 
