@@ -334,7 +334,12 @@ async function main() {
 
     if (ok === 0) { if (++empty >= 3) { console.error('3 bursts in a row with zero buys - exiting (run --recover to pull stranded ETH back)'); process.exit(1); } }
     else empty = 0;
-    if (running) await sleep(Math.max(2000, -Math.log(Math.random()) * (3600_000 / burstsPerHour)));
+    if (running) {
+      const meanMs = 3600_000 / burstsPerHour;
+      // --steady: an even cadence (0.6x-1.4x of the mean gap) so a buy shows up regularly, instead of random long gaps.
+      const gap = has('--steady') ? meanMs * (0.6 + 0.8 * Math.random()) : -Math.log(Math.random()) * meanMs;
+      await sleep(Math.max(2000, gap));
+    }
   }
   console.log(`\n📊 ${done} makers this run`);
 }

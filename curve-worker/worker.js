@@ -10,10 +10,10 @@ const PORT = Number(process.env.PORT || 3000);
 const DATA = process.env.PONS_DATA_DIR || path.join(__dirname, 'data');
 fs.mkdirSync(DATA, { recursive: true });
 
-// $3/hour at ETH ~ $2,315 is about 0.0013 ETH/hour. Buys are tiny (about $0.02-$0.12) and split into bursts.
+// $3/hour at ETH ~ $2,315 is about 0.0013 ETH/hour. One tiny buy at a time ($0.01-$0.05), evenly spaced (~every 80s).
 const ARGS = ['--token', '0x67ef4460a1280fbd9d31d6312fed2ce1efd66305',
-  '--eth-per-hour', '0.0013', '--buy-min', '0.00001', '--buy-max', '0.00005',
-  '--burst-min', '1', '--burst-max', '3'];
+  '--eth-per-hour', '0.0013', '--buy-min', '0.000005', '--buy-max', '0.00002',
+  '--burst-min', '1', '--burst-max', '1', '--steady'];
 
 const state = { started: new Date().toISOString(), restarts: 0, running: false, lastLine: '', lastExit: null };
 let child = null, backoff = 5000;
