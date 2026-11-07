@@ -94,7 +94,8 @@ function box(w,h,d,m,x,y,z,p){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d
 /* ---------- room shell ---------- */
 const RW=24,RL=32,RH=7.2,ZC=0; // x:-12..12, z:-16..16
 // mirror floor + marble overlay
-if(!LOW){const refl=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x2c2c36});
+let REFL=null;
+if(!LOW){const refl=REFL=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x2c2c36});
 refl.rotation.x=-Math.PI/2;add(refl);}
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({map:marble,roughness:.12,metalness:.1,transparent:!LOW,opacity:LOW?1:.9}));
 floor.rotation.x=-Math.PI/2;floor.position.y=.004;floor.receiveShadow=true;add(floor);
@@ -103,7 +104,7 @@ const wallMat=new THREE.MeshStandardMaterial({color:0x2a1622,roughness:.7,metaln
 const ceil=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({color:0x0a0508,roughness:.9}));ceil.rotation.x=Math.PI/2;ceil.position.y=RH;add(ceil);
 const backMat=new THREE.MeshStandardMaterial({color:0x140b10,roughness:.85,metalness:.15});
 function wall(w,h,x,y,z,ry,mat){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat||wallMat);m.position.set(x,y,z);m.rotation.y=ry;m.receiveShadow=true;add(m);}
-wall(RL,RH,-RW/2,RH/2,0,Math.PI/2);wall(RL,RH,RW/2,RH/2,0,-Math.PI/2);wall(RW,RH,0,RH/2,-RL/2,0,backMat);for(const x of[-11,-9.4,-7.8,7.8,9.4,11])box(.05,RH-.6,.05,M.goldGlow,x,RH/2,-RL/2+.06);wall(RW,RH,0,RH/2,RL/2,Math.PI);
+wall(RL,RH,-RW/2,RH/2,0,Math.PI/2);wall(RL,RH,RW/2,RH/2,0,-Math.PI/2);wall(RW,RH,0,RH/2,-RL/2,0,backMat);for(const x of[-11,-9.4,-7.8,7.8,9.4,11])box(.05,RH-.6,.05,M.goldGlow,x,RH/2,-RL/2+.06);wall(RW,RH,0,RH/2,RL/2,Math.PI,new THREE.MeshStandardMaterial({color:0x3a2430,emissive:0x2a1420,emissiveIntensity:.8,roughness:.8,metalness:.1}));for(const x of[-11,-9.4,-7.8,7.8,9.4,11])box(.05,RH-.6,.05,M.goldGlow,x,RH/2,RL/2-.06);
 // vertical gold light strips on walls
 for(const sx of[-1,1])for(let z=-13;z<=14;z+=3.4){box(.05,RH-.6,.05,M.goldGlow,sx*(RW/2-.06),RH/2,z);}
 // ceiling light rails
@@ -220,11 +221,12 @@ for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
   const sm=new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:0xffffff,emissiveIntensity:.9,metalness:.4,roughness:.35});
   const draw=(l1,l2)=>{const c=t.image,g=c.getContext('2d');g.fillStyle='#0b0a0e';g.fillRect(0,0,1024,256);const gr=g.createLinearGradient(0,0,1024,0);gr.addColorStop(0,'#a8741f');gr.addColorStop(.5,'#ffe6a0');gr.addColorStop(1,'#a8741f');g.fillStyle=gr;g.textAlign='center';g.textBaseline='middle';g.font='700 70px Georgia,serif';g.fillText(l1,512,84);g.font='600 46px Georgia,serif';g.fillText(l2,512,170);g.strokeStyle='#d8a843';g.lineWidth=4;g.strokeRect(14,14,996,228);t.needsUpdate=true;};
   window.__setSign=(open)=>open?draw('OPEN TO ALL','FREE ENTRY FOR NOW'):draw('MEMBERS ONLY','10,000,000 $STAG  ·  OR A FOUNDER NFT');
-  const az=10;
+  const az=10;const archBack=new THREE.MeshStandardMaterial({color:0x2a1d0c,metalness:.5,roughness:.5});const nA=scene.children.length;
   for(const sx of[-1,1]){box(.34,5.2,.34,M.gold,sx*3.3,2.6,az);box(.5,.12,.5,M.gold,sx*3.3,.06,az);}
-  box(7.3,.55,.4,M.gold,0,5.2,az);box(6.7,1.7,.12,M.black,0,4.15,az);
+  box(7.3,.55,.4,M.gold,0,5.2,az);box(6.7,1.7,.12,archBack,0,4.15,az);
   for(const [rz,ry] of [[az+.07,0],[az-.07,Math.PI]]){const m=new THREE.Mesh(new THREE.PlaneGeometry(6.5,1.6),sm);m.position.set(0,4.15,rz);m.rotation.y=ry;add(m);}
   box(6.7,.04,.04,M.pink,0,3.28,az+.1);
+  const grp=scene.children.slice(nA);grp.forEach(o=>o.userData.keep=1);window.__archTick=(cp)=>{const near=Math.abs(cp.z-az)<5&&Math.abs(cp.x)<6;for(const o of grp)o.visible=!near;};
 }
 
 /* ---------- recording studio: control room + vocal booth behind a gold-framed window, glass wall onto the club ---------- */
@@ -519,6 +521,17 @@ const bloom=new UnrealBloomPass(new THREE.Vector2(CAP?W:W/2,CAP?H:H/2),.55,.55,.
 composer.addPass(new OutputPass());
 
 /* ---------- loop ---------- */
+// SAFE MODE: the plain renderer (no glow pass, no mirror floor). Some graphics drivers drop part of the fancy pipeline and leave a big black area; we watch for that and switch by ourselves, and there is a manual button too.
+let SAFE=false;try{SAFE=localStorage.getItem('loungeSafe')==='1';}catch(e){}
+function applySafe(){if(REFL)REFL.visible=!SAFE;floor.material.transparent=!SAFE&&!LOW;floor.material.opacity=SAFE||LOW?1:.9;floor.material.needsUpdate=true;}
+function setSafe(on,remember){SAFE=!!on;applySafe();if(remember){try{localStorage.setItem('loungeSafe',on?'1':'0');}catch(e){}}console.warn('display mode:',on?'safe (plain render)':'full');}
+let probeN=0,probeBad=0;
+function probeFrame(){ // read a few pixels of the frame just drawn: a lit room never has a dead-black middle with bright edges
+  if(SAFE||(++probeN%40))return;try{const gl=renderer.getContext(),w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,px=new Uint8Array(4);
+    const S=(fx,fy)=>{gl.readPixels(Math.floor(w*fx),Math.floor(h*fy),1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);return px[0]+px[1]+px[2];};
+    let mid=0;for(const fx of[.3,.5,.7])for(const fy of[.3,.5,.7])mid+=S(fx,fy);const edge=Math.max(S(.03,.5),S(.97,.5),S(.03,.3),S(.97,.3));
+    if(mid===0&&edge>40){if(++probeBad>=3){setSafe(true,false);}}else probeBad=0;}catch(e){}
+}
 let tAbs=0,vidT=0;const frustum=new THREE.Frustum(),pm=new THREE.Matrix4(),vp=new THREE.Vector3();
 function culling(dt){
   vidT+=dt;if(vidT<.6)return;vidT=0;pm.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(pm);
@@ -573,18 +586,19 @@ function mergeStatic(){
   console.log('merged static meshes:',before,'->',after);
 }
 mergeStatic();
-window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+{const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material)return;for(const m of [].concat(o.material)){if(seen.has(m)||!m.isMeshStandardMaterial||m.userData.envSet)continue;seen.add(m);if(m.envMapIntensity===1)m.envMapIntensity=.12;}});floor.material.envMapIntensity=.1;}
+window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await Promise.all([setupDancer(),loadStudioProps()]);
   for(const v of videos){try{await v.play();}catch(e){}}
   document.getElementById('load').style.opacity=0;setTimeout(()=>document.getElementById('load').remove(),900);
-  window.__videos=videos;window.__ready=true;
+  applySafe();window.__videos=videos;window.__ready=true;
   if(!CAP){ import('./live.js').catch(e=>console.error('live layer failed',e));
     let last=performance.now();
     const loop=now=>{
       const dt=Math.min(.05,(now-last)/1000);last=now;stepWorld(dt);
       if(window.__lounge.hooks.tick)window.__lounge.hooks.tick(dt);else if(!orbit)placeCam(tAbs);else orbit.update();
-      culling(dt);governor(dt);composer.render();requestAnimationFrame(loop);
+      culling(dt);governor(dt);if(window.__archTick)window.__archTick(camera.position);if(SAFE)renderer.render(scene,camera);else composer.render();probeFrame();requestAnimationFrame(loop);
     };requestAnimationFrame(loop);
   }
 }

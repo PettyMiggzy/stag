@@ -82,7 +82,7 @@ ui.innerHTML = `
 <div id="pk"><h3><span>CARD ROOM</span><span class="chips" id="pkChips"></span><button id="pkX" style="padding:3px 8px">✕</button></h3><div id="pkBoard" class="pkrow"></div><div id="pkPot"></div><div id="pkSeats" class="pkrow"></div><div id="pkMe" class="pkrow"></div><div id="pkAct"></div><div id="pkTimer"><i></i></div><div id="pkLog"></div><div id="pkLead"></div><small style="opacity:.7">Play chips only. No cash value, nothing to buy or cash out. Prizes are chosen by the club.</small></div>
 <div id="talkp"><h3 id="tpName"></h3><div id="tpSub"></div><div id="tpBtns"></div></div>
 <div id="djp"><h3>DJ BOOTH</h3><div id="djNow"></div><div id="djList"></div><small style="opacity:.75">Tap a track to vote. The most votes plays next.</small></div>
-<div id="dock"><button id="cardBtn" style="display:none">🃏 Cards</button><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
+<div id="dock"><button id="safeBtn" title="If part of the screen goes black, tap this">🛠 Display</button><button id="cardBtn" style="display:none">🃏 Cards</button><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
 <div id="joy"><i></i></div>`;
 document.body.appendChild(ui);
 if ('ontouchstart' in window) document.body.classList.add('touch');
@@ -541,6 +541,7 @@ function cardTick() {
   if (inside && !PK.watching) { PK.watching = true; sendWs({ t: 'pokerwatch', on: true }); }
   if (!inside && PK.watching && PK.seat < 0) { PK.watching = false; sendWs({ t: 'pokerwatch', on: false }); L.cardRoom.setTable(null); $('#pk').style.display = 'none'; }
 }
+$('#safeBtn').onclick = () => { const on = !L.isSafe(); L.setSafe(on, true); say('sys', '', on ? 'Compatibility display on (no glow or mirror floor). Tap again to switch back.' : 'Full display back on.'); };
 $('#cardBtn').onclick = () => { const p = $('#pk'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; if (p.style.display === 'block') pkRender(); };
 $('#pkX').onclick = () => { $('#pk').style.display = 'none'; };
 function pkUpdate(m) {
