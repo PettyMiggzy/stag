@@ -174,6 +174,38 @@ function makeAvatar(info) {
   g.position.set(info.x || 0, 0, info.z || 12); g.rotation.y = info.ry || Math.PI;
   scene.add(g); return g;
 }
+// ---- house guests: a few extras (clearly labelled) who wander between the bar, the floor and the stage rail so the room is never empty
+const GUESTS = []; const GBAR = [[-4.2, -11.5], [-2.5, -11.5], [0.8, -11.5], [2.5, -11.5], [4.2, -11.5]];
+const GFLOOR = [[-3.0, -6.8], [3.0, -6.8], [-4.8, -1.5], [4.8, -1.5], [-3.6, 3.2], [3.6, 3.2], [0, -8.6], [-1.6, 0.5], [1.6, 0.5]];
+const GTINT = [[1, .8, .75], [.8, .9, 1], [.85, 1, .85], [1, .95, .7], [.95, .8, 1]];
+function guestPick(g) { const u = g.userData; const atBar = Math.random() < .45; const L2 = atBar ? GBAR : GFLOOR; const s = L2[Math.floor(Math.random() * L2.length)]; u.gx = s[0] + (Math.random() - .5) * .3; u.gz = s[1]; u.bar = atBar; u.arrived = false; }
+function guestsInit() {
+  if (!AV) { setTimeout(guestsInit, 2500); return; }
+  const n = L.gpuIntel ? 2 : 4;
+  for (let i = 0; i < n; i++) {
+    const g = makeAvatar({ name: 'House guest', tier: '', x: (i % 2 ? 1 : -1) * (2 + i), z: 6 + i * .5, ry: Math.PI });
+    const t = GTINT[i % GTINT.length]; g.traverse((o) => { if ((o.isMesh || o.isSkinnedMesh) && o.material && o.material.color) { o.material = o.material.clone(); o.material.color.setRGB(t[0] * .8, t[1] * .8, t[2] * .8); } });
+    g.userData.tag.visible = false; guestPick(g); GUESTS.push(g);
+  }
+}
+setTimeout(guestsInit, 6000);
+const _HP = new THREE.Vector3();
+function guestTick(dt) {
+  const now = performance.now();
+  for (const g of GUESTS) {
+    const u = g.userData; if (!u.mixer) continue;
+    const dp = Math.hypot(g.position.x - pos.x, g.position.z - pos.z); u.tag.visible = dp < 12;
+    const dx = u.gx - g.position.x, dz = u.gz - g.position.z, d = Math.hypot(dx, dz);
+    if (d > .12) { const sp = Math.min(d, 1.1 * dt); g.position.x += dx / d * sp; g.position.z += dz / d * sp; g.rotation.y += angDiff(Math.atan2(dx, dz), g.rotation.y) * Math.min(1, dt * 6); playAnim(u, 'walk'); u.glass.visible = false; }
+    else {
+      if (!u.arrived) { u.arrived = true; u.until = now + (5 + Math.random() * 7) * 1000; u.act = u.bar ? 'drink' : (Math.random() < .3 ? 'wave' : 'idle'); }
+      g.rotation.y += angDiff(u.bar ? Math.PI : (Math.atan2(-g.position.x, -(g.position.z + 4)) ), g.rotation.y) * Math.min(1, dt * 4); playAnim(u, u.act); u.glass.visible = u.act === 'drink';
+      if (now > u.until) guestPick(g);
+    }
+    if (dp < 26 || frameN % 4 === 0) u.mixer.update(dp < 26 ? dt : dt * 4);
+    if (u.glass.visible && u.hand) { u.hand.getWorldPosition(_HP); g.worldToLocal(_HP); u.glass.position.set(_HP.x, _HP.y + .07, _HP.z); }
+  }
+}
 function playAnim(v, name) { // crossfade between idle and walk
   if (!v.mixer || v.curName === name || !v.acts[name]) return; const next = v.acts[name]; next.reset().play(); if (v.cur) v.cur.crossFadeTo(next, .25, false); v.cur = next; v.curName = name;
 }
@@ -318,6 +350,7 @@ L.hooks.tick = (dt) => {
   sendAcc += dt; if (sendAcc > .1) { sendAcc = 0; sendWs({ t: 'pos', x: pos.x, z: pos.z, ry: pos.ry, a: pos.anim }); }
   for (const a of others.values()) { const v = a.userData; a.position.x += (v.tx - a.position.x) * Math.min(1, dt * 9); a.position.z += (v.tz - a.position.z) * Math.min(1, dt * 9); a.rotation.y += ((v.try - a.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 10); }
   lodT += dt; if (lodT > .5) { lodT = 0; const arr = [...others.values()].map((a) => [a, Math.hypot(a.position.x - pos.x, a.position.z - pos.z)]).sort((x, y) => x[1] - y[1]); arr.forEach(([a, d], i) => { a.userData.near = i < 18 && d < 22; a.userData.tag.visible = d < 16; }); }
+  guestTick(dt);
   frameN++;
   for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); if (v.near !== false || frameN % 4 === 0) v.mixer.update(v.near !== false ? dt : dt * 4); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
@@ -387,10 +420,10 @@ function studioTick() { // the studio button shows only inside the studio; leavi
 /* ---------- NPCs (studio engineer, DJ) and the shared DJ playlist ---------- */
 const NPC_DEFS = [
   // the engineer works a loop around the control room: listens at the console, checks the rack, takes a coffee on the couch, answers the studio phone
-  { id: 'eng', name: 'Engineer', file: 'engineer', x: -9.15, z: 7.05, ry: 0, reach: 2.8, anims: ['idle', 'talk', 'wave', 'agree', 'listen', 'walk', 'look', 'drink', 'phone'],
+  { id: 'eng', name: 'Engineer', file: 'engineer', x: -9.15, z: 7.05, ry: 0, reach: 2.8, speed: 1.25, helloD: 4.5, hello: ['idle'], anims: ['idle', 'talk', 'wave', 'agree', 'listen', 'walk', 'look', 'drink', 'phone', 'push', 'inspect', 'scratch'],
     routine: [
-      { p: [-9.15, 7.05], face: 0, a: 'listen', t: [8, 12] }, { p: [-10.3, 7.3], face: -Math.PI / 2, a: 'look', t: [6, 9] }, { p: [-9.15, 7.05], face: 0, a: 'agree', t: [6, 9] },
-      { p: [-7.9, 6.7], face: Math.PI * .75, a: 'drink', t: [8, 11] }, { p: [-9.15, 7.05], face: 0, a: 'phone', t: [9, 13] },
+      { p: [-9.15, 7.05], face: 0, a: 'push', t: [5, 8] }, { p: [-10.4, 7.2], face: -Math.PI / 2, a: 'inspect', t: [4, 6] }, { p: [-8.4, 6.75], face: Math.PI * .75, a: 'drink', t: [5, 8] },
+      { p: [-7.0, 7.6], face: Math.PI / 2, a: 'look', t: [3, 5] }, { p: [-9.15, 7.05], face: 0, a: 'scratch', t: [3, 5] }, { p: [-9.9, 6.6], face: Math.PI * .6, a: 'phone', t: [6, 9] },
     ] },
   // the DJ never leaves her decks: she alternates her grooves and takes a sip now and then
   { id: 'dj', name: 'DJ', file: 'dj', x: 8.6, z: -12.3, ry: 0, reach: 3.4, anims: ['groove', 'idle', 'wave', 'bass', 'drink'],
@@ -403,6 +436,12 @@ const NPC_DEFS = [
       { p: [-5.5, 8], a: 'look', t: [5, 8] }, { p: [-5.5, -4], a: 'chat', t: [5, 8] }, { p: [-5.5, -10.2], a: 'look', t: [6, 9] },
       { p: [5.5, -10.2], a: 'agree', t: [5, 8] }, { p: [5.5, -4], a: 'look', t: [5, 8] }, { p: [5.5, 8], a: 'chat', t: [6, 9] },
     ], hello: ['hi', 'classy', 'enjoy', 'safe'] },
+  // the vocal booth: a recording artist works on a demo; he fades out whenever a real person steps into the booth or goes on air
+  { id: 'artist', name: 'Artist', file: 'artist', x: -9.6, z: 12.6, ry: Math.PI, h: 1.8, reach: 0, anims: ['idle', 'rap1', 'rap2', 'bounce', 'nod'],
+    routine: [{ p: null, face: Math.PI, a: 'rap1', t: [8, 12] }, { p: null, face: Math.PI, a: 'bounce', t: [5, 8] }, { p: null, face: Math.PI, a: 'rap2', t: [8, 12] }, { p: null, face: Math.PI, a: 'nod', t: [3, 5] }] },
+  // the card room: the dealer stands at the end of the table and calls each street
+  { id: 'dealer', name: 'Charlotte', file: 'dealer', x: 11.2, z: 9.6, ry: -Math.PI / 2, h: 1.75, reach: 3.2, anims: ['idle', 'chat', 'agree', 'look', 'wave'], hello: ['hi'],
+    routine: [{ p: null, face: -Math.PI / 2, a: 'idle', t: [6, 9] }, { p: null, face: -Math.PI * .55, a: 'look', t: [3, 5] }, { p: null, face: -Math.PI / 2, a: 'agree', t: [3, 4] }, { p: null, face: -Math.PI * .45, a: 'look', t: [3, 5] }] },
   // the bar: the bartender works the back bar and chats; a regular nurses a drink at the counter
   { id: 'bar', name: 'Marco', file: 'bar', x: -2.2, z: -14.25, ry: 0, h: 1.9, reach: 3.6, anims: ['idle', 'chat', 'wave', 'look', 'agree', 'drink', 'walk'],
     routine: [
@@ -421,7 +460,7 @@ async function loadNpcs() {
     try {
       const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
       const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = (d.h || 1.8) / (bb.max.y - bb.min.y);
-      g.scene.scale.multiplyScalar(sc); g.scene.position.y = -bb.min.y * sc; g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; if (d.id === 'bar' && o.material && o.material.color) o.material.color.multiplyScalar(.55); } });
+      g.scene.scale.multiplyScalar(sc); g.scene.position.y = -bb.min.y * sc; g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; if ((d.id === 'bar' || d.id === 'dealer') && o.material && o.material.color) o.material.color.multiplyScalar(.55); } });
       const grp = new THREE.Group(); grp.add(g.scene); grp.position.set(d.x, 0, d.z); grp.rotation.y = d.ry; scene.add(grp);
       const mixer = new THREE.AnimationMixer(g.scene); const acts = {};
       for (const a of d.anims) { try { const f = await loadGLB(`./assets/npc/${d.file}_${a}.glb`); const c = f.animations[0]; if (!c) continue;
@@ -429,7 +468,7 @@ async function loadNpcs() {
         const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
       const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
       const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
-      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag);
+      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', dealer: 'Dealer', artist: 'Recording a demo' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
     } catch (e) { console.warn('npc failed', d.file, e); }
   }
   try { const gm = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffa040, emissiveIntensity: .9, transparent: true, opacity: .85 }); for (const [x, z] of [[-1.5, -12.95], [-1.95, -13.3], [1.2, -13.0]]) { const g = new THREE.Mesh(new THREE.CylinderGeometry(.045, .035, .12, 14), gm); g.position.set(x, 1.2, z); scene.add(g); } } catch (e) {}
@@ -455,7 +494,7 @@ function runRoutine(n, now, dt) { // walk to the next station, do the job there 
   if (n.st === 'walk') {
     const dx = s.p[0] - n.obj.position.x, dz = s.p[1] - n.obj.position.z, dist = Math.hypot(dx, dz);
     if (dist < .12) { n.st = 'act'; n.until = now + (s.t[0] + Math.random() * (s.t[1] - s.t[0])) * 1000 * NK; npcPlay(n, s.a); return; }
-    const sp = Math.min(dist, 1.0 * NSP * dt); n.obj.position.x += dx / dist * sp; n.obj.position.z += dz / dist * sp;
+    const sp = Math.min(dist, (n.speed || 1.0) * NSP * dt); n.obj.position.x += dx / dist * sp; n.obj.position.z += dz / dist * sp;
     n.obj.rotation.y += angDiff(Math.atan2(dx, dz), n.obj.rotation.y) * Math.min(1, dt * 7); npcPlay(n, n.acts.walk ? 'walk' : n.base); return;
   }
   if (s.face != null) n.obj.rotation.y += angDiff(s.face, n.obj.rotation.y) * Math.min(1, dt * 4);
@@ -466,10 +505,11 @@ function npcTick(dt) {
   const now = performance.now(); let near = null, nd = 99;
   for (const n of Object.values(NPCS)) {
     const d = Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z);
+    if (n.id === 'artist') { const inB = pos.x > -11.9 && pos.x < -6.4 && pos.z > 10.0 && pos.z < 13.8; if (inB || L.studio.onAir) n.away = now + 12000; const tv = now < (n.away || 0) ? 0 : 1; n.vis += (tv - n.vis) * Math.min(1, dt * 3); for (const m of n.mats || []) m.opacity = n.vis; n.obj.visible = n.vis > .03; if (!n.obj.visible) continue; }
     if (d < 30) n.mixer.update(dt);
     const speaking = now < n.talkUntil, greeting = n.greetUntil && now < n.greetUntil, busy = speaking || talking === n || greeting;
     if (greeting && !(talking === n)) { npcPlay(n, n.acts[n.greetAnim] ? n.greetAnim : n.base); if (d < 12) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 5); } n.until = Math.max(n.until, now + 2000); }
-    else if (n.hello && me && d < 2.6 && now > (n.nextHello || 0) && !busy) { n.nextHello = now + 70000 + Math.random() * 30000; n.greetAnim = 'agree'; n.greetUntil = now + 2800; npcSay(n, n.hello[Math.floor(Math.random() * n.hello.length)]); }
+    else if (n.hello && me && d < (n.helloD || 2.6) && now > (n.nextHello || 0) && !busy) { n.nextHello = now + 70000 + Math.random() * 30000; n.greetAnim = 'agree'; n.greetUntil = now + 2800; npcSay(n, n.hello[Math.floor(Math.random() * n.hello.length)]); }
     else
     if (busy) { // someone is talking to them: stop, face the player, and talk
       npcPlay(n, speaking ? (n.acts.talk ? 'talk' : (n.acts.chat ? 'chat' : (n.acts.wave ? 'wave' : n.base))) : (n.acts.idle ? 'idle' : n.base));
@@ -493,6 +533,9 @@ function openTalk(n) {
   } else if (n.id === 'door') {
     sub.textContent = 'Members only. Anything you need to know?'; npcSay(n, 'info');
     add('How do I get in?', () => { sub.textContent = '10,000,000 $STAG across your linked wallets, or a Hooded 20, Sherwood Saints or WANTED NFT.'; npcSay(n, 'info'); }); add('Thanks', () => { npcSay(n, 'thanks'); n.greetAnim = 'wave'; n.greetUntil = performance.now() + 2200; closeTalk(); });
+  } else if (n.id === 'dealer') {
+    sub.textContent = "Welcome to the card room. Play chips only, and it's free."; npcSay(n, 'hi');
+    add('How does it work?', () => { sub.textContent = "Texas Hold'em on play chips. Free daily top-up if you run low. Sit at the table and I deal you in."; npcSay(n, 'rules'); }); add('Thanks', () => { npcSay(n, 'thanks'); closeTalk(); });
   } else if (n.id === 'bar') {
     sub.textContent = "Evening. What can I get you? It's all on the house right now."; npcSay(n, 'greet');
     add('🍸 See the menu', () => { npcSay(n, 'menu'); $('#bar').style.display = 'flex'; closeTalk(); }); add('Just looking', () => { npcSay(n, 'thanks'); closeTalk(); });
@@ -560,8 +603,17 @@ function cardTick() {
 $('#safeBtn').onclick = () => { const on = !L.isSafe(); L.setSafe(on, true); say('sys', '', on ? 'Compatibility display on (no glow or mirror floor). Tap again to switch back.' : 'Full display back on.'); };
 $('#cardBtn').onclick = () => { const p = $('#pk'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; if (p.style.display === 'block') pkRender(); };
 $('#pkX').onclick = () => { $('#pk').style.display = 'none'; };
+let dcPhase = '', dcHand = -1, dcAt = 0;
+function dealerCall(v) { // the dealer announces each street once, for anyone in or watching the card room
+  const n = NPCS.dealer; if (!n || !v) return; const now = performance.now(); const key = v.hand + ':' + v.phase;
+  if (key === dcPhase) return; const fresh = dcPhase === ''; dcPhase = key; dcHand = v.hand;
+  if (fresh || now - dcAt < 1500 || (!PK.watching && PK.seat < 0)) return;
+  const k = { preflop: 'newhand', flop: 'flop', turn: 'turn', river: 'river', showdown: 'show' }[v.phase]; if (!k) return; dcAt = now;
+  setTimeout(() => { n.greetAnim = k === 'show' ? 'agree' : 'chat'; n.greetUntil = performance.now() + 2200; npcSay(n, k); }, 400);
+}
 function pkUpdate(m) {
   PK.v = m.v; PK.chips = m.chips; PK.deadline = m.deadline || 0; PK.leaders = m.leaders || []; PK.rules = m.rules || PK.rules;
+  dealerCall(m.v);
   const was = PK.seat; PK.seat = m.seat; L.cardRoom.setTable(m.v);
   if (PK.seat >= 0 && was < 0) { $('#pk').style.display = 'block'; say('sys', '', 'You sat down. Play chips only.'); }
   if ($('#pk').style.display === 'block') pkRender();

@@ -476,6 +476,29 @@ async function setupDancer(){
   }
   next(0);
 }
+// a second dancer with her own look: she runs the same clips as the first, three tracks apart, so the stage never looks like a copy
+let dancer2={mixer:null,actions:{},idx:3,cur:null,until:0,root:null};
+async function setupDancer2(){
+  try{
+    const g=await load('./assets/dancer2.glb');
+    const root=new THREE.Group();root.add(g.scene);scene.add(root);
+    g.scene.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;if(o.material){o.material.envMapIntensity=.45;o.material.color.setScalar(.55);o.material.roughness=.7;o.material.metalness=0;if(o.material.map)o.material.map.anisotropy=8;}}});
+    root.updateMatrixWorld(true);
+    const bb=new THREE.Box3().setFromObject(g.scene,true);const sc=1.7/(bb.max.y-bb.min.y);g.scene.scale.multiplyScalar(sc);
+    root.updateMatrixWorld(true);const bb2=new THREE.Box3().setFromObject(g.scene,true);g.scene.position.y-=bb2.min.y;
+    root.position.set(-2.1,STAGE_Y+.045,-3.3);dancer2.root=root;
+    const mixer=new THREE.AnimationMixer(g.scene);dancer2.mixer=mixer;
+    for(const f of DANCE_PLAN.map(d=>d[0])){const a=dancer.actions[f];if(!a)continue;const act=mixer.clipAction(a.getClip());act.setLoop(THREE.LoopRepeat,Infinity);dancer2.actions[f]=act;}
+    next2(0);
+  }catch(e){console.warn('second dancer missing',e);}
+}
+function next2(now){
+  dancer2.idx=(dancer2.idx+1)%DANCE_PLAN.length;
+  const [name,dur]=DANCE_PLAN[dancer2.idx];const act=dancer2.actions[name];if(!act){dancer2.until=now+1;return;}
+  act.reset().setEffectiveWeight(1).play();
+  if(dancer2.cur&&dancer2.cur!==act)dancer2.cur.crossFadeTo(act,.9,false);
+  dancer2.cur=act;dancer2.until=now+dur;
+}
 function next(now){
   dancer.idx=(dancer.idx+1)%DANCE_PLAN.length;
   const [name,dur]=DANCE_PLAN[dancer.idx];const act=dancer.actions[name];if(!act){dancer.until=now+1;return;}
@@ -492,6 +515,7 @@ function syncDance(sec){
   dancer.idx=k-1;next(tAbs);
   if(dancer.cur){const d=dancer.cur.getClip().duration;dancer.cur.time=t%d;}
   dancer.until=tAbs+(DANCE_PLAN[k][1]-t);
+  if(dancer2.mixer&&Object.keys(dancer2.actions).length){const k2=(k+3)%DANCE_PLAN.length;dancer2.idx=k2-1;next2(tAbs);if(dancer2.cur){const d2=dancer2.cur.getClip().duration;dancer2.cur.time=t%d2;}dancer2.until=tAbs+Math.max(1,DANCE_PLAN[k2][1]-Math.min(t,DANCE_PLAN[k2][1]-1));}
 }
 /* ---------- camera path ---------- */
 const KEYS=[
@@ -551,6 +575,7 @@ function governor(dt){
 function stepWorld(dt){
   tAbs+=dt;
   if(dancer.mixer){dancer.mixer.update(dt);if(tAbs>=dancer.until)next(tAbs);}
+  if(dancer2.mixer){dancer2.mixer.update(dt);if(tAbs>=dancer2.until)next2(tAbs);}
   for(const r of rigs){
     const s=Math.sin(tAbs*.35+r.ph)*.55, c=Math.cos(tAbs*.29+r.ph)*.4;
     r.L.target.position.set(r.tx+s,STAGE_Y+1,r.tz+c);
@@ -591,9 +616,9 @@ function mergeStatic(){
 }
 mergeStatic();
 {const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material)return;for(const m of [].concat(o.material)){if(seen.has(m)||!m.isMeshStandardMaterial||m.userData.envSet)continue;seen.add(m);if(m.envMapIntensity===1)m.envMapIntensity=.12;}});floor.material.envMap=scene.environment;floor.material.envMapIntensity=.025;floor.material.roughness=.2;floor.material.emissive=new THREE.Color(0xa07c86);floor.material.emissiveMap=floor.material.map;floor.material.emissiveIntensity=1.5;floor.material.color.setScalar(2.6);floor.material.needsUpdate=true;}
-window.__lounge={applyFlags,FLAGS,THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+window.__lounge={gpuIntel:GPU_INTEL,applyFlags,FLAGS,THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
-  await Promise.all([setupDancer(),loadStudioProps()]);
+  await Promise.all([setupDancer(),loadStudioProps()]);setupDancer2();
   for(const v of videos){try{await v.play();}catch(e){}}
   document.getElementById('load').style.opacity=0;setTimeout(()=>document.getElementById('load').remove(),900);
   applySafe();window.__videos=videos;window.__ready=true;
