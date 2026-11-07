@@ -151,6 +151,11 @@ export function initExtras(X) {
         const on = (args[0] || "").toLowerCase() === "on"; await W.q("insert into bot_state(k,v) values('loungeOpen',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [on ? "1" : "0"]);
         return reply(on ? "🚪 Lounge is OPEN to every wallet (free entry). Send /loungeopen off to put the 10M $STAG / Founder NFT gate back." : "🔒 Lounge gate is back: 10,000,000 $STAG or a Founder NFT.");
       }
+      if ((cmd === "chatid" || cmd === "setclub") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // admin only, run inside a group
+        if (msg.chat.type === "private") return reply("Run this inside the group, not here.");
+        if (cmd === "setclub") { await W.q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); await W.q("insert into bot_state(k,v) values('whaleChat',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [String(msg.chat.id)]); return reply(`✅ This group is now the Hood Rich Club chat (id <code>${msg.chat.id}</code>). Invites will use it from the next check.`, { reply_markup: undefined }); }
+        return reply(`Chat id: <code>${msg.chat.id}</code> · ${esc(msg.chat.title || "")}`, { reply_markup: undefined });
+      }
       if (cmd === "stagme") return STAGME.command(msg, args, reply);
       if (cmd === "burn" || cmd === "burned" || cmd === "burns") return reply(await BURN.text());
       if ((cmd === "burndraft" || cmd === "burnpost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM

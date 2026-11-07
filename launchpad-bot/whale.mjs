@@ -14,7 +14,7 @@ export function initWhale(X) {
   const WHALE_MIN = parseFloat(process.env.WHALE_MIN || "10000000");
   let WHALE_CHAT = process.env.WHALE_CHAT_ID || ""; // the Hood Rich Club chat id: env wins, else bot_state in the database (so it can be set without touching env vars)
   let inviteWarned = false;
-  async function loadChat() { if (!DB || process.env.WHALE_CHAT_ID) return; try { await q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); const [r] = await q("select v from bot_state where k='whaleChat'"); if (r && r.v && r.v !== WHALE_CHAT) { WHALE_CHAT = r.v; log("club chat id:", WHALE_CHAT); } } catch (e) { log("club chat load err:", e.message); } }
+  async function loadChat() { if (!DB || process.env.WHALE_CHAT_ID) return; try { await q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); const [r] = await q("select v from bot_state where k='whaleChat'"); if (r && r.v && r.v !== WHALE_CHAT) { WHALE_CHAT = r.v; inviteWarned = false; log("club chat id:", WHALE_CHAT); } } catch (e) { log("club chat load err:", e.message); } }
   const migrateChat = async (resp) => { const to = resp?.parameters?.migrate_to_chat_id; if (!to) return false; WHALE_CHAT = String(to); try { await q("insert into bot_state(k,v) values('whaleChat',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [WHALE_CHAT]); } catch {} log("club chat upgraded to supergroup:", WHALE_CHAT); return true; };
   const PUBLIC = (process.env.PUBLIC_URL || "https://buybot.stagwifhood.fun").replace(/\/$/, "");
   const BOT_USER = process.env.BOT_USERNAME || "stagzbuybot";
