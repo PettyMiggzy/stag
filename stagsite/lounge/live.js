@@ -1,5 +1,7 @@
 // Hood Rich Club lounge: the live layer. Wallet sign-in, your avatar, other holders, chat, the free bar and voice.
 // Loaded by index.html in normal (non-capture) mode. Nothing here moves money: sign-in is a plain message signature.
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 const L = window.__lounge;
 const { THREE, scene, camera, M, STAGE_Y } = L;
 const Q = new URLSearchParams(location.search);
@@ -97,27 +99,50 @@ function antlers() {
     const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => V(p.x * sx, p.y, p.z))), 10, .018, 6), antlerMat); g.add(m);
   } return g;
 }
+// The holder avatar: a rigged hooded stag (Meshy model), cloned per player. Falls back to a simple figure if the model fails to load.
+const gl = new GLTFLoader(); const loadGLB = (u) => new Promise((res, rej) => gl.load(u, res, undefined, rej));
+let AV = null;
+const AVP = (async () => {
+  try {
+    const g = await loadGLB('./assets/avatar/avatar.glb'); g.scene.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = 1.8 / (bb.max.y - bb.min.y);
+    g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; o.receiveShadow = true; if (o.material) o.material.envMapIntensity = 1; } });
+    const clips = {};
+    for (const n of ['idle', 'walk', 'wave', 'drink']) {
+      try { const a = await loadGLB('./assets/avatar/' + n + '.glb'); const c = a.animations[0]; if (!c) continue;
+        for (const tr of c.tracks) if (tr.name.endsWith('.position') && tr.name.indexOf('Hips') >= 0) { const v = tr.values; const x0 = v[0], z0 = v[2]; for (let i = 0; i < v.length; i += 3) { v[i] -= x0; v[i + 2] -= z0; } }
+        clips[n] = c; } catch (e) { console.warn('avatar clip', n, e); }
+    }
+    AV = { scene: g.scene, clips, sc, bb };
+  } catch (e) { console.warn('avatar model failed, using simple figure', e); }
+})();
 function makeAvatar(info) {
   const key = info.founder && !TIER_COL[info.tier] ? 'Founder' : info.tier; const col = TIER_COL[key] || 0xffffff;
   const g = new THREE.Group();
-  const cloak = new THREE.MeshStandardMaterial({ color: 0x14101a, roughness: .55, metalness: .25 });
-  const fur = new THREE.MeshStandardMaterial({ color: 0xb5753a, roughness: .7 });
-  const trim = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: .5, metalness: .6, roughness: .3 });
-  const body = new THREE.Mesh(bodyGeo, cloak); body.position.y = .88; body.castShadow = true; g.add(body);
-  const belt = new THREE.Mesh(new THREE.TorusGeometry(.25, .025, 8, 24), trim); belt.rotation.x = Math.PI / 2; belt.position.y = .86; g.add(belt);
-  const head = new THREE.Mesh(headGeo, fur); head.position.set(0, 1.47, 0); head.castShadow = true; g.add(head);
-  const hood = new THREE.Mesh(new THREE.SphereGeometry(.225, 18, 14, 0, Math.PI * 2, 0, Math.PI * .62), cloak); hood.position.set(0, 1.5, -.02); g.add(hood);
-  const snout = new THREE.Mesh(snoutGeo, fur); snout.rotation.x = Math.PI / 2; snout.position.set(0, 1.43, .24); g.add(snout);
-  for (const sx of [-1, 1]) { const e = new THREE.Mesh(earGeo, fur); e.position.set(sx * .2, 1.62, 0); e.rotation.z = -sx * 1.0; g.add(e); }
-  const a = antlers(); a.position.set(0, 1.62, 0); a.scale.setScalar(.8); g.add(a);
-  const legs = [];
-  for (const sx of [-1, 1]) { const p = new THREE.Group(); p.position.set(sx * .11, .52, 0); const l = new THREE.Mesh(legGeo, cloak); l.position.y = -.25; p.add(l); g.add(p); legs.push(p); }
+  g.userData = { legs: [], walkPh: 0, tx: info.x || 0, tz: info.z || 0, try: info.ry || 0, moving: false, mixer: null };
   const glass = new THREE.Mesh(new THREE.CylinderGeometry(.04, .03, .12, 10), new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffa040, emissiveIntensity: 1.2, transparent: true, opacity: .9 }));
-  glass.position.set(.3, 1.0, .18); glass.visible = false; g.add(glass);
-  const tag = nameTag((info.name || '?') + (info.tier ? '  ·  ' + info.tier : ''), col); tag.position.y = 2.05; g.add(tag);
-  g.userData = { legs, glass, walkPh: 0, tx: info.x || 0, tz: info.z || 0, try: info.ry || 0, moving: false };
+  glass.position.set(.28, 1.05, .22); glass.visible = false; g.add(glass); g.userData.glass = glass;
+  if (AV) {
+    const inst = SkeletonUtils.clone(AV.scene); inst.scale.multiplyScalar(AV.sc); inst.position.y = -AV.bb.min.y * AV.sc; g.add(inst);
+    let hand = null; inst.traverse((o) => { if (!hand && o.isBone && /right.?hand$/i.test(o.name)) hand = o; }); g.userData.hand = hand;
+    const mixer = new THREE.AnimationMixer(inst); const acts = {};
+    for (const [n, c] of Object.entries(AV.clips)) { const a = mixer.clipAction(c); a.setLoop(THREE.LoopRepeat, Infinity); acts[n] = a; }
+    if (acts.walk) acts.walk.timeScale = 1.5;
+    (acts.idle || acts.walk).play(); mixer.update(Math.random() * 3);
+    Object.assign(g.userData, { mixer, acts, cur: acts.idle || acts.walk, curName: 'idle' });
+  } else {
+    const cloak = new THREE.MeshStandardMaterial({ color: 0x14101a, roughness: .55, metalness: .25 }), fur = new THREE.MeshStandardMaterial({ color: 0xb5753a, roughness: .7 });
+    const body = new THREE.Mesh(bodyGeo, cloak); body.position.y = .88; g.add(body);
+    const head = new THREE.Mesh(headGeo, fur); head.position.set(0, 1.47, 0); g.add(head); const a = antlers(); a.position.set(0, 1.62, 0); a.scale.setScalar(.8); g.add(a);
+  }
+  // a glowing ring at the feet shows the tier from across the room
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.5, .018, 8, 40), new THREE.MeshBasicMaterial({ color: col, toneMapped: false })); ring.rotation.x = Math.PI / 2; ring.position.y = .02; g.add(ring);
+  const tag = nameTag((info.name || '?') + (info.tier ? '  ·  ' + info.tier : ''), col); tag.position.y = 2.2; g.add(tag);
   g.position.set(info.x || 0, 0, info.z || 12); g.rotation.y = info.ry || Math.PI;
   scene.add(g); return g;
+}
+function playAnim(v, name) { // crossfade between idle and walk
+  if (!v.mixer || v.curName === name || !v.acts[name]) return; const next = v.acts[name]; next.reset().play(); if (v.cur) v.cur.crossFadeTo(next, .25, false); v.cur = next; v.curName = name;
 }
 const DRINK_COL = { champagne: 0xfff0b0, whiskey: 0xd98a2b, mojito: 0x8bff9a, gold: 0xffd34d };
 const others = new Map(); // id -> avatar
@@ -134,8 +159,8 @@ function say(cls, who, text, col) {
   setTimeout(() => { d.style.transition = 'opacity 2s'; d.style.opacity = 0; setTimeout(() => d.remove(), 2100); }, 14000);
 }
 function updateTop() { $('#top').textContent = `Hood Rich Club · ${SELF.tier || ''} · ${others.size + 1} in the room`; }
-function connect() {
-  ws = new WebSocket(WS_URL);
+async function connect() {
+  await AVP; ws = new WebSocket(WS_URL);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', token: TOKEN, name: SELF.req || '' }));
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
@@ -204,7 +229,7 @@ function voiceTick() { // volume fades with distance, so you hear the booth you 
 }
 
 /* ---------- per-frame ---------- */
-const camT = new THREE.Vector3(), lookT = new THREE.Vector3();
+const HP = new THREE.Vector3(), camT = new THREE.Vector3(), lookT = new THREE.Vector3();
 let sendAcc = 0;
 L.hooks.tick = (dt) => {
   if (!me) { L.hooks.autoCam(); return; }
@@ -215,7 +240,7 @@ L.hooks.tick = (dt) => {
   if (keys['q']) pos.yaw += dt * 1.8; if (keys['e']) pos.yaw -= dt * 1.8;
   const len = Math.hypot(f, s); const moving = len > .08;
   if (moving) {
-    const sp = 3.4 * dt / Math.max(1, len); const Fx = -Math.sin(pos.yaw), Fz = -Math.cos(pos.yaw), Rx = Math.cos(pos.yaw), Rz = -Math.sin(pos.yaw);
+    const sp = 2.4 * dt / Math.max(1, len); const Fx = -Math.sin(pos.yaw), Fz = -Math.cos(pos.yaw), Rx = Math.cos(pos.yaw), Rz = -Math.sin(pos.yaw);
     let nx = pos.x + (Fx * f + Rx * s) * sp, nz = pos.z + (Fz * f + Rz * s) * sp;
     nx = Math.max(-11, Math.min(11, nx)); nz = Math.max(-14.5, Math.min(14.5, nz));
     if (nx > STAGE.x0 && nx < STAGE.x1 && nz > STAGE.z0 && nz < STAGE.z1) { if (!(pos.x > STAGE.x0 && pos.x < STAGE.x1 && pos.z > STAGE.z0 && pos.z < STAGE.z1)) { nx = pos.x; nz = pos.z; } } // the stage is the dancer's
@@ -226,7 +251,8 @@ L.hooks.tick = (dt) => {
   const u = me.userData; u.moving = moving; me.position.set(pos.x, 0, pos.z); me.rotation.y += ((pos.ry - me.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 12);
   sendAcc += dt; if (sendAcc > .1) { sendAcc = 0; sendWs({ t: 'pos', x: pos.x, z: pos.z, ry: pos.ry, a: pos.anim }); }
   for (const a of others.values()) { const v = a.userData; a.position.x += (v.tx - a.position.x) * Math.min(1, dt * 9); a.position.z += (v.tz - a.position.z) * Math.min(1, dt * 9); a.rotation.y += ((v.try - a.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 10); }
-  for (const a of [me, ...others.values()]) { const v = a.userData; if (v.moving) v.walkPh += dt * 7; else v.walkPh *= .85; v.legs[0].rotation.x = Math.sin(v.walkPh) * .6; v.legs[1].rotation.x = -Math.sin(v.walkPh) * .6; }
+  for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); v.mixer.update(dt); }
+    if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
   // third-person camera behind and above, easing, never inside a wall
   const cx = pos.x + Math.sin(pos.yaw) * 4.2, cz = pos.z + Math.cos(pos.yaw) * 4.2;
   camT.set(Math.max(-11.3, Math.min(11.3, cx)), 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
