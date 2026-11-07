@@ -95,7 +95,7 @@ function box(w,h,d,m,x,y,z,p){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d
 const RW=24,RL=32,RH=7.2,ZC=0; // x:-12..12, z:-16..16
 // mirror floor + marble overlay
 let REFL=null;
-if(!LOW){const refl=REFL=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x2c2c36});
+if(!LOW){const refl=REFL=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x3c3c4a});
 refl.rotation.x=-Math.PI/2;add(refl);}
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({map:marble,roughness:.12,metalness:.1,transparent:!LOW,opacity:LOW?1:.9}));
 floor.rotation.x=-Math.PI/2;floor.position.y=.004;floor.receiveShadow=true;add(floor);
@@ -586,7 +586,7 @@ function mergeStatic(){
   console.log('merged static meshes:',before,'->',after);
 }
 mergeStatic();
-{const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material)return;for(const m of [].concat(o.material)){if(seen.has(m)||!m.isMeshStandardMaterial||m.userData.envSet)continue;seen.add(m);if(m.envMapIntensity===1)m.envMapIntensity=.12;}});floor.material.envMap=scene.environment;floor.material.envMapIntensity=.025;floor.material.roughness=.2;floor.material.needsUpdate=true;}
+{const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material)return;for(const m of [].concat(o.material)){if(seen.has(m)||!m.isMeshStandardMaterial||m.userData.envSet)continue;seen.add(m);if(m.envMapIntensity===1)m.envMapIntensity=.12;}});floor.material.envMap=scene.environment;floor.material.envMapIntensity=.025;floor.material.roughness=.2;floor.material.emissive=new THREE.Color(0xa07c86);floor.material.emissiveMap=floor.material.map;floor.material.emissiveIntensity=1.5;floor.material.color.setScalar(2.6);floor.material.needsUpdate=true;}
 window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await Promise.all([setupDancer(),loadStudioProps()]);
