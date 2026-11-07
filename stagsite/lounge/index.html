@@ -101,8 +101,9 @@ floor.rotation.x=-Math.PI/2;floor.position.y=.004;floor.receiveShadow=true;add(f
 // ceiling + walls
 const wallMat=new THREE.MeshStandardMaterial({color:0x2a1622,roughness:.7,metalness:.2});
 const ceil=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({color:0x0a0508,roughness:.9}));ceil.rotation.x=Math.PI/2;ceil.position.y=RH;add(ceil);
-function wall(w,h,x,y,z,ry){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),wallMat);m.position.set(x,y,z);m.rotation.y=ry;m.receiveShadow=true;add(m);}
-wall(RL,RH,-RW/2,RH/2,0,Math.PI/2);wall(RL,RH,RW/2,RH/2,0,-Math.PI/2);wall(RW,RH,0,RH/2,-RL/2,0);wall(RW,RH,0,RH/2,RL/2,Math.PI);
+const backMat=new THREE.MeshStandardMaterial({color:0x140b10,roughness:.85,metalness:.15});
+function wall(w,h,x,y,z,ry,mat){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat||wallMat);m.position.set(x,y,z);m.rotation.y=ry;m.receiveShadow=true;add(m);}
+wall(RL,RH,-RW/2,RH/2,0,Math.PI/2);wall(RL,RH,RW/2,RH/2,0,-Math.PI/2);wall(RW,RH,0,RH/2,-RL/2,0,backMat);for(const x of[-11,-9.4,-7.8,7.8,9.4,11])box(.05,RH-.6,.05,M.goldGlow,x,RH/2,-RL/2+.06);wall(RW,RH,0,RH/2,RL/2,Math.PI);
 // vertical gold light strips on walls
 for(const sx of[-1,1])for(let z=-13;z<=14;z+=3.4){box(.05,RH-.6,.05,M.goldGlow,sx*(RW/2-.06),RH/2,z);}
 // ceiling light rails
@@ -387,7 +388,12 @@ function screen(x,y,z,ry,w,h,file){
   const webm=v.canPlayType('video/webm; codecs="vp9"');
   src.src='./assets/screens/'+file+(webm?'.webm':'.mp4');v.appendChild(src);
   const tex=new THREE.VideoTexture(v);tex.colorSpace=THREE.SRGBColorSpace;
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,toneMapped:false}));
+  // show the still art first; switch to the moving version only once the video is really playing (phones refuse to start video until you tap, which used to leave a big black rectangle)
+  const poster=new THREE.TextureLoader().load('./assets/screens/'+file+'.jpg');poster.colorSpace=THREE.SRGBColorSpace;
+  const mat=new THREE.MeshBasicMaterial({map:CAP?tex:poster,toneMapped:false});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat);
+  v.addEventListener('playing',()=>{mat.map=tex;mat.needsUpdate=true;});
+  v.addEventListener('pause',()=>{if(!CAP){mat.map=poster;mat.needsUpdate=true;}});
   const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=ry;scene.add(g);
   m.position.z=.06;g.add(m);
   const fr=new THREE.Mesh(new THREE.BoxGeometry(w+.22,h+.22,.08),M.gold);fr.position.z=-.02;g.add(fr);
@@ -399,6 +405,9 @@ screen(-SX,3.7,-9,Math.PI/2,3.8,3.8,'h1');
 screen(-SX,3.7,-1.5,Math.PI/2,3.8,3.8,'h5');
 screen(SX,3.7,-9,-Math.PI/2,3.8,3.8,'h2');
 screen(SX,3.7,-1.5,-Math.PI/2,3.8,3.8,'h8');
+screen(9.15,2.05,5.03,Math.PI,2.6,2.6,'h14');
+screen(-9.15,2.05,5.03,Math.PI,2.6,2.6,'h11');
+for(const sx of[-1,1])for(const dx of[-2.2,2.2])box(.05,2.8,.05,M.goldGlow,sx*9.15+dx,1.7,5.0);
 
 /* ---------- beams & spot lights ---------- */
 const beamMat=c=>new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
@@ -542,6 +551,7 @@ function enableOrbit(){
 }
 renderer.domElement.addEventListener('pointerdown',()=>{if(!CAP&&!window.__lounge.hooks.tick)enableOrbit();});
 
+addEventListener('pointerdown',()=>{for(const v of videos)if(v.paused)v.play().catch(()=>{});},{passive:true});
 function mergeStatic(){
   scene.updateMatrixWorld(true);const groups=new Map(),kill=[];
   scene.traverse(o=>{

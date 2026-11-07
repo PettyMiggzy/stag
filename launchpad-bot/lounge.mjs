@@ -52,7 +52,7 @@ export function initLounge(X) {
   async function http(req, res, u) {
     if (!u.pathname.startsWith("/api/lounge/")) return false;
     if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET,POST,OPTIONS" }); res.end(); return true; }
-    if (u.pathname === "/api/lounge/status") { const all = rooms.flatMap((r) => [...r.players.values()]); json(res, 200, { online: all.length, rooms: rooms.map((r) => ({ n: r.n, count: r.players.size, cap: ROOM_CAP })), names: all.slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })) }); return true; }
+    if (u.pathname === "/api/lounge/status") { const all = rooms.flatMap((r) => [...r.players.values()]); json(res, 200, { online: all.length, rooms: rooms.map((r) => ({ n: r.n, count: r.players.size, cap: ROOM_CAP })), names: all.slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })), dj: djState() }); return true; }
     if (u.pathname === "/api/lounge/poker/leaders") { json(res, 200, { week: true, leaders: await pokerLeaders(10) }); return true; }
     if (u.pathname === "/api/lounge/nonce") {
       const n = HEX(12); nonces.set(n, Date.now() + 300000); for (const [k, v] of nonces) if (v < Date.now()) nonces.delete(k);

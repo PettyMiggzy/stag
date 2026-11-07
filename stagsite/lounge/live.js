@@ -87,7 +87,7 @@ ui.innerHTML = `
 document.body.appendChild(ui);
 if ('ontouchstart' in window) document.body.classList.add('touch');
 const setMsg = (t) => { $('#msg').textContent = t || ''; };
-$('#look').onclick = () => { $('#gate').remove(); document.getElementById('hud').textContent = 'Hood Rich Club · visitor view · reload to sign in'; };
+$('#look').onclick = () => { visitorDj(); $('#gate').remove(); document.getElementById('hud').textContent = 'Hood Rich Club · visitor view · reload to sign in'; };
 if (!window.ethereum) { const a = $('#mm'); a.style.display = 'block'; a.href = 'https://metamask.app.link/dapp/' + location.host + location.pathname; }
 
 /* ---------- sign in ---------- */
@@ -275,7 +275,7 @@ function voiceTick() { // volume fades with distance, so you hear the booth you 
 const HP = new THREE.Vector3(), camT = new THREE.Vector3(), lookT = new THREE.Vector3();
 let sendAcc = 0, lodT = 0, frameN = 0;
 L.hooks.tick = (dt) => {
-  if (!me) { L.hooks.autoCam(); return; }
+  if (!me) { L.hooks.autoCam(); djTick(dt); return; }
   let f = 0, s = 0;
   if (keys['w'] || keys['arrowup']) f += 1; if (keys['s'] || keys['arrowdown']) f -= 1;
   if (keys['a'] || keys['arrowleft']) s -= 1; if (keys['d'] || keys['arrowright']) s += 1;
@@ -434,8 +434,9 @@ function djSync(m) {
 function djPlay() {
   if (!DJ.nums.length) return; if (DJ.audio) { DJ.audio.pause(); DJ.audio = null; }
   const a = new Audio(`./assets/music/${DJ.nums[DJ.idx]}.mp3`); a.loop = false; a.volume = 0; DJ.audio = a;
-  const go = () => { const off = Math.max(0, (Date.now() - DJ.start) / 1000); if (off < DJ.dur - .5) { try { a.currentTime = off; } catch {} } a.play().catch(() => {}); };
-  a.addEventListener('loadedmetadata', go, { once: true });
+  const seek = () => { const off = Math.max(0, (Date.now() - DJ.start) / 1000); if (off < DJ.dur - .5) { try { a.currentTime = off; } catch {} } };
+  a.play().catch(() => {}); // start right away (phones will not report metadata until they are playing), then jump to the right point in the track
+  if (a.readyState >= 1) seek(); else a.addEventListener('loadedmetadata', seek, { once: true });
 }
 function djChanged() { const n = NPCS.dj; if (n && me && Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) < 20) npcSay(n, Math.random() < .6 ? 'next' : 'hype'); }
 function djRender() {
@@ -444,11 +445,16 @@ function djRender() {
 }
 $('#djList').onclick = (e) => { const b = e.target.closest('.dj-t'); if (!b) return; const i = +b.dataset.i; if (i === DJ.idx) return; DJ.myVote = i; sendWs({ t: 'djvote', i }); if (NPCS.dj) npcSay(NPCS.dj, 'vote'); };
 addEventListener('pointerdown', () => { if (DJ.audio && DJ.audio.paused && DJ.idx >= 0) DJ.audio.play().catch(() => {}); }, { passive: true }); // phones only start audio on a tap
+function visitorDj() { // look-around mode still hears the DJ: the public status carries the same clock the room uses
+  const pull = async () => { try { const s = await (await fetch(API + '/api/lounge/status')).json(); if (s.dj) { DJ.visitor = true; djSync(s.dj); } } catch {} };
+  pull(); setInterval(() => { if (DJ.visitor && Date.now() > DJ.start + DJ.dur * 1000 - 200) pull(); }, 3000);
+}
+if (Q.has('debug')) L.DJ = DJ;
 function openDj() { $('#djp').style.display = 'block'; djRender(); }
 $('#djBtn').onclick = () => { const p = $('#djp'); if (p.style.display === 'block') p.style.display = 'none'; else openDj(); };
 function djTick() { // volume follows distance to the booth; softer inside the studio and silent while you record
-  const a = DJ.audio; if (!a || !me) return; const n = NPCS.dj; const d = n ? Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) : 10;
-  let v = Math.max(.14, Math.min(.9, 1.05 - d / 22)); if (inRoom()) v *= .35; if (ST.on) v = 0; a.volume += (v - a.volume) * .1;
+  const a = DJ.audio; if (!a) return; if (!me) { a.volume += (.45 - a.volume) * .1; return; } const n = NPCS.dj; const d = n ? Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) : 10;
+  let v = Math.max(.38, Math.min(.95, 1.05 - d / 40)); if (inRoom() || inCard()) v *= .45; if (ST.on) v = 0; a.volume += (v - a.volume) * .1;
   if (a.ended && DJ.idx >= 0) { /* the server will announce the next track within a second */ }
 }
 
