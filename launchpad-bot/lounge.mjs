@@ -8,7 +8,6 @@ export function initLounge(X) {
   const { q, tierFor, bal, founderCount, totalFor, log, rpc, secretSeed } = X;
   const SECRET = crypto.createHash("sha256").update("lounge:" + secretSeed).digest(); // signs session tokens; derived from the bot token so no new env var is needed
   const MIN_TOTAL = parseFloat(process.env.LOUNGE_MIN || process.env.WHALE_MIN || "10000000"); // same bar as the Hood Rich Club: 10M $STAG, or any Founder NFT
-  const MAX_PLAYERS = 60;
   const EPOCH = Date.now();
   const HEX = (n) => crypto.randomBytes(n).toString("hex");
   const b64u = (b) => Buffer.from(b).toString("base64url");
@@ -39,7 +38,7 @@ export function initLounge(X) {
     const c = await lkConf(); if (!c) return null;
     const now = Math.floor(Date.now() / 1000);
     const head = b64u(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-    const body = b64u(JSON.stringify({ iss: c.key, sub: p.id, name: p.name, nbf: now - 5, exp: now + 7200, metadata: JSON.stringify({ tier: p.tier }), video: { room: "hood-rich-lounge", roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: false } }));
+    const body = b64u(JSON.stringify({ iss: c.key, sub: p.id, name: p.name, nbf: now - 5, exp: now + 7200, metadata: JSON.stringify({ tier: p.tier }), video: { room: "hood-rich-lounge-" + (p.room ? p.room.n : 1), roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: false } }));
     const sig = crypto.createHmac("sha256", c.secret).update(head + "." + body).digest("base64url");
     return { url: c.url, token: head + "." + body + "." + sig };
   }
@@ -50,7 +49,7 @@ export function initLounge(X) {
   async function http(req, res, u) {
     if (!u.pathname.startsWith("/api/lounge/")) return false;
     if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET,POST,OPTIONS" }); res.end(); return true; }
-    if (u.pathname === "/api/lounge/status") { json(res, 200, { online: players.size, names: [...players.values()].slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })) }); return true; }
+    if (u.pathname === "/api/lounge/status") { const all = rooms.flatMap((r) => [...r.players.values()]); json(res, 200, { online: all.length, rooms: rooms.map((r) => ({ n: r.n, count: r.players.size, cap: ROOM_CAP })), names: all.slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })) }); return true; }
     if (u.pathname === "/api/lounge/nonce") {
       const n = HEX(12); nonces.set(n, Date.now() + 300000); for (const [k, v] of nonces) if (v < Date.now()) nonces.delete(k);
       json(res, 200, { nonce: n }); return true;
@@ -70,13 +69,21 @@ export function initLounge(X) {
     json(res, 404, { ok: false }); return true;
   }
 
-  // ---- WebSocket: presence and chat ----
+  // ---- WebSocket: presence and chat. The lounge is split into rooms of ROOM_CAP people so a crowd never melts one server or one phone. ----
+  const ROOM_CAP = parseInt(process.env.LOUNGE_ROOM_CAP || "40", 10), MAX_ROOMS = 10;
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
-  const players = new Map(); // id -> player
+  const rooms = []; // [{ n, players: Map(addr -> player), tick }]
+  const byAddr = new Map(); // addr -> player, so one wallet is in one place at a time
   const DRINKS = { champagne: "🥂 Champagne", whiskey: "🥃 Whiskey", mojito: "🍹 Mojito", gold: "✨ Gold Label" };
   const send = (ws, o) => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
-  const all = (o, except) => { const m = JSON.stringify(o); for (const p of players.values()) if (p.id !== except && p.ws.readyState === 1) p.ws.send(m); };
+  const allIn = (room, o, except) => { const m = JSON.stringify(o); for (const p of room.players.values()) if (p.id !== except && p.ws.readyState === 1) p.ws.send(m); };
   const num = (v, lo, hi, d = 0) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
+  function pickRoom(want) { // a friend can ask for a specific room; otherwise the first one with space
+    want = parseInt(want, 10); if (want >= 1 && rooms[want - 1] && rooms[want - 1].players.size < ROOM_CAP) return rooms[want - 1];
+    for (const r of rooms) if (r.players.size < ROOM_CAP) return r;
+    if (rooms.length >= MAX_ROOMS) return null;
+    const r = { n: rooms.length + 1, players: new Map(), tick: 0 }; rooms.push(r); return r;
+  }
   function attach(server) {
     server.on("upgrade", (req, sock, head) => {
       if ((req.url || "").split("?")[0] !== "/ws/lounge") return; // other upgrades are not ours
@@ -84,41 +91,46 @@ export function initLounge(X) {
     });
   }
   function onSocket(ws) {
-    let me = null; const t0 = Date.now(); let lastChat = 0, lastDrink = 0, msgs = 0, win = Date.now();
+    let me = null; let lastChat = 0, lastDrink = 0, msgs = 0, win = Date.now();
     const joinTimer = setTimeout(() => { if (!me) ws.close(); }, 10000);
     ws.on("message", async (raw) => {
       let m; try { m = JSON.parse(raw.toString()); } catch { return; }
       if (Date.now() - win > 5000) { win = Date.now(); msgs = 0; } if (++msgs > 150) { ws.close(); return; } // flood guard
       if (!me) {
         if (m.t !== "join") return; const s = unsign(m.token); if (!s) return send(ws, { t: "denied", why: "Session expired. Sign in again." });
-        if (players.size >= MAX_PLAYERS && !players.has(s.a)) return send(ws, { t: "denied", why: "The lounge is full right now." });
-        const old = players.get(s.a); if (old) { try { send(old.ws, { t: "denied", why: "Opened in another tab." }); old.ws.close(); } catch {} players.delete(s.a); all({ t: "leave", id: old.id }); }
+        const old = byAddr.get(s.a); if (old) { try { send(old.ws, { t: "denied", why: "Opened in another tab." }); old.ws.close(); } catch {} old.room.players.delete(s.a); byAddr.delete(s.a); allIn(old.room, { t: "leave", id: old.id }); }
+        const room = pickRoom(m.room); if (!room) return send(ws, { t: "denied", why: "The lounge is full right now. Try again in a bit." });
         const name = clean(m.name, 16) || s.a.slice(0, 6) + "…" + s.a.slice(-4);
-        me = { id: HEX(4), addr: s.a, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws };
-        players.set(s.a, me); clearTimeout(joinTimer);
-        send(ws, { t: "welcome", id: me.id, epoch: EPOCH, now: Date.now(), players: [...players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
-        all({ t: "join", p: pub(me) }, me.id); log("lounge: join", name, s.tier, "online", players.size); return;
+        me = { id: HEX(4), addr: s.a, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws, room };
+        room.players.set(s.a, me); byAddr.set(s.a, me); clearTimeout(joinTimer);
+        send(ws, { t: "welcome", id: me.id, room: room.n, cap: ROOM_CAP, epoch: EPOCH, now: Date.now(), players: [...room.players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
+        allIn(room, { t: "join", p: pub(me) }, me.id); log("lounge: join", name, s.tier, "room", room.n, "online", room.players.size); return;
       }
       if (m.t === "pos") { me.x = num(m.x, -11, 11, me.x); me.z = num(m.z, -14.5, 14.5, me.z); me.ry = num(m.ry, -7, 7, me.ry); me.anim = ["idle", "walk", "wave"].includes(m.a) ? m.a : "idle"; me.moved = true; }
       else if (m.t === "chat") {
         const text = clean(m.text, 160); if (!text || Date.now() - lastChat < 1200) return; lastChat = Date.now();
-        all({ t: "chat", id: me.id, name: me.name, tier: me.tier, text });
+        allIn(me.room, { t: "chat", id: me.id, name: me.name, tier: me.tier, text });
       } else if (m.t === "drink") {
-        if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id;
-        const line = { t: "sys", text: `${DRINKS[m.id]} for ${me.name}` }; all(line); setTimeout(() => { if (me) me.drink = ""; }, 60000);
+        if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id; me.moved = true;
+        allIn(me.room, { t: "sys", text: `${DRINKS[m.id]} for ${me.name}` }); setTimeout(() => { if (me) { me.drink = ""; me.moved = true; } }, 60000);
       } else if (m.t === "rec") {
-        if (Date.now() - (me.lastRec || 0) < 1500) return; me.lastRec = Date.now(); me.rec = !!m.on; all({ t: "rec", id: me.id, name: me.name, on: me.rec }, me.id);
+        if (Date.now() - (me.lastRec || 0) < 1500) return; me.lastRec = Date.now(); me.rec = !!m.on; allIn(me.room, { t: "rec", id: me.id, name: me.name, on: me.rec }, me.id);
       } else if (m.t === "voice") {
         const v = await voicePass(me); send(ws, v ? { t: "voice", ...v } : { t: "voice", error: "Voice is not available right now." });
       }
     });
-    ws.on("close", () => { clearTimeout(joinTimer); if (me && players.get(me.addr) === me) { players.delete(me.addr); all({ t: "leave", id: me.id }); log("lounge: leave", me.name, "online", players.size); } });
+    ws.on("close", () => { clearTimeout(joinTimer); if (me && byAddr.get(me.addr) === me) { me.room.players.delete(me.addr); byAddr.delete(me.addr); allIn(me.room, { t: "leave", id: me.id }); log("lounge: leave", me.name, "room", me.room.n, "online", me.room.players.size); } });
     ws.on("error", () => {});
   }
   const pub = (p) => ({ id: p.id, name: p.name, tier: p.tier, founder: p.founder, lvl: p.lvl, x: p.x, z: p.z, ry: p.ry, anim: p.anim, drink: p.drink });
-  setInterval(() => { // 8 snapshots a second, only when somebody moved
-    let any = false; const s = []; for (const p of players.values()) { s.push([p.id, +p.x.toFixed(2), +p.z.toFixed(2), +p.ry.toFixed(2), p.anim, p.drink]); if (p.moved) { any = true; p.moved = false; } }
-    if (any) all({ t: "state", s });
+  const row = (p) => [p.id, +p.x.toFixed(2), +p.z.toFixed(2), +p.ry.toFixed(2), p.anim, p.drink];
+  setInterval(() => { // 8 updates a second per room: only the people who changed, plus a full refresh every 4 seconds so nobody drifts
+    for (const r of rooms) {
+      if (!r.players.size) continue; const full = ++r.tick % 32 === 0; const s = [];
+      for (const p of r.players.values()) { if (full || p.moved) s.push(row(p)); p.moved = false; }
+      if (s.length) allIn(r, { t: "state", s, full });
+    }
   }, 125);
+  const players = { get size() { return rooms.reduce((n, r) => n + r.players.size, 0); }, values: () => rooms.flatMap((r) => [...r.players.values()]) };
   return { http, attach, players };
 }

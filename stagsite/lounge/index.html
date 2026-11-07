@@ -33,13 +33,15 @@ const Q=new URLSearchParams(location.search);
 const CAP=Q.has('capture');
 if(CAP) document.body.classList.add('cap');
 const W=+(Q.get('w')||innerWidth), H=+(Q.get('h')||innerHeight);
+// phones and weak laptops get a lighter render: no live mirror floor, no shadows, 1x pixels, cheaper bloom (?q=high forces the full look)
+const LOW=!CAP&&Q.get('q')!=='high'&&(Q.get('q')==='low'||matchMedia('(pointer:coarse)').matches||(navigator.hardwareConcurrency||8)<=4);
 
 const renderer=new THREE.WebGLRenderer({antialias:!CAP,powerPreference:'high-performance',preserveDrawingBuffer:CAP});
-renderer.setPixelRatio(CAP?1:Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(CAP||LOW?1:Math.min(devicePixelRatio,2));
 renderer.setSize(W,H);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.95;
-renderer.shadowMap.enabled=true;
+renderer.shadowMap.enabled=!LOW;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
@@ -91,9 +93,9 @@ function box(w,h,d,m,x,y,z,p){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d
 /* ---------- room shell ---------- */
 const RW=24,RL=32,RH=7.2,ZC=0; // x:-12..12, z:-16..16
 // mirror floor + marble overlay
-const refl=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*.6),textureHeight:Math.floor(H*.6),color:0x2c2c36});
-refl.rotation.x=-Math.PI/2;add(refl);
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({map:marble,roughness:.12,metalness:.1,transparent:true,opacity:.9}));
+if(!LOW){const refl=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*.6),textureHeight:Math.floor(H*.6),color:0x2c2c36});
+refl.rotation.x=-Math.PI/2;add(refl);}
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({map:marble,roughness:.12,metalness:.1,transparent:!LOW,opacity:LOW?1:.9}));
 floor.rotation.x=-Math.PI/2;floor.position.y=.004;floor.receiveShadow=true;add(floor);
 // ceiling + walls
 const wallMat=new THREE.MeshStandardMaterial({color:0x2a1622,roughness:.7,metalness:.2});
@@ -373,6 +375,15 @@ function next(now){
   dancer.cur=act;dancer.until=now+dur;
 }
 
+// everyone in the lounge sees the same dance at the same moment: the server's clock picks the clip and the point in it
+function syncDance(sec){
+  if(!dancer.mixer||!Object.keys(dancer.actions).length)return;
+  const total=DANCE_PLAN.reduce((a,x)=>a+x[1],0);let t=((sec%total)+total)%total,k=0;
+  while(t>=DANCE_PLAN[k][1]){t-=DANCE_PLAN[k][1];k++;}
+  dancer.idx=k-1;next(tAbs);
+  if(dancer.cur){const d=dancer.cur.getClip().duration;dancer.cur.time=t%d;}
+  dancer.until=tAbs+(DANCE_PLAN[k][1]-t);
+}
 /* ---------- camera path ---------- */
 const KEYS=[
   [0,[0,1.65,13.5],[0,2.4,-10]],
@@ -399,7 +410,7 @@ function camAt(t){
 const composer=new EffectComposer(renderer);
 composer.setSize(W,H);
 composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(W,H),.55,.55,.92);composer.addPass(bloom);
+const bloom=new UnrealBloomPass(new THREE.Vector2(LOW?W/2:W,LOW?H/2:H),.55,.55,.92);composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 /* ---------- loop ---------- */
@@ -426,7 +437,7 @@ function enableOrbit(){
 }
 renderer.domElement.addEventListener('pointerdown',()=>{if(!CAP&&!window.__lounge.hooks.tick)enableOrbit();});
 
-window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,studio:studioState,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await setupDancer();
   for(const v of videos){try{await v.play();}catch(e){}}

@@ -151,7 +151,7 @@ function makeAvatar(info) {
   }
   // a glowing ring at the feet shows the tier from across the room
   const ring = new THREE.Mesh(new THREE.TorusGeometry(.5, .018, 8, 40), new THREE.MeshBasicMaterial({ color: col, toneMapped: false })); ring.rotation.x = Math.PI / 2; ring.position.y = .02; g.add(ring);
-  const tag = nameTag((info.name || '?') + (info.tier ? '  ·  ' + info.tier : ''), col); tag.position.y = 2.2; g.add(tag);
+  const tag = nameTag((info.name || '?') + (info.tier ? '  ·  ' + info.tier : ''), col); tag.position.y = 2.2; g.add(tag); g.userData.tag = tag;
   g.position.set(info.x || 0, 0, info.z || 12); g.rotation.y = info.ry || Math.PI;
   scene.add(g); return g;
 }
@@ -173,20 +173,21 @@ function say(cls, who, text, col) {
   logEl().appendChild(d); while (logEl().children.length > 8) logEl().firstChild.remove();
   setTimeout(() => { d.style.transition = 'opacity 2s'; d.style.opacity = 0; setTimeout(() => d.remove(), 2100); }, 14000);
 }
-function updateTop() { $('#top').textContent = `Hood Rich Club · ${SELF.tier || ''} · ${others.size + 1} in the room`; }
+function updateTop() { $('#top').textContent = `Hood Rich Club · ${SELF.tier || ''} · Lounge ${SELF.room || 1} · ${others.size + 1} in the room`; }
 async function connect() {
   await AVP; ws = new WebSocket(WS_URL);
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', token: TOKEN, name: SELF.req || '' }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', token: TOKEN, name: SELF.req || '', room: Q.get('room') || 0 }));
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.t === 'welcome') {
-      myId = m.id; SELF.name = m.you.name;
+      myId = m.id; SELF.name = m.you.name; SELF.room = m.room; if (L.syncDance) L.syncDance((m.now - m.epoch) / 1000);
       me = makeAvatar({ ...m.you, x: pos.x, z: pos.z, ry: pos.ry }); me.userData.mine = true;
       for (const p of m.players) others.set(p.id, makeAvatar(p));
       updateTop(); say('sys', '', 'Welcome to the Hood Rich Club.');
     } else if (m.t === 'join') { others.set(m.p.id, makeAvatar(m.p)); say('sys', '', `${m.p.name} walked in`); updateTop(); }
     else if (m.t === 'leave') { recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); const a = others.get(m.id); if (a) { scene.remove(a); others.delete(m.id); updateTop(); } }
     else if (m.t === 'state') {
+      if (m.full) { const ids = new Set(m.s.map((r) => r[0])); for (const [id, a] of others) if (!ids.has(id)) { scene.remove(a); others.delete(id); } updateTop(); }
       for (const [id, x, z, ry, an, dr] of m.s) {
         if (id === myId) continue; const a = others.get(id); if (!a) continue;
         const u = a.userData; u.moving = an === 'walk' || Math.hypot(x - u.tx, z - u.tz) > .05; u.tx = x; u.tz = z; u.try = ry; u.glass.visible = !!dr; if (dr) u.glass.material.emissive.setHex(DRINK_COL[dr] || 0xffa040);
@@ -224,7 +225,7 @@ $('#bar').innerHTML = [['champagne', '🥂 Champagne'], ['whiskey', '🥃 Whiske
 $('#bar').onclick = (e) => { const d = e.target.dataset && e.target.dataset.d; if (d) { sendWs({ t: 'drink', id: d }); if (me) { me.userData.glass.visible = true; me.userData.glass.material.emissive.setHex(DRINK_COL[d]); setTimeout(() => { if (me) me.userData.glass.visible = false; }, 60000); } $('#bar').style.display = 'none'; } };
 
 /* ---------- voice (LiveKit, proximity volume) ---------- */
-let lkRoom = null, micOn = false;
+let lkRoom = null, micOn = false, LKM = null, subT = 0;
 $('#mic').onclick = async () => {
   if (lkRoom) { micOn = !micOn; await lkRoom.localParticipant.setMicrophoneEnabled(micOn); $('#mic').textContent = micOn ? '🎤 Live' : '🔇 Muted'; return; }
   $('#mic').textContent = '…'; sendWs({ t: 'voice' });
@@ -233,11 +234,16 @@ async function voiceReady(m) {
   if (m.error) { say('sys', '', m.error); $('#mic').textContent = '🎤 Voice'; return; }
   try {
     const LK = await import('https://cdn.jsdelivr.net/npm/livekit-client@2.9.9/dist/livekit-client.esm.mjs');
-    lkRoom = new LK.Room({ adaptiveStream: true, dynacast: true });
+    lkRoom = new LK.Room({ adaptiveStream: true, dynacast: true }); LKM = LK;
     lkRoom.on(LK.RoomEvent.TrackSubscribed, (track, pub, part) => { if (track.kind === 'audio') { const el = track.attach(); el.dataset.pid = part.identity; document.body.appendChild(el); } });
     lkRoom.on(LK.RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()));
-    await lkRoom.connect(m.url, m.token); await lkRoom.localParticipant.setMicrophoneEnabled(true); micOn = true; $('#mic').textContent = '🎤 Live'; say('sys', '', 'Voice on. You hear people near you.');
+    await lkRoom.connect(m.url, m.token, { autoSubscribe: false }); await lkRoom.localParticipant.setMicrophoneEnabled(true); micOn = true; $('#mic').textContent = '🎤 Live'; say('sys', '', 'Voice on. You hear people near you.');
   } catch (e) { lkRoom = null; $('#mic').textContent = '🎤 Voice'; say('sys', '', 'Could not start voice: ' + ((e && e.message) || e)); }
+}
+function subscribeNearby(dt) { // only the closest few voices are downloaded at all, so a full room costs nothing extra
+  subT += dt; if (subT < .6 || !lkRoom) return; subT = 0;
+  const near = [...lkRoom.remoteParticipants.values()].map((p) => { const a = others.get(p.identity); return [p, a ? Math.hypot(a.position.x - pos.x, a.position.z - pos.z) : 99]; }).sort((x, y) => x[1] - y[1]);
+  near.forEach(([p, d], i) => { const want = i < 6 && d < 13; for (const pub of p.audioTrackPublications.values()) if (pub.isSubscribed !== want) pub.setSubscribed(want); });
 }
 function voiceTick() { // volume fades with distance, so you hear the booth you stand at
   if (!lkRoom || !me) return;
@@ -246,7 +252,7 @@ function voiceTick() { // volume fades with distance, so you hear the booth you 
 
 /* ---------- per-frame ---------- */
 const HP = new THREE.Vector3(), camT = new THREE.Vector3(), lookT = new THREE.Vector3();
-let sendAcc = 0;
+let sendAcc = 0, lodT = 0, frameN = 0;
 L.hooks.tick = (dt) => {
   if (!me) { L.hooks.autoCam(); return; }
   let f = 0, s = 0;
@@ -269,13 +275,15 @@ L.hooks.tick = (dt) => {
   const u = me.userData; u.moving = moving; me.position.set(pos.x, 0, pos.z); me.rotation.y += ((pos.ry - me.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 12);
   sendAcc += dt; if (sendAcc > .1) { sendAcc = 0; sendWs({ t: 'pos', x: pos.x, z: pos.z, ry: pos.ry, a: pos.anim }); }
   for (const a of others.values()) { const v = a.userData; a.position.x += (v.tx - a.position.x) * Math.min(1, dt * 9); a.position.z += (v.tz - a.position.z) * Math.min(1, dt * 9); a.rotation.y += ((v.try - a.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 10); }
-  for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); v.mixer.update(dt); }
+  lodT += dt; if (lodT > .5) { lodT = 0; const arr = [...others.values()].map((a) => [a, Math.hypot(a.position.x - pos.x, a.position.z - pos.z)]).sort((x, y) => x[1] - y[1]); arr.forEach(([a, d], i) => { a.userData.near = i < 18 && d < 22; a.userData.tag.visible = d < 16; }); }
+  frameN++;
+  for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); if (v.near !== false || frameN % 4 === 0) v.mixer.update(v.near !== false ? dt : dt * 4); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
   // third-person camera behind and above, easing, never inside a wall
   const camD = inRoom() ? 2.3 : 4.2; const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
   camT.set(Math.max(-11.3, Math.min(11.3, cx)), inRoom() ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
-  voiceTick(); studioTick();
+  voiceTick(); subscribeNearby(dt); studioTick();
 };
 
 /* ---------- studio: record over a beat, entirely in the browser. Nothing is uploaded or stored. ---------- */
