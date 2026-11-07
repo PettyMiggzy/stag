@@ -26,6 +26,7 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {Reflector} from 'three/addons/objects/Reflector.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
@@ -34,7 +35,7 @@ const CAP=Q.has('capture');
 if(CAP) document.body.classList.add('cap');
 const W=+(Q.get('w')||innerWidth), H=+(Q.get('h')||innerHeight);
 // phones and weak laptops get a lighter render: no live mirror floor, no shadows, 1x pixels, cheaper bloom (?q=high forces the full look)
-const LOW=!CAP&&Q.get('q')!=='high'&&(Q.get('q')==='low'||matchMedia('(pointer:coarse)').matches||(navigator.hardwareConcurrency||8)<=4);
+const LOW=!CAP&&Q.get('q')==='low'; // the full look is the default for everyone; the frame-rate governor below only steps in if a device is really struggling
 
 const renderer=new THREE.WebGLRenderer({antialias:!CAP,powerPreference:'high-performance',preserveDrawingBuffer:CAP});
 renderer.setPixelRatio(CAP||LOW?1:Math.min(devicePixelRatio,2));
@@ -165,8 +166,9 @@ const signGlow=new THREE.PointLight(0xff2d9a,14,12,1.8);signGlow.position.set(0,
     box(10.4,.5,.04,M.pink,0,y+.3,-15.48);
     const bg=new THREE.CylinderGeometry(.055,.07,.34,10);
     const cols=[0xff8fd0,0xffd27a,0x7fe0ff,0xffffff,0xb98cff,0x7dffb2];
+    const bottleMats=cols.map(c=>new THREE.MeshStandardMaterial({color:c,roughness:.1,metalness:.1,emissive:c,emissiveIntensity:.35}));
     for(let k=0;k<44;k++){
-      const m=new THREE.MeshStandardMaterial({color:cols[k%cols.length],roughness:.1,metalness:.1,emissive:cols[k%cols.length],emissiveIntensity:.35,transparent:true,opacity:.85});
+      const m=bottleMats[k%cols.length];
       const b=new THREE.Mesh(bg,m);b.position.set(-5+k*.235+(rnd()-.5)*.03,y+.2,-15.3);add(b);
     }
   }
@@ -193,7 +195,7 @@ function booth(x,z,ry){
   const tr=new THREE.Mesh(new THREE.TorusGeometry(.5,.015,8,40),M.gold);tr.rotation.x=Math.PI/2;tr.position.set(0,.65,1.35);g.add(tr);
   const tb=new THREE.Mesh(new THREE.CylinderGeometry(.04,.16,.6,16),M.gold);tb.position.set(0,.3,1.35);g.add(tb);
   const cd=new THREE.Mesh(new THREE.SphereGeometry(.035,12,12),M.amber);cd.position.set(0,.7,1.35);g.add(cd);
-  const gl=new THREE.Mesh(new THREE.CylinderGeometry(.045,.03,.12,12),new THREE.MeshPhysicalMaterial({color:0xffe0f0,transmission:.9,roughness:.05,thickness:.1,transparent:true,opacity:.7}));gl.position.set(.18,.71,1.42);g.add(gl);
+  const gl=new THREE.Mesh(new THREE.CylinderGeometry(.045,.03,.12,12),new THREE.MeshStandardMaterial({color:0xffe0f0,roughness:.05,transparent:true,opacity:.6}));gl.position.set(.18,.71,1.42);g.add(gl);
   return g;
 }
 const bz=[-4,1.2,6.4,11];
@@ -220,7 +222,6 @@ for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
   box(7.3,.55,.4,M.gold,0,5.2,az);box(6.7,1.7,.12,M.black,0,4.15,az);
   for(const [rz,ry] of [[az+.07,0],[az-.07,Math.PI]]){const m=new THREE.Mesh(new THREE.PlaneGeometry(6.5,1.6),sm);m.position.set(0,4.15,rz);m.rotation.y=ry;add(m);}
   box(6.7,.04,.04,M.pink,0,3.28,az+.1);
-  const al=new THREE.PointLight(0xffd9a0,9,10,1.7);al.position.set(0,3.9,az-1.2);scene.add(al);
 }
 
 /* ---------- recording studio: glass-walled room off the club floor, window onto the club ---------- */
@@ -285,7 +286,7 @@ const studioState={onAir:false};
   studioState.zone={x0:X0,x1:BX1,z0:BZ0,z1:Z1}; studioState.room={x0:X0,x1:X1,z0:Z0,z1:Z1};
 }
 /* ---------- NFT video screens ---------- */
-const videos=[];const vtex=[];
+const videos=[];const vtex=[];const screenObjs=[];
 function screen(x,y,z,ry,w,h,file){
   const v=document.createElement('video');v.muted=true;v.loop=true;v.playsInline=true;v.preload='auto';v.crossOrigin='anonymous';
   const src=document.createElement('source');
@@ -297,7 +298,7 @@ function screen(x,y,z,ry,w,h,file){
   m.position.z=.06;g.add(m);
   const fr=new THREE.Mesh(new THREE.BoxGeometry(w+.22,h+.22,.08),M.gold);fr.position.z=-.02;g.add(fr);
   const bk=new THREE.Mesh(new THREE.BoxGeometry(w+.1,h+.1,.05),M.black);bk.position.z=-.005;g.add(bk);
-  videos.push(v);vtex.push(tex);return v;
+  videos.push(v);vtex.push(tex);screenObjs.push({g,v});return v;
 }
 const SX=RW/2-.12;
 screen(-SX,3.7,-9,Math.PI/2,3.8,3.8,'h1');
@@ -331,7 +332,7 @@ spot(0,2.6,0xfff1d6,0,-1.6,45,false);
 const rim1=new THREE.PointLight(0xff2d9a,7,9,1.7);rim1.position.set(-2.4,2.2,-4.8);scene.add(rim1);
 const rim2=new THREE.PointLight(0x58c8ff,5,9,1.7);rim2.position.set(2.4,2.2,-4.8);scene.add(rim2);
 const hemi=new THREE.HemisphereLight(0x9a6ab0,0x2a1020,.8);scene.add(hemi);
-for(const sx of[-1,1])for(const z of[-3,6]){const f=new THREE.PointLight(0xffa860,22,10,1.5);f.position.set(sx*9.2,2.6,z);scene.add(f);}
+for(const sx of[-1,1]){const f=new THREE.PointLight(0xffa860,30,14,1.5);f.position.set(sx*9.2,2.6,sx<0?-1.5:3);scene.add(f);}
 
 /* ---------- dancer ---------- */
 const loader=new GLTFLoader();
@@ -414,7 +415,18 @@ const bloom=new UnrealBloomPass(new THREE.Vector2(LOW?W/2:W,LOW?H/2:H),.55,.55,.
 composer.addPass(new OutputPass());
 
 /* ---------- loop ---------- */
-let tAbs=0;
+let tAbs=0,vidT=0;const frustum=new THREE.Frustum(),pm=new THREE.Matrix4(),vp=new THREE.Vector3();
+function culling(dt){
+  vidT+=dt;if(vidT<.6)return;vidT=0;pm.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(pm);
+  for(const s of screenObjs){s.g.getWorldPosition(vp);const vis=frustum.containsPoint(vp)||frustum.intersectsSphere(new THREE.Sphere(vp,2.4));if(vis&&s.v.paused)s.v.play().catch(()=>{});else if(!vis&&!s.v.paused)s.v.pause();}
+}
+// frame-rate governor: only if a device is really struggling, lower the pixel density a touch, never the scene
+let gAcc=0,gN=0,gLow=0,gPr=renderer.getPixelRatio();const gMax=gPr;
+function governor(dt){
+  gAcc+=dt;gN++;if(gAcc<1)return;const fps=gN/gAcc;gAcc=0;gN=0;
+  if(fps<24)gLow++;else if(fps>38)gLow=0;
+  if(gLow>=3&&gPr>gMax*.6){gPr=Math.max(gMax*.6,gPr*.88);renderer.setPixelRatio(gPr);composer.setPixelRatio(gPr);renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);gLow=0;}
+}
 function stepWorld(dt){
   tAbs+=dt;
   if(dancer.mixer){dancer.mixer.update(dt);if(tAbs>=dancer.until)next(tAbs);}
@@ -437,6 +449,25 @@ function enableOrbit(){
 }
 renderer.domElement.addEventListener('pointerdown',()=>{if(!CAP&&!window.__lounge.hooks.tick)enableOrbit();});
 
+function mergeStatic(){
+  scene.updateMatrixWorld(true);const groups=new Map(),kill=[];
+  scene.traverse(o=>{
+    if(!o.isMesh||o.isSkinnedMesh||o.isInstancedMesh||o.userData.keep||!o.geometry||!o.geometry.index)return;
+    const m=o.material;if(Array.isArray(m)||m.isShaderMaterial||m.isMeshBasicMaterial||m.transparent||m.isSpriteMaterial)return;
+    const key=m.uuid+(o.castShadow?'c':'')+(o.receiveShadow?'r':'');
+    let g=groups.get(key);if(!g){g={m,cast:o.castShadow,recv:o.receiveShadow,geos:[],src:[]};groups.set(key,g);}
+    g.geos.push(o.geometry.clone().applyMatrix4(o.matrixWorld));g.src.push(o);
+  });
+  let before=0,after=0;
+  for(const g of groups.values()){
+    before+=g.src.length;let merged=null;try{merged=mergeGeometries(g.geos,false);}catch(e){}
+    if(!merged){after+=g.src.length;continue;}
+    const mesh=new THREE.Mesh(merged,g.m);mesh.castShadow=g.cast;mesh.receiveShadow=g.recv;scene.add(mesh);after++;
+    for(const o of g.src)o.removeFromParent();for(const x of g.geos)x.dispose();
+  }
+  console.log('merged static meshes:',before,'->',after);
+}
+mergeStatic();
 window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await setupDancer();
@@ -448,12 +479,13 @@ async function boot(){
     const loop=now=>{
       const dt=Math.min(.05,(now-last)/1000);last=now;stepWorld(dt);
       if(window.__lounge.hooks.tick)window.__lounge.hooks.tick(dt);else if(!orbit)placeCam(tAbs);else orbit.update();
-      composer.render();requestAnimationFrame(loop);
+      culling(dt);governor(dt);composer.render();requestAnimationFrame(loop);
     };requestAnimationFrame(loop);
   }
 }
 // capture API: deterministic stepping
 window.__cap={
+  step(dt){stepWorld(dt);return true;}, // advance the world without drawing, used to resume an interrupted render
   async frame(dt,tCam){
     const t0=performance.now();
     stepWorld(dt);
