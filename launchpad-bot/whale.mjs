@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import crypto from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import { ethers } from "ethers";
+import { initLounge } from "./lounge.mjs";
 
 export function initWhale(X) {
   const { CFG, ST, fmt, short, log, tgPost, ethUsd } = X;
@@ -167,10 +168,12 @@ b.onclick=async()=>{try{
   }
   const CORS = { "access-control-allow-origin": "https://stagwifhood.fun", "access-control-allow-headers": "content-type", "access-control-allow-methods": "POST,OPTIONS" };
   const CARDS = new Map();
+  const lounge = initLounge({ q, tierFor, bal, founderCount, totalFor, log, rpc, secretSeed: CFG.tg || "dev" });
   function startWeb() {
-    http.createServer(async (req, res) => {
+    const srv = http.createServer(async (req, res) => {
       try {
         const u = new URL(req.url, "http://x");
+        if (await lounge.http(req, res, u)) return;
         if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
         if (u.pathname === "/verify") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
         if (u.pathname === "/api/claimstats") { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=10", "access-control-allow-origin": "*" }); return res.end(JSON.stringify(CS.ready || !CLAIM_CACHE ? claimStatsJson() : { ...CLAIM_CACHE, ethUsd: Number((ethUsd && ethUsd()) || CLAIM_CACHE.ethUsd || 0), cached: true })); }
@@ -221,7 +224,7 @@ b.onclick=async()=>{try{
         }
         res.writeHead(200, { "content-type": "text/plain" }); res.end("stag bot ok");
       } catch (e) { json(res, 500, { ok: false }); }
-    }).listen(+process.env.PORT || 3000);
+    }); srv.listen(+process.env.PORT || 3000); lounge.attach(srv);
   }
   async function topArchers(limit = 5) { return q("select name, max(score) as s from game_scores where day=current_date group by tg_id, name order by s desc limit $1", [limit]); }
 
