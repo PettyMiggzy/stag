@@ -13,6 +13,7 @@ export function initWhale(X) {
   const q = async (sql, args = []) => { if (!DB) throw new Error("no database"); return await DB.query(sql, args); };
   const WHALE_MIN = parseFloat(process.env.WHALE_MIN || "10000000");
   let WHALE_CHAT = process.env.WHALE_CHAT_ID || ""; // the Hood Rich Club chat id: env wins, else bot_state in the database (so it can be set without touching env vars)
+  let inviteWarned = false;
   async function loadChat() { if (!DB || process.env.WHALE_CHAT_ID) return; try { await q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); const [r] = await q("select v from bot_state where k='whaleChat'"); if (r && r.v && r.v !== WHALE_CHAT) { WHALE_CHAT = r.v; log("club chat id:", WHALE_CHAT); } } catch (e) { log("club chat load err:", e.message); } }
   const migrateChat = async (resp) => { const to = resp?.parameters?.migrate_to_chat_id; if (!to) return false; WHALE_CHAT = String(to); try { await q("insert into bot_state(k,v) values('whaleChat',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [WHALE_CHAT]); } catch {} log("club chat upgraded to supergroup:", WHALE_CHAT); return true; };
   const PUBLIC = (process.env.PUBLIC_URL || "https://buybot.stagwifhood.fun").replace(/\/$/, "");
@@ -78,17 +79,19 @@ export function initWhale(X) {
           if (inv.ok) {
             await q("insert into whale_members(tg_id) values ($1) on conflict do nothing", [tg]);
             await dm(tg, `👑 <b>Verified: ${founders > 0 ? `${founders} Founder NFT${founders > 1 ? "s" : ""}` : `${fmt(total, 0)} $STAG`}</b>\nWelcome to the Hood Rich Club, you're in. This invite works once and expires in 1 hour.`, { reply_markup: { inline_keyboard: [[{ text: "👑 Join the Hood Rich Club", url: inv.result.invite_link }]] } });
-          } else { log("club invite err:", inv.description); await migrateChat(inv); }
+          } else { if (!(await migrateChat(inv))) { if (!inviteWarned) { inviteWarned = true; log("club invite err:", inv.description); dm(process.env.ADMIN_TG_ID || "6820752140", `⚠️ I can't create Hood Rich Club invites: Telegram says "${inv.description}" for chat ${WHALE_CHAT}. Add me back to that chat as an admin (with invite permission), or send the right chat id. I'll stay quiet about this until the next restart.`).catch(() => {}); } } }
         } else if (!pass && m) {
           await tgPost("banChatMember", { chat_id: WHALE_CHAT, user_id: tg }); await tgPost("unbanChatMember", { chat_id: WHALE_CHAT, user_id: tg, only_if_banned: true });
           await q("delete from whale_members where tg_id=$1", [tg]);
           await dm(tg, `Your linked wallets now hold ${fmt(total, 0)} $STAG, below the ${fmt(WHALE_MIN, 0)} needed for the Hood Rich Club (and no Hooded 20 / Sherwood Saints / WANTED NFT is linked), so I removed you. Buy back in and send /hoodrich to rejoin.`);
         } else if (m) await q("update whale_members set last_ok=now() where tg_id=$1", [tg]);
       }
-      if (process.env.TAG_CHAT_ID && tier) tgPost("setChatMemberTag", { chat_id: process.env.TAG_CHAT_ID, user_id: tg, tag: tier.replace(/^\S+\s/, "") }).then((r) => { if (!r.ok) log("tag err:", r.description); });
+      if (process.env.TAG_CHAT_ID && tier) tgPost("setChatMemberTag", { chat_id: process.env.TAG_CHAT_ID, user_id: tg, tag: tagOf(tier) }).then((r) => { if (!r.ok) log("tag err:", r.description); });
       return { addrs, total, tier };
     } catch (e) { log("evaluate err:", e.message); }
   }
+  // Telegram member tags allow no emoji and at most 16 characters
+  const tagOf = (tier) => { let t = tier.replace(/[^\p{L}\p{N}·\s]/gu, "").replace(/\s*·\s*/g, " · ").replace(/\s+/g, " ").trim(); if (t.length > 16) t = /founder/i.test(t) ? "Founder" : t.slice(0, 16).trim(); return t; };
   async function sweep() { try { await loadChat(); const ids = await q("select distinct tg_id from wallet_links"); for (const r of ids) await evaluate(Number(r.tg_id)); await refreshTiers(); } catch (e) { log("sweep err:", e.message); } }
 
   // ---- holder perks: a verifiable discount code for the real businesses (StagR, Junk Junkies), by $STAG tier / NFT ----
