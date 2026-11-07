@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { initWhale } from "./whale.mjs";
 import { initBurn } from "./burn.mjs";
+import { initStagme } from "./stagme.mjs";
 
 export function initExtras(X) {
   const { provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY } = X;
@@ -121,6 +122,10 @@ export function initExtras(X) {
     return out;
   }
 
+  // ---------- /stagme avatar pictures ----------
+  const tgFile = async (method, fields, fileField, buf, fname) => { const f = new FormData(); for (const [k, v] of Object.entries(fields)) f.append(k, v); f.append(fileField, new Blob([buf], { type: "image/png" }), fname); try { return await (await fetch(`${api}/${method}`, { method: "POST", body: f })).json(); } catch (e) { return { ok: false, description: e.message }; } };
+  const STAGME = initStagme({ q: W.q, log, tgFile, adminTg: process.env.ADMIN_TG_ID || "6820752140" });
+
   // ---------- burn counter ----------
   const BURN = initBurn({ provider, ethers, CFG, q: W.q, log, fmt, usd, tgPost, chat, market, adminTg: process.env.ADMIN_TG_ID || "6820752140",
     stGet: async (k) => { try { const [r] = await W.q("select v from bot_state where k=$1", [k]); return r ? r.v : null; } catch { return null; } },
@@ -146,6 +151,7 @@ export function initExtras(X) {
         const on = (args[0] || "").toLowerCase() === "on"; await W.q("insert into bot_state(k,v) values('loungeOpen',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [on ? "1" : "0"]);
         return reply(on ? "🚪 Lounge is OPEN to every wallet (free entry). Send /loungeopen off to put the 10M $STAG / Founder NFT gate back." : "🔒 Lounge gate is back: 10,000,000 $STAG or a Founder NFT.");
       }
+      if (cmd === "stagme") return STAGME.command(msg, args, reply);
       if (cmd === "burn" || cmd === "burned" || cmd === "burns") return reply(await BURN.text());
       if ((cmd === "burndraft" || cmd === "burnpost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM
         if (cmd === "burndraft") { await BURN.sync(); return reply("<b>Draft of the daily burn post:</b>\n\n" + await BURN.text(true) + "\n\n<i>Not posted anywhere. Send /burnpost on to start posting it once a day, /burnpost off to stop.</i>"); }
@@ -178,7 +184,7 @@ export function initExtras(X) {
       if (cmd === "chart") return reply(`📈 <b>$STAG chart</b>\n${BUY}`, { reply_markup: { inline_keyboard: [[{ text: "📈 Open chart", url: CFG.chartUrl || BUY, style: "primary" }]] } });
       if (cmd === "links" || cmd === "socials" || cmd === "web") return reply(`<b>$STAG links</b>\n🟩 Buy: ${BUY}\n🌐 Site: https://stagwifhood.fun\n🏹 Game: https://stagwifhood.fun/play/\n🎵 Records: https://records.stagwifhood.fun\n💬 Telegram: https://t.me/StagWifHood\n\nCA: <code>${CFG.token}</code>`);
       if (cmd === "game" || cmd === "play") return reply(`🏹 <b>Stag Shot</b> – 3D forest archery\n${process.env.MINIAPP_URL || "https://stagwifhood.fun/play/"}`);
-      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip");
+      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme – make your own stag picture");
     } catch (e) { log("cmd err:", e.message); }
   }
   async function pollCommands() {
