@@ -2,11 +2,13 @@
 // and LiveKit voice passes. Everything is free to use for now. No wallet balances or Telegram details are ever sent to other players.
 import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
+import { PokerRoom, initChips, pokerLeaders } from "./pokerroom.mjs";
 import { WebSocketServer } from "ws";
 import { ethers } from "ethers";
 
 export function initLounge(X) {
   const { q, tierFor, bal, founderCount, totalFor, log, rpc, secretSeed } = X;
+  initChips(q);
   const SECRET = crypto.createHash("sha256").update("lounge:" + secretSeed).digest(); // signs session tokens; derived from the bot token so no new env var is needed
   const MIN_TOTAL = parseFloat(process.env.LOUNGE_MIN || process.env.WHALE_MIN || "10000000"); // same bar as the Hood Rich Club: 10M $STAG, or any Founder NFT
   const EPOCH = Date.now();
@@ -51,6 +53,7 @@ export function initLounge(X) {
     if (!u.pathname.startsWith("/api/lounge/")) return false;
     if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET,POST,OPTIONS" }); res.end(); return true; }
     if (u.pathname === "/api/lounge/status") { const all = rooms.flatMap((r) => [...r.players.values()]); json(res, 200, { online: all.length, rooms: rooms.map((r) => ({ n: r.n, count: r.players.size, cap: ROOM_CAP })), names: all.slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })) }); return true; }
+    if (u.pathname === "/api/lounge/poker/leaders") { json(res, 200, { week: true, leaders: await pokerLeaders(10) }); return true; }
     if (u.pathname === "/api/lounge/nonce") {
       const n = HEX(12); nonces.set(n, Date.now() + 300000); for (const [k, v] of nonces) if (v < Date.now()) nonces.delete(k);
       json(res, 200, { nonce: n }); return true;
@@ -125,6 +128,8 @@ export function initLounge(X) {
       } else if (m.t === "drink") {
         if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id; me.moved = true;
         allIn(me.room, { t: "sys", text: `${DRINKS[m.id]} for ${me.name}` }); setTimeout(() => { if (me) { me.drink = ""; me.moved = true; } }, 60000);
+      } else if (typeof m.t === "string" && m.t.startsWith("poker")) {
+        const room = me.room; room.poker = room.poker || new PokerRoom({ send }); await room.poker.handle(me, m);
       } else if (m.t === "djvote") {
         const i = Math.floor(Number(m.i)); if (!(i >= 0 && i < TRACKS.length) || i === dj.idx || Date.now() - (me.lastVote || 0) < 800) return; me.lastVote = Date.now();
         dj.votes.set(me.addr, i); broadcastAll({ t: "dj", ...djState() }); send(ws, { t: "djack", i });
@@ -134,7 +139,7 @@ export function initLounge(X) {
         const v = await voicePass(me); send(ws, v ? { t: "voice", ...v } : { t: "voice", error: "Voice is not available right now." });
       }
     });
-    ws.on("close", () => { clearTimeout(joinTimer); if (me && byAddr.get(me.addr) === me) { me.room.players.delete(me.addr); byAddr.delete(me.addr); allIn(me.room, { t: "leave", id: me.id }); log("lounge: leave", me.name, "room", me.room.n, "online", me.room.players.size); } });
+    ws.on("close", () => { clearTimeout(joinTimer); if (me && byAddr.get(me.addr) === me) { try { me.room.poker && me.room.poker.drop(me); } catch {} me.room.players.delete(me.addr); byAddr.delete(me.addr); allIn(me.room, { t: "leave", id: me.id }); log("lounge: leave", me.name, "room", me.room.n, "online", me.room.players.size); } });
     ws.on("error", () => {});
   }
   const pub = (p) => ({ id: p.id, name: p.name, tier: p.tier, founder: p.founder, lvl: p.lvl, x: p.x, z: p.z, ry: p.ry, anim: p.anim, drink: p.drink });

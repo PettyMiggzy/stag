@@ -199,7 +199,7 @@ function booth(x,z,ry){
   return g;
 }
 const bz=[-4,1.2,6.4,11];
-for(const z of bz){if(z<5)booth(-9.9,z,Math.PI/2);booth(9.9,z,-Math.PI/2);} // the left wall at the front is the studio
+for(const z of bz){if(z<5){booth(-9.9,z,Math.PI/2);booth(9.9,z,-Math.PI/2);}} // the front of both side walls is the studio (left) and the card room (right) // the left wall at the front is the studio
 // stanchions
 for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
   const x=sx*3.4;
@@ -310,6 +310,75 @@ async function loadStudioProps(){
     put('musicstand',{h:1.35,x:-10.9,z:12.4,ry:R.stand??0}),
   ]);
 }
+/* ---------- card room: glass-walled poker room on the right side, with a felt table and six seats ---------- */
+const cardRoom={seats:[],room:{x0:6.4,x1:11.9,z0:5.2,z1:13.8},center:[9.15,9.6]};
+{
+  const X0=6.4,X1=11.9,Z0=5.2,Z1=13.8,HT=3.5,DOOR=[6.1,7.5],CX=9.15,CZ=9.6,TA=1.5,TB=1.05,TY=.82;
+  const glass=new THREE.MeshPhysicalMaterial({color:0xbcd8ff,transparent:true,opacity:.12,roughness:.02,metalness:0,envMapIntensity:1.6,side:THREE.DoubleSide,depthWrite:false});
+  const wallM=new THREE.MeshStandardMaterial({color:0x14100f,roughness:.8});
+  const carpet=new THREE.MeshStandardMaterial({color:0x2a0c16,roughness:1});
+  const feltTex=canvasTex(256,256,(g,w,h)=>{g.fillStyle='#0c5a3b';g.fillRect(0,0,w,h);for(let i=0;i<2600;i++){g.fillStyle=`rgba(${rnd()<.5?255:0},${rnd()<.5?255:90},${rnd()<.5?255:60},${.02+rnd()*.03})`;g.fillRect(rnd()*w,rnd()*h,1.4,1.4);}},[3,3]);
+  const felt=new THREE.MeshStandardMaterial({map:feltTex,roughness:.95});
+  const S=(w,h,d,m,x,y,z)=>box(w,h,d,m,x,y,z);
+  S(X1-X0,.04,Z1-Z0,carpet,(X0+X1)/2,.03,(Z0+Z1)/2);S(X1-X0,.2,Z1-Z0,wallM,(X0+X1)/2,HT+.1,(Z0+Z1)/2);
+  for(const z of[Z0,Z1])S(X1-X0,HT,.16,wallM,(X0+X1)/2,HT/2,z);S(.16,HT,Z1-Z0,wallM,X1,HT/2,(Z0+Z1)/2);
+  const trim=(w,d,x,z)=>S(w,.06,d,M.gold,x,HT-.03,z);trim(X1-X0,.1,(X0+X1)/2,Z0+.1);trim(X1-X0,.1,(X0+X1)/2,Z1-.1);trim(.1,Z1-Z0,X1-.1,(Z0+Z1)/2);trim(.1,Z1-Z0,X0+.1,(Z0+Z1)/2);
+  S(X1-X0-.4,.03,.06,M.amber,(X0+X1)/2,HT-.1,Z0+.35);S(X1-X0-.4,.03,.06,M.amber,(X0+X1)/2,HT-.1,Z1-.35);S(.06,.03,Z1-Z0-.7,M.amber,X1-.35,HT-.1,(Z0+Z1)/2);
+  S(X1-X0-.3,.04,.04,M.pink,(X0+X1)/2,.09,Z0+.12);S(.04,.04,Z1-Z0-.3,M.pink,X1-.12,.09,(Z0+Z1)/2);S(X1-X0-.3,.04,.04,M.pink,(X0+X1)/2,.09,Z1-.12);
+  // west wall: glass onto the club with a door gap
+  const gl=(w,h,x,y,z,ry)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glass);m.position.set(x,y,z);m.rotation.y=ry;m.renderOrder=3;scene.add(m);};
+  gl(DOOR[0]-Z0,HT-.1,X0,HT/2,(Z0+DOOR[0])/2,Math.PI/2);gl(Z1-DOOR[1],HT-.1,X0,HT/2,(DOOR[1]+Z1)/2,Math.PI/2);
+  for(const z of[Z0,DOOR[0],DOOR[1],Z1])S(.1,HT,.1,M.gold,X0,HT/2,z);
+  for(const [a0,a1] of[[Z0,DOOR[0]],[DOOR[1],Z1]]){S(.07,.08,a1-a0,M.gold,X0,HT-.05,(a0+a1)/2);S(.07,.22,a1-a0,M.gold,X0,.11,(a0+a1)/2);}
+  S(.07,.12,DOOR[1]-DOOR[0],M.gold,X0,HT-.06,(DOOR[0]+DOOR[1])/2);
+  COLLIDERS.push({x0:X0-.15,x1:X0+.15,z0:Z0,z1:DOOR[0]},{x0:X0-.15,x1:X0+.15,z0:DOOR[1],z1:Z1},{x0:X0,x1:X1,z0:Z0-.15,z1:Z0+.15},{x0:X0,x1:X1,z0:Z1-.15,z1:Z1+.15},{x0:CX-TA-.15,x1:CX+TA+.15,z0:CZ-TB-.15,z1:CZ+TB+.15});
+  // suit art panels on the walls
+  const suit=(ch,col)=>canvasTex(256,256,(g,w,h)=>{g.fillStyle='#0b0909';g.fillRect(0,0,w,h);g.strokeStyle='#d8a843';g.lineWidth=6;g.strokeRect(10,10,w-20,h-20);g.fillStyle=col;g.font='160px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(ch,w/2,h/2+10);});
+  const art=(x,z,ry,ch,col)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshStandardMaterial({map:suit(ch,col),emissiveMap:suit(ch,col),emissive:0xffffff,emissiveIntensity:.5,roughness:.6}));m.position.set(x,2.0,z);m.rotation.y=ry;m.userData.keep=true;scene.add(m);S(1.62,1.62,.05,M.gold,x,2.0,z+(ry===0?-.03:ry===Math.PI?.03:0));};
+  art(8.0,Z0+.1,0,'♠','#e9c97a');art(10.3,Z0+.1,0,'♥','#e0405a');art(8.0,Z1-.1,Math.PI,'♣','#e9c97a');art(10.3,Z1-.1,Math.PI,'♦','#e0405a');
+  for(const z of[7.4,9.6,11.8]){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.1),new THREE.MeshStandardMaterial({color:0x1d1415,roughness:.9}));m.position.set(X1-.1,1.9,z);m.rotation.y=-Math.PI/2;scene.add(m);S(.05,1.22,1.52,M.gold,X1-.06,1.9,z);}
+  // the table: oval felt top, gold rail, pedestal
+  const top=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.12,56),felt);top.scale.set(TA,1,TB);top.position.set(CX,TY,CZ);top.receiveShadow=true;scene.add(top);
+  const rail=new THREE.Mesh(new THREE.TorusGeometry(1,.1,14,72),new THREE.MeshStandardMaterial({color:0x1c0f0c,roughness:.5,metalness:.2}));rail.rotation.x=Math.PI/2;rail.scale.set(TA,TB,1);rail.position.set(CX,TY+.05,CZ);scene.add(rail);
+  const rg=new THREE.Mesh(new THREE.TorusGeometry(1,.012,8,72),M.gold);rg.rotation.x=Math.PI/2;rg.scale.set(TA*1.0,TB*1.0,1);rg.position.set(CX,TY+.155,CZ);scene.add(rg);
+  const ped=new THREE.Mesh(new THREE.CylinderGeometry(.3,.5,TY-.04,24),M.black);ped.position.set(CX,(TY-.04)/2,CZ);scene.add(ped);
+  const pb=new THREE.Mesh(new THREE.CylinderGeometry(.75,.8,.05,32),M.gold);pb.position.set(CX,.06,CZ);scene.add(pb);
+  // pendant lamp over the table
+  const lamp=new THREE.Mesh(new THREE.ConeGeometry(.55,.4,32,1,true),new THREE.MeshStandardMaterial({color:0x211410,roughness:.4,metalness:.5,side:THREE.DoubleSide,emissive:0xffa530,emissiveIntensity:.25}));lamp.position.set(CX,2.35,CZ);scene.add(lamp);
+  S(.02,HT-2.5,.02,M.gold,CX,(HT+2.5)/2,CZ);const lb=new THREE.Mesh(new THREE.SphereGeometry(.09,12,12),dlMat());lb.position.set(CX,2.25,CZ);scene.add(lb);
+  function dlMat(){return new THREE.MeshBasicMaterial({color:0xfff1d6,toneMapped:false});}
+  const pl=new THREE.PointLight(0xffc880,12,8,1.6);pl.position.set(CX,2.1,CZ);scene.add(pl);
+  // seats around the table: where a player stands or sits, and which way they face
+  for(let i=0;i<6;i++){
+    const th=(i*60+30)*Math.PI/180,sx=CX+(TA+.7)*Math.cos(th),sz=CZ+(TB+.7)*Math.sin(th);
+    const ry=Math.atan2(CX-sx,CZ-sz);cardRoom.seats.push({x:sx,z:sz,ry,tx:CX+(TA-.28)*Math.cos(th),tz:CZ+(TB-.2)*Math.sin(th)});
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.08,24),M.velvet);st.position.set(sx,.5,sz);scene.add(st);
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.46,10),M.gold);col.position.set(sx,.25,sz);scene.add(col);
+    const bs=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.03,20),M.gold);bs.position.set(sx,.03,sz);scene.add(bs);
+  }
+  // live bits: board cards, hole cards, dealer button, pot chips, name plates
+  const cardGeo=new THREE.PlaneGeometry(.24,.34),cardCache=new Map();
+  const cardTex=(c)=>{const k=c==null?'b':c;if(cardCache.has(k))return cardCache.get(k);let t;
+    if(c==null)t=canvasTex(96,136,(g,w,h)=>{g.fillStyle='#7a1030';g.fillRect(0,0,w,h);g.strokeStyle='#e9c97a';g.lineWidth=5;g.strokeRect(6,6,w-12,h-12);g.fillStyle='#e9c97a';g.font='54px serif';g.textAlign='center';g.textBaseline='middle';g.fillText('♠',w/2,h/2+3);});
+    else{const rank='23456789TJQKA'[c%13],su=Math.floor(c/13),ch='♠♥♦♣'[su],red=su===1||su===2;t=canvasTex(96,136,(g,w,h)=>{g.fillStyle='#f7f2e6';g.fillRect(0,0,w,h);g.strokeStyle='#bbb';g.lineWidth=3;g.strokeRect(2,2,w-4,h-4);g.fillStyle=red?'#c8102e':'#111';g.textAlign='center';g.textBaseline='middle';g.font='bold 34px Georgia,serif';g.fillText(rank==='T'?'10':rank,22,22);g.font='30px serif';g.fillText(ch,22,52);g.font='58px serif';g.fillText(ch,w/2+6,h/2+12);});}
+    cardCache.set(k,t);return t;};
+  const mkCard=()=>{const m=new THREE.Mesh(cardGeo,new THREE.MeshBasicMaterial({map:cardTex(null),toneMapped:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.visible=false;m.userData.keep=true;scene.add(m);return m;};
+  const board=[0,1,2,3,4].map((i)=>{const m=mkCard();m.position.set(CX-.62+i*.31,TY+.075,CZ);return m;});
+  const hole=cardRoom.seats.map((s)=>[0,1].map((k)=>{const m=mkCard();const dx=s.tx-s.x,dz=s.tz-s.z,l=Math.hypot(dx,dz)||1;m.position.set(s.tx+(-dz/l)*(k?.14:-.14),TY+.075,s.tz+(dx/l)*(k?.14:-.14));m.rotation.z=-s.ry;m.scale.setScalar(.85);return m;}));
+  const dealer=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.02,18),new THREE.MeshStandardMaterial({color:0xf5f0e0,emissive:0xe9c97a,emissiveIntensity:.5}));dealer.visible=false;dealer.userData.keep=true;scene.add(dealer);
+  const chipCols=[0xe03050,0x2f7be0,0x1a1a1a,0xe9c97a];const chips=[];for(let i=0;i<16;i++){const m=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.022,18),new THREE.MeshStandardMaterial({color:chipCols[i%4],roughness:.4,metalness:.2}));m.position.set(CX+(i%4)*.002,TY+.075+Math.floor(i/4)*.024+.01,CZ+.32+((i%4)-1.5)*.13);m.visible=false;m.userData.keep=true;scene.add(m);chips.push(m);}
+  const plates=cardRoom.seats.map((s)=>{const c=document.createElement('canvas');c.width=256;c.height=96;const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false,toneMapped:false}));sp.scale.set(.62,.23,1);sp.position.set(s.x,1.7,s.z);sp.renderOrder=11;sp.visible=false;scene.add(sp);return {sp,c,t};});
+  const signT=canvasTex(512,128,(g,cw,ch)=>{g.fillStyle='#090709';g.fillRect(0,0,cw,ch);g.font='700 72px Georgia,serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#ffc566';g.shadowColor='#ffa530';g.shadowBlur=18;g.fillText('CARD ROOM',cw/2,ch/2+4);});
+  const sgn=new THREE.Mesh(new THREE.PlaneGeometry(2.6,.65),new THREE.MeshBasicMaterial({map:signT,toneMapped:false}));sgn.position.set(X0-.1,HT+.55,(Z0+Z1)/2);sgn.rotation.y=-Math.PI/2;sgn.userData.keep=true;scene.add(sgn);
+  cardRoom.setTable=(v)=>{ // v = the table view from the server (or null to clear it)
+    const b=(v&&v.board)||[];board.forEach((m,i)=>{m.visible=i<b.length;if(i<b.length)m.material.map=cardTex(b[i]);});
+    cardRoom.seats.forEach((s,i)=>{const sd=v&&v.seats&&v.seats[i];const pair=hole[i];
+      pair.forEach((m,k)=>{const show=!!(sd&&sd.hasCards&&!sd.folded);m.visible=show;if(show)m.material.map=cardTex(sd.cards?sd.cards[k]:null);});
+      const p=plates[i];if(sd){const g=p.c.getContext('2d');g.clearRect(0,0,256,96);g.fillStyle='rgba(10,4,12,.7)';g.beginPath();g.roundRect(4,8,248,80,18);g.fill();g.textAlign='center';g.fillStyle=sd.folded?'#999':'#e9c97a';g.font='700 28px system-ui,sans-serif';g.fillText((sd.name||'').slice(0,16),128,40);g.fillStyle=sd.allIn?'#ff8fb8':'#fff';g.font='26px system-ui,sans-serif';g.fillText(sd.allIn?'ALL IN':String(sd.stack),128,72);p.t.needsUpdate=true;p.sp.visible=true;}else p.sp.visible=false;});
+    const dl=v&&v.dealer>=0&&v.seats&&v.seats[v.dealer]?cardRoom.seats[v.dealer]:null;dealer.visible=!!dl;if(dl)dealer.position.set(dl.tx*.9+CX*.1,TY+.075,dl.tz*.9+CZ*.1);
+    const n=v&&v.pot?Math.min(16,Math.ceil(v.pot/500)):0;chips.forEach((m,i)=>m.visible=i<n);
+  };
+}
 /* ---------- NFT video screens ---------- */
 const videos=[];const vtex=[];const screenObjs=[];
 function screen(x,y,z,ry,w,h,file){
@@ -330,7 +399,6 @@ screen(-SX,3.7,-9,Math.PI/2,3.8,3.8,'h1');
 screen(-SX,3.7,-1.5,Math.PI/2,3.8,3.8,'h5');
 screen(SX,3.7,-9,-Math.PI/2,3.8,3.8,'h2');
 screen(SX,3.7,-1.5,-Math.PI/2,3.8,3.8,'h8');
-screen(SX,3.7,6,-Math.PI/2,3.8,3.8,'h14');
 
 /* ---------- beams & spot lights ---------- */
 const beamMat=c=>new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
@@ -493,7 +561,7 @@ function mergeStatic(){
   console.log('merged static meshes:',before,'->',after);
 }
 mergeStatic();
-window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await Promise.all([setupDancer(),loadStudioProps()]);
   for(const v of videos){try{await v.play();}catch(e){}}

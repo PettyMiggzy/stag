@@ -46,6 +46,14 @@ body.touch #joy{display:block}
 #tpSub{min-height:38px;line-height:1.4;margin-bottom:8px;color:#fff}
 #tpBtns{display:flex;gap:6px;flex-wrap:wrap}#tpBtns button,.dj-t{padding:9px 12px;border-radius:10px;border:1px solid rgba(233,201,122,.45);background:rgba(30,12,28,.9);color:#e9c97a;font-size:14px;cursor:pointer}
 #djNow{margin:2px 0 8px;color:#fff}.dj-t{display:flex;justify-content:space-between;width:100%;box-sizing:border-box;margin:4px 0;text-align:left}.dj-t.on{background:#4a2a08;color:#fff}.dj-t b{color:#ffb6d9}
+#pk{position:fixed;right:12px;top:12px;width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;z-index:12;display:none;color:#f3e7c9;border:1px solid rgba(233,201,122,.45);border-radius:14px;padding:12px;background:rgba(10,18,14,.94);font-size:13px}
+#pk h3{margin:0;font:700 14px Georgia,serif;letter-spacing:.2em;color:#e9c97a;display:flex;justify-content:space-between;align-items:center}
+#pk .chips{color:#9fe3b4;font-size:12px;letter-spacing:0}.pkrow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;align-items:center}
+.pc{display:inline-block;min-width:34px;padding:7px 4px;border-radius:6px;background:#f7f2e6;color:#111;font:700 16px Georgia,serif;text-align:center;box-shadow:0 1px 3px #000}.pc.r{color:#c8102e}.pc.back{background:#7a1030;color:#e9c97a}.pc.big{min-width:46px;font-size:22px;padding:10px 6px}
+#pkPot{color:#ffd34d;font-weight:700}.pks{flex:1 1 45%;border:1px solid rgba(233,201,122,.25);border-radius:8px;padding:5px 7px;background:rgba(0,0,0,.25)}.pks.turn{border-color:#ffd34d;box-shadow:0 0 8px #ffd34d66}.pks.fold{opacity:.45}.pks small{display:block;opacity:.8}
+#pk button,#pk input[type=number]{padding:9px 10px;border-radius:9px;border:1px solid rgba(233,201,122,.45);background:rgba(30,22,16,.95);color:#e9c97a;font-size:13px;cursor:pointer}#pk button.pri{background:#0d5a3b;color:#fff;border-color:#37c98a}#pk button.red{background:#6b1020;color:#fff}
+#pk input[type=range]{width:100%}#pkTimer{height:5px;background:#222;border-radius:3px;margin:6px 0}#pkTimer i{display:block;height:100%;width:0;background:#ffd34d;border-radius:3px}
+#pkLog{font-size:12px;opacity:.85;line-height:1.35}#pkLead{font-size:12px;margin-top:6px;opacity:.9}
 @media (max-width:640px){#chat{bottom:176px}#talkp,#djp{bottom:150px}}
 `;
 document.head.appendChild(css);
@@ -71,9 +79,10 @@ ui.innerHTML = `
   <div class="r"><button id="srec">● Record</button><button id="splay" disabled>▶ Play</button></div>
   <div class="r"><a class="dl" id="sdl" style="display:none" download>⬇ Download take</a></div>
   <small>Use headphones, or the beat will bleed into your mic. Nothing is uploaded or saved: your take lives on this device until you download it.</small></div>
+<div id="pk"><h3><span>CARD ROOM</span><span class="chips" id="pkChips"></span><button id="pkX" style="padding:3px 8px">✕</button></h3><div id="pkBoard" class="pkrow"></div><div id="pkPot"></div><div id="pkSeats" class="pkrow"></div><div id="pkMe" class="pkrow"></div><div id="pkAct"></div><div id="pkTimer"><i></i></div><div id="pkLog"></div><div id="pkLead"></div><small style="opacity:.7">Play chips only. No cash value, nothing to buy or cash out. Prizes are chosen by the club.</small></div>
 <div id="talkp"><h3 id="tpName"></h3><div id="tpSub"></div><div id="tpBtns"></div></div>
 <div id="djp"><h3>DJ BOOTH</h3><div id="djNow"></div><div id="djList"></div><small style="opacity:.75">Tap a track to vote. The most votes plays next.</small></div>
-<div id="dock"><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
+<div id="dock"><button id="cardBtn" style="display:none">🃏 Cards</button><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
 <div id="joy"><i></i></div>`;
 document.body.appendChild(ui);
 if ('ontouchstart' in window) document.body.classList.add('touch');
@@ -204,6 +213,9 @@ async function connect() {
     else if (m.t === 'sys') say('sys', '', m.text);
     else if (m.t === 'denied') { say('sys', '', m.why || 'Disconnected.'); sessionStorage.removeItem('lounge'); ws = null; }
     else if (m.t === 'voice') voiceReady(m);
+    else if (m.t === 'poker') pkUpdate(m);
+    else if (m.t === 'pokererr') say('sys', '', m.why);
+    else if (m.t === 'pokerleft') pkLeft(m);
     else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
     else if (m.t === 'rec') { if (m.on) recorders.add(m.id); else recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); if (m.on) say('sys', '', `${m.name} is recording in the studio`); }
   };
@@ -269,6 +281,7 @@ L.hooks.tick = (dt) => {
   if (keys['a'] || keys['arrowleft']) s -= 1; if (keys['d'] || keys['arrowright']) s += 1;
   f += -joy.y; s += joy.x;
   if (keys['q']) pos.yaw += dt * 1.8; if (keys['e']) pos.yaw -= dt * 1.8;
+  if (PK.seat >= 0) { f = 0; s = 0; const st = L.cardRoom.seats[PK.seat]; if (st) { pos.x = st.x; pos.z = st.z; pos.ry = st.ry; } } // seated: you stay at your seat until you leave the table
   const len = Math.hypot(f, s); const moving = len > .08;
   if (moving) {
     const sp = 2.4 * dt / Math.max(1, len); const Fx = -Math.sin(pos.yaw), Fz = -Math.cos(pos.yaw), Rx = Math.cos(pos.yaw), Rz = -Math.sin(pos.yaw);
@@ -289,11 +302,12 @@ L.hooks.tick = (dt) => {
   for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); if (v.near !== false || frameN % 4 === 0) v.mixer.update(v.near !== false ? dt : dt * 4); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
   // third-person camera behind and above, easing, never inside a wall
-  const camD = inRoom() ? 2.3 : 4.2; const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
-  camT.set(Math.max(-11.3, Math.min(11.3, cx)), inRoom() ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
+  const camD = (inRoom() || inCard()) ? 2.3 : 4.2; const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
+  camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
+  if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; camT.set(st.x + dx / l * 1.5, 2.15, st.z + dz / l * 1.5); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
   if (L.camOverride) { const c = L.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); }
-  voiceTick(); subscribeNearby(dt); studioTick(); npcTick(dt); djTick(dt);
+  voiceTick(); subscribeNearby(dt); studioTick(); npcTick(dt); djTick(dt); cardTick();
 };
 
 /* ---------- studio: record over a beat, entirely in the browser. Nothing is uploaded or stored. ---------- */
@@ -437,6 +451,56 @@ function djTick() { // volume follows distance to the booth; softer inside the s
   let v = Math.max(.14, Math.min(.9, 1.05 - d / 22)); if (inRoom()) v *= .35; if (ST.on) v = 0; a.volume += (v - a.volume) * .1;
   if (a.ended && DJ.idx >= 0) { /* the server will announce the next track within a second */ }
 }
+
+
+/* ---------- card room: Texas Hold'em on play chips ---------- */
+const PK = { v: null, seat: -1, chips: 0, deadline: 0, leaders: [], rules: { min: 400, max: 5000 }, watching: false, buy: 2000, raise: 0 };
+const inCard = () => { const r = L.cardRoom.room; return pos.x > r.x0 - .5 && pos.x < r.x1 && pos.z > r.z0 && pos.z < r.z1; };
+const SUIT = ['♠', '♥', '♦', '♣'], RK = '23456789TJQKA';
+const cardH = (c, big) => c == null ? `<span class="pc back${big ? ' big' : ''}">♠</span>` : `<span class="pc${(Math.floor(c / 13) === 1 || Math.floor(c / 13) === 2) ? ' r' : ''}${big ? ' big' : ''}">${RK[c % 13] === 'T' ? '10' : RK[c % 13]}${SUIT[Math.floor(c / 13)]}</span>`;
+function cardTick() {
+  const inside = !!me && inCard(); $('#cardBtn').style.display = inside || PK.seat >= 0 ? 'inline-block' : 'none';
+  if (inside && !PK.watching) { PK.watching = true; sendWs({ t: 'pokerwatch', on: true }); }
+  if (!inside && PK.watching && PK.seat < 0) { PK.watching = false; sendWs({ t: 'pokerwatch', on: false }); L.cardRoom.setTable(null); $('#pk').style.display = 'none'; }
+}
+$('#cardBtn').onclick = () => { const p = $('#pk'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; if (p.style.display === 'block') pkRender(); };
+$('#pkX').onclick = () => { $('#pk').style.display = 'none'; };
+function pkUpdate(m) {
+  PK.v = m.v; PK.chips = m.chips; PK.deadline = m.deadline || 0; PK.leaders = m.leaders || []; PK.rules = m.rules || PK.rules;
+  const was = PK.seat; PK.seat = m.seat; L.cardRoom.setTable(m.v);
+  if (PK.seat >= 0 && was < 0) { $('#pk').style.display = 'block'; say('sys', '', 'You sat down. Play chips only.'); }
+  if ($('#pk').style.display === 'block') pkRender();
+}
+function pkLeft(m) {
+  PK.seat = -1; const st = PK.v && PK.v.seats; say('sys', '', `${m.busted ? 'You ran out of chips. ' : ''}You left the table with ${m.net >= 0 ? '+' : ''}${m.net} play chips this session. Balance: ${m.chips}.`);
+  PK.chips = m.chips; pkRender();
+}
+const pkSend = (o) => sendWs(o);
+function pkRender() {
+  const v = PK.v; if (!v) { $('#pkSeats').textContent = 'Connecting to the table…'; return; }
+  $('#pkChips').textContent = `Your chips: ${PK.chips.toLocaleString()}`;
+  $('#pkBoard').innerHTML = v.board.length ? v.board.map((c) => cardH(c)).join('') : '<span style="opacity:.6">No cards yet</span>';
+  $('#pkPot').textContent = v.pot ? `Pot: ${v.pot.toLocaleString()}` : (v.phase === 'wait' ? 'Waiting for players…' : '');
+  $('#pkSeats').innerHTML = (v.seats || []).map((s, i) => s ? `<div class="pks${v.toAct === i ? ' turn' : ''}${s.folded ? ' fold' : ''}"><b>${esc(s.name)}</b>${s.bot ? '' : ''}${v.dealer === i ? ' Ⓓ' : ''}<small>${s.allIn ? 'ALL IN' : s.stack.toLocaleString()}${s.bet ? ' · bet ' + s.bet : ''}${s.folded ? ' · folded' : ''}</small></div>` : (PK.seat < 0 ? `<div class="pks" data-sit="${i}" style="cursor:pointer;text-align:center"><b>Seat ${i + 1}</b><small>tap to sit</small></div>` : '<div class="pks" style="opacity:.35;text-align:center"><small>empty</small></div>')).join('');
+  const my = PK.seat >= 0 ? v.seats[PK.seat] : null;
+  $('#pkMe').innerHTML = my && my.cards ? my.cards.map((c) => cardH(c, true)).join('') + `<span style="opacity:.75;margin-left:6px">${my.waiting ? 'next hand' : ''}</span>` : '';
+  const act = $('#pkAct'); const o = v.options;
+  if (PK.seat < 0) {
+    const max = Math.min(PK.rules.max, PK.chips), min = PK.rules.min; PK.buy = Math.max(min, Math.min(PK.buy, max));
+    act.innerHTML = PK.chips < min ? `<div>You are out of play chips. You get a free top-up each day.</div>` : `<div class="pkrow">Buy in: <b id="pkBuyN">${PK.buy}</b></div><input type="range" id="pkBuy" min="${min}" max="${max}" step="100" value="${PK.buy}"><div style="opacity:.75;margin-top:4px">Tap an empty seat above to sit.</div>`;
+    const r = $('#pkBuy'); if (r) r.oninput = () => { PK.buy = +r.value; $('#pkBuyN').textContent = PK.buy; };
+  } else if (o && v.toAct === PK.seat) {
+    PK.raise = Math.max(o.minRaise, Math.min(PK.raise || o.minRaise, o.maxRaise));
+    act.innerHTML = `<div class="pkrow"><button class="red" data-a="fold">Fold</button>${o.check ? '<button class="pri" data-a="check">Check</button>' : `<button class="pri" data-a="call">Call ${o.call}</button>`}</div>` + (o.canRaise ? `<input type="range" id="pkRz" min="${o.minRaise}" max="${o.maxRaise}" step="${v.blinds[0]}" value="${PK.raise}"><div class="pkrow"><button data-a="raise">Raise to <b id="pkRn">${PK.raise}</b></button><button data-a="allin">All in</button></div>` : '');
+    const rz = $('#pkRz'); if (rz) rz.oninput = () => { PK.raise = +rz.value; $('#pkRn').textContent = PK.raise; };
+  } else act.innerHTML = PK.seat >= 0 ? `<div style="opacity:.8">${v.phase === 'showdown' ? 'Next hand starting…' : (v.toAct >= 0 && v.seats[v.toAct] ? 'Waiting for ' + esc(v.seats[v.toAct].name) + '…' : 'Waiting…')}</div>` : '';
+  if (PK.seat >= 0) act.innerHTML += '<div class="pkrow"><button data-a="leave">Leave table</button></div>';
+  const res = v.result; $('#pkLog').innerHTML = (res ? res.winners.map((w) => `🏆 <b>${esc(w.name)}</b> wins ${w.won.toLocaleString()}${w.hand ? ' with ' + w.hand : ''}`).join('<br>') + '<br>' : '') + (v.log || []).slice(-4).map(esc).join('<br>');
+  $('#pkLead').innerHTML = PK.leaders.length ? '<b style="color:#e9c97a">This week</b> ' + PK.leaders.map((l, i) => `${i + 1}. ${esc(l.name)} ${l.net >= 0 ? '+' : ''}${l.net}`).join(' · ') : '';
+}
+$('#pkSeats').onclick = (e) => { const d = e.target.closest('[data-sit]'); if (d && PK.seat < 0) pkSend({ t: 'pokersit', seat: +d.dataset.sit, buyin: PK.buy }); };
+$('#pkAct').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a; if (a === 'leave') pkSend({ t: 'pokerleave' }); else if (a === 'allin') pkSend({ t: 'pokeract', a: 'raise', amt: PK.v.options.maxRaise }); else if (a === 'raise') pkSend({ t: 'pokeract', a: 'raise', amt: PK.raise }); else if (a) pkSend({ t: 'pokeract', a }); };
+setInterval(() => { const i = $('#pkTimer i'); if (!i) return; const left = PK.deadline && PK.v && PK.v.toAct === PK.seat && PK.seat >= 0 ? Math.max(0, PK.deadline - Date.now()) : 0; i.style.width = left ? Math.min(100, left / 250) + '%' : '0'; }, 200);
 
 function enter() {
   SELF.req = $('#nm').value; $('#gate').remove(); $('#hud').style.display = 'none';
