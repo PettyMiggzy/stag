@@ -7,7 +7,7 @@ const { THREE, scene, camera, M, STAGE_Y } = L;
 const Q = new URLSearchParams(location.search);
 const API = (Q.get('api') || 'https://buybot.stagwifhood.fun').replace(/\/$/, '');
 const WS_URL = API.replace(/^http/, 'ws') + '/ws/lounge';
-const TIER_COL = { 'Fawn': 0x6fd08c, 'Buck': 0xd9a441, 'Stag': 0xf2f2f2, 'Royal Stag': 0xffd34d, 'Founder': 0xff5fb8 };
+const TIER_COL = { 'Guest': 0xb8b8c4, 'Fawn': 0x6fd08c, 'Buck': 0xd9a441, 'Stag': 0xf2f2f2, 'Royal Stag': 0xffd34d, 'Founder': 0xff5fb8 };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -110,6 +110,9 @@ async function signIn() {
 }
 $('#go').onclick = () => { if (TOKEN) enter(); else signIn(); };
 if (TOKEN) { $('#go').textContent = 'Enter the club'; }
+fetch(API + '/api/lounge/status').then((r) => r.json()).then((s) => { // while the doors are open, say so; otherwise show the real requirement
+  const note = $('#gate .card p:last-child'); if (s.open) { note.textContent = 'Free entry for now: any wallet can come in. Holders get their rank on their name tag.'; $('#gp').textContent = 'Sign in with your wallet to enter. It is a plain message signature: no gas, no transaction, no approvals.'; window.__lounge.setSign && window.__lounge.setSign(true); }
+}).catch(() => {});
 
 /* ---------- avatars ---------- */
 function nameTag(text, col) {
@@ -179,6 +182,7 @@ const others = new Map(); // id -> avatar
 let me = null, ws = null, myId = null;
 const pos = { x: 0, z: 12, ry: Math.PI, yaw: 0, anim: 'idle' };
 const keys = {};
+if (Q.has('debug')) L.setYaw = (y) => { pos.yaw = y; };
 if (Q.has('debug')) L.setCam = (a) => { L.camOverride = a; };
 if (Q.has('debug')) L.teleport = (x, z) => { pos.x = x; pos.z = z; }; // test hook only, never on in normal use
 
@@ -191,16 +195,19 @@ function say(cls, who, text, col) {
   setTimeout(() => { d.style.transition = 'opacity 2s'; d.style.opacity = 0; setTimeout(() => d.remove(), 2100); }, 14000);
 }
 function updateTop() { $('#top').textContent = `Hood Rich Club · ${SELF.tier || ''} · Lounge ${SELF.room || 1} · ${others.size + 1} in the room`; }
-async function connect() {
-  await AVP; loadNpcs(); ws = new WebSocket(WS_URL);
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', token: TOKEN, name: SELF.req || '', room: Q.get('room') || 0 }));
+let retries = 0, denied = false, npcsLoaded = false;
+async function connect() { await AVP; if (!npcsLoaded) { npcsLoaded = true; loadNpcs(); } openSocket(); }
+function openSocket() { // if the connection drops, quietly reconnect and rejoin with the same sign-in, so nobody has to reload
+  ws = new WebSocket(WS_URL); const mine = ws;
+  ws.onopen = () => { retries = 0; mine.send(JSON.stringify({ t: 'join', token: TOKEN, name: SELF.req || '', room: Q.get('room') || 0 })); };
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.t === 'welcome') {
       if (m.dj) djSync(m.dj); myId = m.id; SELF.name = m.you.name; SELF.room = m.room; if (L.syncDance) L.syncDance((m.now - m.epoch) / 1000);
-      me = makeAvatar({ ...m.you, x: pos.x, z: pos.z, ry: pos.ry }); me.userData.mine = true;
+      for (const a of others.values()) scene.remove(a); others.clear(); recorders.clear(); // a fresh roster (this also covers a reconnect)
+      if (!me) { me = makeAvatar({ ...m.you, x: pos.x, z: pos.z, ry: pos.ry }); me.userData.mine = true; }
       for (const p of m.players) others.set(p.id, makeAvatar(p));
-      updateTop(); say('sys', '', 'Welcome to the Hood Rich Club.');
+      updateTop(); const firstJoin = !SELF.joined; say('sys', '', firstJoin ? 'Welcome to the Hood Rich Club.' : 'Reconnected.'); SELF.joined = true; PK.watching = false; if (firstJoin) doorGreet(0);
     } else if (m.t === 'join') { others.set(m.p.id, makeAvatar(m.p)); say('sys', '', `${m.p.name} walked in`); updateTop(); }
     else if (m.t === 'leave') { recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); const a = others.get(m.id); if (a) { scene.remove(a); others.delete(m.id); updateTop(); } }
     else if (m.t === 'state') {
@@ -211,7 +218,7 @@ async function connect() {
       }
     } else if (m.t === 'chat') say('', m.name, m.text, TIER_COL[m.tier]);
     else if (m.t === 'sys') say('sys', '', m.text);
-    else if (m.t === 'denied') { say('sys', '', m.why || 'Disconnected.'); sessionStorage.removeItem('lounge'); ws = null; }
+    else if (m.t === 'denied') { denied = true; say('sys', '', m.why || 'Disconnected.'); sessionStorage.removeItem('lounge'); ws = null; }
     else if (m.t === 'voice') voiceReady(m);
     else if (m.t === 'poker') pkUpdate(m);
     else if (m.t === 'pokererr') say('sys', '', m.why);
@@ -219,7 +226,7 @@ async function connect() {
     else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
     else if (m.t === 'rec') { if (m.on) recorders.add(m.id); else recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); if (m.on) say('sys', '', `${m.name} is recording in the studio`); }
   };
-  ws.onclose = () => { if (ws) say('sys', '', 'Connection lost. Reload to rejoin.'); };
+  ws.onclose = () => { if (ws !== mine || denied) return; say('sys', '', retries ? 'Still trying to reconnect…' : 'Connection lost. Reconnecting…'); PK.seat = -1; PK.watching = false; setTimeout(() => { if (!denied) openSocket(); }, Math.min(8000, 1000 * 2 ** retries++)); };
 }
 const sendWs = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 
@@ -272,6 +279,19 @@ function voiceTick() { // volume fades with distance, so you hear the booth you 
 }
 
 /* ---------- per-frame ---------- */
+// The camera never goes through a wall: pull it in front of the first wall it would cross (2D check against the same walls players collide with)
+function camClip(px, pz, c) {
+  const dx = c.x - px, dz = c.z - pz; let tHit = 1;
+  for (const r of L.COLLIDERS) {
+    const x0 = r.x0 - .12, x1 = r.x1 + .12, z0 = r.z0 - .12, z1 = r.z1 + .12; let tmin = 0, tmax = 1, ok = true;
+    for (const [p, d, a0, a1] of [[px, dx, x0, x1], [pz, dz, z0, z1]]) {
+      if (Math.abs(d) < 1e-6) { if (p < a0 || p > a1) { ok = false; break; } } else { let t0 = (a0 - p) / d, t1 = (a1 - p) / d; if (t0 > t1) [t0, t1] = [t1, t0]; tmin = Math.max(tmin, t0); tmax = Math.min(tmax, t1); if (tmin > tmax) { ok = false; break; } }
+    }
+    if (ok && tmin > 0 && tmin < tHit) tHit = tmin; // a wall in between (ignore walls we already stand inside)
+  }
+  if (tHit < 1) { const len = Math.hypot(dx, dz) || 1, keep = Math.max(.9, len * tHit - .15) / len; c.x = px + dx * Math.min(1, keep); c.z = pz + dz * Math.min(1, keep); }
+}
+const camFree = (px, pz, yaw, d) => { const c = { x: px + Math.sin(yaw) * d, z: pz + Math.cos(yaw) * d }; c.x = Math.max(-11.3, Math.min(11.3, c.x)); c.z = Math.max(-15.3, Math.min(15.3, c.z)); camClip(px, pz, c); return Math.hypot(c.x - px, c.z - pz); };
 const HP = new THREE.Vector3(), camT = new THREE.Vector3(), lookT = new THREE.Vector3();
 let sendAcc = 0, lodT = 0, frameN = 0;
 L.hooks.tick = (dt) => {
@@ -302,9 +322,14 @@ L.hooks.tick = (dt) => {
   for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); if (v.near !== false || frameN % 4 === 0) v.mixer.update(v.near !== false ? dt : dt * 4); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
   // third-person camera behind and above, easing, never inside a wall
-  const camD = (inRoom() || inCard()) ? 2.3 : 4.2; const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
-  camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z);
-  if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; camT.set(st.x + dx / l * 1.5, 2.15, st.z + dz / l * 1.5); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
+  const camD = (inRoom() || inCard()) ? 2.3 : 4.2;
+  if (PK.seat < 0 && drag === null) { // a wall right behind you: swing the camera round to the side with the most room instead of squashing in
+    const cur = camFree(pos.x, pos.z, pos.yaw, camD);
+    if (cur < Math.min(2.6, camD * .85)) { let best = pos.yaw, bl = cur; for (let k = 1; k <= 9; k++) for (const sg of [1, -1]) { const y = pos.yaw + sg * k * .35, l = camFree(pos.x, pos.z, y, camD); if (l > bl + .35) { bl = l; best = y; } } if (best !== pos.yaw) pos.yaw += Math.max(-2.4 * dt, Math.min(2.4 * dt, best - pos.yaw)); }
+  }
+  const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
+  camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z); camClip(pos.x, pos.z, camT);
+  if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; camT.set(Math.min(11.7, Math.max(6.7, st.x + dx / l * 1.1)), 2.05, Math.min(13.6, Math.max(5.4, st.z + dz / l * 1.1))); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
   if (L.camOverride) { const c = L.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); }
   voiceTick(); subscribeNearby(dt); studioTick(); npcTick(dt); djTick(dt); cardTick();
@@ -361,8 +386,23 @@ function studioTick() { // the studio button shows only inside the studio; leavi
 
 /* ---------- NPCs (studio engineer, DJ) and the shared DJ playlist ---------- */
 const NPC_DEFS = [
-  { id: 'eng', name: 'Engineer', file: 'engineer', x: -9.15, z: 7.05, ry: 0, anims: ['idle', 'talk', 'wave', 'agree', 'listen'], reach: 2.8 },
-  { id: 'dj', name: 'DJ', file: 'dj', x: 8.6, z: -12.3, ry: 0, anims: ['groove', 'idle', 'wave', 'bass'], reach: 3.4 },
+  // the engineer works a loop around the control room: listens at the console, checks the rack, takes a coffee on the couch, answers the studio phone
+  { id: 'eng', name: 'Engineer', file: 'engineer', x: -9.15, z: 7.05, ry: 0, reach: 2.8, anims: ['idle', 'talk', 'wave', 'agree', 'listen', 'walk', 'look', 'drink', 'phone'],
+    routine: [
+      { p: [-9.15, 7.05], face: 0, a: 'listen', t: [8, 12] }, { p: [-10.3, 7.3], face: -Math.PI / 2, a: 'look', t: [6, 9] }, { p: [-9.15, 7.05], face: 0, a: 'agree', t: [6, 9] },
+      { p: [-7.9, 6.7], face: Math.PI * .75, a: 'drink', t: [8, 11] }, { p: [-9.15, 7.05], face: 0, a: 'phone', t: [9, 13] },
+    ] },
+  // the DJ never leaves her decks: she alternates her grooves and takes a sip now and then
+  { id: 'dj', name: 'DJ', file: 'dj', x: 8.6, z: -12.3, ry: 0, reach: 3.4, anims: ['groove', 'idle', 'wave', 'bass', 'drink'],
+    routine: [{ p: null, a: 'groove', t: [22, 30] }, { p: null, a: 'bass', t: [16, 22] }, { p: null, a: 'groove', t: [20, 26] }, { p: null, a: 'drink', t: [6, 8] }] },
+  // security: the door bouncer greets every arrival by their tier; the floor guard walks a loop round the club and nods at people he passes
+  { id: 'door', name: 'Doorman', file: 'door', x: -2.5, z: 10.9, ry: 0, h: 2.35, reach: 3.4, anims: ['idle', 'pose', 'bow', 'wave', 'chat'],
+    routine: [{ p: null, a: 'pose', t: [16, 24] }, { p: null, a: 'idle', t: [5, 9] }], greet: true },
+  { id: 'patrol', name: 'Security', file: 'patrol', x: -5.5, z: 8, ry: 0, h: 2.25, reach: 3.0, anims: ['idle', 'chat', 'look', 'agree', 'wave', 'walk'],
+    routine: [
+      { p: [-5.5, 8], a: 'look', t: [5, 8] }, { p: [-5.5, -4], a: 'chat', t: [5, 8] }, { p: [-5.5, -10.2], a: 'look', t: [6, 9] },
+      { p: [5.5, -10.2], a: 'agree', t: [5, 8] }, { p: [5.5, -4], a: 'look', t: [5, 8] }, { p: [5.5, 8], a: 'chat', t: [6, 9] },
+    ], hello: ['hi', 'classy', 'enjoy', 'safe'] },
 ];
 const NPCS = {}; let LINES = {}; let talking = null;
 const voiceVol = (npc) => { if (!me) return .6; const d = Math.hypot(npc.obj.position.x - pos.x, npc.obj.position.z - pos.z); return Math.max(.25, Math.min(1, 1.2 - d / 14)); };
@@ -371,7 +411,7 @@ async function loadNpcs() {
   for (const d of NPC_DEFS) {
     try {
       const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
-      const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = 1.8 / (bb.max.y - bb.min.y);
+      const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = (d.h || 1.8) / (bb.max.y - bb.min.y);
       g.scene.scale.multiplyScalar(sc); g.scene.position.y = -bb.min.y * sc; g.scene.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; } });
       const grp = new THREE.Group(); grp.add(g.scene); grp.position.set(d.x, 0, d.z); grp.rotation.y = d.ry; scene.add(grp);
       const mixer = new THREE.AnimationMixer(g.scene); const acts = {};
@@ -379,8 +419,8 @@ async function loadNpcs() {
         for (const tr of c.tracks) if (tr.name.endsWith('.position') && tr.name.indexOf('Hips') >= 0) { const v = tr.values; const x0 = v[0], z0 = v[2]; for (let i = 0; i < v.length; i += 3) { v[i] -= x0; v[i + 2] -= z0; } }
         const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
       const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
-      const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0 }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
-      const tag = nameTag(d.name + '  ·  ' + (d.id === 'dj' ? 'Resident DJ' : 'Studio engineer'), 0xe9c97a); tag.position.y = 2.2; grp.add(tag);
+      const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
+      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag);
     } catch (e) { console.warn('npc failed', d.file, e); }
   }
   try { const b = await loadGLB('./assets/npc/djbooth.glb'); b.scene.updateMatrixWorld(true); let bb = new THREE.Box3().setFromObject(b.scene); const sz = bb.getSize(new THREE.Vector3()); b.scene.scale.multiplyScalar(2.6 / Math.max(sz.x, sz.z)); b.scene.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(b.scene); b.scene.position.set(8.6 - (bb.min.x + bb.max.x) / 2, -bb.min.y, -11.2 - (bb.min.z + bb.max.z) / 2); scene.add(b.scene); } catch (e) { console.warn('dj booth model missing'); }
@@ -398,14 +438,34 @@ function engFeedback() { // simple, honest feedback from what the mic actually d
   if (M.voice < Math.max(3, M.n * .06)) key = 'silent'; else if (M.clip >= 3) key = 'clip'; else if (M.peak < .22) key = 'quiet';
   setTimeout(() => { const a = engSay(key); if (a) a.onended = () => setTimeout(() => engSay('save'), 600); }, 700);
 }
+const NK = Q.has('fast') ? .12 : 1, NSP = Q.has('fast') ? 5 : 1; // test-only speed-up
+const angDiff = (a, b) => ((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+function runRoutine(n, now, dt) { // walk to the next station, do the job there for a while, move on
+  const r = n.routine || []; if (!r.length) { npcPlay(n, n.base); return; } const s = r[n.step % r.length];
+  if (n.st === 'walk') {
+    const dx = s.p[0] - n.obj.position.x, dz = s.p[1] - n.obj.position.z, dist = Math.hypot(dx, dz);
+    if (dist < .12) { n.st = 'act'; n.until = now + (s.t[0] + Math.random() * (s.t[1] - s.t[0])) * 1000 * NK; npcPlay(n, s.a); return; }
+    const sp = Math.min(dist, 1.0 * NSP * dt); n.obj.position.x += dx / dist * sp; n.obj.position.z += dz / dist * sp;
+    n.obj.rotation.y += angDiff(Math.atan2(dx, dz), n.obj.rotation.y) * Math.min(1, dt * 7); npcPlay(n, n.acts.walk ? 'walk' : n.base); return;
+  }
+  if (s.face != null) n.obj.rotation.y += angDiff(s.face, n.obj.rotation.y) * Math.min(1, dt * 4);
+  if (n.curName !== s.a) npcPlay(n, n.acts[s.a] ? s.a : n.base);
+  if (now > n.until) { n.step = (n.step + 1) % r.length; const nx = r[n.step]; if (nx.p && (Math.hypot(nx.p[0] - n.obj.position.x, nx.p[1] - n.obj.position.z) > .15)) n.st = 'walk'; else { n.until = now + (nx.t[0] + Math.random() * (nx.t[1] - nx.t[0])) * 1000 * NK; npcPlay(n, n.acts[nx.a] ? nx.a : n.base); } }
+}
 function npcTick(dt) {
   const now = performance.now(); let near = null, nd = 99;
   for (const n of Object.values(NPCS)) {
     const d = Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z);
     if (d < 30) n.mixer.update(dt);
-    const speaking = now < n.talkUntil; if (n.id === 'eng') npcPlay(n, speaking ? (n.acts.talk ? 'talk' : 'idle') : 'idle'); else npcPlay(n, speaking && n.acts.wave ? 'wave' : n.base);
-    if ((speaking || talking === n) && d < 8) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += ((t - n.obj.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 6); }
-    else if (talking !== n) n.obj.rotation.y += ((n.ry - n.obj.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 3);
+    const speaking = now < n.talkUntil, greeting = n.greetUntil && now < n.greetUntil, busy = speaking || talking === n || greeting;
+    if (greeting && !(talking === n)) { npcPlay(n, n.acts[n.greetAnim] ? n.greetAnim : n.base); if (d < 12) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 5); } n.until = Math.max(n.until, now + 2000); }
+    else if (n.hello && me && d < 2.6 && now > (n.nextHello || 0) && !busy) { n.nextHello = now + 70000 + Math.random() * 30000; n.greetAnim = 'agree'; n.greetUntil = now + 2800; npcSay(n, n.hello[Math.floor(Math.random() * n.hello.length)]); }
+    else
+    if (busy) { // someone is talking to them: stop, face the player, and talk
+      npcPlay(n, speaking ? (n.acts.talk ? 'talk' : (n.acts.chat ? 'chat' : (n.acts.wave ? 'wave' : n.base))) : (n.acts.idle ? 'idle' : n.base));
+      if (d < 9) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 6); }
+      n.until = Math.max(n.until, now + 2500);
+    } else runRoutine(n, now, dt);
     if (d < n.reach && d < nd) { near = n; nd = d; }
   }
   const btn = $('#talkBtn'); if (near) { btn.style.display = 'inline-block'; btn.textContent = '💬 Talk to ' + near.name; btn.dataset.n = near.id; } else { btn.style.display = 'none'; if (talking && !ST.on) closeTalk(); }
@@ -417,10 +477,21 @@ function openTalk(n) {
     sub.textContent = "Welcome to the studio. Want to cut a track?"; const a = engSay('greet');
     add('🎙 Book a session', () => { ENG.session = true; const a2 = engSay('pickbeat'); $('#studio').style.display = 'block'; sub.textContent = 'Pick a beat in the Studio panel, then hit Record. I count you in. Nothing is saved or uploaded.'; });
     add('Just looking', closeTalk);
-  } else {
+  } else if (n.id === 'dj') {
     sub.textContent = "What's good. I take requests all night."; npcSay(n, 'greet');
     add('🎧 Vote for the next track', () => { npcSay(n, 'ask'); openDj(); }); add('Close', closeTalk);
+  } else if (n.id === 'door') {
+    sub.textContent = 'Members only. Anything you need to know?'; npcSay(n, 'info');
+    add('How do I get in?', () => { sub.textContent = '10,000,000 $STAG across your linked wallets, or a Hooded 20, Sherwood Saints or WANTED NFT.'; npcSay(n, 'info'); }); add('Thanks', () => { npcSay(n, 'thanks'); n.greetAnim = 'wave'; n.greetUntil = performance.now() + 2200; closeTalk(); });
+  } else {
+    sub.textContent = 'Evening. Everything good?'; npcSay(n, 'hi');
+    add('All good', () => { npcSay(n, 'enjoy'); closeTalk(); }); add('Is this place safe?', () => { sub.textContent = 'Nobody gets past the door without making the list.'; npcSay(n, 'safe'); });
   }
+}
+function doorGreet(tries) { // the doorman bows and welcomes each arrival by their rank
+  const n = NPCS.door; if (!n) { if (tries < 25) setTimeout(() => doorGreet(tries + 1), 600); return; }
+  const key = { 'Royal Stag': 'royalstag', 'Stag': 'stag', 'Buck': 'buck', 'Fawn': 'fawn', 'Founder': 'founder', 'Guest': 'guest' }[SELF.tier] || 'founder';
+  setTimeout(() => { n.greetAnim = 'bow'; n.greetUntil = performance.now() + 3600; npcSay(n, key); }, 900);
 }
 function closeTalk() { talking = null; $('#talkp').style.display = 'none'; ENG.session = false; }
 $('#talkBtn').onclick = () => { const n = NPCS[$('#talkBtn').dataset.n]; if (!n) return; $('#talkp').style.display = 'block'; openTalk(n); };
@@ -450,6 +521,7 @@ function visitorDj() { // look-around mode still hears the DJ: the public status
   pull(); setInterval(() => { if (DJ.visitor && Date.now() > DJ.start + DJ.dur * 1000 - 200) pull(); }, 3000);
 }
 if (Q.has('debug')) L.DJ = DJ;
+if (Q.has('debug')) L.NPCS = NPCS;
 function openDj() { $('#djp').style.display = 'block'; djRender(); }
 $('#djBtn').onclick = () => { const p = $('#djp'); if (p.style.display === 'block') p.style.display = 'none'; else openDj(); };
 function djTick() { // volume follows distance to the booth; softer inside the studio and silent while you record

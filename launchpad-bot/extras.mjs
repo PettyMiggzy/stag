@@ -142,6 +142,10 @@ export function initExtras(X) {
         const days = parseFloat(args[0]) || 7, minEth = parseFloat(args[1]) || 0.005; const head = await provider.getBlockNumber(); const now = Date.now();
         await compSet({ on: true, startBlock: head, startTs: now, endTs: now + days * 86400000, minEth, prize: args.slice(2).join(" ") || "Hooded 20 #1 · Golden Sovereign (Mythic)" }); return reply(`Comp started: ${days} days, min ${minEth} ETH.`);
       }
+      if (cmd === "loungeopen" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only: open the lounge doors to every wallet, or put the 10M gate back
+        const on = (args[0] || "").toLowerCase() === "on"; await W.q("insert into bot_state(k,v) values('loungeOpen',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [on ? "1" : "0"]);
+        return reply(on ? "🚪 Lounge is OPEN to every wallet (free entry). Send /loungeopen off to put the 10M $STAG / Founder NFT gate back." : "🔒 Lounge gate is back: 10,000,000 $STAG or a Founder NFT.");
+      }
       if (cmd === "burn" || cmd === "burned" || cmd === "burns") return reply(await BURN.text());
       if ((cmd === "burndraft" || cmd === "burnpost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM
         if (cmd === "burndraft") { await BURN.sync(); return reply("<b>Draft of the daily burn post:</b>\n\n" + await BURN.text(true) + "\n\n<i>Not posted anywhere. Send /burnpost on to start posting it once a day, /burnpost off to stop.</i>"); }

@@ -1,9 +1,10 @@
 // Small static file server for the Stag House Records site: correct audio types and byte-range support (needed for iPhones and for seeking).
-import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const HIDE = new Set(['build.py', '_base.css', 'server.mjs', 'Dockerfile', '.dockerignore', 'README.txt']);
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav', '.mp4': 'video/mp4', '.webm': 'video/webm', '.txt': 'text/plain; charset=utf-8', '.glb': 'model/gltf-binary', '.wasm': 'application/wasm' };
+const ZC = new Map();
 const send = (res, code, body, type = 'text/plain; charset=utf-8', extra = {}) => { res.writeHead(code, { 'content-type': type, 'x-content-type-options': 'nosniff', ...extra }); res.end(body); };
 http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', 'text/plain', { allow: 'GET, HEAD' });
@@ -18,6 +19,12 @@ http.createServer((req, res) => {
     const isHtml = type.startsWith('text/html');
     const base = { 'content-type': type, 'accept-ranges': 'bytes', 'last-modified': st.mtime.toUTCString(), 'cache-control': isHtml ? 'no-cache' : 'public, max-age=86400', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin', 'x-frame-options': 'SAMEORIGIN' };
     const ims = req.headers['if-modified-since']; if (ims && new Date(ims) >= new Date(Math.floor(st.mtimeMs / 1000) * 1000)) { res.writeHead(304, base); return res.end(); }
+    const ae = String(req.headers['accept-encoding'] || ''); // text files go out brotli/gzip compressed (the three.js bundle drops from ~1.2 MB to ~0.3 MB); models and video are already compressed
+    if ((type.startsWith('text/') || type.includes('javascript') || type.includes('json') || type.includes('svg')) && !req.headers.range && st.size > 1024 && /\b(br|gzip)\b/.test(ae)) {
+      const enc = /\bbr\b/.test(ae) ? 'br' : 'gzip'; const key = file + '|' + enc + '|' + st.mtimeMs; let buf = ZC.get(key);
+      if (!buf) { const raw = fs.readFileSync(file); buf = enc === 'br' ? zlib.brotliCompressSync(raw, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } }) : zlib.gzipSync(raw, { level: 6 }); ZC.set(key, buf); }
+      base['content-encoding'] = enc; base['vary'] = 'Accept-Encoding'; base['content-length'] = buf.length; res.writeHead(200, base); return req.method === 'HEAD' ? res.end() : res.end(buf);
+    }
     const range = req.headers.range; let start = 0, end = st.size - 1, code = 200;
     if (range) {
       const m = /^bytes=(\d*)-(\d*)$/.exec(range);

@@ -24,6 +24,8 @@ export function initLounge(X) {
   const nonces = new Map(); // nonce -> expiry
   const clean = (s, n) => String(s || "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
 
+  let openAt = 0, openVal = false; // the doors-open switch (bot_state.loungeOpen = '1'), cached for 15 seconds
+  async function isOpen() { if (Date.now() - openAt < 15000) return openVal; try { const [r] = await q("select v from bot_state where k='loungeOpen'"); openVal = !!r && r.v === "1"; } catch {} openAt = Date.now(); return openVal; }
   async function resolve(addr) { // what does this wallet hold, counting every wallet linked to the same Telegram account
     const [l] = await q("select tg_id from wallet_links where address=$1 limit 1", [addr]).catch(() => []);
     let total, founders;
@@ -52,7 +54,7 @@ export function initLounge(X) {
   async function http(req, res, u) {
     if (!u.pathname.startsWith("/api/lounge/")) return false;
     if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET,POST,OPTIONS" }); res.end(); return true; }
-    if (u.pathname === "/api/lounge/status") { const all = rooms.flatMap((r) => [...r.players.values()]); json(res, 200, { online: all.length, rooms: rooms.map((r) => ({ n: r.n, count: r.players.size, cap: ROOM_CAP })), names: all.slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })), dj: djState() }); return true; }
+    if (u.pathname === "/api/lounge/status") { const all = rooms.flatMap((r) => [...r.players.values()]); json(res, 200, { open: await isOpen(), online: all.length, rooms: rooms.map((r) => ({ n: r.n, count: r.players.size, cap: ROOM_CAP })), names: all.slice(0, 12).map((p) => ({ name: p.name, tier: p.tier })), dj: djState() }); return true; }
     if (u.pathname === "/api/lounge/poker/leaders") { json(res, 200, { week: true, leaders: await pokerLeaders(10) }); return true; }
     if (u.pathname === "/api/lounge/nonce") {
       const n = HEX(12); nonces.set(n, Date.now() + 300000); for (const [k, v] of nonces) if (v < Date.now()) nonces.delete(k);
@@ -65,9 +67,10 @@ export function initLounge(X) {
       let rec = ""; try { rec = ethers.verifyMessage(msg, String(b.signature || "")).toLowerCase(); } catch {}
       if (rec !== a) { let ok1271 = false; try { if ((await rpc.getCode(a)).length > 2) { const c = new ethers.Contract(a, ["function isValidSignature(bytes32,bytes) view returns (bytes4)"], rpc); ok1271 = (await c.isValidSignature(ethers.hashMessage(msg), String(b.signature || ""))) === "0x1626ba7e"; } } catch {} if (!ok1271) { json(res, 200, { ok: false, error: "Signature did not match that wallet." }); return true; } }
       const r = await resolve(a);
+      const open = await isOpen(); if (!r.ok && open) { r.ok = true; r.tier = "Guest"; }
       if (!r.ok) { json(res, 200, { ok: false, locked: true, error: "The lounge opens at 10,000,000 $STAG (across your linked wallets) or with a Hooded 20, Sherwood Saints or WANTED NFT. Link wallets with /hoodrich in the Telegram bot." }); return true; }
       const tier = r.tier || "Founder";
-      const tok = sign({ a, tier, founder: r.founder, lvl: LEVEL[r.tier] ?? 0, exp: Date.now() + 12 * 3600e3 });
+      const tok = sign({ a, tier, founder: r.founder, lvl: LEVEL[r.tier] ?? 0, guest: r.tier === "Guest", exp: Date.now() + 12 * 3600e3 });
       json(res, 200, { ok: true, token: tok, tier, founder: r.founder, short: a.slice(0, 6) + "…" + a.slice(-4) }); return true;
     }
     json(res, 404, { ok: false }); return true;

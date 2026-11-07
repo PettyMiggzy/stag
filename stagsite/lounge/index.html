@@ -94,7 +94,7 @@ function box(w,h,d,m,x,y,z,p){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d
 /* ---------- room shell ---------- */
 const RW=24,RL=32,RH=7.2,ZC=0; // x:-12..12, z:-16..16
 // mirror floor + marble overlay
-if(!LOW){const refl=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*.6),textureHeight:Math.floor(H*.6),color:0x2c2c36});
+if(!LOW){const refl=new Reflector(new THREE.PlaneGeometry(RW,RL),{clipBias:.003,textureWidth:Math.floor(W*(CAP?.6:.5)),textureHeight:Math.floor(H*(CAP?.6:.5)),color:0x2c2c36});
 refl.rotation.x=-Math.PI/2;add(refl);}
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RL),new THREE.MeshStandardMaterial({map:marble,roughness:.12,metalness:.1,transparent:!LOW,opacity:LOW?1:.9}));
 floor.rotation.x=-Math.PI/2;floor.position.y=.004;floor.receiveShadow=true;add(floor);
@@ -218,6 +218,8 @@ for(const z of[-8,-4,0,4]){for(const sx of[-1,1]){
     g.font='600 46px Georgia,serif';g.fillText('10,000,000 $STAG  ·  OR A FOUNDER NFT',w/2,170);
     g.strokeStyle='#d8a843';g.lineWidth=4;g.strokeRect(14,14,w-28,h-28);});
   const sm=new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:0xffffff,emissiveIntensity:.9,metalness:.4,roughness:.35});
+  const draw=(l1,l2)=>{const c=t.image,g=c.getContext('2d');g.fillStyle='#0b0a0e';g.fillRect(0,0,1024,256);const gr=g.createLinearGradient(0,0,1024,0);gr.addColorStop(0,'#a8741f');gr.addColorStop(.5,'#ffe6a0');gr.addColorStop(1,'#a8741f');g.fillStyle=gr;g.textAlign='center';g.textBaseline='middle';g.font='700 70px Georgia,serif';g.fillText(l1,512,84);g.font='600 46px Georgia,serif';g.fillText(l2,512,170);g.strokeStyle='#d8a843';g.lineWidth=4;g.strokeRect(14,14,996,228);t.needsUpdate=true;};
+  window.__setSign=(open)=>open?draw('OPEN TO ALL','FREE ENTRY FOR NOW'):draw('MEMBERS ONLY','10,000,000 $STAG  ·  OR A FOUNDER NFT');
   const az=10;
   for(const sx of[-1,1]){box(.34,5.2,.34,M.gold,sx*3.3,2.6,az);box(.5,.12,.5,M.gold,sx*3.3,.06,az);}
   box(7.3,.55,.4,M.gold,0,5.2,az);box(6.7,1.7,.12,M.black,0,4.15,az);
@@ -513,7 +515,7 @@ function camAt(t){
 const composer=new EffectComposer(renderer);
 composer.setSize(W,H);
 composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(LOW?W/2:W,LOW?H/2:H),.55,.55,.92);composer.addPass(bloom);
+const bloom=new UnrealBloomPass(new THREE.Vector2(CAP?W:W/2,CAP?H:H/2),.55,.55,.92);composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 /* ---------- loop ---------- */
@@ -571,7 +573,7 @@ function mergeStatic(){
   console.log('merged static meshes:',before,'->',after);
 }
 mergeStatic();
-window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
+window.__lounge={THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
   await Promise.all([setupDancer(),loadStudioProps()]);
   for(const v of videos){try{await v.play();}catch(e){}}
