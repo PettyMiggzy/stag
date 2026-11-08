@@ -45,13 +45,49 @@ export function rouletteMult(k, n) { // returns the total multiplier on the stak
 const validKey = (k) => /^n([0-9]|[1-2][0-9]|3[0-6])$/.test(k) || ["red", "black", "odd", "even", "low", "high", "d1", "d2", "d3", "c1", "c2", "c3"].includes(k);
 const MINB = 25, MAXROUND = 5000, BET_MS = 20000, SPIN_MS = 7000, SHOW_MS = 5000;
 
+
+// ---------------- lucky wheel ----------------
+// 40 segments, one spin per bet. Each segment multiplies the bet. Pays back about 97.5% over time.
+const SEGS = [...Array(17).fill(0), ...Array(10).fill(0.5), ...Array(5).fill(1), ...Array(4).fill(2), 3, 3, 5, 10];
+export const WHEEL = (() => { const out = Array(SEGS.length).fill(0); const sorted = [...SEGS].sort((x, y) => y - x); sorted.forEach((m, k) => { out[(k * 13) % SEGS.length] = m; }); return out; })(); // rare segments spread around the rim
+export function wheelSpin() { const i = rnd(WHEEL.length); return { idx: i, mult: WHEEL[i] }; }
+
+// ---------------- baccarat (punto banco, 6 decks) ----------------
+const bval = (c) => { const r = c % 13; return r >= 8 ? 0 : r === 12 ? 1 : r + 2 > 9 ? 0 : r + 2; };
+const btotal = (h) => h.reduce((a, c) => a + bval(c), 0) % 10;
+export function baccaratRound(drawCard) {
+  const P = [drawCard(), drawCard()], B = [drawCard(), drawCard()]; let p = btotal(P), b = btotal(B);
+  if (p < 8 && b < 8) {
+    let p3 = null;
+    if (p <= 5) { p3 = drawCard(); P.push(p3); }
+    const v3 = p3 === null ? null : bval(p3);
+    let bDraw;
+    if (p3 === null) bDraw = b <= 5;
+    else if (b <= 2) bDraw = true; else if (b === 3) bDraw = v3 !== 8; else if (b === 4) bDraw = v3 >= 2 && v3 <= 7;
+    else if (b === 5) bDraw = v3 >= 4 && v3 <= 7; else if (b === 6) bDraw = v3 === 6 || v3 === 7; else bDraw = false;
+    if (bDraw) B.push(drawCard());
+  }
+  p = btotal(P); b = btotal(B);
+  return { P, B, p, b, winner: p > b ? "player" : b > p ? "banker" : "tie" };
+}
+export function baccaratPay(side, winner, bet) { // total returned to the player (stake included)
+  if (winner === "tie") return side === "tie" ? bet * 9 : bet; // ties push player/banker bets, pay 8 to 1
+  if (side !== winner) return 0; return side === "player" ? bet * 2 : Math.floor(bet * 1.95); // banker pays 0.95 to 1
+}
+
+// ---------------- stag dice (pass line / don't pass) ----------------
+export function diceRoll() { return [rnd(6) + 1, rnd(6) + 1]; }
+
 export class Casino {
-  constructor(deps) { this.send = deps.send; this.bj = new Map(); this.last = new Map(); this.rl = { phase: "bet", until: 0, bets: new Map(), watchers: new Map(), history: [], timer: null, result: -1 }; }
+  constructor(deps) { this.send = deps.send; this.bj = new Map(); this.dice = new Map(); this.last = new Map(); this.rl = { phase: "bet", until: 0, bets: new Map(), watchers: new Map(), history: [], timer: null, result: -1 }; }
   ok(me, ms = 450) { const now = Date.now(); if (now - (this.last.get(me.addr) || 0) < ms) return false; this.last.set(me.addr, now); return true; }
   async handle(me, m) {
     if (m.t === "cgslots") return this.slots(me, m);
     if (m.t === "cgbj") return this.blackjack(me, m);
     if (m.t === "cgrl") return this.roulette(me, m);
+    if (m.t === "cgwheel") return this.wheel(me, m);
+    if (m.t === "cgbac") return this.baccarat(me, m);
+    if (m.t === "cgdice") return this.stagdice(me, m);
     if (m.t === "cgatm") return this.atm(me);
   }
   push(me, o) { this.send(me.ws, { t: "cg", ...o }); }
@@ -117,9 +153,42 @@ export class Casino {
       R.timer = setTimeout(() => { R.timer = null; if (R.watchers.size) this.rlStart(); }, SHOW_MS);
     }, SPIN_MS);
   }
+  async wheel(me, m) {
+    if (!this.ok(me, 900)) return; const bet = BETS.includes(Number(m.bet)) ? Number(m.bet) : 0; if (!bet) return;
+    const c = await chipsFor(me.addr, me.name); if (c.chips < bet) return this.push(me, { g: "wheel", err: "Not enough play chips. See the ATM for your free daily top-up.", chips: c.chips });
+    c.chips -= bet; const s = wheelSpin(); const win = Math.floor(bet * s.mult); c.chips += win; saveChips(c);
+    this.push(me, { g: "wheel", idx: s.idx, mult: s.mult, segs: WHEEL, bet, win, chips: c.chips });
+  }
+  async baccarat(me, m) {
+    if (!this.ok(me, 900)) return; const bet = BETS.includes(Number(m.bet)) ? Number(m.bet) : 0; const side = ["player", "banker", "tie"].includes(m.side) ? m.side : ""; if (!bet || !side) return;
+    const c = await chipsFor(me.addr, me.name); if (c.chips < bet) return this.push(me, { g: "bac", err: "Not enough play chips. See the ATM for your free daily top-up.", chips: c.chips });
+    c.chips -= bet; const shoe = []; for (let d = 0; d < 6; d++) for (let k = 0; k < 52; k++) shoe.push(k); for (let i = shoe.length - 1; i > 0; i--) { const j = rnd(i + 1); [shoe[i], shoe[j]] = [shoe[j], shoe[i]]; }
+    const r = baccaratRound(() => shoe.pop()); const back = baccaratPay(side, r.winner, bet); c.chips += back; saveChips(c);
+    this.push(me, { g: "bac", player: r.P, banker: r.B, p: r.p, b: r.b, winner: r.winner, side, bet, win: back, chips: c.chips });
+  }
+  async stagdice(me, m) {
+    if (!this.ok(me, 700)) return; const c = await chipsFor(me.addr, me.name); let g = this.dice.get(me.addr);
+    if (!g || g.over) { // a fresh come-out roll needs a bet
+      const bet = BETS.includes(Number(m.bet)) ? Number(m.bet) : 0; const side = m.side === "dont" ? "dont" : "pass"; if (!bet) return;
+      if (c.chips < bet) return this.push(me, { g: "dice", err: "Not enough play chips. See the ATM for your free daily top-up.", chips: c.chips });
+      c.chips -= bet; g = { bet, side, point: 0, over: false }; this.dice.set(me.addr, g);
+    }
+    const d = diceRoll(), t = d[0] + d[1]; let res = "", back = 0;
+    if (!g.point) { // come-out roll
+      if (t === 7 || t === 11) { res = g.side === "pass" ? "Natural! You win" : "Seven out. Dealer wins"; back = g.side === "pass" ? g.bet * 2 : 0; g.over = true; }
+      else if (t === 2 || t === 3 || t === 12) { if (g.side === "pass") { res = "Craps. Dealer wins"; g.over = true; } else if (t === 12) { res = "Twelve: push"; back = g.bet; g.over = true; } else { res = "Craps! You win"; back = g.bet * 2; g.over = true; } }
+      else { g.point = t; res = `Point is ${t}. Roll again`; }
+    } else { // chasing the point
+      if (t === g.point) { res = g.side === "pass" ? "Made the point! You win" : "Point made. Dealer wins"; back = g.side === "pass" ? g.bet * 2 : 0; g.over = true; }
+      else if (t === 7) { res = g.side === "pass" ? "Seven out. Dealer wins" : "Seven out! You win"; back = g.side === "pass" ? 0 : g.bet * 2; g.over = true; }
+      else res = `Rolled ${t}. Point is ${g.point}`;
+    }
+    if (g.over) { c.chips += back; saveChips(c); }
+    this.push(me, { g: "dice", dice: d, total: t, point: g.over ? 0 : g.point, over: g.over, res, side: g.side, bet: g.bet, win: back, chips: c.chips });
+  }
   async atm(me) {
     const c = await chipsFor(me.addr, me.name);
     this.push(me, { g: "atm", chips: c.chips, used: c.topup === todayStr(), level: TOPUP_LEVEL, buy: false });
   }
-  drop(me) { this.rl.watchers.delete(me.addr); this.bj.delete(me.addr); }
+  drop(me) { this.rl.watchers.delete(me.addr); this.bj.delete(me.addr); this.dice.delete(me.addr); }
 }

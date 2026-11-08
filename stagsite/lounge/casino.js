@@ -26,7 +26,7 @@ export function initCasino({ L, sendWs, pos, $, say, onEvent }) {
   const btn = document.createElement('button'); btn.id = 'playBtn'; document.body.appendChild(btn);
   const REDS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const S = { chips: null, bet: 100, slots: { reels: [0, 0, 0], sym: ['🦌', '👑', '💎', '🔔', '🍒', '🍋'], spin: false, msg: '' }, bj: null, bjMsg: '', rl: { phase: 'bet', until: 0, history: [], result: -1, mine: {}, chip: 50, msg: '', watching: false }, atm: null };
+  const S = { chips: null, bet: 100, slots: { reels: [0, 0, 0], sym: ['🦌', '👑', '💎', '🔔', '🍒', '🍋'], spin: false, msg: '' }, bj: null, bjMsg: '', wheel: { spin: false, msg: '', last: null, segs: [] }, bac: { side: 'banker', res: null, msg: '' }, dice: { side: 'pass', g: null, msg: '' }, rl: { phase: 'bet', until: 0, history: [], result: -1, mine: {}, chip: 50, msg: '', watching: false }, atm: null };
   let near = null, game = null, tmr = null;
   const BETS = [50, 100, 250, 500, 1000], RCHIPS = [25, 50, 100, 250, 500];
   const bal = () => `<span class="bal">🪙 ${S.chips == null ? '…' : Number(S.chips).toLocaleString()} play chips</span>`;
@@ -75,6 +75,31 @@ export function initCasino({ L, sendWs, pos, $, say, onEvent }) {
       box.querySelectorAll('[data-chip]').forEach((x) => x.onclick = () => { R.chip = +x.dataset.chip; render(); });
       box.querySelectorAll('[data-k]').forEach((x) => x.onclick = () => sendWs({ t: 'cgrl', a: 'bet', k: x.dataset.k, amt: R.chip }));
       $('#cgClr').onclick = () => sendWs({ t: 'cgrl', a: 'clear' }); $('#cgX').onclick = close;
+    } else if (game === 'wheel') {
+      const w = S.wheel; box.innerHTML = `<h3>LUCKY WHEEL ${bal()}</h3><div class="sub">One spin, one bet. Every segment multiplies your bet (× pays nothing, ½ gives half back). Play chips only.</div>
+        <div class="big">${w.spin ? '🎡 …' : (w.last != null ? (w.last === 0 ? '×' : '×' + w.last) : '🎡')}</div><div class="msg">${esc(w.msg)}</div>${betRow()}
+        <div class="row"><button id="cgSpin" ${w.spin ? 'disabled' : ''}>🎡 SPIN THE WHEEL</button><button id="cgX">Close</button></div>`;
+      box.querySelectorAll('[data-bet]').forEach((b) => b.onclick = () => { S.bet = +b.dataset.bet; render(); });
+      $('#cgSpin').onclick = () => { if (S.wheel.spin) return; S.wheel.spin = true; S.wheel.msg = ''; render(); sendWs({ t: 'cgwheel', bet: S.bet }); }; $('#cgX').onclick = close;
+    } else if (game === 'baccarat') {
+      const b = S.bac, r = b.res; const hand = (h) => (h || []).map(cardHtml).join('');
+      box.innerHTML = `<h3>BACCARAT ${bal()}</h3><div class="sub">Closest to 9 wins. Banker pays 0.95 to 1, Tie pays 8 to 1. Play chips only.</div>
+        ${r ? `<div class="sub">Player (${r.p})</div><div class="cards">${hand(r.player)}</div><div class="sub">Banker (${r.b})</div><div class="cards">${hand(r.banker)}</div>` : ''}
+        <div class="msg">${esc(b.msg)}</div>
+        <div class="row">${['player', 'banker', 'tie'].map((x) => `<button data-side="${x}" class="${b.side === x ? 'on' : ''}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div>${betRow()}
+        <div class="row"><button id="cgDeal">Deal</button><button id="cgX">Close</button></div>`;
+      box.querySelectorAll('[data-bet]').forEach((x) => x.onclick = () => { S.bet = +x.dataset.bet; render(); });
+      box.querySelectorAll('[data-side]').forEach((x) => x.onclick = () => { S.bac.side = x.dataset.side; render(); });
+      $('#cgDeal').onclick = () => { S.bac.msg = ''; sendWs({ t: 'cgbac', bet: S.bet, side: S.bac.side }); }; $('#cgX').onclick = close;
+    } else if (game === 'dice') {
+      const d = S.dice, g = d.g; const live = g && !g.over; const face = (n) => '⚀⚁⚂⚃⚄⚅'[n - 1];
+      box.innerHTML = `<h3>STAG DICE ${bal()}</h3><div class="sub">Pass line: 7 or 11 wins on the first roll, 2, 3 or 12 loses; any other number is your point, make it again before a 7. "Don't pass" is the reverse. Play chips only.</div>
+        <div class="big">${g ? face(g.dice[0]) + ' ' + face(g.dice[1]) : '🎲'}</div><div class="msg">${esc(d.msg)}</div>
+        ${live ? `<div class="sub" style="text-align:center">Point: ${g.point} · bet ${g.bet}</div>` : `<div class="row">${['pass', 'dont'].map((x) => `<button data-side="${x}" class="${d.side === x ? 'on' : ''}">${x === 'pass' ? 'Pass line' : "Don't pass"}</button>`).join('')}</div>${betRow()}`}
+        <div class="row"><button id="cgRoll">🎲 ${live ? 'Roll for the point' : 'Roll'}</button><button id="cgX">Close</button></div>`;
+      box.querySelectorAll('[data-bet]').forEach((x) => x.onclick = () => { S.bet = +x.dataset.bet; render(); });
+      box.querySelectorAll('[data-side]').forEach((x) => x.onclick = () => { S.dice.side = x.dataset.side; render(); });
+      $('#cgRoll').onclick = () => sendWs({ t: 'cgdice', bet: S.bet, side: S.dice.side }); $('#cgX').onclick = close;
     } else if (game === 'atm') {
       const a = S.atm || {};
       box.innerHTML = `<h3>STAG ATM ${bal()}</h3><div class="sub">Play chips are for fun only. They have no cash value and can't be cashed out.</div>
@@ -95,7 +120,7 @@ export function initCasino({ L, sendWs, pos, $, say, onEvent }) {
     game = g; render();
     if (g === 'roulette') { sendWs({ t: 'cgrl', a: 'watch' }); tmr = setInterval(() => { if (game === 'roulette' && S.rl.phase === 'bet') render(); }, 500); }
     if (g === 'atm') sendWs({ t: 'cgatm' });
-    if (g === 'slots' || g === 'blackjack') sendWs({ t: 'cgatm' }); // learns the balance
+    if (g !== 'roulette' && g !== 'atm') sendWs({ t: 'cgatm' }); // learns the balance
   }
   function onMsg(m) {
     if (m.chips != null) S.chips = m.chips;
@@ -113,6 +138,16 @@ export function initCasino({ L, sendWs, pos, $, say, onEvent }) {
       if (m.history) R.history = m.history; if (m.result !== undefined) R.result = m.result; if (m.mine) R.mine = m.mine;
       if (m.phase === 'spin' && L.cardRoom.roulette) L.cardRoom.roulette.spin(m.result, m.spinMs || 7000);
       if (game === 'roulette') render();
+    } else if (m.g === 'wheel') {
+      const w = S.wheel; if (m.err) { w.spin = false; w.msg = m.err; render(); return; }
+      if (L.cardRoom.bigWheel) L.cardRoom.bigWheel.spin(m.idx, 4200);
+      setTimeout(() => { w.spin = false; w.last = m.mult; w.msg = m.win > m.bet ? `You win ${m.win.toLocaleString()} chips! 🎉` : m.win > 0 ? `You get ${m.win.toLocaleString()} back.` : 'No win. Spin again?'; S.chips = m.chips; render(); }, 4300);
+    } else if (m.g === 'bac') {
+      if (m.err) { S.bac.msg = m.err; render(); return; }
+      S.bac.res = m; S.bac.msg = `${m.winner === 'tie' ? 'Tie' : m.winner[0].toUpperCase() + m.winner.slice(1) + ' wins'}${m.win > m.bet ? ` · you win ${m.win.toLocaleString()}` : m.win === m.bet ? ' · push' : ' · you lose'}`; render();
+    } else if (m.g === 'dice') {
+      if (m.err) { S.dice.msg = m.err; render(); return; }
+      S.dice.g = m; S.dice.msg = `${m.res}${m.over && m.win > m.bet ? ` · +${m.win.toLocaleString()}` : ''}`; render();
     } else if (m.g === 'atm') { S.atm = m; render(); }
   }
   const act = () => { if (!near) return; if (game) { close(); return; } openGame(near.type); };

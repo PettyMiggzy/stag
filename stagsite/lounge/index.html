@@ -343,7 +343,7 @@ const cardRoom={seats:[],stations:[],room:{x0:4.0,x1:11.9,z0:3.3,z1:15.7},center
   const suit=(ch,col)=>canvasTex(256,256,(g,w,h)=>{g.fillStyle='#0b0909';g.fillRect(0,0,w,h);g.strokeStyle='#d8a843';g.lineWidth=6;g.strokeRect(10,10,w-20,h-20);g.fillStyle=col;g.font='160px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(ch,w/2,h/2+10);});
   const art=(x,z,ry,ch,col)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshStandardMaterial({map:suit(ch,col),emissiveMap:suit(ch,col),emissive:0xffffff,emissiveIntensity:.5,roughness:.6}));m.position.set(x,2.0,z);m.rotation.y=ry;m.userData.keep=true;scene.add(m);S(1.62,1.62,.05,M.gold,x,2.0,z+(ry===0?-.03:ry===Math.PI?.03:0));};
   art(6.0,Z0+.1,0,'♠','#e9c97a');art(9.8,Z0+.1,0,'♥','#e0405a');art(6.0,Z1-.1,Math.PI,'♣','#e9c97a');art(9.0,Z1-.1,Math.PI,'♦','#e0405a');
-  for(const z of[10.4,12.4,14.4]){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.1),new THREE.MeshStandardMaterial({color:0x1d1415,roughness:.9}));m.position.set(X1-.1,1.9,z);m.rotation.y=-Math.PI/2;scene.add(m);S(.05,1.22,1.52,M.gold,X1-.06,1.9,z);}
+  for(const z of[]){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.1),new THREE.MeshStandardMaterial({color:0x1d1415,roughness:.9}));m.position.set(X1-.1,1.9,z);m.rotation.y=-Math.PI/2;scene.add(m);S(.05,1.22,1.52,M.gold,X1-.06,1.9,z);}
   // the table: oval felt top, gold rail, pedestal
   const top=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.12,56),felt);top.scale.set(TA,1,TB);top.position.set(CX,TY,CZ);top.receiveShadow=true;scene.add(top);
   const rail=new THREE.Mesh(new THREE.TorusGeometry(1,.1,14,72),new THREE.MeshStandardMaterial({color:0x1c0f0c,roughness:.5,metalness:.2}));rail.rotation.x=Math.PI/2;rail.scale.set(TA,TB,1);rail.position.set(CX,TY+.05,CZ);scene.add(rail);
@@ -459,7 +459,44 @@ const cardRoom={seats:[],stations:[],room:{x0:4.0,x1:11.9,z0:3.3,z1:15.7},center
     const gl2=new THREE.PointLight(0x35ff8a,3,3.2,1.8);gl2.position.set(3.2,1.4,4.9);scene.add(gl2);
     station('atm','atm',3.2,4.9,1.8,'ATM');col(3.45,4.0,4.55,5.25);
   }
-  cardRoom.update=(dt)=>{if(cardRoom.updateRoulette)cardRoom.updateRoulette(dt);const t=performance.now()/1000;if(cardRoom.slotMats)cardRoom.slotMats.forEach((m,i)=>{m.emissiveIntensity=.5+.25*Math.sin(t*2+i);});if(cardRoom.atmMat)cardRoom.atmMat.emissiveIntensity=.65+.2*Math.sin(t*1.6);};
+
+  // -- the lucky wheel on the east wall
+  {
+    const SEGS=[10,0,0,0,0,0,.5,.5,.5,.5,1,2,2,5,0,0,0,0,0,0,.5,.5,.5,1,1,2,3,0,0,0,0,0,0,.5,.5,.5,1,1,2,3];
+    const wt=canvasTex(512,512,(g,w,h)=>{g.translate(256,256);const colr=(m)=>m===0?'#1b1018':m===.5?'#35506b':m===1?'#1d8a4f':m===2?'#c79a2b':m===3?'#d9732a':m===5?'#d12a8e':'#c8102e';
+      for(let i=0;i<40;i++){const a0=i/40*Math.PI*2-Math.PI/2,a1=(i+1)/40*Math.PI*2-Math.PI/2;g.beginPath();g.moveTo(0,0);g.arc(0,0,250,a0,a1);g.closePath();g.fillStyle=colr(SEGS[i]);g.fill();g.strokeStyle='#e9c97a';g.lineWidth=2;g.stroke();
+        g.save();g.rotate((i+.5)/40*Math.PI*2);g.fillStyle='#fff';g.font='bold 26px Georgia,serif';g.textAlign='center';g.fillText(SEGS[i]===.5?'½':SEGS[i]===0?'×':String(SEGS[i]),0,-205);g.restore();}
+      g.beginPath();g.arc(0,0,48,0,Math.PI*2);g.fillStyle='#16090f';g.fill();g.strokeStyle='#e9c97a';g.lineWidth=5;g.stroke();g.fillStyle='#e9c97a';g.font='bold 22px Georgia,serif';g.textAlign='center';g.fillText('STAG',0,-2);g.fillText('WHEEL',0,22);},[1,1]);
+    const g=new THREE.Group();g.position.set(11.76,2.15,11.3);g.rotation.y=-Math.PI/2;scene.add(g);
+    const back=new THREE.Mesh(new THREE.CylinderGeometry(1.12,1.12,.1,40),black);back.rotation.x=Math.PI/2;back.position.z=-.02;g.add(back);
+    const ringG=new THREE.Mesh(new THREE.TorusGeometry(1.08,.05,8,48),gold);ringG.position.z=.04;g.add(ringG);
+    const disc=new THREE.Mesh(new THREE.CircleGeometry(1.0,48),new THREE.MeshStandardMaterial({map:wt,roughness:.6,emissiveMap:wt,emissive:0xffffff,emissiveIntensity:.35}));disc.position.z=.05;disc.userData.keep=true;g.add(disc);
+    const ptr=new THREE.Mesh(new THREE.ConeGeometry(.09,.26,3),new THREE.MeshStandardMaterial({color:0xe03050,emissive:0x600010}));ptr.rotation.z=Math.PI;ptr.position.set(0,1.12,.12);g.add(ptr);
+    const W={disc,sp:null,a:0};cardRoom.bigWheel=W;
+    W.spin=(idx,ms)=>{W.sp={a0:W.a,a1:W.a+Math.PI*2*5+((idx+.5)/40*Math.PI*2-(W.a%(Math.PI*2))+Math.PI*2)%(Math.PI*2),t0:performance.now(),ms};};
+    cardRoom.updateWheel=()=>{const sp=W.sp;if(!sp)return;const k=Math.min(1,(performance.now()-sp.t0)/sp.ms),e=1-Math.pow(1-k,3);W.a=sp.a0+(sp.a1-sp.a0)*e;disc.rotation.z=W.a;if(k>=1)W.sp=null;};
+    station('wheel','wheel',10.3,11.3,2.0,'Lucky Wheel');
+  }
+  // -- baccarat table (south-east corner)
+  {
+    const bx=10.85,bz=14.3;
+    const bt=canvasTex(512,1024,(g,w,h)=>{g.fillStyle='#0c5a3b';g.fillRect(0,0,w,h);g.strokeStyle='#e9c97a';g.lineWidth=4;g.fillStyle='#e9c97a';g.font='bold 54px Georgia,serif';g.textAlign='center';g.save();g.translate(w/2,150);g.fillText('BACCARAT',0,0);g.restore();g.font='bold 40px Georgia,serif';
+      [['PLAYER',330],['BANKER',560],['TIE',790]].forEach(([t,y])=>{g.strokeRect(70,y-90,w-140,170);g.fillText(t,w/2,y+12);});g.font='28px Georgia,serif';g.fillText('BANKER PAYS 0.95 · TIE 8 TO 1',w/2,980);},[1,1]);
+    box(1.5,.8,2.9,black,bx,.4,bz);box(1.56,.05,2.96,gold,bx,.82,bz);
+    const bp=new THREE.Mesh(new THREE.PlaneGeometry(1.4,2.8),new THREE.MeshStandardMaterial({map:bt,roughness:.9}));bp.rotation.x=-Math.PI/2;bp.position.set(bx,.86,bz);bp.userData.keep=true;scene.add(bp);
+    station('baccarat','baccarat',bx-1.3,bz,2.1,'Baccarat');col(bx-.8,bx+.8,bz-1.5,bz+1.5);
+  }
+  // -- stag dice cabinets on the north wall
+  {
+    const dt=canvasTex(256,320,(g,w,h)=>{g.fillStyle='#0b0709';g.fillRect(0,0,w,h);g.fillStyle='#ffc566';g.font='bold 40px Georgia,serif';g.textAlign='center';g.fillText('STAG',w/2,60);g.fillText('DICE',w/2,104);g.fillStyle='#16090f';g.fillRect(20,130,w-40,120);g.font='70px serif';g.fillText('⚄ ⚂',w/2,215);g.fillStyle='#ff4aa8';g.font='bold 26px system-ui';g.fillText('PLAY CHIPS',w/2,290);},[1,1]);
+    const dmat=new THREE.MeshStandardMaterial({map:dt,emissiveMap:dt,emissive:0xffffff,emissiveIntensity:.6,roughness:.5});cardRoom.diceMat=dmat;
+    [10.05,11.0].forEach((x)=>{const g=new THREE.Group();g.position.set(x,0,3.72);scene.add(g);
+      const b=(w,h,d,m,xx,y,zz)=>{const q=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);q.position.set(xx,y,zz);g.add(q);return q;};
+      b(.78,1.35,.62,black,0,.68,0);b(.82,.12,.66,gold,0,1.38,0);b(.7,.42,.5,M.black,0,1.62,-.04);
+      const scr=new THREE.Mesh(new THREE.PlaneGeometry(.62,.78),dmat);scr.position.set(0,.98,.32);scr.userData.keep=true;g.add(scr);b(.6,.06,.04,M.pink,0,1.82,.24);b(.28,.1,.2,gold,0,.55,.4);
+      station('dice','dice',x,4.7,1.6,'Stag Dice');col(x-.45,x+.45,3.38,4.06);});
+  }
+  cardRoom.update=(dt)=>{if(cardRoom.updateRoulette)cardRoom.updateRoulette(dt);if(cardRoom.updateWheel)cardRoom.updateWheel();const t=performance.now()/1000;if(cardRoom.slotMats)cardRoom.slotMats.forEach((m,i)=>{m.emissiveIntensity=.5+.25*Math.sin(t*2+i);});if(cardRoom.atmMat)cardRoom.atmMat.emissiveIntensity=.65+.2*Math.sin(t*1.6);};
 
   cardRoom.setTable=(v)=>{ // v = the table view from the server (or null to clear it)
     const b=(v&&v.board)||[];board.forEach((m,i)=>{m.visible=i<b.length;if(i<b.length)m.material.map=cardTex(b[i]);});
