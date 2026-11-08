@@ -451,7 +451,7 @@ const NPC_DEFS = [
       { p: [5.5, -10.2], a: 'agree', t: [5, 8] }, { p: [5.5, -4], a: 'look', t: [5, 8] }, { p: [3.0, 1.6], a: 'look', t: [2, 3] }, { p: [3.0, 8], a: 'chat', t: [6, 9] },
     ], hello: ['hi', 'classy', 'enjoy', 'safe'] },
   // the casino tables: a blackjack dealer and a roulette croupier
-  { id: 'bj', name: 'Vince', file: 'bj', x: 9.3, z: 8.5, ry: 0, h: 1.8, reach: 0, hello: ['hi'], anims: ['idle', 'chat', 'agree', 'look', 'wave'],
+  { id: 'bj', name: 'Vince', file: 'bj', x: 8.3, z: 8.5, ry: 0, h: 1.8, reach: 0, hello: ['hi'], anims: ['idle', 'chat', 'agree', 'look', 'wave'],
     routine: [{ p: null, face: 0, a: 'idle', t: [6, 9] }, { p: null, face: .3, a: 'look', t: [3, 5] }, { p: null, face: 0, a: 'agree', t: [3, 4] }, { p: null, face: -.3, a: 'look', t: [3, 5] }] },
   { id: 'rl', name: 'Mina', file: 'rl', x: 7.0, z: 4.25, ry: 0, h: 1.75, reach: 0, hello: ['hi'], anims: ['idle', 'chat', 'agree', 'look', 'wave'],
     routine: [{ p: null, face: 0, a: 'idle', t: [6, 9] }, { p: null, face: .35, a: 'look', t: [3, 5] }, { p: null, face: 0, a: 'chat', t: [3, 4] }, { p: null, face: -.35, a: 'look', t: [3, 5] }] },

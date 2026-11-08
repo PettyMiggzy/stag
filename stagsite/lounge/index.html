@@ -423,7 +423,7 @@ const cardRoom={seats:[],stations:[],room:{x0:4.0,x1:11.9,z0:0.5,z1:15.7},center
   }
   // -- blackjack: a half-moon table, dealer on the north side
   {
-    const BX=9.3,BZ=9.0;
+    const BX=8.3,BZ=9.0;
     const felt2=new THREE.MeshStandardMaterial({color:0x0c5a3b,roughness:.95});
     const half=new THREE.Mesh(new THREE.CylinderGeometry(1.55,1.55,.1,48,1,false,0,Math.PI),felt2);half.rotation.y=Math.PI/2*0+(-Math.PI/2);half.position.set(BX,.78,BZ);scene.add(half);
     const rim=new THREE.Mesh(new THREE.TorusGeometry(1.55,.08,10,48,Math.PI),new THREE.MeshStandardMaterial({color:0x1c0f0c,roughness:.5,metalness:.2}));rim.rotation.x=Math.PI/2;rim.rotation.z=0;rim.position.set(BX,.84,BZ);rim.rotation.order='YXZ';rim.rotation.y=0;scene.add(rim);
