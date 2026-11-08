@@ -185,13 +185,18 @@ function makeAvatar(info) {
 // ---- house guests: a few extras (clearly labelled) who wander between the bar, the floor and the stage rail so the room is never empty
 const _FR = new THREE.Frustum(), _PM = new THREE.Matrix4(), _SP = new THREE.Sphere(new THREE.Vector3(), 2.4);
 const inView = (x, y, z, r = 2.4) => { _SP.center.set(x, y, z); _SP.radius = r; return _FR.intersectsSphere(_SP); };
-const GUESTS = []; const GBAR = [[-4.2, -11.5], [-2.5, -11.5], [0.8, -11.5], [2.5, -11.5], [4.2, -11.5]];
+const GUESTS = []; const GBAR = [[-5.4, -11.5], [5.6, -11.5], [0.1, -11.5]]; const GCROWD = [[-4.2, -11.5], [-3.0, -11.5], [-0.6, -11.5], [1.0, -11.5], [2.6, -11.5], [4.0, -11.5]]; // the crowd always stays on the bar rail
 const GFLOOR = [[-3.0, -6.8], [3.0, -6.8], [-4.8, -1.5], [4.8, -1.5], [-3.6, 3.2], [2.4, 3.0], [0, -8.6], [-1.6, 0.5], [1.6, 0.5]];
 const GTINT = [[1, .8, .75], [.8, .9, 1], [.85, 1, .85], [1, .95, .7], [.95, .8, 1]];
 function guestPick(g) { const u = g.userData; const atBar = Math.random() < .45; const L2 = atBar ? GBAR : GFLOOR; const s = L2[Math.floor(Math.random() * L2.length)]; u.gx = s[0] + (Math.random() - .5) * .3; u.gz = s[1]; u.bar = atBar; u.arrived = false; }
 function guestsInit() {
   if (!AV) { setTimeout(guestsInit, 2500); return; }
-  const n = L.gpuIntel ? 2 : 4;
+  const n = L.gpuIntel ? 2 : 4, nc = L.gpuIntel ? 3 : 6;
+  for (let i = 0; i < nc; i++) { // bar crowd
+    const s = GCROWD[i]; const g = makeAvatar({ name: 'House guest', tier: '', x: s[0], z: s[1] + .2, ry: Math.PI });
+    const t = GTINT[(i + 2) % GTINT.length]; g.traverse((o) => { if ((o.isMesh || o.isSkinnedMesh) && o.material && o.material.color) { o.material = o.material.clone(); o.material.color.setRGB(t[0] * .8, t[1] * .8, t[2] * .8); } });
+    g.userData.tag.visible = false; g.userData.stay = true; g.userData.gx = s[0]; g.userData.gz = s[1]; g.userData.bar = true; g.userData.arrived = false; GUESTS.push(g);
+  }
   for (let i = 0; i < n; i++) {
     const g = makeAvatar({ name: 'House guest', tier: '', x: (i % 2 ? 1 : -1) * (2 + i), z: 6 + i * .5, ry: Math.PI });
     const t = GTINT[i % GTINT.length]; g.traverse((o) => { if ((o.isMesh || o.isSkinnedMesh) && o.material && o.material.color) { o.material = o.material.clone(); o.material.color.setRGB(t[0] * .8, t[1] * .8, t[2] * .8); } });
@@ -204,13 +209,13 @@ function guestTick(dt) {
   const now = performance.now();
   for (const g of GUESTS) {
     const u = g.userData; if (!u.mixer) continue;
-    const dp = Math.hypot(g.position.x - pos.x, g.position.z - pos.z); u.tag.visible = dp < 12; const vis = dp < 3 || inView(g.position.x, 1, g.position.z); g.visible = vis;
+    const dp = Math.hypot(g.position.x - pos.x, g.position.z - pos.z); u.tag.visible = !u.stay && dp < 12; const vis = dp < 3 || inView(g.position.x, 1, g.position.z); g.visible = vis;
     const dx = u.gx - g.position.x, dz = u.gz - g.position.z, d = Math.hypot(dx, dz);
     if (d > .12) { const sp = Math.min(d, 1.1 * dt); g.position.x += dx / d * sp; g.position.z += dz / d * sp; g.rotation.y += angDiff(Math.atan2(dx, dz), g.rotation.y) * Math.min(1, dt * 6); playAnim(u, 'walk'); u.glass.visible = false; }
     else {
-      if (!u.arrived) { u.arrived = true; u.until = now + (5 + Math.random() * 7) * 1000; u.act = u.bar ? 'drink' : (Math.random() < .3 ? 'wave' : 'idle'); }
+      if (!u.arrived) { u.arrived = true; u.until = now + (5 + Math.random() * 7) * 1000; u.act = u.stay ? (['drink', 'drink', 'idle', 'wave', 'drink'][Math.floor(Math.random() * 5)]) : u.bar ? 'drink' : (Math.random() < .3 ? 'wave' : 'idle'); }
       g.rotation.y += angDiff(u.bar ? Math.PI : (Math.atan2(-g.position.x, -(g.position.z + 4)) ), g.rotation.y) * Math.min(1, dt * 4); playAnim(u, u.act); u.glass.visible = u.act === 'drink';
-      if (now > u.until) guestPick(g);
+      if (now > u.until) { if (u.stay) { u.arrived = false; } else guestPick(g); }
     }
     if (vis && (dp < 26 || frameN % 4 === 0)) u.mixer.update(dp < 26 ? dt : dt * 4);
     if (u.glass.visible && u.hand) { u.hand.getWorldPosition(_HP); g.worldToLocal(_HP); u.glass.position.set(_HP.x, _HP.y + .07, _HP.z); }
@@ -475,7 +480,8 @@ const NPCS = {}; let LINES = {}; let talking = null;
 const voiceVol = (npc) => { if (!me) return .6; const d = Math.hypot(npc.obj.position.x - pos.x, npc.obj.position.z - pos.z); return Math.max(.25, Math.min(1, 1.2 - d / 14)); };
 async function loadNpcs() {
   try { LINES = await (await fetch('./assets/npc/voices/lines.json')).json(); } catch {}
-  for (const d of NPC_DEFS) {
+  const PRI = ['door', 'bar', 'patron', 'dj', 'patrol', 'dealer', 'eng', 'artist', 'rl', 'bj']; const queue = [...NPC_DEFS].sort((a, b) => PRI.indexOf(a.id) - PRI.indexOf(b.id));
+  const loadOne = async (d) => {
     try {
       const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
       const bb = new THREE.Box3().setFromObject(g.scene, true); const sc = (d.h || 1.8) / (bb.max.y - bb.min.y);
@@ -489,7 +495,8 @@ async function loadNpcs() {
       const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
       const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', dealer: 'Poker dealer', artist: 'Recording a demo', bj: 'Blackjack dealer', rl: 'Roulette croupier' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
     } catch (e) { console.warn('npc failed', d.file, e); }
-  }
+  };
+  await Promise.all([0, 1, 2].map(async () => { while (queue.length) await loadOne(queue.shift()); })); // three at a time, the door and the bar first
   try { const gm = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffa040, emissiveIntensity: .9, transparent: true, opacity: .85 }); for (const [x, z] of [[-1.5, -12.95], [-1.95, -13.3], [1.2, -13.0]]) { const g = new THREE.Mesh(new THREE.CylinderGeometry(.045, .035, .12, 14), gm); g.position.set(x, 1.2, z); scene.add(g); } } catch (e) {}
   try { const b = await loadGLB('./assets/npc/djbooth.glb'); b.scene.updateMatrixWorld(true); let bb = new THREE.Box3().setFromObject(b.scene); const sz = bb.getSize(new THREE.Vector3()); b.scene.scale.multiplyScalar(2.6 / Math.max(sz.x, sz.z)); b.scene.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(b.scene); b.scene.position.set(8.6 - (bb.min.x + bb.max.x) / 2, -bb.min.y, -11.2 - (bb.min.z + bb.max.z) / 2); scene.add(b.scene); } catch (e) { console.warn('dj booth model missing'); }
 }
