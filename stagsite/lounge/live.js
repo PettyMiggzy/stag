@@ -265,7 +265,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
   ws.onclose = () => { if (ws !== mine || denied) return; say('sys', '', retries ? 'Still trying to reconnect…' : 'Connection lost. Reconnecting…'); PK.seat = -1; PK.watching = false; setTimeout(() => { if (!denied) openSocket(); }, Math.min(8000, 1000 * 2 ** retries++)); };
 }
 const sendWs = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
-const CG = initCasino({ L, sendWs, pos, $, say, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
+const CG = initCasino({ L, sendWs, pos, $, say, busy: () => PK.seat >= 0, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
 
 /* ---------- controls ---------- */
 const STAGE = { x0: -2.5, x1: 2.5, z0: -9.8, z1: 3.5 };
