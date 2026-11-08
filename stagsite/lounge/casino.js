@@ -1,6 +1,6 @@
 // Casino floor client: walk up to a table or machine, press E (or tap the button), play. PLAY CHIPS ONLY, no cash value.
 // All results come from the server; this file only draws them.
-export function initCasino({ L, sendWs, pos, $, say, onEvent, busy }) {
+export function initCasino({ L, sendWs, pos, $, say, onEvent, busy, duel }) {
   const CSS = `
 #playBtn{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:12;display:none;padding:10px 20px;border-radius:999px;border:1px solid #e9c97a;background:rgba(14,6,14,.9);color:#ffe9a8;font:700 15px system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;box-shadow:0 0 22px rgba(255,200,90,.35)}
 #cg{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:13;display:none;width:min(560px,96vw);max-height:84vh;overflow:auto;background:rgba(14,6,14,.94);border:1px solid rgba(233,201,122,.55);border-radius:16px;padding:14px;color:#f3e7c9;font:14px system-ui,sans-serif;box-shadow:0 0 40px rgba(0,0,0,.6)}
@@ -150,7 +150,7 @@ export function initCasino({ L, sendWs, pos, $, say, onEvent, busy }) {
       S.dice.g = m; S.dice.msg = `${m.res}${m.over && m.win > m.bet ? ` · +${m.win.toLocaleString()}` : ''}`; render();
     } else if (m.g === 'atm') { S.atm = m; render(); }
   }
-  const act = () => { if (busy && busy()) return; if (!near) return; if (game) { close(); return; } openGame(near.type); };
+  const act = () => { if (busy && busy()) return; if (!near) return; if (near.type === 'duel') { if (duel) duel.toggle(); return; } if (game) { close(); return; } openGame(near.type); };
   btn.onclick = act;
   addEventListener('keydown', (e) => { if ((e.key === 'e' || e.key === 'E') && !e.repeat && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) act(); if (e.key === 'Escape' && game) close(); });
   let acc = 0, watching = false;
@@ -160,7 +160,7 @@ export function initCasino({ L, sendWs, pos, $, say, onEvent, busy }) {
     for (const s of list) { const d = Math.hypot(pos.x - s.x, pos.z - s.z); if (d < s.r && d < bd) { best = s; bd = d; } }
     if (busy && busy()) best = null;
     near = best;
-    if (!best) { btn.style.display = 'none'; if (game) close(); } else { btn.style.display = 'block'; btn.textContent = game ? `E · Leave ${best.label}` : `E · Play ${best.label}`; if (game && game !== best.type) close(); }
+    if (!best) { btn.style.display = 'none'; if (game) close(); if (duel && duel.isOpen() && !duel.inMatch()) duel.close(); } else { btn.style.display = 'block'; const dOpen = best.type === 'duel' && duel && duel.isOpen(); btn.textContent = (game || dOpen) ? `E · Leave ${best.label}` : `E · Play ${best.label}`; if (game && game !== best.type) close(); }
     const wheel = list.find((s) => s.type === 'roulette'); const nearWheel = wheel && Math.hypot(pos.x - wheel.x, pos.z - wheel.z) < 5.5;
     if (nearWheel && !watching) { watching = true; sendWs({ t: 'cgrl', a: 'watch' }); } else if (!nearWheel && watching && game !== 'roulette') { watching = false; sendWs({ t: 'cgrl', a: 'unwatch' }); }
   }

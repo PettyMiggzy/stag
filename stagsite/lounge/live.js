@@ -3,6 +3,7 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { initCasino } from './casino.js';
+import { initDuels } from './duels.js';
 const L = window.__lounge;
 const { THREE, scene, camera, M, STAGE_Y } = L;
 const Q = new URLSearchParams(location.search);
@@ -257,6 +258,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
     else if (m.t === 'voice') voiceReady(m);
     else if (m.t === 'poker') pkUpdate(m);
     else if (m.t === 'cg') CG.onMsg(m);
+    else if (m.t === 'du') DU.onMsg(m);
     else if (m.t === 'pokererr') say('sys', '', m.why);
     else if (m.t === 'pokerleft') pkLeft(m);
     else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
@@ -265,7 +267,8 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
   ws.onclose = () => { if (ws !== mine || denied) return; say('sys', '', retries ? 'Still trying to reconnect…' : 'Connection lost. Reconnecting…'); PK.seat = -1; PK.watching = false; setTimeout(() => { if (!denied) openSocket(); }, Math.min(8000, 1000 * 2 ** retries++)); };
 }
 const sendWs = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
-const CG = initCasino({ L, sendWs, pos, $, say, busy: () => PK.seat >= 0, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
+const DU = initDuels({ sendWs });
+const CG = initCasino({ L, sendWs, pos, $, say, duel: DU, busy: () => PK.seat >= 0, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
 
 /* ---------- controls ---------- */
 const STAGE = { x0: -2.5, x1: 2.5, z0: -9.8, z1: 3.5 };
