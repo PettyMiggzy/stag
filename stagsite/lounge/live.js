@@ -55,6 +55,12 @@ body.touch #joy{display:block}
 #pkPot{color:#ffd34d;font-weight:700}.pks{flex:1 1 45%;border:1px solid rgba(233,201,122,.25);border-radius:8px;padding:5px 7px;background:rgba(0,0,0,.25)}.pks.turn{border-color:#ffd34d;box-shadow:0 0 8px #ffd34d66}.pks.fold{opacity:.45}.pks small{display:block;opacity:.8}
 #pk button,#pk input[type=number]{padding:9px 10px;border-radius:9px;border:1px solid rgba(233,201,122,.45);background:rgba(30,22,16,.95);color:#e9c97a;font-size:13px;cursor:pointer}#pk button.pri{background:#0d5a3b;color:#fff;border-color:#37c98a}#pk button.red{background:#6b1020;color:#fff}
 #pk input[type=range]{width:100%}#pkTimer{height:5px;background:#222;border-radius:3px;margin:6px 0}#pkTimer i{display:block;height:100%;width:0;background:#ffd34d;border-radius:3px}
+#pk.seated{right:auto;left:50%;top:auto;bottom:10px;transform:translateX(-50%);width:min(620px,calc(100vw - 16px));max-height:62vh;background:rgba(8,14,11,.9)}
+#pk.seated #pkX,#pk.seated #pkLead,#pk.seated small.pkfoot{display:none}
+#pk.seated #pkBoard{justify-content:center;min-height:50px}#pk.seated #pkPot{text-align:center}
+#pk.seated .pke{display:none}#pk.seated #pkSeats{gap:4px}#pk.seated .pks{flex:1 1 18%;min-width:78px;padding:3px 5px;font-size:11px}
+#pk.seated #pkMe{justify-content:center}#pk.seated #pkLog{max-height:44px;overflow:auto}
+#pk.seated .pc.big{font-size:26px;min-width:54px;padding:12px 8px}
 #pkLog{font-size:12px;opacity:.85;line-height:1.35}#pkLead{font-size:12px;margin-top:6px;opacity:.9}
 @media (max-width:640px){#chat{bottom:176px}#talkp,#djp{bottom:150px}}
 `;
@@ -81,7 +87,7 @@ ui.innerHTML = `
   <div class="r"><button id="srec">● Record</button><button id="splay" disabled>▶ Play</button></div>
   <div class="r"><a class="dl" id="sdl" style="display:none" download>⬇ Download take</a></div>
   <small>Use headphones, or the beat will bleed into your mic. Nothing is uploaded or saved: your take lives on this device until you download it.</small></div>
-<div id="pk"><h3><span>CARD ROOM</span><span class="chips" id="pkChips"></span><button id="pkX" style="padding:3px 8px">✕</button></h3><div id="pkBoard" class="pkrow"></div><div id="pkPot"></div><div id="pkSeats" class="pkrow"></div><div id="pkMe" class="pkrow"></div><div id="pkAct"></div><div id="pkTimer"><i></i></div><div id="pkLog"></div><div id="pkLead"></div><small style="opacity:.7">Play chips only. No cash value, nothing to buy or cash out. Prizes are chosen by the club.</small></div>
+<div id="pk"><h3><span>CARD ROOM</span><span class="chips" id="pkChips"></span><button id="pkX" style="padding:3px 8px">✕</button></h3><div id="pkBoard" class="pkrow"></div><div id="pkPot"></div><div id="pkSeats" class="pkrow"></div><div id="pkMe" class="pkrow"></div><div id="pkAct"></div><div id="pkTimer"><i></i></div><div id="pkLog"></div><div id="pkLead"></div><small class="pkfoot" style="opacity:.7">Play chips only. No cash value, nothing to buy or cash out. Prizes are chosen by the club.</small></div>
 <div id="talkp"><h3 id="tpName"></h3><div id="tpSub"></div><div id="tpBtns"></div></div>
 <div id="djp"><h3>DJ BOOTH</h3><div id="djNow"></div><div id="djList"></div><small style="opacity:.75">Tap a track to vote. The most votes plays next.</small></div>
 <div id="dock"><button id="safeBtn" title="If part of the screen goes black, tap this">🛠 Display</button><button id="cardBtn" style="display:none">🃏 Cards</button><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
@@ -268,7 +274,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
 }
 const sendWs = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const DU = initDuels({ sendWs });
-const CG = initCasino({ L, sendWs, pos, $, say, duel: DU, busy: () => PK.seat >= 0, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
+const CG = initCasino({ L, sendWs, pos, $, say, duel: DU, poker: { sit: () => pokerSit() }, busy: () => PK.seat >= 0, onEvent: (e) => { const n = NPCS.rl; if (!n || !(e === 'rl-spin' || e === 'rl-bet')) return; if (Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z) > 8) return; n.greetAnim = n.acts.chat ? 'chat' : 'idle'; n.greetUntil = performance.now() + 2200; npcSay(n, e === 'rl-spin' ? 'nomore' : 'place'); } });
 
 /* ---------- controls ---------- */
 const STAGE = { x0: -2.5, x1: 2.5, z0: -9.8, z1: 3.5 };
@@ -630,21 +636,29 @@ function dealerCall(v) { // the dealer announces each street once, for anyone in
 function pkUpdate(m) {
   PK.v = m.v; PK.chips = m.chips; PK.deadline = m.deadline || 0; PK.leaders = m.leaders || []; PK.rules = m.rules || PK.rules;
   dealerCall(m.v);
-  const was = PK.seat; PK.seat = m.seat; L.cardRoom.setTable(m.v);
-  if (PK.seat >= 0 && was < 0) { $('#pk').style.display = 'block'; say('sys', '', 'You sat down. Play chips only.'); }
+  const was = PK.seat; PK.seat = m.seat; L.cardRoom.mySeat = PK.seat; L.cardRoom.setTable(m.v); $('#pk').classList.toggle('seated', PK.seat >= 0);
+  if (PK.seat >= 0 && was < 0) { $('#pk').style.display = 'block'; say('sys', '', 'You sat down. Play chips only. Press E to stand up.'); }
   if ($('#pk').style.display === 'block') pkRender();
 }
 function pkLeft(m) {
   PK.seat = -1; const st = PK.v && PK.v.seats; say('sys', '', `${m.busted ? 'You ran out of chips. ' : ''}You left the table with ${m.net >= 0 ? '+' : ''}${m.net} play chips this session. Balance: ${m.chips}.`);
-  PK.chips = m.chips; pkRender();
+  PK.chips = m.chips; L.cardRoom.mySeat = -1; $('#pk').classList.remove('seated'); $('#pk').style.display = 'none'; L.cardRoom.setTable(PK.v); pkRender();
 }
+function pokerSit() { // E at the table: take the nearest free seat with a sensible buy-in, and the table view opens by itself
+  if (PK.seat >= 0) return; const v = PK.v; if (!v) { say('sys', '', 'Connecting to the table…'); return; }
+  const min = PK.rules.min, max = Math.min(PK.rules.max, PK.chips); if (PK.chips < min) { say('sys', '', 'You are out of play chips. You get a free top-up each day.'); return; }
+  let best = -1, bd = 1e9; (v.seats || []).forEach((s, i) => { if (s) return; const st = L.cardRoom.seats[i]; if (!st) return; const d = Math.hypot(pos.x - st.x, pos.z - st.z); if (d < bd) { bd = d; best = i; } });
+  if (best < 0) { say('sys', '', 'The table is full right now.'); return; }
+  const buy = Math.max(min, Math.min(PK.buy, max)); pkSend({ t: 'pokersit', seat: best, buyin: Math.floor(buy / 100) * 100 });
+}
+addEventListener('keydown', (e) => { if ((e.key === 'e' || e.key === 'E') && !e.repeat && PK.seat >= 0 && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) pkSend({ t: 'pokerleave' }); });
 const pkSend = (o) => sendWs(o);
 function pkRender() {
   const v = PK.v; if (!v) { $('#pkSeats').textContent = 'Connecting to the table…'; return; }
   $('#pkChips').textContent = `Your chips: ${PK.chips.toLocaleString()}`;
   $('#pkBoard').innerHTML = v.board.length ? v.board.map((c) => cardH(c)).join('') : '<span style="opacity:.6">No cards yet</span>';
   $('#pkPot').textContent = v.pot ? `Pot: ${v.pot.toLocaleString()}` : (v.phase === 'wait' ? 'Waiting for players…' : '');
-  $('#pkSeats').innerHTML = (v.seats || []).map((s, i) => s ? `<div class="pks${v.toAct === i ? ' turn' : ''}${s.folded ? ' fold' : ''}"><b>${esc(s.name)}</b>${s.bot ? '' : ''}${v.dealer === i ? ' Ⓓ' : ''}<small>${s.allIn ? 'ALL IN' : s.stack.toLocaleString()}${s.bet ? ' · bet ' + s.bet : ''}${s.folded ? ' · folded' : ''}</small></div>` : (PK.seat < 0 ? `<div class="pks" data-sit="${i}" style="cursor:pointer;text-align:center"><b>Seat ${i + 1}</b><small>tap to sit</small></div>` : '<div class="pks" style="opacity:.35;text-align:center"><small>empty</small></div>')).join('');
+  $('#pkSeats').innerHTML = (v.seats || []).map((s, i) => s ? `<div class="pks${v.toAct === i ? ' turn' : ''}${s.folded ? ' fold' : ''}"><b>${esc(s.name)}</b>${s.bot ? '' : ''}${v.dealer === i ? ' Ⓓ' : ''}<small>${s.allIn ? 'ALL IN' : s.stack.toLocaleString()}${s.bet ? ' · bet ' + s.bet : ''}${s.folded ? ' · folded' : ''}</small></div>` : (PK.seat < 0 ? `<div class="pks" data-sit="${i}" style="cursor:pointer;text-align:center"><b>Seat ${i + 1}</b><small>tap to sit</small></div>` : '<div class="pks pke" style="opacity:.35;text-align:center"><small>empty</small></div>')).join('');
   const my = PK.seat >= 0 ? v.seats[PK.seat] : null;
   $('#pkMe').innerHTML = my && my.cards ? my.cards.map((c) => cardH(c, true)).join('') + `<span style="opacity:.75;margin-left:6px">${my.waiting ? 'next hand' : ''}</span>` : '';
   const act = $('#pkAct'); const o = v.options;
@@ -657,7 +671,7 @@ function pkRender() {
     act.innerHTML = `<div class="pkrow"><button class="red" data-a="fold">Fold</button>${o.check ? '<button class="pri" data-a="check">Check</button>' : `<button class="pri" data-a="call">Call ${o.call}</button>`}</div>` + (o.canRaise ? `<input type="range" id="pkRz" min="${o.minRaise}" max="${o.maxRaise}" step="${v.blinds[0]}" value="${PK.raise}"><div class="pkrow"><button data-a="raise">Raise to <b id="pkRn">${PK.raise}</b></button><button data-a="allin">All in</button></div>` : '');
     const rz = $('#pkRz'); if (rz) rz.oninput = () => { PK.raise = +rz.value; $('#pkRn').textContent = PK.raise; };
   } else act.innerHTML = PK.seat >= 0 ? `<div style="opacity:.8">${v.phase === 'showdown' ? 'Next hand starting…' : (v.toAct >= 0 && v.seats[v.toAct] ? 'Waiting for ' + esc(v.seats[v.toAct].name) + '…' : 'Waiting…')}</div>` : '';
-  if (PK.seat >= 0) act.innerHTML += '<div class="pkrow"><button data-a="leave">Leave table</button></div>';
+  if (PK.seat >= 0) act.innerHTML += '<div class="pkrow"><button data-a="leave">Stand up (E)</button></div>';
   const res = v.result; $('#pkLog').innerHTML = (res ? res.winners.map((w) => `🏆 <b>${esc(w.name)}</b> wins ${w.won.toLocaleString()}${w.hand ? ' with ' + w.hand : ''}`).join('<br>') + '<br>' : '') + (v.log || []).slice(-4).map(esc).join('<br>');
   $('#pkLead').innerHTML = PK.leaders.length ? '<b style="color:#e9c97a">This week</b> ' + PK.leaders.map((l, i) => `${i + 1}. ${esc(l.name)} ${l.net >= 0 ? '+' : ''}${l.net}`).join(' · ') : '';
 }

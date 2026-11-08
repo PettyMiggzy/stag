@@ -486,6 +486,7 @@ const cardRoom={seats:[],stations:[],room:{x0:4.0,x1:11.9,z0:0.5,z1:15.7},center
     const bp=new THREE.Mesh(new THREE.PlaneGeometry(1.2,2.8),new THREE.MeshStandardMaterial({map:bt,roughness:.9}));bp.rotation.x=-Math.PI/2;bp.position.set(bx,.86,bz);bp.userData.keep=true;scene.add(bp);
     station('baccarat','baccarat',bx+1.1,bz,2.1,'Baccarat');col(bx-.7,bx+.7,bz-1.5,bz+1.5);
   }
+  station('poker','poker',7.6,13.0,3.6,'Poker');
   // -- skill duels corner (chess + trivia, head to head, play chips only), south-east
   {
     const DX=11.0,DZ=14.4;
@@ -514,7 +515,7 @@ const cardRoom={seats:[],stations:[],room:{x0:4.0,x1:11.9,z0:0.5,z1:15.7},center
   cardRoom.setTable=(v)=>{ // v = the table view from the server (or null to clear it)
     const b=(v&&v.board)||[];board.forEach((m,i)=>{m.visible=i<b.length;if(i<b.length)m.material.map=cardTex(b[i]);});
     cardRoom.seats.forEach((s,i)=>{const sd=v&&v.seats&&v.seats[i];const pair=hole[i];
-      pair.forEach((m,k)=>{const show=!!(sd&&sd.hasCards&&!sd.folded);m.visible=show;if(show)m.material.map=cardTex(sd.cards?sd.cards[k]:null);});
+      pair.forEach((m,k)=>{const show=!!(sd&&sd.hasCards&&!sd.folded)&&cardRoom.mySeat!==i;m.visible=show;if(show)m.material.map=cardTex(sd.cards?sd.cards[k]:null);});
       const p=plates[i];if(sd){const g=p.c.getContext('2d');g.clearRect(0,0,256,96);g.fillStyle='rgba(10,4,12,.7)';g.beginPath();g.roundRect(4,8,248,80,18);g.fill();g.textAlign='center';g.fillStyle=sd.folded?'#999':'#e9c97a';g.font='700 28px system-ui,sans-serif';g.fillText((sd.name||'').slice(0,16),128,40);g.fillStyle=sd.allIn?'#ff8fb8':'#fff';g.font='26px system-ui,sans-serif';g.fillText(sd.allIn?'ALL IN':String(sd.stack),128,72);p.t.needsUpdate=true;p.sp.visible=true;}else p.sp.visible=false;});
     const dl=v&&v.dealer>=0&&v.seats&&v.seats[v.dealer]?cardRoom.seats[v.dealer]:null;dealer.visible=!!dl;if(dl)dealer.position.set(dl.tx*.9+CX*.1,TY+.075,dl.tz*.9+CZ*.1);
     const n=v&&v.pot?Math.min(16,Math.ceil(v.pot/500)):0;chips.forEach((m,i)=>m.visible=i<n);
