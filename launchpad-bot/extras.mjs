@@ -317,6 +317,15 @@ export function initExtras(X) {
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();
+    (async () => { // one-time announcement of the WYTE BOYZ song sale in the main group (approved by the owner); the claim row makes sure it can never post twice
+      try {
+        const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return;
+        const cap = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>JellyRoll615</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
+        const kb = { inline_keyboard: [[{ text: "🛒 Collect WYTE BOYZ", url: "https://records.stagwifhood.fun/songs/" }]] };
+        await X.sendVideoCard(cap, kb, "9"); const r = { ok: true };
+        if (!r.ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); log("wyte announce failed:", r.description); } else log("wyte announce posted");
+      } catch (e) { log("wyte announce err:", e.message); }
+    })();
     (async () => { // dashboard is OFF unless bot_state.dashboardOn = '1'; when off, take down the pinned one
       let on = false; try { const [r] = await W.q("select v from bot_state where k='dashboardOn'"); on = !!r && r.v === "1"; } catch {}
       if (on) { updateDashboard(); setInterval(updateDashboard, 3600000); return; }

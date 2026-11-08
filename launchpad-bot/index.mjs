@@ -534,12 +534,12 @@ async function main() {
     EX = initExtras({ provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY,
       META: () => META, ethUsd: () => ETHUSD, CLIPS: () => CLIPS,
       sendSong: (chatId, clip, replyTo) => sendSongReply(`https://api.telegram.org/bot${CFG.tg}`, clip, replyTo, chatId),
-      sendVideoCard: async (caption, markup) => {
-        const clip = CLIPS.length ? CLIPS[CLIP_N++ % CLIPS.length] : null; const api = `https://api.telegram.org/bot${CFG.tg}`;
+      sendVideoCard: async (caption, markup, clipN) => {
+        const clip = clipN ? (CLIPS.find((c) => c.n === clipN) || null) : CLIPS.length ? CLIPS[CLIP_N++ % CLIPS.length] : null; const api = `https://api.telegram.org/bot${CFG.tg}`;
         const f = clip ? path.join(DIR, "clips", clip.n + ".mp4") : null;
         if (f && existsSync(f)) {
           const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(markup));
-          fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "stag.mp4"); await fetch(`${api}/sendVideo`, { method: "POST", body: fd });
+          fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "stag.mp4"); const j = await fetch(`${api}/sendVideo`, { method: "POST", body: fd }).then((r) => r.json()).catch(() => null); if (clipN && j && j.ok) await sendSongReply(api, clip, j.result.message_id); // announcements get the song player (with its cover) under the video, like buy alerts
         } else await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", reply_markup: markup }) });
       } });
     EX.start(head).catch((e) => log("extras start err:", e.message));
