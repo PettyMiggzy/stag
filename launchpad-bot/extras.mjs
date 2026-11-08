@@ -156,6 +156,10 @@ export function initExtras(X) {
         if (cmd === "setclub") { await W.q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); await W.q("insert into bot_state(k,v) values('whaleChat',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [String(msg.chat.id)]); return reply(`✅ This group is now the Hood Rich Club chat (id <code>${msg.chat.id}</code>). Invites will use it from the next check.`, { reply_markup: undefined }); }
         return reply(`Chat id: <code>${msg.chat.id}</code> · ${esc(msg.chat.title || "")}`, { reply_markup: undefined });
       }
+      if (cmd === "wytepost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM: posts the WYTE BOYZ sale announcement to the main group, once
+        const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
+        const ok = await wyteSend(chat, false); if (!ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); return reply("The post failed, nothing was marked as sent. Try again."); } return reply("✅ Posted to the main group.");
+      }
       if (cmd === "stagme") return STAGME.command(msg, args, reply);
       if (cmd === "burn" || cmd === "burned" || cmd === "burns") return reply(await BURN.text());
       if ((cmd === "burndraft" || cmd === "burnpost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM
@@ -313,18 +317,17 @@ export function initExtras(X) {
     const songs = X.CLIPS(); if (songs.length >= 4) { const pick = [...songs].sort(() => Math.random() - 0.5).slice(0, 4).map((s) => s.title.slice(0, 90)); await tgPost("sendPoll", { chat_id: chat, question: "🎵 Which Winslow Bankz song should we feature next week?", options: pick, is_anonymous: true }); }
   }
 
+  const WYTE_CAP = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>JellyRoll615</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
+  const WYTE_KB = { inline_keyboard: [[{ text: "🛒 Collect WYTE BOYZ", url: "https://records.stagwifhood.fun/songs/" }]] };
+  async function wyteSend(to, draft) { try { await X.sendVideoCard((draft ? "<i>DRAFT, not posted anywhere. Send /wytepost here to post it to the main group.</i>\n\n" : "") + WYTE_CAP, WYTE_KB, "9", to); return true; } catch (e) { log("wyte send err:", e.message); return false; } }
   async function start(head) {
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();
-    (async () => { // one-time announcement of the WYTE BOYZ song sale in the main group (approved by the owner); the claim row makes sure it can never post twice
-      try {
-        const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return;
-        const cap = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>JellyRoll615</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
-        const kb = { inline_keyboard: [[{ text: "🛒 Collect WYTE BOYZ", url: "https://records.stagwifhood.fun/songs/" }]] };
-        await X.sendVideoCard(cap, kb, "9"); const r = { ok: true };
-        if (!r.ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); log("wyte announce failed:", r.description); } else log("wyte announce posted");
-      } catch (e) { log("wyte announce err:", e.message); }
+    (async () => { // WYTE BOYZ sale announcement: a one-time DRAFT goes to the owner's bot DM; the main group only gets it when the owner sends /wytepost
+      try { const [c] = await W.q("insert into bot_state(k,v) values('wyteDraftDM','1') on conflict(k) do nothing returning k"); if (!c) return;
+        const r = await wyteSend(ADMIN_TG, true); if (!r) { await W.q("delete from bot_state where k='wyteDraftDM'"); log("wyte draft dm failed"); } else log("wyte draft sent to admin dm");
+      } catch (e) { log("wyte draft err:", e.message); }
     })();
     (async () => { // dashboard is OFF unless bot_state.dashboardOn = '1'; when off, take down the pinned one
       let on = false; try { const [r] = await W.q("select v from bot_state where k='dashboardOn'"); on = !!r && r.v === "1"; } catch {}

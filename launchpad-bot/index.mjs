@@ -534,13 +534,14 @@ async function main() {
     EX = initExtras({ provider, ethers, CFG, ST, fmt, usd, esc, short, log, DIR, BLOCKS_PER_DAY,
       META: () => META, ethUsd: () => ETHUSD, CLIPS: () => CLIPS,
       sendSong: (chatId, clip, replyTo) => sendSongReply(`https://api.telegram.org/bot${CFG.tg}`, clip, replyTo, chatId),
-      sendVideoCard: async (caption, markup, clipN) => {
+      sendVideoCard: async (caption, markup, clipN, toChat) => {
+        const dest = toChat || CFG.tgChat;
         const clip = clipN ? (CLIPS.find((c) => c.n === clipN) || null) : CLIPS.length ? CLIPS[CLIP_N++ % CLIPS.length] : null; const api = `https://api.telegram.org/bot${CFG.tg}`;
         const f = clip ? (clipN === "9" && existsSync(path.join(DIR, "wyteboyz.mp4")) ? path.join(DIR, "wyteboyz.mp4") : path.join(DIR, "clips", clip.n + ".mp4")) : null; // clip 9 announcements use the full WYTE BOYZ video
         if (f && existsSync(f)) {
-          const fd = new FormData(); fd.append("chat_id", CFG.tgChat); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(markup));
-          fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "stag.mp4"); const j = await fetch(`${api}/sendVideo`, { method: "POST", body: fd }).then((r) => r.json()).catch(() => null); if (clipN && j && j.ok) await sendSongReply(api, clip, j.result.message_id); // announcements get the song player (with its cover) under the video, like buy alerts
-        } else await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: CFG.tgChat, text: caption, parse_mode: "HTML", reply_markup: markup }) });
+          const fd = new FormData(); fd.append("chat_id", dest); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(markup));
+          fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "stag.mp4"); const j = await fetch(`${api}/sendVideo`, { method: "POST", body: fd }).then((r) => r.json()).catch(() => null); if (clipN && j && j.ok) await sendSongReply(api, clip, j.result.message_id, dest); if (!(j && j.ok)) throw new Error((j && j.description) || "video send failed"); // announcements get the song player (with its cover) under the video, like buy alerts
+        } else { const t = await fetch(`${api}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: dest, text: caption, parse_mode: "HTML", reply_markup: markup }) }).then((r) => r.json()).catch(() => null); if (!(t && t.ok)) throw new Error("text send failed"); }
       } });
     EX.start(head).catch((e) => log("extras start err:", e.message));
     try { const team = startTeamBuyer({ provider, CFG, ST, log, ethUsd: () => ETHUSD, BLOCKS_PER_DAY, buyerCached: (tx) => EX.buyerCached(tx) }); if (team) EX.setTeam(team); } catch (e) { log("team buyer init err:", e.message); }
