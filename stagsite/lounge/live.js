@@ -176,6 +176,8 @@ function makeAvatar(info) {
   scene.add(g); return g;
 }
 // ---- house guests: a few extras (clearly labelled) who wander between the bar, the floor and the stage rail so the room is never empty
+const _FR = new THREE.Frustum(), _PM = new THREE.Matrix4(), _SP = new THREE.Sphere(new THREE.Vector3(), 2.4);
+const inView = (x, y, z, r = 2.4) => { _SP.center.set(x, y, z); _SP.radius = r; return _FR.intersectsSphere(_SP); };
 const GUESTS = []; const GBAR = [[-4.2, -11.5], [-2.5, -11.5], [0.8, -11.5], [2.5, -11.5], [4.2, -11.5]];
 const GFLOOR = [[-3.0, -6.8], [3.0, -6.8], [-4.8, -1.5], [4.8, -1.5], [-3.6, 3.2], [2.4, 3.0], [0, -8.6], [-1.6, 0.5], [1.6, 0.5]];
 const GTINT = [[1, .8, .75], [.8, .9, 1], [.85, 1, .85], [1, .95, .7], [.95, .8, 1]];
@@ -195,7 +197,7 @@ function guestTick(dt) {
   const now = performance.now();
   for (const g of GUESTS) {
     const u = g.userData; if (!u.mixer) continue;
-    const dp = Math.hypot(g.position.x - pos.x, g.position.z - pos.z); u.tag.visible = dp < 12;
+    const dp = Math.hypot(g.position.x - pos.x, g.position.z - pos.z); u.tag.visible = dp < 12; const vis = dp < 3 || inView(g.position.x, 1, g.position.z); g.visible = vis;
     const dx = u.gx - g.position.x, dz = u.gz - g.position.z, d = Math.hypot(dx, dz);
     if (d > .12) { const sp = Math.min(d, 1.1 * dt); g.position.x += dx / d * sp; g.position.z += dz / d * sp; g.rotation.y += angDiff(Math.atan2(dx, dz), g.rotation.y) * Math.min(1, dt * 6); playAnim(u, 'walk'); u.glass.visible = false; }
     else {
@@ -203,7 +205,7 @@ function guestTick(dt) {
       g.rotation.y += angDiff(u.bar ? Math.PI : (Math.atan2(-g.position.x, -(g.position.z + 4)) ), g.rotation.y) * Math.min(1, dt * 4); playAnim(u, u.act); u.glass.visible = u.act === 'drink';
       if (now > u.until) guestPick(g);
     }
-    if (dp < 26 || frameN % 4 === 0) u.mixer.update(dp < 26 ? dt : dt * 4);
+    if (vis && (dp < 26 || frameN % 4 === 0)) u.mixer.update(dp < 26 ? dt : dt * 4);
     if (u.glass.visible && u.hand) { u.hand.getWorldPosition(_HP); g.worldToLocal(_HP); u.glass.position.set(_HP.x, _HP.y + .07, _HP.z); }
   }
 }
@@ -511,10 +513,13 @@ function runRoutine(n, now, dt) { // walk to the next station, do the job there 
 }
 function npcTick(dt) {
   const now = performance.now(); let near = null, nd = 99;
+  _PM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _FR.setFromProjectionMatrix(_PM);
   for (const n of Object.values(NPCS)) {
     const d = Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z);
-    if (n.id === 'artist') { const inB = pos.x > -11.9 && pos.x < -6.4 && pos.z > 10.0 && pos.z < 13.8; if (inB || L.studio.onAir) n.away = now + 12000; const tv = now < (n.away || 0) ? 0 : 1; n.vis += (tv - n.vis) * Math.min(1, dt * 3); for (const m of n.mats || []) m.opacity = n.vis; n.obj.visible = n.vis > .03; if (!n.obj.visible) continue; }
-    if (d < 30) n.mixer.update(dt);
+    const inV = d < 3 || inView(n.obj.position.x, 1, n.obj.position.z);
+    if (n.id === 'artist') { const inB = pos.x > -11.9 && pos.x < -6.4 && pos.z > 10.0 && pos.z < 13.8; if (inB || L.studio.onAir) n.away = now + 12000; const tv = now < (n.away || 0) ? 0 : 1; n.vis += (tv - n.vis) * Math.min(1, dt * 3); for (const m of n.mats || []) m.opacity = n.vis; n.obj.visible = n.vis > .03 && inV; if (!n.obj.visible) continue; }
+    if (n.id !== 'artist') n.obj.visible = inV;
+    if (d < 30 && inV) n.mixer.update(dt);
     const speaking = now < n.talkUntil, greeting = n.greetUntil && now < n.greetUntil, busy = speaking || talking === n || greeting;
     if (greeting && !(talking === n)) { npcPlay(n, n.acts[n.greetAnim] ? n.greetAnim : n.base); if (d < 12) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 5); } n.until = Math.max(n.until, now + 2000); }
     else if (n.hello && me && d < (n.helloD || 2.6) && now > (n.nextHello || 0) && !busy) { n.nextHello = now + 70000 + Math.random() * 30000; n.greetAnim = 'agree'; n.greetUntil = now + 2800; npcSay(n, n.hello[Math.floor(Math.random() * n.hello.length)]); }

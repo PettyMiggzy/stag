@@ -644,7 +644,7 @@ function probeFrame(){ // read a few pixels of the frame just drawn: a lit room 
     let mid=0;for(const fx of[.3,.5,.7])for(const fy of[.3,.5,.7])mid+=S(fx,fy);const edge=Math.max(S(.03,.5),S(.97,.5),S(.03,.3),S(.97,.3));
     if(mid===0&&edge>40){if(++probeBad>=3){setSafe(true,false);}}else probeBad=0;}catch(e){}
 }
-let tAbs=0,vidT=0;const frustum=new THREE.Frustum(),pm=new THREE.Matrix4(),vp=new THREE.Vector3();
+let tAbs=0,vidT=0;const frustum=new THREE.Frustum(),pm=new THREE.Matrix4(),vp=new THREE.Vector3();const dSph={s:new THREE.Sphere(new THREE.Vector3(),2.4),set(c,r){this.s.center.copy(c);this.s.radius=r;return this.s;}};
 function culling(dt){
   vidT+=dt;if(vidT<.6)return;vidT=0;pm.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(pm);
   for(const s of screenObjs){s.g.getWorldPosition(vp);const vis=frustum.containsPoint(vp)||frustum.intersectsSphere(new THREE.Sphere(vp,2.4));if(vis&&s.v.paused)s.v.play().catch(()=>{});else if(!vis&&!s.v.paused)s.v.pause();}
@@ -658,8 +658,9 @@ function governor(dt){
 }
 function stepWorld(dt){
   tAbs+=dt;
-  if(dancer.mixer){dancer.mixer.update(dt);if(tAbs>=dancer.until)next(tAbs);}
-  if(dancer2.mixer){dancer2.mixer.update(dt);if(tAbs>=dancer2.until)next2(tAbs);}
+  {pm.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(pm);}
+  if(dancer.mixer){const v=dancer.root?frustum.intersectsSphere(dSph.set(dancer.root.position.clone().setY(1),2.4)):true;if(dancer.root)dancer.root.visible=v;if(v)dancer.mixer.update(dt);if(tAbs>=dancer.until)next(tAbs);}
+  if(dancer2.mixer){const v=dancer2.root?frustum.intersectsSphere(dSph.set(dancer2.root.position.clone().setY(1),2.4)):true;if(dancer2.root)dancer2.root.visible=v;if(v)dancer2.mixer.update(dt);if(tAbs>=dancer2.until)next2(tAbs);}
   if(cardRoom.update)cardRoom.update(dt);
   for(const r of rigs){
     const s=Math.sin(tAbs*.35+r.ph)*.55, c=Math.cos(tAbs*.29+r.ph)*.4;
