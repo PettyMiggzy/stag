@@ -321,10 +321,44 @@ export function initExtras(X) {
   const WYTE_CAP = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>JellyRoll615</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
   const WYTE_KB = { inline_keyboard: [[{ text: "🛒 Collect WYTE BOYZ", url: "https://records.stagwifhood.fun/songs/" }]] };
   async function wyteSend(to, draft) { try { await X.sendVideoCard((draft ? "<i>DRAFT, not posted anywhere. Send /wytepost here to post it to the main group.</i>\n\n" : "") + WYTE_CAP, WYTE_KB, "9", to); return true; } catch (e) { log("wyte send err:", e.message); return false; } }
+  // ---------- song NFT sale alerts: every purchase on the Stag House Records song shop gets announced in the main chat ----------
+  const SONGS = (process.env.SONGS_CONTRACT || "0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4");
+  const SONG_NAMES = { 1: "Money on My Mind", 2: "Crown Too Heavy", 3: "First Heartbreak at School (Remix)", 4: "No Me Llames", 5: "Fresh Cut, White Tee", 6: "Back On Go", 7: "Walk Me Through the Fire", 8: "Still Ridin' Slow", 9: "Hood Rich (the full album)", 10: "WYTE BOYZ (feat. JellyRoll615 & Pyrexx)" };
+  const SONG_IFACE = new ethers.Interface(["event Bought(address indexed buyer, uint256 indexed id, uint256 price)", "function songInfo(uint256) view returns (uint256 price, uint256 cap, uint256 minted, bool open, bool frozen, string metadataURI)"]);
+  const BOUGHT_TOPIC = SONG_IFACE.getEvent("Bought").topicHash;
+  const songContract = new ethers.Contract(SONGS, SONG_IFACE, provider);
+  async function songTitle(id, uri) {
+    if (SONG_NAMES[id]) return SONG_NAMES[id];
+    try { const j = await fetch(uri, { signal: AbortSignal.timeout(8000) }).then((r) => r.json()); if (j && j.name) return String(j.name).replace(/\s*-\s*Winslow Bankz$/, "").slice(0, 80); } catch {}
+    return "song #" + id;
+  }
+  let songBusy = false;
+  async function songSales() {
+    if (songBusy) return; songBusy = true;
+    try {
+      await W.q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())");
+      const head = await provider.getBlockNumber(); const [r] = await W.q("select v from bot_state where k='songSaleBlock'");
+      if (!r) { await W.q("insert into bot_state(k,v) values('songSaleBlock',$1) on conflict(k) do nothing", [String(head)]); log("song sale alerts: watching from block", head); return; } // first run starts now, no history spam
+      let from = Number(r.v) + 1; if (from > head) return; const to = Math.min(head, from + 20000);
+      const logs = await provider.getLogs({ address: SONGS, topics: [BOUGHT_TOPIC], fromBlock: from, toBlock: to });
+      for (const lg of logs.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index)) {
+        const ev = SONG_IFACE.parseLog(lg); const id = Number(ev.args.id); const buyer = ev.args.buyer; const eth = Number(ethers.formatEther(ev.args.price));
+        let left = "", title = SONG_NAMES[id] || "song #" + id;
+        try { const si = await songContract.songInfo(id, { blockTag: lg.blockNumber }); const cap = Number(si.cap), minted = Number(si.minted); left = cap - minted <= 0 ? "🔥 <b>SOLD OUT</b>" : `🔥 <b>${cap - minted}</b> of ${cap} left`; title = await songTitle(id, si.metadataURI); } catch {}
+        const ethUsd = X.ethUsd ? X.ethUsd() : 0;
+        const text = ["🎟️ <b>NEW COLLECTOR</b>", `<a href="${CFG.explorer}/address/${buyer}">${short(buyer)}</a> just collected <b>${esc(title)}</b>`, `💰 <b>${fmt(eth, 4)} ETH</b>${ethUsd ? " (~" + usd(eth * ethUsd) + ")" : ""}${left ? " · " + left : ""}`, `🦌 Stag House Records · Winslow Bankz`].join("\n");
+        const res = await tgPost("sendMessage", { chat_id: chat, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: [[{ text: "🛒 Collect yours", url: "https://records.stagwifhood.fun/songs/" }, { text: "🔗 Tx", url: `${CFG.explorer}/tx/${lg.transactionHash}` }]] } });
+        if (!res.ok) { log("song sale post failed:", res.description); await W.q("update bot_state set v=$1, updated_at=now() where k='songSaleBlock'", [String(lg.blockNumber - 1)]); return; } // retry from this block next poll
+        log("song sale announced:", title, short(buyer));
+      }
+      await W.q("update bot_state set v=$1, updated_at=now() where k='songSaleBlock'", [String(to)]);
+    } catch (e) { log("song sale watch err:", e.message); } finally { songBusy = false; }
+  }
   async function start(head) {
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();
+    if (process.env.SONG_SALES !== "off") { setTimeout(songSales, 15000); setInterval(songSales, 20000); }
     (async () => { // WYTE BOYZ sale announcement: a one-time DRAFT goes to the owner's bot DM; the main group only gets it when the owner sends /wytepost
       try { const [c] = await W.q("insert into bot_state(k,v) values('wyteDraftDM','1') on conflict(k) do nothing returning k"); if (!c) return;
         const r = await wyteSend(ADMIN_TG, true); if (!r) { await W.q("delete from bot_state where k='wyteDraftDM'"); log("wyte draft dm failed"); } else log("wyte draft sent to admin dm");
