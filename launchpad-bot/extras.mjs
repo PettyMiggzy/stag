@@ -189,7 +189,7 @@ export function initExtras(X) {
       if (cmd === "chart") return reply(`📈 <b>$STAG chart</b>\n${BUY}`, { reply_markup: { inline_keyboard: [[{ text: "📈 Open chart", url: CFG.chartUrl || BUY, style: "primary" }]] } });
       if (cmd === "links" || cmd === "socials" || cmd === "web") return reply(`<b>$STAG links</b>\n🟩 Buy: ${BUY}\n🌐 Site: https://stagwifhood.fun\n🏹 Game: https://stagwifhood.fun/play/\n🎵 Records: https://records.stagwifhood.fun\n💬 Telegram: https://t.me/StagWifHood\n\nCA: <code>${CFG.token}</code>`);
       if (cmd === "game" || cmd === "play") return reply(`🏹 <b>Stag Shot</b> – 3D forest archery\n${process.env.MINIAPP_URL || "https://stagwifhood.fun/play/"}`);
-      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme – make your own stag picture");
+      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
     } catch (e) { log("cmd err:", e.message); }
   }
   async function pollCommands() {
