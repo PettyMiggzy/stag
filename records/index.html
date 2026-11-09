@@ -216,6 +216,7 @@ footer .links a:hover{color:var(--neon)}
       <div class="eq" id="eq"></div>
       <div class="bar" id="seek" role="slider" tabindex="0" aria-label="Seek in track" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><b id="prog"></b></div>
       <div class="ptime"><span id="tcur">0:00</span><span id="tdur">0:00</span></div>
+      <div class="psub" style="margin-top:8px">20-second preview &middot; <a href="/songs/" style="color:#e9c97a">collect the song to hear the rest</a></div>
     </div>
   </div>
 </div></section>
@@ -225,8 +226,9 @@ footer .links a:hover{color:var(--neon)}
 <section class="band" id="listen"><div class="in">
   <span class="eyebrow">Listen</span>
   <h2 class="sec-h">Winslow Bankz: <span class="gold">the tracks</span></h2>
-  <p class="sec-p">Press play on any track. Every play starts with the stag.</p>
+  <p class="sec-p">Press play on any track for a 20-second preview. Every play starts with the stag. Collect a song to own the full track.</p>
   <ol class="tracks" id="tracks">
+    <li class="trk" data-i="9"><button class="tplay" aria-label="Play Choosing You"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Choosing You" width="72" height="72" loading="lazy"><div class="tmeta"><b>Choosing You</b><span>Winslow Bankz · 1:33 · New</span></div></li>
     <li class="trk" data-i="8"><button class="tplay" aria-label="Play WYTE BOYZ"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/wyteboyz.jpg" alt="Cover art for WYTE BOYZ" width="72" height="72" loading="lazy"><div class="tmeta"><b>WYTE BOYZ</b><span>Winslow Bankz ft. JellyRoll615 &amp; Pyrexx · 2:29 · New</span><span>Limited NFT: 100 copies at $24.99. Mint details come out in Telegram first.</span></div></li>
     <li class="trk" data-i="0"><button class="tplay" aria-label="Play Money on My Mind"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Money on My Mind" width="72" height="72" loading="lazy"><div class="tmeta"><b>Money on My Mind</b><span>Winslow Bankz · 3:21</span></div></li>
     <li class="trk" data-i="1"><button class="tplay" aria-label="Play Crown Too Heavy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Crown Too Heavy" width="72" height="72" loading="lazy"><div class="tmeta"><b>Crown Too Heavy</b><span>Winslow Bankz · 3:06</span></div></li>
@@ -359,15 +361,16 @@ footer .links a:hover{color:var(--neon)}
 <script>
 (function(){
   var TR=[
-    {t:'Money on My Mind',a:'Winslow Bankz',f:'assets/audio/money.mp3'},
-    {t:'Crown Too Heavy',a:'Winslow Bankz',f:'assets/audio/crown.mp3'},
-    {t:'First Heartbreak at School (Remix)',a:'Winslow Bankz',f:'assets/audio/heartbreak.mp3'},
-    {t:'No Me Llames',a:'Winslow Bankz',f:'assets/audio/nomellames.mp3'},
-    {t:'Fresh Cut, White Tee',a:'Winslow Bankz',f:'assets/audio/whitetee.mp3'},
-    {t:'Back On Go',a:'Winslow Bankz',f:'assets/audio/backongo.mp3'},
-    {t:'Walk Me Through the Fire',a:'Winslow Bankz',f:'assets/audio/walkfire.mp3'},
-    {t:"Still Ridin' Slow",a:'Winslow Bankz',f:'assets/audio/ridinslow.mp3'},
-    {t:'WYTE BOYZ (feat. JellyRoll615 & Pyrexx)',a:'Winslow Bankz',f:'assets/audio/wyteboyz.mp3'}];
+    {t:'Money on My Mind',a:'Winslow Bankz',f:'assets/preview/money.mp3'},
+    {t:'Crown Too Heavy',a:'Winslow Bankz',f:'assets/preview/crown.mp3'},
+    {t:'First Heartbreak at School (Remix)',a:'Winslow Bankz',f:'assets/preview/heartbreak.mp3'},
+    {t:'No Me Llames',a:'Winslow Bankz',f:'assets/preview/nomellames.mp3'},
+    {t:'Fresh Cut, White Tee',a:'Winslow Bankz',f:'assets/preview/whitetee.mp3'},
+    {t:'Back On Go',a:'Winslow Bankz',f:'assets/preview/backongo.mp3'},
+    {t:'Walk Me Through the Fire',a:'Winslow Bankz',f:'assets/preview/walkfire.mp3'},
+    {t:"Still Ridin' Slow",a:'Winslow Bankz',f:'assets/preview/ridinslow.mp3'},
+    {t:'WYTE BOYZ (feat. JellyRoll615 & Pyrexx)',a:'Winslow Bankz',f:'assets/preview/wyteboyz.mp3'},
+    {t:'Choosing You',a:'Winslow Bankz',f:'assets/preview/choosing.mp3'}];
   var $=function(id){return document.getElementById(id)};
   var player=$('player'),btn=$('play'),ico=$('ico'),identEl=$('ident'),st=$('pstate'),prog=$('prog'),seek=$('seek'),eq=$('eq'),ptitle=$('ptitle'),tcur=$('tcur'),tdur=$('tdur');
   var PLAY='<path d="M8 5v14l11-7z"/>',PAUSE='<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
@@ -380,7 +383,7 @@ footer .links a:hover{color:var(--neon)}
     var playing=(mode==='play');
     ico.innerHTML=(playing||mode==='ident')?PAUSE:PLAY;btn.setAttribute('aria-label',playing?'Pause':'Play');
     player.classList.toggle('playing',playing);
-    rows.forEach(function(r,i){var on=i===cur;r.classList.toggle('cur',on);r.querySelector('.tplay svg').innerHTML=(on&&(playing||mode==='ident'))?PAUSE:PLAY});
+    rows.forEach(function(r){var on=(+r.dataset.i)===cur;r.classList.toggle('cur',on);r.querySelector('.tplay svg').innerHTML=(on&&(playing||mode==='ident'))?PAUSE:PLAY});
   }
   function setTrack(i){cur=i;audio.src=TR[i].f;ptitle.textContent=TR[i].a+' · '+TR[i].t;prog.style.width='0';tcur.textContent='0:00';tdur.textContent='0:00';paint()}
   function wire(){
@@ -466,7 +469,7 @@ footer .links a:hover{color:var(--neon)}
     startWithIdent(cur);
   }
   btn.addEventListener('click',function(){toggle()});
-  rows.forEach(function(r,i){r.querySelector('.tplay').addEventListener('click',function(){toggle(i)})});
+  rows.forEach(function(r){var n=+r.dataset.i;r.querySelector('.tplay').addEventListener('click',function(){toggle(n)})});
   audio.addEventListener('loadedmetadata',function(){tdur.textContent=fmt(audio.duration)});
   audio.addEventListener('timeupdate',function(){var d=audio.duration||0;if(d){prog.style.width=(audio.currentTime/d*100)+'%';seek.setAttribute('aria-valuenow',Math.round(audio.currentTime/d*100))}tcur.textContent=fmt(audio.currentTime)});
   audio.addEventListener('ended',function(){var n=(cur+1)%TR.length;setTrack(n);mode='play';playTrack()});
