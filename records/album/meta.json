@@ -1,11 +1,24 @@
 {
   "name": "Hood Rich - Winslow Bankz",
-  "description": "One NFT unlocks the entire Hood Rich digital album by Winslow Bankz on Stag House Records. Only 100 copies. More tracks are being added.",
+  "description": "One NFT for the whole Hood Rich album by Winslow Bankz on Stag House Records: 9 tracks (Money on My Mind, Crown Too Heavy, First Heartbreak at School (Remix), No Me Llames, Fresh Cut, White Tee, Back On Go, Walk Me Through the Fire, Still Ridin' Slow and Choosing You). WYTE BOYZ is a separate exclusive single and is not included. Only 100 copies.",
   "image": "https://records.stagwifhood.fun/assets/hood-rich.webp",
   "external_url": "https://records.stagwifhood.fun/album/",
   "attributes": [
-    {"trait_type": "Artist", "value": "Winslow Bankz"},
-    {"trait_type": "Label", "value": "Stag House Records"},
-    {"trait_type": "Edition size", "value": 100}
+    {
+      "trait_type": "Artist",
+      "value": "Winslow Bankz"
+    },
+    {
+      "trait_type": "Label",
+      "value": "Stag House Records"
+    },
+    {
+      "trait_type": "Edition size",
+      "value": 100
+    },
+    {
+      "trait_type": "Tracks",
+      "value": 9
+    }
   ]
 }

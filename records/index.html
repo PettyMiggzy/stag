@@ -229,7 +229,7 @@ footer .links a:hover{color:var(--neon)}
   <p class="sec-p">Press play on any track for a 20-second preview. Every play starts with the stag. Collect a song to own the full track.</p>
   <ol class="tracks" id="tracks">
     <li class="trk" data-i="9"><button class="tplay" aria-label="Play Choosing You"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Choosing You" width="72" height="72" loading="lazy"><div class="tmeta"><b>Choosing You</b><span>Winslow Bankz · 1:33 · New</span></div></li>
-    <li class="trk" data-i="8"><button class="tplay" aria-label="Play WYTE BOYZ"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/wyteboyz.jpg" alt="Cover art for WYTE BOYZ" width="72" height="72" loading="lazy"><div class="tmeta"><b>WYTE BOYZ</b><span>Winslow Bankz ft. JellyRoll615 &amp; Pyrexx · 2:29 · New</span><span>Limited NFT: 100 copies at $24.99. Mint details come out in Telegram first.</span></div></li>
+    <li class="trk" data-i="8"><button class="tplay" aria-label="Play WYTE BOYZ"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/wyteboyz.jpg" alt="Cover art for WYTE BOYZ" width="72" height="72" loading="lazy"><div class="tmeta"><b>WYTE BOYZ</b><span>Winslow Bankz ft. JellyRoll615 &amp; Pyrexx · 2:29 · New</span><span>Exclusive single, not in the album. Limited NFT: 100 copies at $24.99.</span></div></li>
     <li class="trk" data-i="0"><button class="tplay" aria-label="Play Money on My Mind"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Money on My Mind" width="72" height="72" loading="lazy"><div class="tmeta"><b>Money on My Mind</b><span>Winslow Bankz · 3:21</span></div></li>
     <li class="trk" data-i="1"><button class="tplay" aria-label="Play Crown Too Heavy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for Crown Too Heavy" width="72" height="72" loading="lazy"><div class="tmeta"><b>Crown Too Heavy</b><span>Winslow Bankz · 3:06</span></div></li>
     <li class="trk" data-i="2"><button class="tplay" aria-label="Play First Heartbreak at School (Remix)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><img src="assets/covers/hood-rich.jpg" alt="Cover art for First Heartbreak at School (Remix)" width="72" height="72" loading="lazy"><div class="tmeta"><b>First Heartbreak at School (Remix)</b><span>Winslow Bankz · 3:04</span></div></li>
@@ -245,11 +245,11 @@ footer .links a:hover{color:var(--neon)}
 <section class="band" id="album" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in split">
   <div class="frame" style="border-radius:26px;overflow:hidden;border:2px solid rgba(216,171,75,.6);box-shadow:0 0 60px rgba(216,171,75,.22)"><img src="assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" loading="lazy" width="1000" height="1000"></div>
   <div><span class="eyebrow">The album</span><h2 class="sec-h">Hood <span class="gold">Rich</span></h2>
-  <p class="sec-p">One NFT unlocks the entire Hood Rich album by Winslow Bankz. More tracks are being added.</p>
-  <p class="price" style="font:400 clamp(54px,9vw,96px)/1 var(--display);color:var(--gold-hi);margin:0 0 6px">$24.99</p>
+  <p class="sec-p">One NFT for the whole Hood Rich album by Winslow Bankz: 9 tracks. WYTE BOYZ is a separate exclusive single and is not part of the album.</p>
+  <p id="homeAlbumPrice" class="price" style="font:400 clamp(54px,9vw,96px)/1 var(--display);color:var(--gold-hi);margin:0 0 6px">See price</p>
   <p class="gold" style="font:700 16px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;margin:0 0 14px">Only 100 copies</p>
-  <p class="note" style="margin:0 0 22px">The mint date and details are announced in Telegram first. Nothing to buy yet.</p>
-  <a class="btn solid" href="/album/">See the album</a> <a class="btn" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Telegram</a></div>
+  <p class="note" style="margin:0 0 22px">Paid in ETH on Robinhood Chain. The price shown is read live from the contract.</p>
+  <a class="btn solid" href="/album/">Get the album</a> <a class="btn" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Telegram</a></div>
 </div></section>
 <section class="band" id="artists"><div class="in">
   <span class="eyebrow">For artists</span>
@@ -481,4 +481,10 @@ footer .links a:hover{color:var(--neon)}
 })();
 </script>
 
+<script>
+(function(){var el=document.getElementById('homeAlbumPrice');if(!el)return;
+fetch('https://rpc.mainnet.chain.robinhood.com',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:'0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4',data:'0x4e692b50'+'9'.padStart(64,'0')},'latest']})}).then(function(r){return r.json()}).then(function(j){
+var wei=BigInt('0x'+j.result.slice(2,66)),eth=Number(wei)/1e18;el.textContent=eth.toFixed(4)+' ETH';
+return fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd').then(function(r){return r.json()}).then(function(p){var u=p.ethereum&&p.ethereum.usd;if(u)el.textContent='$'+(eth*u).toFixed(2)})}).catch(function(){})})();
+</script>
 </html>

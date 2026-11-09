@@ -100,7 +100,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 </style>
 <header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>Stag House Records</span></a><nav><a href="/#listen">Listen</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
 <main class="wrap"><span class="eyebrow">Winslow Bankz · Robinhood Chain</span><h1 class="sec-h">Collect a <span class="gold">song</span></h1>
-<p class="sec-p" style="margin-bottom:6px">Each song is its own limited NFT. Paid in ETH on Robinhood Chain, straight to the artist's wallet. Want everything? <a class="gold" href="/album/">Get the whole album for $24.99</a>.</p>
+<p class="sec-p" style="margin-bottom:6px">WYTE BOYZ is an exclusive single, its own limited NFT, and it is not part of the album. Every other Winslow Bankz song is in the <a class="gold" href="/album/">Hood Rich album</a>. Paid in ETH on Robinhood Chain, straight to the artist's wallet.</p>
 <div style="margin:14px 0 0"><button class="btn" id="conn" type="button">Connect wallet</button></div><div id="msg" role="status"></div>
 <div class="sg" id="list"></div>
 <p class="small">You need a wallet (MetaMask, Rabby or similar) with enough ETH on Robinhood Chain for the price shown plus a little for network fees. Sales are final. A song NFT is a digital collectible and song access, not an investment. <span id="ca"></span></p></main>
@@ -132,7 +132,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
   async function readAll(){
     if(!C.contract||!window.ethers)return draw();
     try{var p=new ethers.JsonRpcProvider(C.rpc||CHAIN.rpcUrls[0],4663,{staticNetwork:true}),n=new ethers.Contract(C.contract,ABI,p);
-      var count=Number(await n.songCount()),ids=[];for(var k=1;k<=count;k++)ids.push(k);
+      var count=Number(await n.songCount()),ids=[],hide=C.hide||[];for(var k=1;k<=count;k++)if(hide.indexOf(k)<0)ids.push(k);
       await Promise.all(ids.map(async function(id){var r=await n.songInfo(id);info[id]={price:r[0],cap:Number(r[1]),minted:Number(r[2]),open:r[3],uri:r[5]};
         var known=songs.filter(function(x){return x.id===id})[0];
         if(!known){known={id:id,title:'Song #'+id};songs.push(known)}
