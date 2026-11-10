@@ -115,6 +115,9 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 <label>Number of copies<input id="cap" type="number" step="1" min="1" value="100"></label>
 <label>Cover image (square works best)<input id="cover" type="file" accept="image/*"></label>
 <div class="row2"><button class="btn solid" id="add" type="button" disabled>Add on-chain</button></div></section>
+<section class="card2"><h2>Open or close one item</h2><p class="small" style="margin-top:0">Closing an item stops new sales of just that item. Nothing else changes, and you can open it again any time.</p>
+<label>Which one<select id="owhich"></select></label>
+<div class="row2"><button class="btn" id="oclose" type="button" disabled>Close this item</button> <button class="btn solid" id="oopen" type="button" disabled>Open this item</button></div></section>
 <section class="card2"><h2>Change a price</h2><p class="small" style="margin-top:0">Prices are in ETH, so update them if ETH moves a lot. Buyers are protected: if you change the price while someone is buying, their purchase fails and nothing is charged.</p>
 <label>Which one<select id="pwhich"></select></label>
 <label>New price in ETH<input id="pnew" type="number" step="0.0001" min="0"></label>
@@ -145,14 +148,14 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
     function btn(t,fn,cls){var b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=t;b.onclick=fn;act.appendChild(b)}
     try{
       if(S.contract){var sg=new ethers.Contract(S.contract,SABI,p),so=await sg.owner(),po=await sg.pendingOwner(),n=Number(await sg.songCount()),open=[],closed=[],sold=0;
-        var sel=$('pwhich'),fsel=$('fwhich');sel.innerHTML='';fsel.innerHTML='';for(var i=1;i<=n;i++){var r=await sg.songInfo(i);sold+=Number(r[2]);(r[3]?open:closed).push(i);var op=document.createElement('option');op.value=String(i);op.textContent='Item #'+i+' (now '+eth(r[0])+(r[4]?', locked':'')+')';sel.appendChild(op);fsel.appendChild(op.cloneNode(true))}
+        var NAMES={9:'Hood Rich album',10:'WYTE BOYZ',11:'Who Got the Keys',12:'Who Got the Keys (duplicate)'};var sel=$('pwhich'),fsel=$('fwhich'),osel=$('owhich'),keepO=osel.value,keepP=sel.value;sel.innerHTML='';fsel.innerHTML='';osel.innerHTML='';for(var i=1;i<=n;i++){var r=await sg.songInfo(i);sold+=Number(r[2]);(r[3]?open:closed).push(i);var nm=NAMES[i]||(i<=8?'album track':'');var op=document.createElement('option');op.value=String(i);op.textContent='Item #'+i+(nm?' · '+nm:'')+' (now '+eth(r[0])+(r[4]?', locked':'')+')';sel.appendChild(op);fsel.appendChild(op.cloneNode(true));var oo=document.createElement('option');oo.value=String(i);oo.textContent='Item #'+i+(nm?' · '+nm:'')+' · '+(r[3]?'OPEN':'closed')+' · '+eth(r[0]);osel.appendChild(oo)}if(keepO)osel.value=keepO;if(keepP)sel.value=keepP;
         html+='<b>Songs</b> '+short(S.contract)+' · owner '+short(so)+(po!=='0x0000000000000000000000000000000000000000'?' · ownership pending to '+short(po):'')+' · '+n+' items · '+open.length+' open · '+sold+' sold · label wallet '+short(await sg.labelWallet())+'<br>';
         if(acct){var w2=new ethers.Contract(S.contract,SABI,signer);
           if(po.toLowerCase()===acct.toLowerCase())btn('Accept ownership of songs',function(){tx('Accept ownership',function(){return w2.acceptOwnership()})},'solid');
           if(so.toLowerCase()===acct.toLowerCase()){
             if(closed.length)btn('Open all '+closed.length+' closed items',function(){tx('Open items',function(){return w2.setOpenMany(closed,true)})},'solid');
             if(open.length)btn('Close all open items',function(){tx('Close items',function(){return w2.setOpenMany(open,false)})});
-            $('add').disabled=false;$('pgo').disabled=false;$('fgo').disabled=false}}}
+            $('add').disabled=false;$('pgo').disabled=false;$('fgo').disabled=false;$('oclose').disabled=false;$('oopen').disabled=false;$('oclose').onclick=function(){var id=Number($('owhich').value);tx('Close item #'+id,function(){return w2.setOpen(id,false)})};$('oopen').onclick=function(){var id=Number($('owhich').value);tx('Open item #'+id,function(){return w2.setOpen(id,true)})}}}}
     }catch(e){html+='Could not read the contracts right now.'}
     st.innerHTML=html||'No contracts set.'
   }
