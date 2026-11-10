@@ -2,7 +2,7 @@
 // and LiveKit voice passes. Everything is free to use for now. No wallet balances or Telegram details are ever sent to other players.
 import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
-import { PokerRoom, initChips, pokerLeaders } from "./pokerroom.mjs";
+import { PokerRoom, initChips, pokerLeaders, claimDaily } from "./pokerroom.mjs";
 import { Casino } from "./casino.mjs";
 import { Duels } from "./duels.mjs";
 import { WebSocketServer } from "ws";
@@ -137,6 +137,7 @@ export function initLounge(X) {
         me = { id: HEX(4), addr: s.a, nw: !!s.nw, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws, room };
         room.players.set(s.a, me); byAddr.set(s.a, me); clearTimeout(joinTimer);
         send(ws, { t: "welcome", id: me.id, room: room.n, cap: ROOM_CAP, epoch: EPOCH, now: Date.now(), dj: djState(), players: [...room.players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
+        claimDaily(me.addr, me.name).then((n) => { if (n) send(ws, { t: "sys", text: `Daily gift: +${n} play chips. Come back tomorrow for another.` }); }).catch(() => {});
         allIn(room, { t: "join", p: pub(me) }, me.id); log("lounge: join", name, s.tier, "room", room.n, "online", room.players.size); return;
       }
       if (m.t === "pos") { me.x = num(m.x, -11, 11, me.x); me.z = num(m.z, -14.5, 14.5, me.z); me.ry = num(m.ry, -7, 7, me.ry); me.anim = ["idle", "walk", "wave"].includes(m.a) ? m.a : "idle"; me.moved = true; }

@@ -120,6 +120,9 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 <div class="price" id="price">…</div><div class="small" id="usdnote" style="margin:0 0 10px"></div><div class="cnt" id="cnt">Loading…</div><div class="bar2"><b id="fill"></b></div>
 <div class="buyrow"><button class="btn solid" id="buy" type="button" disabled>Connect wallet</button></div>
 <div id="msg" role="status"></div>
+<div id="winshare" hidden></div>
+<div id="cwall" style="display:none"></div>
+<div id="share"></div>
 <ul class="list"><li>All 9 tracks: Money on My Mind, Crown Too Heavy, First Heartbreak at School (Remix), No Me Llames, Fresh Cut, White Tee, Back On Go, Walk Me Through the Fire, Still Ridin' Slow and Choosin You</li><li>WYTE BOYZ is its own exclusive release and is not in the album</li><li>Only 100 copies will ever exist</li><li>Paid in ETH on Robinhood Chain; the contract pays the artist's payout wallet (and the label's share, where there is one) automatically</li></ul>
 <div class="tl"><div class="tlh">Tracklist <span>9 tracks &middot; all on one NFT</span></div><ol id="tl"><li data-k="money"><span class="n">01</span><b>Money on My Mind</b></li><li data-k="crown"><span class="n">02</span><b>Crown Too Heavy</b></li><li data-k="heartbreak"><span class="n">03</span><b>First Heartbreak at School (Remix)</b></li><li data-k="nomellames"><span class="n">04</span><b>No Me Llames</b></li><li data-k="whitetee"><span class="n">05</span><b>Fresh Cut, White Tee</b></li><li data-k="backongo"><span class="n">06</span><b>Back On Go</b></li><li data-k="walkfire"><span class="n">07</span><b>Walk Me Through the Fire</b></li><li data-k="ridinslow"><span class="n">08</span><b>Still Ridin&#39; Slow</b></li><li data-k="choosing"><span class="n">09</span><b>Choosin You</b></li></ol></div>
 <button type="button" class="btn alt" id="shuf" style="margin:0 0 14px;display:inline-flex;align-items:center;gap:10px"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play 20-second clips (shuffle)</span></button><audio id="tlau" preload="none"></audio>
@@ -143,6 +146,7 @@ au.addEventListener('ended',function(){next()});au.addEventListener('play',paint
 </div></div></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <script src="/album/config.js"></script>
+<script src="/assets/social.js"></script>
 <script>
 (function(){
   var C=window.ALBUM||{},$=function(i){return document.getElementById(i)},btn=$('buy'),msg=$('msg');
@@ -154,7 +158,7 @@ au.addEventListener('ended',function(){next()});au.addEventListener('play',paint
   async function usdNote(){try{var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'),j=await r.json(),u=j.ethereum.usd;if(u&&state.price!=null){$('price').textContent='$'+(Number(ethers.formatEther(state.price))*u).toFixed(2);$('usdnote').textContent=fmt(state.price)+' on Robinhood Chain, at today\u2019s ETH price'}}catch(e){}}
   function render(){
     if(!C.contract){$('price').textContent='Soon';$('cnt').textContent='Mint opens soon';btn.textContent='Get the drop in Telegram';btn.disabled=false;btn.onclick=function(){location.href='https://t.me/StagWifHood'};return}
-    if(state.sold!=null){$('cnt').textContent=state.sold+' of '+state.max+' minted';$('fill').style.width=Math.min(100,state.sold/state.max*100)+'%'}
+    if(state.sold!=null){var left=Math.max(0,state.max-state.sold);$('cnt').textContent=state.sold>0?(left+' of '+state.max+' left'):('Limited to '+state.max+' copies');$('fill').parentNode.style.display=state.sold>0?'':'none';$('fill').style.width=Math.min(100,state.sold/state.max*100)+'%'}
     if(state.sold!=null&&state.sold>=state.max){btn.textContent='Sold out';btn.disabled=true;return}
     if(state.paused){btn.textContent=state.acct?'Mint not open yet':'Connect wallet';btn.disabled=!!state.acct&&true;if(state.acct)say('The sale is not open yet. Watch Telegram for the mint time.');return}
     btn.disabled=state.busy;btn.textContent=state.busy?'Working…':(state.acct?'Buy the album · '+fmt(state.price):'Connect wallet')
@@ -189,11 +193,13 @@ au.addEventListener('ended',function(){next()});au.addEventListener('play',paint
       say('Confirm the purchase in your wallet…');
       var t2=await nft.mint(ID,{value:price}),rc=await t2.wait(),id='';
       say('Done. You own the Hood Rich album pass. Tx: '+rc.hash,'ok');
+      try{var ws=$('winshare');ws.hidden=false;StagShare.buttons(ws,{win:true,label:'You are in. Tell people.',text:'I just collected Hood Rich by Winslow Bankz. Only 100 copies exist.',url:'https://records.stagwifhood.fun/album/'});setTimeout(function(){StagShare.collectors($('cwall'),ID)},25000)}catch(e){}
       await readState()
     }catch(e){var m=(e&&(e.shortMessage||e.reason||e.message))||'Something went wrong';if(/user rejected|denied/i.test(m))m='Cancelled in your wallet. Nothing was charged.';say(m,'err')}
     state.busy=false;render()
   }
   btn.addEventListener('click',function(){if(!C.contract)return;if(!state.acct){connect().catch(function(e){say((e&&e.message)||'Could not connect','err')});return}buy()});
-  render();readState()
+  render();readState();
+  try{StagShare.buttons($('share'),{text:'Hood Rich by Winslow Bankz. 9 tracks, only 100 collector copies.',url:'https://records.stagwifhood.fun/album/'});StagShare.collectors($('cwall'),ID)}catch(e){}
 })();
 </script></html>

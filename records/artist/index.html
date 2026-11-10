@@ -67,6 +67,13 @@ h1{font-size:clamp(54px,11vw,128px)}
 .pb svg{width:18px;height:18px;fill:currentColor}
 .pb.on{background:var(--neon);color:#031005}
 .note{color:var(--muted);font-size:14px;margin-top:14px}
+.vids{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.vid{margin:0}.vid button{position:relative;display:block;width:100%;aspect-ratio:16/9;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#000;padding:0;cursor:pointer}
+.vid img{width:100%;height:100%;object-fit:cover}.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vp{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;background:rgba(5,8,6,.82);border:2px solid var(--neon)}
+.vp::after{content:"";position:absolute;left:24px;top:18px;border-left:20px solid var(--neon);border-top:12px solid transparent;border-bottom:12px solid transparent}
+.vid button:hover .vp,.vid button:focus-visible .vp{background:var(--neon)}.vid button:hover .vp::after,.vid button:focus-visible .vp::after{border-left-color:#031005}
+.vid figcaption{font-weight:600;margin-top:8px}
 .links{display:flex;flex-wrap:wrap;gap:12px}
 footer{border-top:1px solid var(--line);padding:28px 0 calc(28px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:14px}
 footer a{margin-right:16px}
@@ -77,6 +84,7 @@ footer a{margin-right:16px}
  .rel{flex-direction:row}.rel img{width:128px;height:auto;aspect-ratio:auto;flex:none}
  .rel h3{font-size:22px}
  .tl{grid-template-columns:1fr}
+ .vids{grid-template-columns:1fr}
  .brand span{font-size:15px}
  .hero .row .btn{flex:1 1 100%}
 }
@@ -127,6 +135,20 @@ footer a{margin-right:16px}
 </div></section>
 
 <section class="band"><div class="in">
+  <span class="eyebrow">Watch</span>
+  <h2 class="sec-h">Music <span class="gold">videos</span></h2>
+  <div class="vids" id="vids">
+    <figure class="vid"><button type="button" data-v="HGIOoeF9_vg" aria-label="Play the Neon On 45 music video"><img src="https://i.ytimg.com/vi/HGIOoeF9_vg/hqdefault.jpg" alt="" width="480" height="360" loading="lazy"><span class="vp" aria-hidden="true"></span></button><figcaption>Neon On 45</figcaption></figure>
+    <figure class="vid"><button type="button" data-v="pk_wWA7Wk2E" aria-label="Play the Cowboy (with Pyrexx) music video"><img src="https://i.ytimg.com/vi/pk_wWA7Wk2E/hqdefault.jpg" alt="" width="480" height="360" loading="lazy"><span class="vp" aria-hidden="true"></span></button><figcaption>Cowboy (with Pyrexx)</figcaption></figure>
+    <figure class="vid"><button type="button" data-v="1nIYa3g4XyU" aria-label="Play the Hotel California ft. Machine music video"><img src="https://i.ytimg.com/vi/1nIYa3g4XyU/hqdefault.jpg" alt="" width="480" height="360" loading="lazy"><span class="vp" aria-hidden="true"></span></button><figcaption>Hotel California ft. Machine</figcaption></figure>
+    <figure class="vid"><button type="button" data-v="Zku8AEWXfl4" aria-label="Play the Run It ft. Daddex music video"><img src="https://i.ytimg.com/vi/Zku8AEWXfl4/hqdefault.jpg" alt="" width="480" height="360" loading="lazy"><span class="vp" aria-hidden="true"></span></button><figcaption>Run It ft. Daddex</figcaption></figure>
+    <figure class="vid"><button type="button" data-v="eMWDl2633uU" aria-label="Play the Rolex ft. T-Wayne music video"><img src="https://i.ytimg.com/vi/eMWDl2633uU/hqdefault.jpg" alt="" width="480" height="360" loading="lazy"><span class="vp" aria-hidden="true"></span></button><figcaption>Rolex ft. T-Wayne</figcaption></figure>
+    <figure class="vid"><button type="button" data-v="Lif-IFPFpWY" aria-label="Play the Whiskey Burn music video"><img src="https://i.ytimg.com/vi/Lif-IFPFpWY/hqdefault.jpg" alt="" width="480" height="360" loading="lazy"><span class="vp" aria-hidden="true"></span></button><figcaption>Whiskey Burn</figcaption></figure>
+  </div>
+  <p class="note">Videos play from YouTube when you tap them. <a href="https://www.youtube.com/@winslowbankz" target="_blank" rel="noopener" style="color:var(--gold-hi)">More on his channel</a>.</p>
+</div></section>
+
+<section class="band"><div class="in">
   <span class="eyebrow">Follow</span>
   <h2 class="sec-h">Find <span class="gold">Winslow</span></h2>
   <div class="links" id="socials">
@@ -134,6 +156,7 @@ footer a{margin-right:16px}
     <a class="btn" href="https://x.com/stagwifhoodrh" target="_blank" rel="noopener">X</a>
     <a class="btn" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Telegram community</a>
   </div>
+  <div id="share"></div>
 </div></section>
 </main>
 
@@ -141,6 +164,12 @@ footer a{margin-right:16px}
 <p style="margin-top:12px;max-width:none">Editions are collectibles, not investments. Nothing on this page is financial advice.</p></div></footer>
 
 <audio id="a" preload="none"></audio>
+<script src="/assets/social.js"></script>
+<script>
+try{StagShare.buttons(document.getElementById('share'),{label:'Share this page',text:'Winslow Bankz on Stag House Records: the Hood Rich album, WYTE BOYZ and more.',url:'https://records.stagwifhood.fun/artist/'})}catch(e){}
+document.getElementById('vids').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button[data-v]');if(!b||b.querySelector('iframe'))return;var a=document.getElementById('a');if(a&&!a.paused)a.pause();
+  var f=document.createElement('iframe');f.src='https://www.youtube-nocookie.com/embed/'+b.getAttribute('data-v')+'?autoplay=1&rel=0';f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';f.allowFullscreen=true;f.title='Music video';b.appendChild(f);});
+</script>
 <script>
 (function(){
   var TR=[['Money on My Mind','money'],['Crown Too Heavy','crown'],['First Heartbreak at School (Remix)','heartbreak'],['No Me Llames','nomellames'],['Fresh Cut, White Tee','whitetee'],['Back On Go','backongo'],['Walk Me Through the Fire','walkfire'],["Still Ridin' Slow",'ridinslow'],['WYTE BOYZ','wyteboyz'],['Choosin You','choosing'],['Who Got the Keys','whogotthekeys']];

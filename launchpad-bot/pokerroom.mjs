@@ -13,6 +13,7 @@ const cache = new Map(); let Q = null, ready = false;
 export async function initChips(q) {
   Q = q; if (!Q) return;
   try { await Q("create table if not exists poker_chips(addr text primary key, chips bigint not null, net_week bigint not null default 0, week text, topup_day text, name text, updated_at timestamptz default now())"); ready = true; } catch (e) { console.log("poker chips table err:", e.message); }
+  try { await Q("create table if not exists chip_bonus(addr text primary key, day text not null)"); } catch (e) { console.log("chip bonus table err:", e.message); }
 }
 export async function chipsFor(addr, name) {
   let c = cache.get(addr);
@@ -25,6 +26,13 @@ export async function chipsFor(addr, name) {
   if (c.week !== weekKey()) { c.week = weekKey(); c.net = 0; } // a new week starts the leaderboard fresh
   if (c.chips < TOPUP_BELOW && c.topup !== day()) { c.chips = TOPUP_TO; c.topup = day(); } // one free top-up a day if you are nearly out
   return c;
+}
+const DAILY_BONUS = 500; const bonusMem = new Map();
+export async function claimDaily(addr, name) { // a small free play-chip gift the first time you walk in each day
+  const d = day(); if (bonusMem.get(addr) === d) return 0;
+  if (Q && ready) { try { const r = await Q("insert into chip_bonus(addr, day) values ($1,$2) on conflict(addr) do update set day=excluded.day where chip_bonus.day <> excluded.day returning addr", [addr, d]); bonusMem.set(addr, d); if (!r.length) return 0; } catch { return 0; } }
+  else bonusMem.set(addr, d);
+  const c = await chipsFor(addr, name); c.chips += DAILY_BONUS; await saveChips(c); return DAILY_BONUS;
 }
 export async function saveChips(c) { if (!Q || !ready) return; try { await Q("insert into poker_chips(addr, chips, net_week, week, topup_day, name, updated_at) values ($1,$2,$3,$4,$5,$6, now()) on conflict(addr) do update set chips=excluded.chips, net_week=excluded.net_week, week=excluded.week, topup_day=excluded.topup_day, name=excluded.name, updated_at=now()", [c.addr, c.chips, c.net, c.week, c.topup, c.name]); } catch {} }
 export async function pokerLeaders(limit = 10) {

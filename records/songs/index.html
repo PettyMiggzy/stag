@@ -116,10 +116,14 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 <main class="wrap"><span class="eyebrow">Winslow Bankz · Robinhood Chain</span><h1 class="sec-h">Collect a <span class="gold">song</span></h1>
 <p class="sec-p" style="margin-bottom:6px">WYTE BOYZ is an exclusive single, its own limited NFT, and it is not part of the album. Every other Winslow Bankz song is in the <a class="gold" href="/album/">Hood Rich album</a>. Paid in ETH on Robinhood Chain. The contract pays the artist's payout wallet (and the label's share, where there is one) automatically.</p>
 <div style="margin:14px 0 0"><button class="btn" id="conn" type="button">Connect wallet</button></div><div id="msg" role="status"></div>
+<div id="winshare" hidden></div>
 <div class="sg" id="list"></div>
+<div id="cwall" style="display:none"></div>
+<div id="share"></div>
 <p class="small">You need a wallet (MetaMask, Rabby or similar) with enough ETH on Robinhood Chain for the price shown plus a little for network fees. Sales are final. A song NFT is a digital collectible and song access, not an investment. <span id="ca"></span></p></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <script src="/songs/config.js"></script>
+<script src="/assets/social.js"></script>
 <script>
 (function(){
   var C=window.SONGS||{},$=function(i){return document.getElementById(i)},msg=$('msg'),list=$('list');
@@ -133,7 +137,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
     list.innerHTML='';
     songs.forEach(function(s){
       var i=info[s.id],row=document.createElement('div');row.className='sr';
-      var sub=!C.contract?'Opens soon':(!i?'Loading…':(i.minted>=i.cap?'Sold out':(i.open?usd(i.price)+' · '+(i.cap-i.minted)+' of '+i.cap+' left':'Not open yet')));
+      var sub=!C.contract?'Opens soon':(!i?'Loading…':(i.minted>=i.cap?'Sold out':(i.open?usd(i.price)+' · '+(i.minted>0?(i.cap-i.minted)+' of '+i.cap+' left':'limited to '+i.cap+' copies'):'Not open yet')));
       row.innerHTML='<img alt=""><div><b></b><span></span></div>';row.querySelector('img').src=s.image||'/assets/covers/hood-rich.jpg';
       row.querySelector('b').textContent=s.title;row.querySelector('span').textContent=sub;
       var b=document.createElement('button');b.className='btn solid';b.type='button';
@@ -147,7 +151,7 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
     if(!C.contract||!window.ethers)return draw();
     try{var p=new ethers.JsonRpcProvider(C.rpc||CHAIN.rpcUrls[0],4663,{staticNetwork:true}),n=new ethers.Contract(C.contract,ABI,p);
       var count=Number(await n.songCount()),ids=[],hide=C.hide||[];for(var k=1;k<=count;k++)if(hide.indexOf(k)<0)ids.push(k);
-      await Promise.all(ids.map(async function(id){var r=await n.songInfo(id);info[id]={price:r[0],cap:Number(r[1]),minted:Number(r[2]),open:r[3],uri:r[5]};
+      await Promise.all(ids.map(async function(id){var r=await n.songInfo(id);if(C.minPrice&&C.minPrice[id]&&r[0]<ethers.parseEther(C.minPrice[id]))return;info[id]={price:r[0],cap:Number(r[1]),minted:Number(r[2]),open:r[3],uri:r[5]};
         var known=songs.filter(function(x){return x.id===id})[0];
         if(!known){known={id:id,title:'Song #'+id};songs.push(known)}
         try{var m=await (await fetch(ipfs(r[5]))).json();if(m&&m.name)known.title=m.name.replace(/ - Winslow Bankz$/,'');if(m&&m.image)known.image=ipfs(m.image)}catch(e){}}));
@@ -167,11 +171,15 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
       var r=await nft.songInfo(id),price=r[0];if(!r[3])throw new Error('This song is not open yet.');if(r[2]>=r[1])throw new Error('Sold out.');
       if((await prov.getBalance(me))<price)throw new Error('You need '+usd(price)+' plus a little for fees in this wallet on Robinhood Chain.');
       say('Confirm the purchase in your wallet…');var rc=await (await nft.mint(id,{value:price})).wait();
-      say('Done. You own this song NFT. Tx: '+rc.hash,'ok');await readAll()}
+      say('Done. You own this song NFT. Tx: '+rc.hash,'ok');
+      try{var nm=(songs.filter(function(x){return x.id===id})[0]||{}).title||'a Winslow Bankz release',ws=$('winshare');ws.hidden=false;StagShare.buttons(ws,{win:true,label:'You are in. Tell people.',text:'I just collected '+nm+' by Winslow Bankz. Only 100 copies exist.',url:'https://records.stagwifhood.fun/songs/'});setTimeout(wall,25000)}catch(e){}
+      await readAll()}
     catch(e){var m=(e&&(e.shortMessage||e.reason||e.message))||'Something went wrong';if(/user rejected|denied/i.test(m))m='Cancelled in your wallet. Nothing was charged.';say(m,'err')}
     busy=false;draw()
   }
   $('conn').onclick=function(){connect().catch(function(e){say((e&&e.message)||'Could not connect','err')})};
-  draw();readAll()
+  function wall(){var nm={};songs.forEach(function(x){nm[x.id]=x.title});try{StagShare.collectors($('cwall'),0,nm)}catch(e){}}
+  draw();readAll().then(wall);
+  try{StagShare.buttons($('share'),{text:'WYTE BOYZ by Winslow Bankz ft. JellyRoll615 & Pyrexx. An exclusive single, only 100 copies.',url:'https://records.stagwifhood.fun/songs/'})}catch(e){}
 })();
 </script></html>

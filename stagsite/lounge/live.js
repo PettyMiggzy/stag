@@ -252,6 +252,33 @@ function guestsInit() {
   }
 }
 setTimeout(guestsInit, 6000);
+
+/* ---------- weekly poker board by the door (play chips, wallets only) ---------- */
+(function leaderBoard() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 680; const g = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const BX = 2.75, BZ = 10.75;
+  const grp = new THREE.Group(); grp.position.set(BX, 0, BZ); grp.rotation.y = -0.28; scene.add(grp);
+  const gold = new THREE.MeshStandardMaterial({ color: 0xd8a843, metalness: .7, roughness: .35 });
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.42, 1.86, .06), gold); frame.position.set(0, 1.55, -.035); grp.add(frame);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.727), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })); face.position.set(0, 1.55, 0); grp.add(face);
+  for (const sx of [-1, 1]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.06, .7, .06), gold); leg.position.set(sx * .55, .35, -.035); grp.add(leg); }
+  function draw(rows) {
+    g.fillStyle = '#0b0a0e'; g.fillRect(0, 0, 512, 680); g.strokeStyle = '#d8a843'; g.lineWidth = 4; g.strokeRect(10, 10, 492, 660);
+    g.textAlign = 'center'; g.fillStyle = '#ffe6a0'; g.font = '700 46px Georgia,serif'; g.fillText('TOP PLAYERS', 256, 74);
+    g.fillStyle = '#ff7ac0'; g.font = '600 24px system-ui,sans-serif'; g.fillText('POKER  ·  THIS WEEK', 256, 112);
+    g.strokeStyle = '#5a4520'; g.lineWidth = 2; g.beginPath(); g.moveTo(40, 134); g.lineTo(472, 134); g.stroke();
+    if (!rows.length) { g.fillStyle = '#e9e2d0'; g.font = '500 28px system-ui,sans-serif'; g.fillText('No scores yet this week.', 256, 300); g.fillText('Take a seat at the', 256, 350); g.fillText('poker table.', 256, 390); }
+    rows.slice(0, 5).forEach((r, i) => { const y = 200 + i * 84; g.textAlign = 'left'; g.fillStyle = i === 0 ? '#ffe6a0' : '#e9e2d0'; g.font = (i === 0 ? '700 ' : '600 ') + '32px system-ui,sans-serif';
+      let nm = String(r.name || 'player'); while (g.measureText(nm).width > 250 && nm.length > 3) nm = nm.slice(0, -2); if (nm !== String(r.name || 'player')) nm += '…';
+      g.fillText((i + 1) + '.  ' + nm, 40, y); g.textAlign = 'right'; g.fillStyle = r.net >= 0 ? '#7dff9a' : '#ff8d8d'; g.fillText((r.net >= 0 ? '+' : '') + Number(r.net).toLocaleString('en-US'), 472, y); });
+    g.textAlign = 'center'; g.fillStyle = '#9a917c'; g.font = '500 20px system-ui,sans-serif'; g.fillText('Play chips only  ·  resets every Monday', 256, 640);
+    tex.needsUpdate = true;
+  }
+  draw([]);
+  const pull = () => fetch(API + '/api/lounge/poker/leaders').then((r) => r.json()).then((d) => draw(d.leaders || [])).catch(() => {});
+  pull(); setInterval(pull, 60000);
+})();
 const _HP = new THREE.Vector3();
 function guestTick(dt) {
   const now = performance.now();

@@ -27,6 +27,8 @@
 <body>
 <div id="load">LOADING THE CLUB</div>
 <div id="hud">Hood Rich Club · drag to look around</div>
+<link rel="modulepreload" href="./vendor/three.module.js">
+<link rel="modulepreload" href="./live.js">
 <script type="importmap">
 {"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}
 </script>
@@ -767,8 +769,9 @@ mergeStatic();
 {const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material)return;for(const m of [].concat(o.material)){if(seen.has(m)||!m.isMeshStandardMaterial||m.userData.envSet)continue;seen.add(m);if(m.envMapIntensity===1)m.envMapIntensity=.12;}});floor.material.envMap=scene.environment;floor.material.envMapIntensity=.025;floor.material.roughness=.2;floor.material.emissive=new THREE.Color(0xa07c86);floor.material.emissiveMap=floor.material.map;floor.material.emissiveIntensity=1.5;floor.material.color.setScalar(2.6);floor.material.needsUpdate=true;}
 window.__lounge={gpuIntel:GPU_INTEL,applyFlags,FLAGS,THREE,scene,camera,renderer,M,STAGE_Y,COLLIDERS,cardRoom,setSafe,isSafe:()=>SAFE,setSign:(o)=>window.__setSign&&window.__setSign(o),studio:studioState,syncDance,hooks:{tick:null,autoCam:()=>placeCam(tAbs)}};
 async function boot(){
-  await Promise.all([setupDancer(),loadStudioProps()]);setupDancer2();
-  for(const v of videos){try{await v.play();}catch(e){}}
+  const heavy=Promise.all([setupDancer().catch(e=>console.warn('dancer failed',e)),loadStudioProps().catch(e=>console.warn('studio props failed',e))]).then(()=>{applySafe();return setupDancer2();});
+  if(CAP)await heavy; // capture mode waits for the full scene
+  for(const v of videos){const p=v.play();if(p&&p.catch)p.catch(()=>{});}
   document.getElementById('load').style.opacity=0;setTimeout(()=>document.getElementById('load').remove(),900);
   applySafe();window.__videos=videos;window.__ready=true;
   if(Q.has('diag'))import('./diag.js').catch(e=>console.error('diag failed',e));

@@ -21,7 +21,8 @@ export function initExtras(X) {
     [{ text: "🏹 Play Stag Shot", url: process.env.MINIAPP_URL || "https://stagwifhood.fun/play/", style: "success" }, { text: "🎵 Records", url: "https://records.stagwifhood.fun", style: "primary" }],
   ] });
 
-  const W = initWhale({ CFG, ST, fmt, short, log, tgPost, ethUsd: X.ethUsd });
+  const API = { h: null };
+  const W = initWhale({ CFG, ST, fmt, short, log, tgPost, ethUsd: X.ethUsd, api: API });
   // ---------- buyer lookup (cached) ----------
   const BUYER = new Map();
   let TEAM = "";
@@ -343,6 +344,7 @@ export function initExtras(X) {
       const logs = await provider.getLogs({ address: SONGS, topics: [BOUGHT_TOPIC], fromBlock: from, toBlock: to });
       for (const lg of logs.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index)) {
         const ev = SONG_IFACE.parseLog(lg); const id = Number(ev.args.id); const buyer = ev.args.buyer; const eth = Number(ethers.formatEther(ev.args.price));
+        try { await W.q("insert into song_sales(tx, idx, song_id, buyer, eth, block) values ($1,$2,$3,$4,$5,$6) on conflict do nothing", [lg.transactionHash, lg.index, id, buyer.toLowerCase(), eth, lg.blockNumber]); } catch (e) { log("song sale save err:", e.message); }
         let left = "", title = SONG_NAMES[id] || "song #" + id;
         try { const si = await songContract.songInfo(id, { blockTag: lg.blockNumber }); const cap = Number(si.cap), minted = Number(si.minted); left = cap - minted <= 0 ? "🔥 <b>SOLD OUT</b>" : `🔥 <b>${cap - minted}</b> of ${cap} left`; title = await songTitle(id, si.metadataURI); } catch {}
         const ethUsd = X.ethUsd ? X.ethUsd() : 0;
@@ -354,7 +356,29 @@ export function initExtras(X) {
       await W.q("update bot_state set v=$1, updated_at=now() where k='songSaleBlock'", [String(to)]);
     } catch (e) { log("song sale watch err:", e.message); } finally { songBusy = false; }
   }
+  // ---------- public read-only numbers for the websites (cached; no wallet or Telegram details) ----------
+  let tokCache = null, tokAt = 0; const colCache = new Map();
+  const sendJson = (res, obj, age) => { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=" + age, "access-control-allow-origin": "*" }); res.end(JSON.stringify(obj)); };
+  API.h = async (req, res, u) => {
+    if (u.pathname === "/api/token") {
+      if (!tokCache || Date.now() - tokAt > 20000) { try { const m = await market(); tokCache = { ok: true, token: CFG.token, priceUsd: m.priceUsd, mcUsd: m.mcUsd, ch24: m.ch24, holders: m.holders, buys24: m.buys24, vol24Eth: m.vol24, vol24Usd: m.vol24 * m.ethUsd, bondPct: m.bondPct, lastBuyBlock: m.lastBlock, head: m.head, buyUrl: CFG.buyUrl || CFG.chartUrl || `${CFG.launchpad}/${CFG.token}`, updated: Date.now() }; tokAt = Date.now(); } catch (e) { if (!tokCache) { sendJson(res, { ok: false }, 5); return true; } } }
+      sendJson(res, tokCache, 15); return true;
+    }
+    if (u.pathname === "/api/collectors") {
+      const id = parseInt(u.searchParams.get("id") || "0", 10) || 0; const k = String(id); const c = colCache.get(k);
+      if (c && Date.now() - c.at < 20000) { sendJson(res, c.v, 15); return true; }
+      let v = { ok: true, total: 0, recent: [] };
+      try {
+        const rows = id ? await W.q("select song_id, buyer, eth, tx, extract(epoch from at)::bigint as ts from song_sales where song_id=$1 order by block desc, idx desc limit 12", [id]) : await W.q("select song_id, buyer, eth, tx, extract(epoch from at)::bigint as ts from song_sales order by block desc, idx desc limit 12");
+        const [n] = id ? await W.q("select count(*)::int as n from song_sales where song_id=$1", [id]) : await W.q("select count(*)::int as n from song_sales");
+        v = { ok: true, total: n ? n.n : 0, recent: rows.map((r) => ({ id: Number(r.song_id), buyer: r.buyer.slice(0, 6) + "…" + r.buyer.slice(-4), eth: Number(r.eth), tx: r.tx, ts: Number(r.ts) })) };
+      } catch (e) { v = { ok: false, total: 0, recent: [] }; }
+      colCache.set(k, { at: Date.now(), v }); sendJson(res, v, 15); return true;
+    }
+    return false;
+  };
   async function start(head) {
+    try { await W.q("create table if not exists song_sales(tx text not null, idx int not null, song_id int not null, buyer text not null, eth double precision not null, block bigint not null, at timestamptz default now(), primary key(tx, idx))"); } catch (e) { log("song_sales table err:", e.message); }
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();

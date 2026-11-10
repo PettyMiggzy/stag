@@ -44,6 +44,16 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 .hero .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
 .stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:34px;font:700 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .stats b{color:var(--gold-hi);font-weight:700}
+.live{background:var(--panel);border-bottom:1px solid var(--line)}
+.live .in{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;gap:10px;align-items:stretch;padding-block:16px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.tile small{display:block;font:700 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.tile b{display:block;font:400 clamp(20px,2.4vw,28px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile b.up{color:var(--neon)}.tile b.dn{color:#ff8a80}
+.live .btn{align-self:center;white-space:nowrap}
+.livenote{font:700 11px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-bottom:14px}
+.livenote i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--neon);box-shadow:0 0 10px var(--neon);margin-right:8px}
+@media(max-width:900px){.live .in{grid-template-columns:repeat(2,minmax(0,1fr))}.live .tile:nth-child(1){grid-column:1/-1}.live .btn{grid-column:1/-1;justify-content:center;min-height:52px}}
 .boothwrap{position:relative;border-radius:26px;overflow:hidden;border:2px solid rgba(57,255,20,.55);box-shadow:0 0 70px rgba(57,255,20,.28),0 30px 80px rgba(0,0,0,.65)}
 .boothwrap>img{width:100%;aspect-ratio:4/5;object-fit:cover}
 .boothwrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(3,8,4,.92) 100%);pointer-events:none}
@@ -108,6 +118,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
  .hero .lead{margin-top:12px}
  .hero .cta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
  .hero .cta .btn{justify-content:center;text-align:center;padding-inline:8px;min-height:52px;font-size:14px}
+ .hero .cta .btn.buy{grid-column:1/-1}
  header{backdrop-filter:none;-webkit-backdrop-filter:none}
  header nav .btn{white-space:nowrap;min-height:40px;display:inline-flex;align-items:center}
  footer a{display:inline-block;padding:8px 0}
@@ -119,18 +130,36 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 <span class="eyebrow">Stag Wif Hood</span>
 <h1>The stag <em>runs</em> the hood.</h1>
 <p class="lead">$STAG is the community token behind real businesses: a CRM built for junk removal and moving companies, a record label where artists own their music, and a 3D club for the community.</p>
-<div class="cta"><a class="btn solid" href="/stagr/">See StagR CRM</a><a class="btn" href="https://records.stagwifhood.fun">Hear the music</a></div>
+<div class="cta"><a class="btn solid buy" data-buy href="https://robinhoodchain.blockscout.com/token/0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305" target="_blank" rel="noopener">Buy $STAG</a><a class="btn" href="/lounge/">Enter the lounge</a><a class="btn" href="/stagr/">See StagR CRM</a><a class="btn" href="https://records.stagwifhood.fun">Hear the music</a></div>
 <div class="stats"><span><b>1</b> CRM in beta</span><span><b>1</b> album + <b>2</b> singles</span><span><b>Robinhood</b> Chain</span></div>
 </div><div class="boothwrap"><img src="/assets/poster.webp" alt="Stag Wif Hood poster"></div></div></section>
+<section class="live" id="live" hidden aria-label="Live $STAG numbers"><div class="in"><div class="tile"><small>Price</small><b id="lvPrice">…</b></div><div class="tile"><small>Market cap</small><b id="lvMc">…</b></div><div class="tile"><small>24h change</small><b id="lvCh">…</b></div><div class="tile"><small>Holders</small><b id="lvHold">…</b></div><div class="tile"><small>24h buys</small><b id="lvBuys">…</b></div><a class="btn solid" data-buy href="https://robinhoodchain.blockscout.com/token/0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305" target="_blank" rel="noopener">Buy $STAG</a></div><div class="in livenote"><i></i>Live from the chain, refreshed every 30 seconds. Not financial advice.</div></section>
 <div class="ticker" aria-hidden="true"><div><span>$STAG</span><span>StagR CRM</span><span>Stag House Records</span><span>Winslow Bankz</span><span>Own your music</span><span>$STAG</span><span>StagR CRM</span><span>Stag House Records</span><span>Winslow Bankz</span><span>Own your music</span></div></div>
 <section class="band" id="ecosystem"><div class="in"><span class="eyebrow">The ecosystem</span><h2 class="sec-h">Three doors. One <span class="gold">stag</span>.</h2><p class="sec-p">Everything is built by the same crew and tied back to the community.</p>
 <div class="grid">
 <a class="card" href="/stagr/"><img src="/assets/stagr.webp" alt="StagR CRM"><div class="b"><span class="chip">In beta</span><h3>StagR CRM</h3><p>Customers, quotes, jobs, invoices and follow-ups for junk removal and moving companies. Already tested with a real crew.</p><span class="go">Open StagR →</span></div></a>
-<a class="card" href="https://records.stagwifhood.fun"><img src="/assets/booth.webp" alt="Stag House Records booth"><div class="b"><span class="chip">Live</span><h3>Stag House Records</h3><p>Winslow Bankz and the label. Hear clips from the Hood Rich album and collect limited NFT editions.</p><span class="go">Open Records →</span></div></a><a class="card" href="/lounge/"><img src="/assets/lounge-card.webp" alt="Inside the Hood Rich Club lounge: neon dance floor, bar and casino"><div class="b"><span class="chip">Live</span><h3>Hood Rich Club</h3><p>A 3D lounge you walk around in: live DJ, bar, poker and casino tables, chess and trivia duels. Play chips only, no cash value.</p><span class="go">Enter the lounge →</span></div></a>
+<a class="card" href="https://records.stagwifhood.fun"><img src="/assets/booth.webp" alt="Stag House Records booth"><div class="b"><span class="chip">Live</span><h3>Stag House Records</h3><p>Winslow Bankz and the label. Hear clips from the Hood Rich album and collect limited NFT editions.</p><span class="go">Open Records →</span></div></a><a class="card" href="/lounge/"><img src="/assets/lounge-card.webp" alt="Inside the Hood Rich Club lounge: neon dance floor, bar and casino"><div class="b"><span class="chip" id="loungeChip">Live</span><h3>Hood Rich Club</h3><p>A 3D lounge you walk around in: live DJ, bar, poker and casino tables, chess and trivia duels. Play chips only, no cash value.</p><span class="go">Enter the lounge →</span></div></a>
 </div></div></section>
-<section class="band alt"><div class="in split"><div><span class="eyebrow">Hood Rich</span><h2 class="sec-h">Winslow Bankz</h2><p class="sec-p">The first artist on Stag House Records. Hit play for 20-second clips from the album. One NFT, the whole Hood Rich album: 9 tracks, only 100 copies. WYTE BOYZ is a separate exclusive single.</p><a class="btn solid" href="https://records.stagwifhood.fun">Listen now</a></div><div class="frame"><img src="/assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" onerror="this.src='/assets/booth.webp'"></div></div></section>
+<section class="band alt"><div class="in split"><div><span class="eyebrow">Hood Rich</span><h2 class="sec-h">Winslow Bankz</h2><p class="sec-p">The first artist on Stag House Records. Hit play for 20-second clips from the album. One NFT, the whole Hood Rich album: 9 tracks, only 100 copies. WYTE BOYZ is a separate exclusive single.</p><div class="cta" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px"><a class="btn solid" href="https://records.stagwifhood.fun">Listen now</a><a class="btn" href="https://records.stagwifhood.fun/artist/">Meet Winslow</a></div></div><div class="frame"><img src="/assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" onerror="this.src='/assets/booth.webp'"></div></div></section>
 <section class="band"><div class="in"><span class="eyebrow">Where it's going</span><h2 class="sec-h">The plan</h2><ol class="steps"><li>Ship StagR to real service businesses and keep improving it.</li><li>Release music on Stag House Records with the artist's say on every deal.</li><li>Use profits for music videos, with a stag clip ahead of each one.</li><li>Keep releasing limited music editions for fans, 100 copies at a time.</li></ol></div></section>
-<section class="band alt"><div class="in"><span class="eyebrow">Contract</span><h2 class="sec-h">Verify before you buy</h2><div class="ca"><span>$STAG on Robinhood Chain<br><span id="caTxt">0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305</span></span><button class="btn" type="button" id="caCopy">Copy</button><a class="btn" href="https://robinhoodchain.blockscout.com/token/0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305" target="_blank" rel="noopener">Explorer</a></div><p style="margin-top:14px;color:var(--muted)">This is the only $STAG contract. Never trust an address from a DM.</p><script>document.getElementById("caCopy").onclick=function(){var b=this,t=document.getElementById("caTxt").textContent;var done=function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy"},1600)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,function(){});else{var r=document.createRange();r.selectNodeContents(document.getElementById("caTxt"));var g=getSelection();g.removeAllRanges();g.addRange(r);try{document.execCommand("copy");done()}catch(e){}}};</script></div></section>
+<section class="band alt"><div class="in"><span class="eyebrow">Contract</span><h2 class="sec-h">Verify before you buy</h2><div class="ca"><span>$STAG on Robinhood Chain<br><span id="caTxt">0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305</span></span><button class="btn" type="button" id="caCopy">Copy</button><a class="btn solid" data-buy href="https://robinhoodchain.blockscout.com/token/0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305" target="_blank" rel="noopener">Buy</a><a class="btn" href="https://robinhoodchain.blockscout.com/token/0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305" target="_blank" rel="noopener">Explorer</a></div><p style="margin-top:14px;color:var(--muted)">This is the only $STAG contract. Never trust an address from a DM.</p><script>document.getElementById("caCopy").onclick=function(){var b=this,t=document.getElementById("caTxt").textContent;var done=function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy"},1600)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,function(){});else{var r=document.createRange();r.selectNodeContents(document.getElementById("caTxt"));var g=getSelection();g.removeAllRanges();g.addRange(r);try{document.execCommand("copy");done()}catch(e){}}};</script></div></section>
 </main>
+<script>
+(function(){
+  var API='https://buybot.stagwifhood.fun',$=function(i){return document.getElementById(i)};
+  function price(n){if(!n)return '…';if(n>=1)return '$'+n.toFixed(2);var d=Math.min(12,Math.max(2,2-Math.floor(Math.log10(n))+1));return '$'+n.toFixed(d).replace(/0+$/,'')}
+  function big(n){if(!n)return '…';if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M';if(n>=1e3)return '$'+(n/1e3).toFixed(1)+'K';return '$'+n.toFixed(0)}
+  function tick(){fetch(API+'/api/token').then(function(r){return r.json()}).then(function(d){
+    if(!d||!d.ok||!d.priceUsd)return;
+    $('lvPrice').textContent=price(d.priceUsd);$('lvMc').textContent=big(d.mcUsd);
+    var c=$('lvCh'),v=Number(d.ch24)||0;c.textContent=(v>=0?'+':'')+v.toFixed(1)+'%';c.className=v>=0?'up':'dn';
+    $('lvHold').textContent=Number(d.holders||0).toLocaleString('en-US');$('lvBuys').textContent=Number(d.buys24||0).toLocaleString('en-US');
+    if(d.buyUrl&&/^https:\/\//.test(d.buyUrl))[].forEach.call(document.querySelectorAll('[data-buy]'),function(a){a.href=d.buyUrl});
+    $('live').hidden=false;
+  }).catch(function(){})}
+  tick();setInterval(function(){if(!document.hidden)tick()},30000);
+  fetch(API+'/api/lounge/status').then(function(r){return r.json()}).then(function(d){if(d&&d.online>0)$('loungeChip').textContent='Live · '+d.online+' inside'}).catch(function(){});
+})();
+</script>
 <footer><div class="in"><span>© $STAG · Stag Wif Hood</span><a href="/stagr/">StagR CRM</a><a href="https://x.com/stagwifhoodrh" target="_blank" rel="noopener">X</a><a href="https://records.stagwifhood.fun">Stag House Records</a><a href="https://t.me/StagWifHood" rel="noopener">Telegram</a></div><div class="in"><p class="fine">$STAG is a community token. Nothing here is financial advice or a promise of returns. Crypto is volatile and you can lose everything you put in.</p></div></footer>
 </html>

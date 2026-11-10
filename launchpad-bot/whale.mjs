@@ -178,6 +178,7 @@ b.onclick=async()=>{try{
         const u = new URL(req.url, "http://x");
         if (await lounge.http(req, res, u)) return;
         if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
+        if (X.api && X.api.h && await X.api.h(req, res, u)) return;
         if (u.pathname === "/verify") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
         if (u.pathname === "/api/claimstats") { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=10", "access-control-allow-origin": "*" }); return res.end(JSON.stringify(CS.ready || !CLAIM_CACHE ? claimStatsJson() : { ...CLAIM_CACHE, ethUsd: Number((ethUsd && ethUsd()) || CLAIM_CACHE.ethUsd || 0), cached: true })); }
         if (u.pathname === "/api/perk") { // staff check: a code in, tier + discount out. No wallet or Telegram details leave the server.
