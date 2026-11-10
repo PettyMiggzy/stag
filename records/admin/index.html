@@ -120,6 +120,9 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
 <div class="row2"><button class="btn" id="oclose" type="button" disabled>Close this item</button> <button class="btn solid" id="oopen" type="button" disabled>Open this item</button></div></section>
 <section class="card2"><h2>Change a price</h2><p class="small" style="margin-top:0">Prices are in ETH, so update them if ETH moves a lot. Buyers are protected: if you change the price while someone is buying, their purchase fails and nothing is charged.</p>
 <label>Which one<select id="pwhich"></select></label>
+<label>Price in US dollars (fills in the ETH amount for you)<input id="pusd" type="number" step="0.01" min="0" placeholder="9.99"></label>
+<div class="row2" style="margin:-4px 0 10px"><button class="btn" type="button" data-usd="9.99">$9.99</button> <button class="btn" type="button" data-usd="24.99">$24.99</button> <button class="btn" type="button" data-usd="25">$25</button></div>
+<p class="small" id="pusdnote" style="margin-top:0"></p>
 <label>New price in ETH<input id="pnew" type="number" step="0.0001" min="0"></label>
 <div class="row2"><button class="btn solid" id="pgo" type="button" disabled>Update price</button></div></section>
 <section class="card2"><h2>Lock the artwork</h2><p class="small" style="margin-top:0">After an item is on sale, lock it so its title and cover can never be changed. This cannot be undone.</p>
@@ -173,6 +176,10 @@ nav .btn{padding:11px 18px;font-size:13px;color:#031005;border-color:var(--neon)
       var w=new ethers.Contract(S.contract,SABI,signer);await tx('Add '+kind,function(){return w.addSong(ethers.parseEther(price),cap,payout,Math.round(cutPct*100),uri)})}
     catch(e){say((e&&e.message)||'Could not add','err')}
   };
+  function usdToEth(){var u=Number($('pusd').value),n=$('pusdnote');if(!(u>0)){n.textContent='';return}if(!ethUsd){n.textContent='Could not load the ETH price right now. Enter the ETH amount yourself below.';return}
+    var e=Math.ceil(u/ethUsd*1e5)/1e5;$('pnew').value=String(e);n.textContent='$'+u.toFixed(2)+' is '+e+' ETH at today\u2019s price ($'+ethUsd+' per ETH). Press Update price to set it.'}
+  $('pusd').addEventListener('input',usdToEth);
+  [].forEach.call(document.querySelectorAll('[data-usd]'),function(b){b.onclick=function(){$('pusd').value=b.getAttribute('data-usd');usdToEth()}});
   $('pgo').onclick=async function(){try{var which=$('pwhich').value,v=$('pnew').value;if(!(Number(v)>=0)||v==='')throw new Error('Enter the new price in ETH');var wei=ethers.parseEther(v);
     if(!confirm('Set the price to '+v+' ETH'+(ethUsd?' (about $'+(Number(v)*ethUsd).toFixed(2)+')':'')+'?'))return;
     var w2=new ethers.Contract(S.contract,SABI,signer);await tx('Update price',function(){return w2.setPrice(BigInt(which),wei)})}
