@@ -532,4 +532,5 @@ fetch('https://rpc.mainnet.chain.robinhood.com',{method:'POST',headers:{'content
 var wei=BigInt('0x'+j.result.slice(2,66)),eth=Number(wei)/1e18;el.textContent=eth.toFixed(4)+' ETH';
 return fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd').then(function(r){return r.json()}).then(function(p){var u=p.ethereum&&p.ethereum.usd;if(u)el.textContent='$'+(eth*u).toFixed(2)})}).catch(function(){})})();
 </script>
+<script src="/assets/menu.js" defer></script>
 </html>
