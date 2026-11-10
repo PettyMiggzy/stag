@@ -24,6 +24,7 @@ export function initLounge(X) {
   };
   const loginMsg = (nonce, addr) => `Enter the Hood Rich Club lounge.\nNonce: ${nonce}\nWallet: ${addr}\nThis signs a message only. It costs no gas and gives no access to funds.`;
   const nonces = new Map(); // nonce -> expiry
+  const guestHits = new Map(); // ip -> times a new guest pass was issued in the last hour
   const clean = (s, n) => String(s || "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
 
   let openAt = 0, openVal = false; // the doors-open switch (bot_state.loungeOpen = '1'), cached for 15 seconds
@@ -75,6 +76,18 @@ export function initLounge(X) {
       const tok = sign({ a, tier, founder: r.founder, lvl: LEVEL[r.tier] ?? 0, guest: r.tier === "Guest", exp: Date.now() + 12 * 3600e3 });
       json(res, 200, { ok: true, token: tok, tier, founder: r.founder, short: a.slice(0, 6) + "…" + a.slice(-4) }); return true;
     }
+    if (u.pathname === "/api/lounge/guest" && req.method === "POST") { // walk in without a wallet: only while the doors are open, limited per connection, no rank and no voice
+      if (!(await isOpen())) { json(res, 200, { ok: false, error: "Guest entry is closed right now. Sign in with a holder wallet." }); return true; }
+      const b = await readBody(req); const old = b.token ? unsign(b.token) : null;
+      let a = old && old.nw && /^guest:[0-9a-f]{16}$/.test(old.a) ? old.a : "";
+      if (!a) { // a new guest id: cap how many one connection can mint per hour
+        const ip = String((req.headers["x-forwarded-for"] || "").split(",")[0].trim() || (req.socket && req.socket.remoteAddress) || "?"); const now = Date.now();
+        const h = (guestHits.get(ip) || []).filter((t) => now - t < 3600e3); if (h.length >= 8) { json(res, 200, { ok: false, error: "Too many guest passes from this connection. Try again later, or sign in with a wallet." }); return true; }
+        h.push(now); guestHits.set(ip, h); if (guestHits.size > 5000) guestHits.clear(); a = "guest:" + HEX(8);
+      }
+      const tok = sign({ a, tier: "Guest", founder: false, lvl: 0, guest: true, nw: true, exp: Date.now() + 30 * 24 * 3600e3 });
+      json(res, 200, { ok: true, token: tok, tier: "Guest", short: "Guest " + a.slice(6, 10) }); return true;
+    }
     json(res, 404, { ok: false }); return true;
   }
 
@@ -120,15 +133,17 @@ export function initLounge(X) {
         if (m.t !== "join") return; const s = unsign(m.token); if (!s) return send(ws, { t: "denied", why: "Session expired. Sign in again." });
         const old = byAddr.get(s.a); if (old) { try { send(old.ws, { t: "denied", why: "Opened in another tab." }); old.ws.close(); } catch {} old.room.players.delete(s.a); byAddr.delete(s.a); allIn(old.room, { t: "leave", id: old.id }); }
         const room = pickRoom(m.room); if (!room) return send(ws, { t: "denied", why: "The lounge is full right now. Try again in a bit." });
-        const name = clean(m.name, 16) || s.a.slice(0, 6) + "…" + s.a.slice(-4);
-        me = { id: HEX(4), addr: s.a, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws, room };
+        const name = clean(m.name, 16) || (s.nw ? "Guest " + s.a.slice(6, 10) : s.a.slice(0, 6) + "…" + s.a.slice(-4));
+        me = { id: HEX(4), addr: s.a, nw: !!s.nw, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws, room };
         room.players.set(s.a, me); byAddr.set(s.a, me); clearTimeout(joinTimer);
         send(ws, { t: "welcome", id: me.id, room: room.n, cap: ROOM_CAP, epoch: EPOCH, now: Date.now(), dj: djState(), players: [...room.players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
         allIn(room, { t: "join", p: pub(me) }, me.id); log("lounge: join", name, s.tier, "room", room.n, "online", room.players.size); return;
       }
       if (m.t === "pos") { me.x = num(m.x, -11, 11, me.x); me.z = num(m.z, -14.5, 14.5, me.z); me.ry = num(m.ry, -7, 7, me.ry); me.anim = ["idle", "walk", "wave"].includes(m.a) ? m.a : "idle"; me.moved = true; }
       else if (m.t === "chat") {
-        const text = clean(m.text, 160); if (!text || Date.now() - lastChat < 1200) return; lastChat = Date.now();
+        const text = clean(m.text, 160); if (!text || Date.now() - lastChat < (me.nw ? 4000 : 1200)) return;
+        if (me.nw && /(https?:|www\.|t\.me|\.(com|io|xyz|fun|net|org|gg|app)\b)/i.test(text)) return send(ws, { t: "sys", text: "Guests can't post links. Sign in with a wallet to share one." });
+        lastChat = Date.now();
         allIn(me.room, { t: "chat", id: me.id, name: me.name, tier: me.tier, text });
       } else if (m.t === "drink") {
         if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id; me.moved = true;
@@ -145,6 +160,7 @@ export function initLounge(X) {
       } else if (m.t === "rec") {
         if (Date.now() - (me.lastRec || 0) < 1500) return; me.lastRec = Date.now(); me.rec = !!m.on; allIn(me.room, { t: "rec", id: me.id, name: me.name, on: me.rec }, me.id);
       } else if (m.t === "voice") {
+        if (me.nw) return send(ws, { t: "voice", error: "Voice chat needs a wallet sign-in. Guests can listen to the room and use text chat." });
         const v = await voicePass(me); send(ws, v ? { t: "voice", ...v } : { t: "voice", error: "Voice is not available right now." });
       }
     });

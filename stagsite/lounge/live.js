@@ -83,6 +83,7 @@ ui.innerHTML = `
   <p id="gp">Holders only. Sign in with your wallet. It is a plain message signature: no gas, no transaction, no approvals.</p>
   <input id="nm" maxlength="16" placeholder="Name in the club (optional)">
   <button class="btn" id="go">Sign in with wallet</button>
+  <button class="btn alt" id="guest" style="display:none">Enter as a guest</button>
   <a class="btn alt" id="mm" style="display:none" href="#">Open in MetaMask</a>
   <button class="btn alt" id="look">Just look around</button>
   <div id="msg"></div>
@@ -127,10 +128,21 @@ async function signIn() {
     enter();
   } catch (e) { setMsg((e && e.message) || 'Sign-in cancelled.'); }
 }
+async function guestIn() { // no wallet needed while the doors are open; the same guest id (and play chips) comes back on this device
+  setMsg('');
+  try {
+    let old = null; try { old = JSON.parse(localStorage.getItem('loungeGuest')); } catch {}
+    const r = await (await fetch(API + '/api/lounge/guest', { method: 'POST', body: JSON.stringify({ token: old && old.token }) })).json();
+    if (!r.ok) { setMsg(r.error || 'Could not enter as a guest.'); return; }
+    TOKEN = r.token; SELF.tier = r.tier; try { localStorage.setItem('loungeGuest', JSON.stringify({ token: r.token })); } catch {}
+    enter();
+  } catch (e) { setMsg('Could not reach the lounge. Try again in a moment.'); }
+}
+$('#guest').onclick = guestIn;
 $('#go').onclick = () => { if (TOKEN) enter(); else signIn(); };
 if (TOKEN) { $('#go').textContent = 'Enter the club'; }
 fetch(API + '/api/lounge/status').then((r) => r.json()).then((s) => { // while the doors are open, say so; otherwise show the real requirement
-  const note = $('#gate .card p:last-child'); if (s.open) { note.textContent = 'Free entry for now: any wallet can come in. Holders get their rank on their name tag.'; $('#gp').textContent = 'Sign in with your wallet to enter. It is a plain message signature: no gas, no transaction, no approvals.'; window.__lounge.setSign && window.__lounge.setSign(true); }
+  const note = $('#gate .card p:last-child'); if (s.open) { note.textContent = 'Free entry for now: walk in as a guest, or sign in with a wallet to get your rank on your name tag and use voice chat.'; const gb = $('#guest'); gb.style.display = 'block'; if (!window.ethereum) { gb.className = 'btn'; $('#go').className = 'btn alt'; $('#go').before(gb); } $('#gp').textContent = window.ethereum ? 'Sign in with your wallet, or walk in as a guest. Signing in is a plain message signature: no gas, no transaction, no approvals.' : 'Walk in as a guest, no wallet needed. Play chips only.'; window.__lounge.setSign && window.__lounge.setSign(true); }
 }).catch(() => {});
 
 /* ---------- avatars ---------- */

@@ -28,8 +28,8 @@ export async function chipsFor(addr, name) {
 }
 export async function saveChips(c) { if (!Q || !ready) return; try { await Q("insert into poker_chips(addr, chips, net_week, week, topup_day, name, updated_at) values ($1,$2,$3,$4,$5,$6, now()) on conflict(addr) do update set chips=excluded.chips, net_week=excluded.net_week, week=excluded.week, topup_day=excluded.topup_day, name=excluded.name, updated_at=now()", [c.addr, c.chips, c.net, c.week, c.topup, c.name]); } catch {} }
 export async function pokerLeaders(limit = 10) {
-  const rows = [...cache.values()].filter((c) => c.week === weekKey());
-  let db = []; if (Q && ready) { try { db = await Q("select addr, name, net_week from poker_chips where week=$1 order by net_week desc limit $2", [weekKey(), limit]); } catch {} }
+  const rows = [...cache.values()].filter((c) => c.week === weekKey() && !String(c.addr).startsWith("guest:")); // guests play, but the weekly board is for wallets
+  let db = []; if (Q && ready) { try { db = await Q("select addr, name, net_week from poker_chips where week=$1 and addr not like 'guest:%' order by net_week desc limit $2", [weekKey(), limit]); } catch {} }
   const m = new Map(db.map((r) => [r.addr, { name: r.name || "player", net: Number(r.net_week) }])); for (const c of rows) m.set(c.addr, { name: c.name || "player", net: c.net });
   return [...m.values()].sort((a, b) => b.net - a.net).slice(0, limit).filter((r) => r.net !== 0);
 }

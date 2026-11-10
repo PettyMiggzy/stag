@@ -363,7 +363,7 @@ function endGame(){
   let top=[];try{top=JSON.parse(localStorage.getItem('stagshot_top')||'[]')}catch(e){}top.push(score);top=top.sort((x,y)=>y-x).slice(0,5);try{localStorage.setItem('stagshot_top',JSON.stringify(top))}catch(e){}
   const isBest=score>best;if(isBest){best=score;try{localStorage.setItem('stagshot_best',best)}catch(e){}}
   $('big').textContent=score;const acc=shots?Math.round(hits/shots*100):0;
-  $('endmsg').textContent=`${hits} hits from ${shots} arrows (${acc}% accuracy). ${isBest?'NEW BEST!':'Best: '+best}  ·  Your top 5: ${top.join(' · ')}`;
+  $('endmsg').textContent=`${hits} ${hits===1?'hit':'hits'} from ${shots} ${shots===1?'arrow':'arrows'} (${acc}% accuracy). ${isBest?'NEW BEST!':'Best: '+best}  ·  Your top 5: ${top.join(' · ')}`;
   const txt=encodeURIComponent(`I scored ${score} in Stag Shot — 3D forest archery by $STAG. Beat it:`);
   $('share').href=`https://twitter.com/intent/tweet?text=${txt}&url=${encodeURIComponent(location.href.split('?')[0])}`;
   try{const tw=window.Telegram&&window.Telegram.WebApp;if(tw&&tw.initData){fetch('https://buybot.stagwifhood.fun/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tw.initData,score})}).then(r=>r.json()).then(j=>{if(j&&j.ok)$('endmsg').textContent+='  ·  Today\'s rank: #'+j.rank}).catch(()=>{})}}catch(e){}
