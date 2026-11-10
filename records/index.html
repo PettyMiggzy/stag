@@ -338,8 +338,8 @@ footer .links a:hover{color:var(--neon)}
       <span class="ribbon">&#9733; New drop</span>
       <h3>Who Got the Keys</h3>
       <p class="sfeat">Winslow Bankz</p>
-      <p class="sline">A new single. Only 100 copies at <b>$25</b>. Sale opens soon.</p>
-      <div class="abtns"><button type="button" class="btn solid" id="keysPlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the clip</span></button></div>
+      <p class="sline" id="keysLine">A new single. Only 100 copies at <b>$25</b>. Sale opens soon.</p>
+      <div class="abtns" id="keysBtns"><button type="button" class="btn solid" id="keysPlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the clip</span></button></div>
     </div>
   </div>
   <div class="special" id="special">
@@ -531,6 +531,15 @@ footer .links a:hover{color:var(--neon)}
 fetch('https://rpc.mainnet.chain.robinhood.com',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:'0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4',data:'0x4e692b50'+'9'.padStart(64,'0')},'latest']})}).then(function(r){return r.json()}).then(function(j){
 var wei=BigInt('0x'+j.result.slice(2,66)),eth=Number(wei)/1e18;el.textContent=eth.toFixed(4)+' ETH';
 return fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd').then(function(r){return r.json()}).then(function(p){var u=p.ethereum&&p.ethereum.usd;if(u)el.textContent='$'+(eth*u).toFixed(2)})}).catch(function(){})})();
+</script>
+<script>
+/* Who Got the Keys (item #11): the Collect button appears by itself once the sale is open at its real price */
+(function(){fetch('https://rpc.mainnet.chain.robinhood.com',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:'0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4',data:'0x4e692b50'+'b'.padStart(64,'0')},'latest']})}).then(function(r){return r.json()}).then(function(j){
+var h=j.result.slice(2),price=Number(BigInt('0x'+h.slice(0,64)))/1e18,cap=Number(BigInt('0x'+h.slice(64,128))),minted=Number(BigInt('0x'+h.slice(128,192))),open=BigInt('0x'+h.slice(192,256))===1n;
+if(!open||price<0.008)return;var line=document.getElementById('keysLine'),row=document.getElementById('keysBtns');if(!line||!row)return;
+line.textContent=minted>=cap?'Sold out. All '+cap+' copies are gone.':(minted>0?(cap-minted)+' of '+cap+' copies left. ':'A new single. Only '+cap+' copies. ')+(minted>=cap?'':'On sale now.');
+if(minted<cap&&!document.getElementById('keysBuy')){var a=document.createElement('a');a.id='keysBuy';a.className='btn solid';a.href='/songs/';a.textContent='Collect it';row.appendChild(a)}
+}).catch(function(){})})();
 </script>
 <script src="/assets/menu.js" defer></script>
 </html>
