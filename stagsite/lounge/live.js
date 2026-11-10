@@ -63,6 +63,17 @@ body.touch #joy{display:block}
 #pk.seated .pc.big{font-size:26px;min-width:54px;padding:12px 8px}
 #pkLog{font-size:12px;opacity:.85;line-height:1.35}#pkLead{font-size:12px;margin-top:6px;opacity:.9}
 @media (max-width:640px){#chat{bottom:176px}#talkp,#djp{bottom:150px}}
+/* phones: status on one line, buttons fit the screen, chat sits beside the joystick instead of on top of it */
+@media (max-width:640px){
+ #top{left:10px;right:10px;top:calc(8px + env(safe-area-inset-top,0px));font-size:10px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #dock{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));gap:5px}
+ #dock button{flex:1 1 0;min-width:0;padding:9px 4px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #joy{left:10px;bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+ #chat{left:132px;right:10px;width:auto;bottom:calc(70px + env(safe-area-inset-bottom,0px));font-size:13px}
+ #log{max-height:96px}
+ #talkp,#djp{bottom:190px}
+ #playBtn{bottom:calc(196px + env(safe-area-inset-bottom,0px))!important}
+}
 `;
 document.head.appendChild(css);
 const ui = document.createElement('div');
@@ -374,13 +385,15 @@ L.hooks.tick = (dt) => {
   for (const a of [me, ...others.values()]) { const v = a.userData; if (v.mixer) { playAnim(v, v.moving ? 'walk' : 'idle'); if (v.near !== false || frameN % 4 === 0) v.mixer.update(v.near !== false ? dt : dt * 4); }
     if (v.glass.visible && v.hand) { v.hand.getWorldPosition(HP); a.worldToLocal(HP); v.glass.position.set(HP.x, HP.y + .07, HP.z); } }
   // third-person camera behind and above, easing, never inside a wall
-  const camD = (inRoom() || inCard()) ? 2.3 : 4.2;
+  const portrait = innerHeight > innerWidth * 1.15;
+  const camD = (inRoom() || inCard()) ? (portrait ? 3.0 : 2.3) : (portrait ? 6.4 : 4.2);
+  if (!u.tagSized) { u.tagSized = true; if (u.tag) u.tag.scale.multiplyScalar(.55); } // your own name tag is right in front of the camera, so keep it small
   if (PK.seat < 0 && drag === null) { // a wall right behind you: swing the camera round to the side with the most room instead of squashing in
     const cur = camFree(pos.x, pos.z, pos.yaw, camD);
     if (cur < Math.min(2.6, camD * .85)) { let best = pos.yaw, bl = cur; for (let k = 1; k <= 9; k++) for (const sg of [1, -1]) { const y = pos.yaw + sg * k * .35, l = camFree(pos.x, pos.z, y, camD); if (l > bl + .35) { bl = l; best = y; } } if (best !== pos.yaw) pos.yaw += Math.max(-2.4 * dt, Math.min(2.4 * dt, best - pos.yaw)); }
   }
   const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
-  camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? 1.9 : 2.3, Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, 1.35, pos.z); camClip(pos.x, pos.z, camT);
+  camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? (portrait ? 2.2 : 1.9) : (portrait ? 3.1 : 2.3), Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, portrait ? 1.6 : 1.35, pos.z); camClip(pos.x, pos.z, camT);
   if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; const R = L.cardRoom.room; camT.set(Math.min(R.x1 - .2, Math.max(R.x0 + .3, st.x + dx / l * 1.1)), 2.05, Math.min(R.z1 - .25, Math.max(R.z0 + .25, st.z + dz / l * 1.1))); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
   if (L.camOverride) { const c = L.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); }
@@ -547,7 +560,7 @@ function npcTick(dt) {
     } else runRoutine(n, now, dt);
     if (d < n.reach && d < nd) { near = n; nd = d; }
   }
-  const btn = $('#talkBtn'); if (near) { btn.style.display = 'inline-block'; btn.textContent = '💬 Talk to ' + near.name; btn.dataset.n = near.id; } else { btn.style.display = 'none'; if (talking && !ST.on) closeTalk(); }
+  const btn = $('#talkBtn'); if (near) { btn.style.display = 'inline-block'; btn.textContent = innerWidth <= 640 ? '💬 Talk' : '💬 Talk to ' + near.name; btn.dataset.n = near.id; } else { btn.style.display = 'none'; if (talking && !ST.on) closeTalk(); }
 }
 function openTalk(n) {
   talking = n; $('#tpName').textContent = n.name.toUpperCase(); const b = $('#tpBtns'); b.innerHTML = ''; const sub = $('#tpSub');
