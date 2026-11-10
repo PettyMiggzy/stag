@@ -24,6 +24,8 @@ css.textContent = `
 .btn{display:block;width:100%;box-sizing:border-box;margin-top:12px;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:700;letter-spacing:.06em;cursor:pointer;text-decoration:none;color:#1a0b00;background:linear-gradient(180deg,#ffe29a,#d9a441)}
 .btn.alt{background:transparent;color:#e9c97a;border:1px solid rgba(233,201,122,.4)}
 #msg{min-height:18px;font-size:13px;color:#ff8fb8;margin-top:8px}
+#gnudge{position:fixed;left:10px;right:10px;margin:0 auto;width:fit-content;top:calc(40px + env(safe-area-inset-top,0px));z-index:12;display:flex;align-items:center;gap:8px;background:rgba(10,4,12,.9);border:1px solid #e9c97a;border-radius:999px;padding:6px 8px 6px 14px;color:#fff;font-size:13px;max-width:calc(100vw - 20px);box-shadow:0 4px 18px #000}
+#gnudge b{color:#e9c97a;font-weight:700}#gnudge button{border:0;border-radius:999px;cursor:pointer;font:inherit;min-height:34px}#gnudge .y{background:#e9c97a;color:#1a0d12;font-weight:700;padding:6px 12px;white-space:nowrap}#gnudge .x{background:transparent;color:#bbb;padding:6px 8px;font-size:16px}
 #top{position:fixed;left:14px;top:12px;color:#e9c97a;font-size:12px;letter-spacing:.16em;text-transform:uppercase;z-index:10;text-shadow:0 0 10px #000;display:none}
 #chat{position:fixed;left:12px;bottom:58px;width:min(420px,calc(100vw - 24px));z-index:10;display:none;font-size:14px}
 #log{max-height:150px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;margin-bottom:6px;pointer-events:none}
@@ -139,6 +141,29 @@ async function guestIn() { // no wallet needed while the doors are open; the sam
   } catch (e) { setMsg('Could not reach the lounge. Try again in a moment.'); }
 }
 $('#guest').onclick = guestIn;
+function guestNudge() { // guests keep playing; this only points out what a wallet sign-in adds, once per visit
+  try { if (sessionStorage.getItem('gnudge')) return; sessionStorage.setItem('gnudge', '1'); } catch {}
+  if ($('#gnudge')) return;
+  const d = document.createElement('div'); d.id = 'gnudge';
+  d.innerHTML = '<span>Guest pass. <b>Sign in</b> for your rank and voice chat.</span><button class="y" type="button">Sign in</button><button class="x" type="button" aria-label="Dismiss">\u00d7</button>';
+  document.body.appendChild(d);
+  d.querySelector('.x').onclick = () => d.remove();
+  d.querySelector('.y').onclick = async () => {
+    if (!window.ethereum) { location.href = 'https://metamask.app.link/dapp/' + location.host + location.pathname; return; }
+    const t = d.querySelector('span');
+    try {
+      const { nonce } = await (await fetch(API + '/api/lounge/nonce')).json();
+      const [a] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const msg = `Enter the Hood Rich Club lounge.\nNonce: ${nonce}\nWallet: ${a}\nThis signs a message only. It costs no gas and gives no access to funds.`;
+      const sig = await window.ethereum.request({ method: 'personal_sign', params: [msg, a] });
+      const r = await (await fetch(API + '/api/lounge/login', { method: 'POST', body: JSON.stringify({ nonce, address: a, signature: sig }) })).json();
+      if (!r.ok) { t.textContent = r.error || 'Could not sign in.'; return; }
+      sessionStorage.setItem('lounge', JSON.stringify({ token: r.token, tier: r.tier, exp: Date.now() + 11 * 3600e3, name: SELF.req || '' }));
+      const q2 = new URLSearchParams(location.search); q2.set('autologin', '1'); location.href = location.pathname + '?' + q2;
+    } catch (e) { t.textContent = 'Sign-in cancelled. You are still in as a guest.'; }
+  };
+  setTimeout(() => d.remove(), 40000);
+}
 $('#go').onclick = () => { if (TOKEN) enter(); else signIn(); };
 if (TOKEN) { $('#go').textContent = 'Enter the club'; }
 fetch(API + '/api/lounge/status').then((r) => r.json()).then((s) => { // while the doors are open, say so; otherwise show the real requirement
@@ -277,7 +302,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
       for (const a of others.values()) scene.remove(a); others.clear(); recorders.clear(); // a fresh roster (this also covers a reconnect)
       if (!me) { me = makeAvatar({ ...m.you, x: pos.x, z: pos.z, ry: pos.ry }); me.userData.mine = true; }
       for (const p of m.players) others.set(p.id, makeAvatar(p));
-      updateTop(); const firstJoin = !SELF.joined; say('sys', '', firstJoin ? 'Welcome to the Hood Rich Club.' : 'Reconnected.'); SELF.joined = true; PK.watching = false; if (firstJoin) doorGreet(0);
+      updateTop(); const firstJoin = !SELF.joined; say('sys', '', firstJoin ? 'Welcome to the Hood Rich Club.' : 'Reconnected.'); SELF.joined = true; PK.watching = false; if (firstJoin) doorGreet(0); if (firstJoin && SELF.tier === 'Guest') setTimeout(guestNudge, 45000);
     } else if (m.t === 'join') { others.set(m.p.id, makeAvatar(m.p)); say('sys', '', `${m.p.name} walked in`); updateTop(); }
     else if (m.t === 'leave') { recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); const a = others.get(m.id); if (a) { scene.remove(a); others.delete(m.id); updateTop(); } }
     else if (m.t === 'state') {
