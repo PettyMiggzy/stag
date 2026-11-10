@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elysium launch</title>
+<style>
+ body{font:15px/1.5 system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;background:#111;color:#eee}
+ button{padding:10px 16px;margin:6px 6px 6px 0;border-radius:6px;border:0;background:#4a7;color:#fff;cursor:pointer;font-size:15px}
+ button:disabled{background:#555}
+ code{color:#9cf;word-break:break-all}.ok{color:#6d6}.bad{color:#f77}.row{border:1px solid #333;border-radius:8px;padding:10px;margin:10px 0}
+</style></head><body>
+<h2>Launch ELD on Elysium</h2>
+<p>Sends <code>createLaunch</code> to the Elysium portal from <b>your own MetaMask</b>. No key is typed here. The data is built into this page, so there is nothing to paste.</p>
+<div class="row">
+ Portal: <code id="to"></code><br>
+ Name: <b>elysiumpad.world</b> &middot; Symbol: <b>ELD</b> &middot; Starting market cap: <b>$20,000,000,000</b> &middot; Buy/sell tax: <b>3% / 3%</b><br>
+ Data: <span id="dinfo"></span>
+</div>
+<button id="connect">1. Connect MetaMask (adds/switches to Elysium)</button>
+<button id="sim" disabled>2. Test it (no cost)</button>
+<button id="send" disabled>3. Launch</button>
+<div id="wallets" style="color:#aaa;margin:8px 0">Page loaded &#10003; (looking for wallets...)</div>
+<div id="status"></div>
+<script>
+const TO='0x788A959628C49b7eB92e6FCe9154dF775B4d709c';
+const DATA='0x225df1ed000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000470de4df820000000000000000000000000000000000000000000000000000000000000000012c000000000000000000000000000000000000000000000000000000000000012c0000000000000000000000000000000000000000000000000000000000000010656c797369756d7061642e776f726c64000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003454c440000000000000000000000000000000000000000000000000000000000';
+const CHAIN='0x'+(99901).toString(16), RPC='https://rpc.elyscan.live';
+const $=id=>document.getElementById(id), say=(m,c)=>{$('status').innerHTML='<p class="'+(c||'')+'">'+m+'</p>'};
+let acct=null, W=null; const found=[];
+window.addEventListener('eip6963:announceProvider',e=>{found.push(e.detail);pick();});
+window.dispatchEvent(new Event('eip6963:requestProvider'));
+function pick(){
+ const mm=found.find(f=>/metamask/i.test(f.info.name)||f.info.rdns==='io.metamask');
+ W=mm?mm.provider:(window.ethereum&&window.ethereum.providers&&window.ethereum.providers.find(x=>x.isMetaMask))||window.ethereum||null;
+ $('wallets').innerHTML='Page loaded &#10003; &middot; wallets detected: <b>'+(found.length?found.map(f=>f.info.name).join(', '):(window.ethereum?'(one, unnamed)':'none'))+'</b>'+(mm?' &middot; <span class="ok">using MetaMask</span>':'');
+}
+setTimeout(pick,300);
+$('to').textContent=TO;
+// sanity check the data so a bad paste can never be sent
+const okData=/^0x225df1ed[0-9a-f]{640}$/.test(DATA);
+$('dinfo').innerHTML=okData?'<span class="ok">OK: selector 0x225df1ed, '+((DATA.length-2)/2)+' bytes</span>':'<span class="bad">BAD DATA, do not send</span>';
+$('connect').onclick=async()=>{
+ try{
+  pick(); if(!W) throw new Error('No wallet found in this browser. Is MetaMask enabled for this page (file access)?');
+  say('Look for the MetaMask popup (click the fox icon if you do not see one) and approve the connection...');
+  [acct]=await W.request({method:'eth_requestAccounts'});
+  try{await W.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN}]});}
+  catch(e){await W.request({method:'wallet_addEthereumChain',params:[{chainId:CHAIN,chainName:'Elysium',rpcUrls:[RPC],nativeCurrency:{name:'HYPE',symbol:'HYPE',decimals:18},blockExplorerUrls:['https://elyscan.live']}]});}
+  const bal=await (await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getBalance',params:[acct,'latest']})})).json();
+  const h=Number(BigInt(bal.result))/1e18;
+  say('Connected as <code>'+acct+'</code><br>HYPE balance on Elysium: <b>'+h.toFixed(4)+'</b>'+(h<0.005?' <span class="bad">(low: you need about 0.005)</span>':''),'ok');
+  $('sim').disabled=!okData; $('send').disabled=!okData;
+ }catch(e){say(e.message,'bad');}
+};
+$('sim').onclick=async()=>{
+ try{
+  const r=await (await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{from:acct,to:TO,data:DATA},'latest']})})).json();
+  if(r.error) say('Test FAILED: '+(r.error.message||JSON.stringify(r.error))+' '+(r.error.data||''),'bad'); else say('Test passed: the launch would succeed from your account.','ok');
+ }catch(e){say(e.message,'bad');}
+};
+$('send').onclick=async()=>{
+ try{
+  $('send').disabled=true; say('Confirm in MetaMask...');
+  // gas is fixed here on purpose: MetaMask's own estimate on this chain is wildly wrong
+  const tx=await W.request({method:'eth_sendTransaction',params:[{from:acct,to:TO,data:DATA,value:'0x0',gas:'0x'+(3000000).toString(16),maxFeePerGas:'0x'+(1000000000).toString(16),maxPriorityFeePerGas:'0x0'}]});
+  say('Sent: <code>'+tx+'</code><br><a style="color:#9cf" href="https://elyscan.live/tx/'+tx+'" target="_blank">view on elyscan</a>','ok');
+ }catch(e){$('send').disabled=false;say(e.message,'bad');}
+};
+</script></body></html>
