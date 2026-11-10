@@ -259,6 +259,30 @@ footer .links a:hover{color:var(--neon)}
  .trk.single .tmeta{grid-area:m}
  .tracks.album .tmeta b{font-size:19px}
 }
+/* ---- mobile pass 2: first screen shows photo, price and buttons; equal buttons; mini-player ---- */
+.mini{display:none}
+@media(max-width:900px){
+ .hero{padding-top:14px}
+ .boothwrap>img{aspect-ratio:5/4;object-position:50% 12%}
+ #pstate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .player{padding:12px 14px 12px}.eq{height:20px;margin-top:2px}
+ .hero h1{margin:6px 0 4px}.hero .lead{margin:0 0 2px}
+ .aprice{margin:6px 0 10px;font-size:clamp(56px,17vw,84px)}
+ .eyebrow{letter-spacing:.14em}
+ .abtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .abtns .btn{justify-content:center;text-align:center;width:100%;padding-inline:8px;min-height:52px;font-size:14px}
+ .abtns .btn:only-child{grid-column:1/-1}
+ .special{padding:34px 16px 30px;gap:18px}.scover{max-width:none}
+ .special h3{font-size:clamp(44px,13vw,64px)}
+ footer .links a{display:inline-block;padding:10px 0}
+ header nav .btn{min-height:40px;display:inline-flex;align-items:center}
+ .mini:not([hidden]){display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:60;align-items:center;gap:12px;padding:8px 14px 8px 8px;border-radius:999px;background:#07110a;border:1px solid var(--neon);box-shadow:0 8px 30px rgba(0,0,0,.7),0 0 18px rgba(57,255,20,.25)}
+ .mini button{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--neon);color:#031005;display:grid;place-items:center;padding:0}
+ .mini svg{width:18px;height:18px}
+ .mini .mt{min-width:0;flex:1}.mini b{display:block;font:700 12px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-hi);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mini i{display:block;height:3px;border-radius:2px;background:#16241a;margin-top:6px;overflow:hidden}.mini em{display:block;height:100%;width:0;background:var(--neon)}
+ body.hasmini footer{padding-bottom:84px}
+}
 </style>
 
 <header><div class="in">
@@ -269,7 +293,7 @@ footer .links a:hover{color:var(--neon)}
 <main id="top">
 <section class="hero" id="album"><div class="in">
   <div>
-    <span class="eyebrow">Stag House Records &middot; Winslow Bankz</span>
+    <span class="eyebrow">Winslow Bankz &middot; the album</span>
     <h1>Hood <em>Rich</em></h1>
     <p class="lead">The album. 9 tracks. One NFT, only 100 copies.</p>
     <p class="aprice" id="homeAlbumPrice">&hellip;</p>
@@ -342,6 +366,7 @@ footer .links a:hover{color:var(--neon)}
 </div></section>
 </main>
 
+<div class="mini" id="mini" hidden><button type="button" id="miniBtn" aria-label="Pause"><svg viewBox="0 0 24 24" fill="currentColor" id="miniIco"><path d="M8 5v14l11-7z"/></svg></button><div class="mt"><b id="miniT"></b><i><em id="miniP"></em></i></div></div>
 <footer><div class="in">
   <div class="f">
     <img class="eco" src="assets/ecosystem.webp" alt="$STAG Ecosystem" width="120" height="120">
@@ -379,6 +404,7 @@ footer .links a:hover{color:var(--neon)}
     var playing=(mode==='play');
     ico.innerHTML=(playing||mode==='ident')?PAUSE:PLAY;btn.setAttribute('aria-label',playing?'Pause':'Play');
     player.classList.toggle('playing',playing);
+    var mn=$('mini');if(mn){var act=(mode!=='idle');mn.hidden=!act;document.body.classList.toggle('hasmini',act);$('miniT').textContent=TR[cur].t+(mode==='ident'?' (intro)':'');$('miniIco').innerHTML=(playing||mode==='ident')?PAUSE:PLAY;$('miniBtn').setAttribute('aria-label',playing?'Pause':'Play')}
     var on1=(playing||mode==='ident'),inA=ALBUM_POOL.indexOf(cur)>=0,apb=$('albumPlay'),wpb=$('wytePlay'),nowEl=$('albumNow');
     if(apb){apb.querySelector('span').textContent=(on1&&inA)?'Pause':'Play the album';apb.querySelector('svg').innerHTML=(on1&&inA)?PAUSE:PLAY;apb.classList.toggle('on',on1&&inA)}
     if(wpb){wpb.querySelector('span').textContent=(on1&&cur===8)?'Pause':'Play the clip';wpb.querySelector('svg').innerHTML=(on1&&cur===8)?PAUSE:PLAY}
@@ -472,13 +498,14 @@ footer .links a:hover{color:var(--neon)}
     var first=firstPlay;firstPlay=false;startWithIdent(first?pickAlbum(-1):cur);
   }
   btn.addEventListener('click',function(){toggle()});
+  var mB=$('miniBtn');if(mB)mB.addEventListener('click',function(){toggle()});
   var apB=$('albumPlay'),wpB=$('wytePlay');
   if(apB)apB.addEventListener('click',function(){if(ALBUM_POOL.indexOf(cur)>=0&&mode!=='idle'){toggle();return}toggle(pickAlbum(cur))});
   if(wpB)wpB.addEventListener('click',function(){toggle(8)});
   var kpB=$('keysPlay');if(kpB)kpB.addEventListener('click',function(){toggle(10)});
   rows.forEach(function(r){var n=+r.dataset.i;r.querySelector('.tplay').addEventListener('click',function(){toggle(n)})});
   audio.addEventListener('loadedmetadata',function(){tdur.textContent=fmt(audio.duration)});
-  audio.addEventListener('timeupdate',function(){var d=audio.duration||0;if(d){prog.style.width=(audio.currentTime/d*100)+'%';seek.setAttribute('aria-valuenow',Math.round(audio.currentTime/d*100))}tcur.textContent=fmt(audio.currentTime)});
+  audio.addEventListener('timeupdate',function(){var d=audio.duration||0;if(d){prog.style.width=(audio.currentTime/d*100)+'%';var mp=$('miniP');if(mp)mp.style.width=prog.style.width;seek.setAttribute('aria-valuenow',Math.round(audio.currentTime/d*100))}tcur.textContent=fmt(audio.currentTime)});
   audio.addEventListener('ended',function(){var n=pickAlbum(cur);setTrack(n);mode='play';playTrack()});
   function seekTo(x){var r=seek.getBoundingClientRect(),p=Math.max(0,Math.min(1,(x-r.left)/r.width));if(audio.duration)audio.currentTime=p*audio.duration}
   seek.addEventListener('click',function(e){seekTo(e.clientX)});
