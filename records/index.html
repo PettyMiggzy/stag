@@ -232,6 +232,14 @@ footer .links a:hover{color:var(--neon)}
 .how3 b{flex:none;width:38px;height:38px;border-radius:50%;background:var(--neon);color:#031005;display:grid;place-items:center;font:700 18px var(--mono)}
 .how3 h3{margin:0 0 4px;font:400 26px/1 var(--display);text-transform:uppercase}.how3 p{margin:0;color:var(--muted);line-height:1.45}
 @media(max-width:820px){.how3{grid-template-columns:1fr}}
+.special.drop{margin-top:0;margin-bottom:30px;border-color:#2dff6a;background:radial-gradient(120% 160% at 100% 0%,rgba(255,40,40,.28),transparent 55%),radial-gradient(100% 140% at 0% 100%,rgba(40,255,100,.2),transparent 55%),#070a07;box-shadow:0 0 34px rgba(45,255,106,.5),0 0 90px rgba(255,50,50,.3)}
+.special.drop::before{background:conic-gradient(from 0deg,transparent 0 72%,rgba(255,90,90,.3) 82%,transparent 92%)}
+.special.drop::after{box-shadow:inset 0 0 46px rgba(45,255,106,.5)}
+.special.drop .ribbon{background:linear-gradient(90deg,#2dff6a,#ff4a4a);color:#06100a;box-shadow:0 0 18px rgba(45,255,106,.6)}
+.special.drop h3{color:#ffffff;text-shadow:0 0 26px rgba(45,255,106,.7),0 0 60px rgba(255,60,60,.5)}
+.special.drop .sfeat{color:#9dffb8}.special.drop .bulbs{background-image:radial-gradient(circle,#9dffb8 0 3px,rgba(157,255,184,0) 5px)}
+.special.drop .bulbs.bot{background-image:radial-gradient(circle,#ff7a7a 0 3px,rgba(255,122,122,0) 5px)}
+.special.drop .sline b{color:#9dffb8}
 /* phones: the player sits under the photo (not over Winslow's face), compact header button, roomy single card */
 @media(max-width:900px){
  .boothwrap{display:flex;flex-direction:column}
@@ -255,7 +263,7 @@ footer .links a:hover{color:var(--neon)}
 
 <header><div class="in">
   <a class="brand" href="#top"><img src="assets/badge.webp" alt="" width="46" height="46"><span>Stag House Records</span></a>
-  <nav aria-label="Main"><a href="#top">The album</a><a href="#listen">WYTE BOYZ</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a class="btn solid" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Join Telegram</a></nav>
+  <nav aria-label="Main"><a href="#top">The album</a><a href="#listen">New singles</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a class="btn solid" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Join Telegram</a></nav>
 </div></header>
 
 <main id="top">
@@ -287,6 +295,17 @@ footer .links a:hover{color:var(--neon)}
 
 
 <section class="band" id="listen"><div class="in">
+  <div class="special drop" id="keysdrop">
+    <div class="bulbs top" aria-hidden="true"></div><div class="bulbs bot" aria-hidden="true"></div>
+    <div class="scover"><img src="assets/covers/whogotthekeys.jpg" alt="Cover art for Who Got the Keys by Winslow Bankz" width="1000" height="1000" loading="lazy"></div>
+    <div class="sinfo">
+      <span class="ribbon">&#9733; New drop</span>
+      <h3>Who Got the Keys</h3>
+      <p class="sfeat">Winslow Bankz</p>
+      <p class="sline">A new single. Only 100 copies at <b>$25</b>. Sale opens soon.</p>
+      <div class="abtns"><button type="button" class="btn solid" id="keysPlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the clip</span></button></div>
+    </div>
+  </div>
   <div class="special" id="special">
     <div class="bulbs top" aria-hidden="true"></div><div class="bulbs bot" aria-hidden="true"></div>
     <div class="scover"><img src="assets/covers/wyteboyz.jpg" alt="Cover art for WYTE BOYZ" width="480" height="480" loading="lazy"></div>
@@ -344,7 +363,8 @@ footer .links a:hover{color:var(--neon)}
     {t:'Walk Me Through the Fire',a:'Winslow Bankz',f:'assets/preview/walkfire.mp3'},
     {t:"Still Ridin' Slow",a:'Winslow Bankz',f:'assets/preview/ridinslow.mp3'},
     {t:'WYTE BOYZ (feat. JellyRoll615 & Pyrexx)',a:'Winslow Bankz',f:'assets/preview/wyteboyz.mp3'},
-    {t:'Choosing You',a:'Winslow Bankz',f:'assets/preview/choosing.mp3'}];
+    {t:'Choosing You',a:'Winslow Bankz',f:'assets/preview/choosing.mp3'},
+    {t:'Who Got the Keys',a:'Winslow Bankz',f:'assets/preview/whogotthekeys.mp3'}];
   var $=function(id){return document.getElementById(id)};
   var player=$('player'),btn=$('play'),ico=$('ico'),identEl=$('ident'),st=$('pstate'),prog=$('prog'),seek=$('seek'),eq=$('eq'),ptitle=$('ptitle'),tcur=$('tcur'),tdur=$('tdur');
   var PLAY='<path d="M8 5v14l11-7z"/>',PAUSE='<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
@@ -362,6 +382,7 @@ footer .links a:hover{color:var(--neon)}
     var on1=(playing||mode==='ident'),inA=ALBUM_POOL.indexOf(cur)>=0,apb=$('albumPlay'),wpb=$('wytePlay'),nowEl=$('albumNow');
     if(apb){apb.querySelector('span').textContent=(on1&&inA)?'Pause':'Play the album';apb.querySelector('svg').innerHTML=(on1&&inA)?PAUSE:PLAY;apb.classList.toggle('on',on1&&inA)}
     if(wpb){wpb.querySelector('span').textContent=(on1&&cur===8)?'Pause':'Play the clip';wpb.querySelector('svg').innerHTML=(on1&&cur===8)?PAUSE:PLAY}
+    var kpb=$('keysPlay');if(kpb){kpb.querySelector('span').textContent=(on1&&cur===10)?'Pause':'Play the clip';kpb.querySelector('svg').innerHTML=(on1&&cur===10)?PAUSE:PLAY}
     if(nowEl)nowEl.textContent=(playing&&inA)?('Now playing a clip: '+TR[cur].t):NOW0;
     rows.forEach(function(r){var on=(+r.dataset.i)===cur;r.classList.toggle('cur',on);r.querySelector('.tplay svg').innerHTML=(on&&(playing||mode==='ident'))?PAUSE:PLAY});
   }
@@ -454,6 +475,7 @@ footer .links a:hover{color:var(--neon)}
   var apB=$('albumPlay'),wpB=$('wytePlay');
   if(apB)apB.addEventListener('click',function(){if(ALBUM_POOL.indexOf(cur)>=0&&mode!=='idle'){toggle();return}toggle(pickAlbum(cur))});
   if(wpB)wpB.addEventListener('click',function(){toggle(8)});
+  var kpB=$('keysPlay');if(kpB)kpB.addEventListener('click',function(){toggle(10)});
   rows.forEach(function(r){var n=+r.dataset.i;r.querySelector('.tplay').addEventListener('click',function(){toggle(n)})});
   audio.addEventListener('loadedmetadata',function(){tdur.textContent=fmt(audio.duration)});
   audio.addEventListener('timeupdate',function(){var d=audio.duration||0;if(d){prog.style.width=(audio.currentTime/d*100)+'%';seek.setAttribute('aria-valuenow',Math.round(audio.currentTime/d*100))}tcur.textContent=fmt(audio.currentTime)});
