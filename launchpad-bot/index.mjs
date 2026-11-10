@@ -228,7 +228,7 @@ async function sendSongReply(api, clip, replyTo, chatId = CFG.tgChat) {
     } else if (existsSync(f)) {
       const fd = new FormData();
       fd.append("chat_id", chatId); fd.append("title", clip.title); fd.append("performer", "Winslow Bankz · Stag House Records");
-      fd.append("duration", "40"); fd.append("disable_notification", "true");
+      fd.append("duration", String(clip.dur || 40)); fd.append("disable_notification", "true");
       fd.append("reply_parameters", JSON.stringify({ message_id: replyTo }));
       fd.append("audio", new Blob([readFileSync(f)], { type: "audio/mpeg" }), `${clip.title}.mp3`);
       const tf = path.join(DIR, "thumbs", clip.n + ".jpg");
@@ -536,7 +536,7 @@ async function main() {
       sendSong: (chatId, clip, replyTo) => sendSongReply(`https://api.telegram.org/bot${CFG.tg}`, clip, replyTo, chatId),
       sendVideoCard: async (caption, markup, clipN, toChat) => {
         const dest = toChat || CFG.tgChat;
-        const clip = clipN ? (CLIPS.find((c) => c.n === clipN) || null) : CLIPS.length ? CLIPS[CLIP_N++ % CLIPS.length] : null; const api = `https://api.telegram.org/bot${CFG.tg}`;
+        const clip = clipN ? (CLIPS.find((c) => c.n === clipN) || [{ n: "keys", title: "Who Got the Keys", dur: 20 }].find((c) => c.n === clipN) || null) : CLIPS.length ? CLIPS[CLIP_N++ % CLIPS.length] : null; const api = `https://api.telegram.org/bot${CFG.tg}`;
         const f = clip ? (clipN === "9" && existsSync(path.join(DIR, "wyteboyz.mp4")) ? path.join(DIR, "wyteboyz.mp4") : path.join(DIR, "clips", clip.n + ".mp4")) : null; // clip 9 announcements use the full WYTE BOYZ video
         if (f && existsSync(f)) {
           const fd = new FormData(); fd.append("chat_id", dest); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", JSON.stringify(markup));

@@ -157,6 +157,11 @@ export function initExtras(X) {
         if (cmd === "setclub") { await W.q("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())"); await W.q("insert into bot_state(k,v) values('whaleChat',$1) on conflict(k) do update set v=excluded.v, updated_at=now()", [String(msg.chat.id)]); return reply(`✅ This group is now the Hood Rich Club chat (id <code>${msg.chat.id}</code>). Invites will use it from the next check.`, { reply_markup: undefined }); }
         return reply(`Chat id: <code>${msg.chat.id}</code> · ${esc(msg.chat.title || "")}`, { reply_markup: undefined });
       }
+      if (cmd === "keysdraft" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { const ok = await keysSend(msg.chat.id, true); return ok ? null : reply("The draft failed to send."); } // admin only: resend the Who Got the Keys draft to this DM
+      if (cmd === "keyspost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM: posts the Who Got the Keys announcement to the main group, once
+        const [c] = await W.q("insert into bot_state(k,v) values('keysAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
+        const ok = await keysSend(chat, false); if (!ok) { await W.q("delete from bot_state where k='keysAnnounced'"); return reply("The post failed, nothing was marked as sent. Try again."); } return reply("✅ Posted to the main group.");
+      }
       if (cmd === "wytedraft" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { const ok = await wyteSend(msg.chat.id, true); return ok ? null : reply("The draft failed to send."); } // admin only: resend the WYTE BOYZ draft to this DM
       if (cmd === "wytepost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM: posts the WYTE BOYZ sale announcement to the main group, once
         const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
@@ -321,10 +326,13 @@ export function initExtras(X) {
 
   const WYTE_CAP = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>JellyRoll615</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
   const WYTE_KB = { inline_keyboard: [[{ text: "🛒 Collect WYTE BOYZ", url: "https://records.stagwifhood.fun/songs/" }]] };
+  const KEYS_CAP = "🔑🔥 <b>NEW SINGLE: “WHO GOT THE KEYS”</b> 🦌\n<b>Winslow Bankz</b> · out now on <b>Stag House Records</b>\nLimited to <b>100 copies at $25</b> (0.0122 ETH on Robinhood Chain).\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎤 Meet the artist: https://records.stagwifhood.fun/artist/";
+  const KEYS_KB = { inline_keyboard: [[{ text: "🛒 Collect Who Got the Keys", url: "https://records.stagwifhood.fun/songs/" }]] };
+  async function keysSend(to, draft) { try { await X.sendVideoCard((draft ? "<i>DRAFT, not posted anywhere. Send /keyspost here to post it to the main group.</i>\n\n" : "") + KEYS_CAP, KEYS_KB, "keys", to); return true; } catch (e) { log("keys send err:", e.message); return false; } }
   async function wyteSend(to, draft) { try { await X.sendVideoCard((draft ? "<i>DRAFT, not posted anywhere. Send /wytepost here to post it to the main group.</i>\n\n" : "") + WYTE_CAP, WYTE_KB, "9", to); return true; } catch (e) { log("wyte send err:", e.message); return false; } }
   // ---------- song NFT sale alerts: every purchase on the Stag House Records song shop gets announced in the main chat ----------
   const SONGS = (process.env.SONGS_CONTRACT || "0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4");
-  const SONG_NAMES = { 1: "Money on My Mind", 2: "Crown Too Heavy", 3: "First Heartbreak at School (Remix)", 4: "No Me Llames", 5: "Fresh Cut, White Tee", 6: "Back On Go", 7: "Walk Me Through the Fire", 8: "Still Ridin' Slow", 9: "Hood Rich (the full album)", 10: "WYTE BOYZ (feat. JellyRoll615 & Pyrexx)" };
+  const SONG_NAMES = { 1: "Money on My Mind", 2: "Crown Too Heavy", 3: "First Heartbreak at School (Remix)", 4: "No Me Llames", 5: "Fresh Cut, White Tee", 6: "Back On Go", 7: "Walk Me Through the Fire", 8: "Still Ridin' Slow", 9: "Hood Rich (the full album)", 10: "WYTE BOYZ (feat. JellyRoll615 & Pyrexx)", 11: "Who Got the Keys", 12: "Who Got the Keys" };
   const SONG_IFACE = new ethers.Interface(["event Bought(address indexed buyer, uint256 indexed id, uint256 price)", "function songInfo(uint256) view returns (uint256 price, uint256 cap, uint256 minted, bool open, bool frozen, string metadataURI)"]);
   const BOUGHT_TOPIC = SONG_IFACE.getEvent("Bought").topicHash;
   const songContract = new ethers.Contract(SONGS, SONG_IFACE, provider);
@@ -383,6 +391,11 @@ export function initExtras(X) {
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
     if (process.env.COMMANDS !== "0") pollCommands();
     if (process.env.SONG_SALES !== "off") { setTimeout(songSales, 15000); setInterval(songSales, 20000); }
+    (async () => { // Who Got the Keys: a one-time DRAFT to the owner's bot DM; the main group only gets it on /keyspost
+      try { const [c] = await W.q("insert into bot_state(k,v) values('keysDraftDM','1') on conflict(k) do nothing returning k"); if (!c) return;
+        const r = await keysSend(ADMIN_TG, true); if (!r) { await W.q("delete from bot_state where k='keysDraftDM'"); log("keys draft dm failed"); } else log("keys draft sent to admin dm");
+      } catch (e) { log("keys draft err:", e.message); }
+    })();
     (async () => { // WYTE BOYZ sale announcement: a one-time DRAFT goes to the owner's bot DM; the main group only gets it when the owner sends /wytepost
       try { const [c] = await W.q("insert into bot_state(k,v) values('wyteDraftDM','1') on conflict(k) do nothing returning k"); if (!c) return;
         const r = await wyteSend(ADMIN_TG, true); if (!r) { await W.q("delete from bot_state where k='wyteDraftDM'"); log("wyte draft dm failed"); } else log("wyte draft sent to admin dm");
