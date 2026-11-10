@@ -223,6 +223,11 @@ footer .links a:hover{color:var(--neon)}
 @keyframes spBlink{0%{opacity:1}100%{opacity:.25}}
 @media(prefers-reduced-motion:reduce){.special,.special::before,.bulbs{animation:none}}
 @media(max-width:820px){.albumhero{grid-template-columns:1fr;gap:22px}.acover{max-width:440px}.special{grid-template-columns:1fr;padding:38px 20px 34px;text-align:left}.scover{max-width:230px}}
+.how3{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.how3 li{display:flex;gap:14px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:18px}
+.how3 b{flex:none;width:38px;height:38px;border-radius:50%;background:var(--neon);color:#031005;display:grid;place-items:center;font:700 18px var(--mono)}
+.how3 h3{margin:0 0 4px;font:400 26px/1 var(--display);text-transform:uppercase}.how3 p{margin:0;color:var(--muted);line-height:1.45}
+@media(max-width:820px){.how3{grid-template-columns:1fr}}
 /* phones: the player sits under the photo (not over Winslow's face), compact header button, roomy single card */
 @media(max-width:900px){
  .boothwrap{display:flex;flex-direction:column}
@@ -245,18 +250,19 @@ footer .links a:hover{color:var(--neon)}
 
 <header><div class="in">
   <a class="brand" href="#top"><img src="assets/badge.webp" alt="" width="46" height="46"><span>Stag House Records</span></a>
-  <nav aria-label="Main"><a href="#artists">Artists</a><a href="#fans">Fans</a><a href="#roster">Roster</a><a href="#faq">FAQ</a><a class="btn solid" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Join Telegram</a></nav>
+  <nav aria-label="Main"><a href="#top">The album</a><a href="#listen">WYTE BOYZ</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a class="btn solid" href="https://t.me/StagWifHood" target="_blank" rel="noopener">Join Telegram</a></nav>
 </div></header>
 
 <main id="top">
-<section class="hero"><div class="in">
+<section class="hero" id="album"><div class="in">
   <div>
-    <span class="eyebrow">Stag House Records · Robinhood Chain</span>
-    <h1>Where the stag <em>records the hits.</em></h1>
-    <p class="lead">A music label where artists keep their masters and fans fund the videos. Every release opens with the stag.</p>
-    <div class="cta"><a class="btn solid" href="#submit">Submit your demo</a><a class="btn" href="#fans">Become a collector</a></div>
-    <div class="stats"><span><b>Artists</b> keep 100% of the masters</span><span><b>Every drop</b> pays for a video</span><span><b>Fans</b> vote on the next single</span></div>
-    <p class="note">Design mock: names, numbers and dates on this page are examples.</p>
+    <span class="eyebrow">Stag House Records &middot; Winslow Bankz</span>
+    <h1>Hood <em>Rich</em></h1>
+    <p class="lead">The album. 9 tracks. One NFT, only 100 copies.</p>
+    <p class="aprice" id="homeAlbumPrice">&hellip;</p>
+    <div class="abtns"><button type="button" class="btn solid aplay" id="albumPlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the album</span></button><a class="btn" href="/album/">Get the album</a></div>
+    <p class="anow" id="albumNow">Hit play for 20-second clips from random songs on the album. Every play starts with the stag.</p>
+    <p class="atl">Money on My Mind &middot; Crown Too Heavy &middot; First Heartbreak at School (Remix) &middot; No Me Llames &middot; Fresh Cut, White Tee &middot; Back On Go &middot; Walk Me Through the Fire &middot; Still Ridin&#39; Slow &middot; Choosing You</p>
   </div>
   <div class="boothwrap" id="stage">
     <img src="assets/winslow-hero.webp" alt="Winslow Bankz in a black and green hood and gold chain, Hood Rich album art" width="864" height="1184" id="boothImg">
@@ -273,22 +279,8 @@ footer .links a:hover{color:var(--neon)}
   </div>
 </div></section>
 
-<div class="ticker" aria-hidden="true"><div><span>Artists keep their masters</span><span>Fan-funded videos</span><span>Drop after drop</span><span>The stag plays first</span><span>Plain-English splits</span><span>Artists keep their masters</span><span>Fan-funded videos</span><span>Drop after drop</span><span>The stag plays first</span><span>Plain-English splits</span></div></div>
 
 <section class="band" id="listen"><div class="in">
-  <span class="eyebrow">Winslow Bankz</span>
-  <h2 class="sec-h">Hood <span class="gold">Rich</span></h2>
-  <div class="albumhero" id="album">
-    <div class="acover"><img src="assets/hood-rich.webp" alt="Hood Rich digital album cover by Winslow Bankz" width="1000" height="1000"></div>
-    <div class="ainfo">
-      <span class="abadge">The album &middot; 9 tracks &middot; only 100 copies</span>
-      <p class="aprice" id="homeAlbumPrice">&hellip;</p>
-      <p class="asub">One NFT. Own the whole album.</p>
-      <div class="abtns"><button type="button" class="btn solid aplay" id="albumPlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the album</span></button><a class="btn" href="/album/">Get the album</a></div>
-      <p class="anow" id="albumNow">Hit play for 20-second clips from random songs on the album. Every play starts with the stag.</p>
-      <p class="atl">Money on My Mind &middot; Crown Too Heavy &middot; First Heartbreak at School (Remix) &middot; No Me Llames &middot; Fresh Cut, White Tee &middot; Back On Go &middot; Walk Me Through the Fire &middot; Still Ridin&#39; Slow &middot; Choosing You</p>
-    </div>
-  </div>
   <div class="special" id="special">
     <div class="bulbs top" aria-hidden="true"></div><div class="bulbs bot" aria-hidden="true"></div>
     <div class="scover"><img src="assets/covers/wyteboyz.jpg" alt="Cover art for WYTE BOYZ" width="480" height="480" loading="lazy"></div>
@@ -300,113 +292,38 @@ footer .links a:hover{color:var(--neon)}
       <div class="abtns"><button type="button" class="btn solid" id="wytePlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the clip</span></button><a class="btn" href="/songs/">Collect it</a></div>
     </div>
   </div>
+
 </div></section>
 
-<section class="band" id="artists"><div class="in">
-  <span class="eyebrow">For artists</span>
-  <h2 class="sec-h">Why artists sign with <span class="gold">the House</span></h2>
-  <p class="sec-p">We handle the polish and the promotion. You keep the music.</p>
-  <div class="grid4">
-    <div><h3>Keep your masters</h3><p>Your recordings and your songs stay yours. The label earns from the services it provides on a release, never from owning the music.</p></div>
-    <div><h3>A full release kit</h3><p>Cover art in the House look, a 15-second promo with the stag, the pre-roll intro, a release page and a Telegram listening party.</p></div>
-    <div><h3>Fan-funded videos</h3><p>Each drop pays for the next video, and the progress is public. Artists without a budget get a real shoot.</p></div>
-    <div><h3>Plain-English splits</h3><p>Who gets what is written down in one page before you sign: artist, video fund, label. No surprises after the drop.</p></div>
-  </div>
+<section class="band" id="how" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
+  <span class="eyebrow">Collecting</span>
+  <h2 class="sec-h">How it <span class="gold">works</span></h2>
+  <ol class="how3">
+    <li><b>1</b><div><h3>Listen</h3><p>Hit play on the album for 20-second clips, or play the WYTE BOYZ clip.</p></div></li>
+    <li><b>2</b><div><h3>Collect</h3><p>Connect a wallet on Robinhood Chain and pay in ETH. The NFT goes straight into your wallet.</p></div></li>
+    <li><b>3</b><div><h3>Own an edition</h3><p>Only 100 copies of each release exist. When they are gone, they are gone.</p></div></li>
+  </ol>
+  <p style="margin-top:22px"><a class="btn solid" href="/album/">Get the album</a> <a class="btn" href="/songs/">WYTE BOYZ</a></p>
 </div></section>
-
-<section class="band" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in split">
-  <img class="poster" src="assets/poster.webp" alt="The Stag House mascot at the mixing console under a neon Stag House Records sign" width="800" height="1096" loading="lazy">
-  <div>
-    <span class="eyebrow">How a release works</span>
-    <h2 class="sec-h">From demo to <span class="neon">drop day</span></h2>
-    <ul class="kit">
-      <li>Mastering checklist and release plan, with a date everyone can see</li>
-      <li>The stag ident plays in front of every video and every track on the site</li>
-      <li>Distribution to the streaming services and song registration, with our help</li>
-      <li>A promo clip and a drop page for every single</li>
-    </ul>
-  </div>
-</div>
-<div class="in" style="margin-top:56px"><ol class="steps">
-  <li><b>Demo</b><span>You send a link and confirm you own it.</span></li>
-  <li><b>Greenlight</b><span>We agree the one-page terms.</span></li>
-  <li><b>Record</b><span>Finish the song in the booth or remotely.</span></li>
-  <li><b>Drop</b><span>The edition opens for a fixed window.</span></li>
-  <li><b>Video</b><span>The drop pays for the shoot, with the stag ident up front.</span></li>
-  <li><b>Next</b><span>Fans vote on the following single.</span></li>
-</ol></div></section>
-
-<section class="band fans" id="fans"><div class="in">
-  <span class="eyebrow">For fans</span>
-  <h2 class="sec-h">Own the moment. <span class="gold">Shape the hit.</span></h2>
-  <p class="sec-p">Collect an edition of a release and get more than a file: a say in what happens next.</p>
-  <div class="fan3">
-    <div><h3>Collect</h3><p>Limited editions of each release with early plays, lyric sheets, stems and your name in the video credits.</p></div>
-    <div><h3>Vote</h3><p>Holders choose the next single and which demo gets a video budget. The House reports back on the result.</p></div>
-    <div><h3>Remix</h3><p>Stems get released for remix contests. Winners go out on the label and share in the release.</p></div>
-  </div>
-  <div class="pass">
-    <div><span class="eyebrow">Season membership</span><h3>The Stag Pass</h3><p style="color:#cfe0cb;margin-bottom:16px">One pass opens every drop in the season.</p>
-      <ul><li>Early access to every release</li><li>Members-only Telegram listening room</li><li>Vote weight on singles and videos</li><li>Studio session streams with the stag as host</li></ul></div>
-    <div class="fund" style="margin:0"><div class="row"><span>Video fund · Example</span><b>62% funded</b></div><div class="meter"><i></i></div>
-      <p style="margin-top:14px;color:var(--muted);font-size:15px">Every edition sold moves this bar. When it fills, the video is booked and the date goes up on the page. These numbers are an example.</p></div>
-  </div>
-</div></section>
-
-<section class="band" id="roster" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
-  <span class="eyebrow">The roster</span>
-  <h2 class="sec-h">First in <span class="gold">the House</span></h2>
-  <div class="roster">
-    <article class="card feat"><div class="ph"><img src="assets/poster.webp" alt="" loading="lazy"></div><div class="tx"><span class="tag">Flagship artist</span><h3>Winslow Bankz</h3><p>Eight tracks are live on the page now. The first fan-funded video and the first stag ident come next. Artist photo goes here.</p></div></article>
-    <article class="card slot"><div class="ph">Your name here</div><div class="tx"><span class="tag">Open slot</span><h3>Next up</h3><p>Send a demo. If it fits the House, you get the full release kit.</p></div></article>
-    <article class="card slot"><div class="ph">Your name here</div><div class="tx"><span class="tag">Open slot</span><h3>Next up</h3><p>Producers, singers and rappers are all welcome to submit.</p></div></article>
-  </div>
-</div></section>
-
-<section class="band submit" id="submit"><div class="in">
-  <span class="eyebrow">Open submissions</span>
-  <h2 class="sec-h">Send us <span class="neon">your demo</span></h2>
-  <p class="sec-p">One link is enough. We listen to everything and answer every artist.</p>
-  <form id="demo" novalidate>
-    <label for="an">Artist name<input id="an" name="artist" type="text" autocomplete="off" required></label>
-    <label for="tg">Telegram handle<input id="tg" name="telegram" type="text" placeholder="@yourname" autocomplete="off"></label>
-    <label class="full" for="dl">Link to your demo<input id="dl" name="demo" type="url" placeholder="https://" required></label>
-    <label for="gn">Genre<select id="gn" name="genre"><option>Hip-hop</option><option>R&amp;B</option><option>Pop</option><option>Dance</option><option>Other</option></select></label>
-    <label for="st">Stage<select id="st" name="stage"><option>Finished song</option><option>Rough demo</option><option>Just an idea</option></select></label>
-    <label class="check full" for="ow"><input id="ow" name="own" type="checkbox"><span>I own the recordings and the songs I am sending, and any samples are cleared.</span></label>
-    <div class="full"><button class="btn solid" type="submit" id="go">Send demo</button></div>
-    <div id="sent" role="status">Mock form: nothing was sent. Real submissions will go to the label team.</div>
-  </form>
-</div></section>
-
-
-<section class="band" id="vibe" style="background:var(--panel);border-block:1px solid var(--line)"><div class="in">
-  <span class="eyebrow">The vibe</span>
-  <h2 class="sec-h">Inside <span class="gold">the House</span></h2>
-  <div class="gal">
-    <figure><img src="assets/party.webp" alt="The Stag House mascot at the mic under the neon Stag House Records sign with the crew and stacks of cash" loading="lazy" width="896" height="1120"></figure>
-    <figure><img src="assets/booth.webp" alt="The Stag House mascot recording in the neon booth" loading="lazy" width="1100" height="1375"></figure>
-    <figure><img src="assets/pool.webp" alt="Stag House Records pool party at night with the mascot, supercars and neon lasers" loading="lazy" width="896" height="1120"></figure>
-  </div></div></section>
 
 <section class="band" id="faq"><div class="in" style="max-width:880px">
   <span class="eyebrow">Questions</span>
   <h2 class="sec-h">Straight <span class="gold">answers</span></h2>
-  <details><summary>Do artists really keep their masters?</summary><p>Yes. The label earns from the services it provides on a release, and the split is written on one page before signing.</p></details>
-  <details><summary>Are the NFTs an investment?</summary><p>No. Editions are collectibles with fan perks. We do not promise returns, and nothing here is financial advice.</p></details>
-  <details><summary>Which chain and which launchpad?</summary><p>The plan is Robinhood Chain through the Pons family launchpad. The exact setup is still being confirmed.</p></details>
-  <details><summary>What does the label take?</summary><p>A small published share of each drop plus fees for optional services. The numbers go on this page before the first drop.</p></details>
+  <details><summary>What exactly am I buying?</summary><p>A limited digital collectible NFT on Robinhood Chain: an edition of the Hood Rich album (100 copies) or of the WYTE BOYZ single (100 copies). You pay in ETH and the NFT lands in your own wallet.</p></details>
+  <details><summary>Can I hear the full songs?</summary><p>For now this site plays 20-second clips. Full-track listening for collectors is the next thing being built.</p></details>
+  <details><summary>Are the NFTs an investment?</summary><p>No. Editions are collectibles. We do not promise returns, and nothing here is financial advice.</p></details>
   <details><summary>Who owns what I buy?</summary><p>You own the collectible edition. The music rights stay with the artist, and each release page spells out what holders may do.</p></details>
+  <details><summary>Where does my payment go?</summary><p>Straight into the on-chain contract, which pays the artist&#39;s payout wallet (and the label&#39;s share, where a release has one) automatically. You can read the contract on the block explorer.</p></details>
 </div></section>
 </main>
 
 <footer><div class="in">
   <div class="f">
     <img class="eco" src="assets/ecosystem.webp" alt="$STAG Ecosystem" width="120" height="120">
-    <div class="links"><a href="https://t.me/StagWifHood" target="_blank" rel="noopener">t.me/StagWifHood</a><a href="#artists">Artists</a><a href="#fans">Fans</a><a href="#submit">Submit</a></div>
+    <div class="links"><a href="https://t.me/StagWifHood" target="_blank" rel="noopener">t.me/StagWifHood</a><a href="/album/">The album</a><a href="/songs/">WYTE BOYZ</a><a href="https://robinhoodchain.blockscout.com/address/0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4" target="_blank" rel="noopener">Contract</a></div>
     <img src="assets/stagr.webp" alt="STAGR CRM" width="64" height="64" style="border-radius:16px">
   </div>
-  <p class="disc">Stag House Records is part of the $STAG ecosystem. Editions are collectibles, not investments, and nothing on this page is financial advice. Crypto involves risk. Names, numbers and dates marked as examples are examples.</p>
+  <p class="disc">Stag House Records is part of the $STAG ecosystem. Editions are collectibles, not investments, and nothing on this page is financial advice. Crypto involves risk.</p>
 </div></footer>
 
 <script>
@@ -538,7 +455,6 @@ footer .links a:hover{color:var(--neon)}
   seek.addEventListener('click',function(e){seekTo(e.clientX)});
   seek.addEventListener('keydown',function(e){if(e.key==='ArrowRight')audio.currentTime=Math.min(audio.duration||0,audio.currentTime+5);if(e.key==='ArrowLeft')audio.currentTime=Math.max(0,audio.currentTime-5)});
   setTrack(0);
-  $('demo').addEventListener('submit',function(e){e.preventDefault();var ok=$('an').value.trim()&&$('dl').value.trim()&&$('ow').checked;var s=$('sent');s.style.display='block';s.textContent=ok?'Mock form: nothing was sent. Real submissions will go to the label team.':'Add your name, a demo link and tick the rights box to continue.'});
 })();
 </script>
 
