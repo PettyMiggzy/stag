@@ -134,8 +134,14 @@ export function initExtras(X) {
 
   // ---------- commands ----------
   let offset = 0;
+  const wordAt = new Map();
   async function handle(msg) {
-    const text = (msg.text || "").trim(); if (!text.startsWith("/")) return;
+    let text = (msg.text || "").trim();
+    if (!text.startsWith("/")) {
+      const w = text.toLowerCase().replace(/^[$#]/, "").replace(/[?!.]+$/, "");
+      const WORDS = { ca: "ca", contract: "ca", "contract address": "ca", price: "price", mc: "price", chart: "chart", links: "links", website: "links", site: "links", lounge: "lounge", app: "app" };
+      if (!WORDS[w]) return; const k = msg.chat.id + ":" + WORDS[w], now = Date.now(); if (now - (wordAt.get(k) || 0) < 20000) return; wordAt.set(k, now); text = "/" + WORDS[w];
+    }
     const [raw, ...args] = text.split(/\s+/); const cmd = raw.slice(1).split("@")[0].toLowerCase();
     const reply = (t, extra = {}) => tgPost("sendMessage", { chat_id: msg.chat.id, text: t, parse_mode: "HTML", disable_web_page_preview: true, reply_parameters: { message_id: msg.message_id }, reply_markup: links(), ...extra });
     try {
@@ -196,11 +202,14 @@ export function initExtras(X) {
         const med = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]; return reply(["<b>🏹 TOP ARCHERS · TODAY</b>", ...rows.map((r, i) => `${med[i]} ${esc(r.name)} · <b>${r.s}</b>`), "", "Play: https://stagwifhood.fun/play/"].join("\n"));
       }
       if (cmd === "ca" || cmd === "contract" || cmd === "address") return reply(`<b>$STAG contract (Robinhood Chain)</b>\n<code>${CFG.token}</code>\n<i>tap to copy</i>\n\n<a href="${CFG.explorer}/token/${CFG.token}">Explorer</a> · <a href="${BUY}">Buy on Pons</a>`);
+      if (cmd === "lounge" || cmd === "club") return reply("🍸 <b>Hood Rich Club</b>\nThe 3D lounge: DJ, bar, poker, casino tables, chess and trivia. Walk in as a guest, no wallet needed. Play chips only.\nhttps://stagwifhood.fun/lounge/", { reply_markup: { inline_keyboard: [[{ text: "🍸 Enter the lounge", url: "https://stagwifhood.fun/lounge/" }]] } });
+      if (cmd === "records" || cmd === "music" || cmd === "album") return reply("🎵 <b>Stag House Records</b> · Winslow Bankz\n💿 Hood Rich album: https://records.stagwifhood.fun/album/\n🎸 WYTE BOYZ and singles: https://records.stagwifhood.fun/songs/\n🎤 Artist page: https://records.stagwifhood.fun/artist/", { reply_markup: { inline_keyboard: [[{ text: "🎧 Hear the clips", url: "https://records.stagwifhood.fun/" }]] } });
+      if (cmd === "app" || cmd === "stagr" || cmd === "crm") return reply("📱 <b>StagR</b> · the field service CRM for junk removal and moving crews\nOn Google Play: https://play.google.com/store/apps/details?id=com.stagr.app\nMore: https://stagwifhood.fun/stagr/", { reply_markup: { inline_keyboard: [[{ text: "📱 Get it on Google Play", url: "https://play.google.com/store/apps/details?id=com.stagr.app" }]] } });
       if (cmd === "buy") return reply(`🟩 <b>Buy $STAG</b> on Pons (Robinhood Chain)\n${BUY}\n\nCA: <code>${CFG.token}</code>`, { reply_markup: { inline_keyboard: [[{ text: "🟩 Buy $STAG", url: BUY, style: "success" }]] } });
       if (cmd === "chart") return reply(`📈 <b>$STAG chart</b>\n${BUY}`, { reply_markup: { inline_keyboard: [[{ text: "📈 Open chart", url: CFG.chartUrl || BUY, style: "primary" }]] } });
-      if (cmd === "links" || cmd === "socials" || cmd === "web") return reply(`<b>$STAG links</b>\n🟩 Buy: ${BUY}\n🌐 Site: https://stagwifhood.fun\n🏹 Game: https://stagwifhood.fun/play/\n🎵 Records: https://records.stagwifhood.fun\n💬 Telegram: https://t.me/StagWifHood\n\nCA: <code>${CFG.token}</code>`);
+      if (cmd === "links" || cmd === "socials" || cmd === "web") return reply(`<b>$STAG links</b>\n🟩 Buy: ${BUY}\n🌐 Site: https://stagwifhood.fun\n🏹 Game: https://stagwifhood.fun/play/\n🎵 Records: https://records.stagwifhood.fun\n🍸 Lounge: https://stagwifhood.fun/lounge/\n📱 StagR app: https://play.google.com/store/apps/details?id=com.stagr.app\n𝕏 X: https://x.com/stagwifhoodrh\n💬 Telegram: https://t.me/StagWifHood\n\nCA: <code>${CFG.token}</code>`);
       if (cmd === "game" || cmd === "play") return reply(`🏹 <b>Stag Shot</b> – 3D forest archery\n${process.env.MINIAPP_URL || "https://stagwifhood.fun/play/"}`);
-      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
+      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n<i>You can also just type: ca, price, chart, links</i>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/lounge – the 3D club · /records – the music · /app – StagR on Google Play\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
     } catch (e) { log("cmd err:", e.message); }
   }
   async function pollCommands() {
