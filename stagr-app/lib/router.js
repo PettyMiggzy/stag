@@ -6,7 +6,7 @@ const routes = [];
 // closed to workers until someone decides otherwise. Handlers still narrow these further (own visits, own time).
 const WORKER_OK = new Set(['GET /api/auth/me', 'POST /api/auth/password', 'POST /api/auth/delete-account', 'GET /api/team', 'GET /api/services', 'GET /api/dashboard',
   'GET /api/visits', 'GET /api/visits/:id', 'PUT /api/visits/:id', 'POST /api/visits/:id/photos', 'GET /api/jobs/:id', 'POST /api/time/start', 'POST /api/time/stop', 'GET /api/time',
-  'POST /api/expenses', 'GET /api/expenses', 'POST /api/devices', 'DELETE /api/devices', 'GET /api/photos/:id', 'POST /api/visits/:id/omw', 'POST /api/visits/:id/signature']);
+  'POST /api/expenses', 'GET /api/expenses', 'POST /api/devices', 'DELETE /api/devices', 'GET /api/photos/:kind/:id/:idx', 'POST /api/visits/:id/omw', 'POST /api/visits/:id/signature']);
 // route('GET', '/api/customers/:id', { auth: true }, async ctx => ({...}))
 export function route(method, pattern, opts, handler) {
   if (typeof opts === 'function') { handler = opts; opts = {}; }

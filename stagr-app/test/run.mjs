@@ -105,6 +105,8 @@ r = await W.get('/api/team'); ok('worker team list has names only', r.s === 200 
 r = await W.get('/api/jobs/' + vs[0].job_id); ok('worker opens their job without money', r.s === 200 && r.j.costing === null && r.j.invoices.length === 0 && r.j.job.items.every(i => i.price === undefined), r.j);
 r = await W.get('/api/expenses'); ok('worker sees only their own expenses', r.s === 200 && r.j.expenses.every(e => e.user_id === wally.id), r.j);
 r = await W.post('/api/visits/' + vs[0].id + '/photos', { data: 'data:image/png;base64,iVBORw0KGgo=' }); ok('worker adds a photo', r.s === 200 && r.j.photos.length === 1, r);
+{ const wi = await fetch(BASE + r.j.photos[0].data, { headers: { cookie: W.cookie } }); ok('assigned worker loads the visit photo as an image', wi.status === 200 && wi.headers.get('content-type') === 'image/png', wi.status);
+  const wr = await W.get('/api/photos/request/1/0'); ok('worker cannot load request photos', wr.s === 403, wr.s); }
 r = await W.post('/api/visits/' + vs[0].id + '/photos', { data: 'javascript:alert(1)' }); ok('non-image photo rejected', r.s === 400, r);
 r = await B.put('/api/visits/' + vs[0].id, { notes: 'x' }); ok('B cannot edit A visit', r.s === 404, r);
 r = await B.get('/api/jobs/' + job.id); ok('B cannot read A job', r.s === 404, r);
@@ -354,6 +356,27 @@ ok('no cross-tenant references anywhere in the database', Number(cross[0].n) ===
   await E.post('/api/devices', { platform: 'ios', token: tok });
   r = await E.post('/api/auth/delete-account', { password: 'password6', confirm: 'DELETE' }); ok('deleting the account', r.s === 200, r);
   const n4 = await sql`SELECT count(*) AS n FROM devices WHERE token = ${tok}`; ok('deleting an account removes its devices', Number(n4[0].n) === 0, n4);
+}
+
+// ---------- photos are links, served one at a time, never inside lists ----------
+{
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const A = new Client(), B = new Client(); r = await A.post('/api/auth/signup', { business: 'Photo Co', name: 'Phil', email: 'phil@photo.test', password: 'password9' }); ok('signup photo co', r.s === 200, r);
+  await B.post('/api/auth/signup', { business: 'Other Co', name: 'Otto', email: 'otto@other.test', password: 'password9' });
+  r = await A.post('/api/customers', { name: 'Cam Client', phone: '5552223333' }); const cA = r.j.customer;
+  r = await A.post('/api/jobs', { customer_id: cA.id, title: 'Photo job', visit: { starts_at: '2026-11-05T15:00:00Z' } }); const pj = r.j.job; ok('photo job', r.s === 200, r);
+  r = await A.get('/api/jobs/' + pj.id); const pv = r.j.visits[0]; r = await A.post('/api/visits/' + pv.id + '/photos', { data: png, caption: 'before' }); ok('photo added', r.s === 200, r);
+  r = await A.get('/api/visits/' + pv.id); const ph = r.j.visit.photos; ok('visit photos are links', ph.length >= 1 && ph.every(p => /^\/api\/photos\/visit\/\d+\/\d+$/.test(p.data)), ph);
+  const img = await fetch(BASE + ph[0].data, { headers: { cookie: A.cookie } }); ok('the photo loads as an image', img.status === 200 && /^image\//.test(img.headers.get('content-type')) && /max-age/.test(img.headers.get('cache-control')), img.status);
+  r = await B.get(ph[0].data); ok('another business cannot load the photo', r.s === 404, r.s);
+  r = await anon.get(ph[0].data); ok('signed-out cannot load the photo', r.s === 401, r.s);
+  r = await A.get('/api/visits?from=2026-10-01&to=2026-12-01'); ok('schedule list carries a count, not pictures', r.j.visits.every(v => v.photos === undefined && typeof v.photo_count === 'number') && !JSON.stringify(r.j).includes('base64'), Object.keys(r.j.visits[0]));
+  const slug = (await A.get('/api/auth/me')).j.business.slug;
+  r = await anon.post('/api/public/b/' + slug + '/request', { name: 'Photo Pete', phone: '5557778888', message: 'see pics', photos: [png, png] }); ok('booking request with photos', r.s === 200, r);
+  r = await A.get('/api/requests'); const pr = r.j.requests.find(x => x.name === 'Photo Pete'); ok('request list has photo links only', !!pr && pr.photos.length === 2 && pr.photos.every(u => /^\/api\/photos\/request\//.test(u)) && !JSON.stringify(r.j).includes('base64'), pr && pr.photos);
+  const ri = await fetch(BASE + pr.photos[1], { headers: { cookie: A.cookie } }); ok('manager loads a request photo', ri.status === 200 && ri.headers.get('content-type') === 'image/png', ri.status);
+  r = await A.get('/api/photos/request/' + pr.id + '/9'); ok('missing photo index is 404', r.s === 404, r.s);
+  r = await A.get('/api/requests/' + pr.id); ok('request detail has photo links', r.j.request.photos.length === 2 && !JSON.stringify(r.j).includes('base64'), r.j.request.photos);
 }
 
 // ---------- money: concurrent payments, edits, deposits ----------

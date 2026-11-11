@@ -6,7 +6,7 @@ import { clean, cleanItems, billable, totals, r2 } from '../util.js';
 import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { nextNumber } from './sales.js';
-import { shapeInvoice } from './shapes.js';
+import { shapeInvoice, visitOut } from './shapes.js';
 import { runReviewRequests } from './reviews.js';
 import { baseUrl } from './comms.js';
 
@@ -91,7 +91,7 @@ route('GET', '/api/jobs/:id', async ctx => {
   const id = Number(ctx.params.id) || 0, tid = ctx.tid;
   const [job] = await sql`SELECT * FROM jobs WHERE id = ${id} AND tenant_id = ${tid}`; if (!job) throw missing('Job not found');
   if (ctx.user.role === 'worker') { // a worker sees a job only when one of its visits is theirs, and never the money
-    const mine = await sql`SELECT id, starts_at, ends_at, assigned, status, notes, checklist, completed_at FROM visits WHERE job_id = ${id} AND tenant_id = ${tid} AND ${ctx.user.id} = ANY(assigned) ORDER BY starts_at`;
+    const mine = await sql`SELECT id, starts_at, ends_at, assigned, status, notes, checklist, completed_at, '[]'::jsonb AS photos FROM visits WHERE job_id = ${id} AND tenant_id = ${tid} AND ${ctx.user.id} = ANY(assigned) ORDER BY starts_at`;
     if (!mine.length) throw new HttpError(403, 'This job is not assigned to you');
     const [c] = await sql`SELECT id, name, phone FROM customers WHERE id = ${job.customer_id} AND tenant_id = ${tid}`;
     return { job: { id: job.id, number: job.number, title: job.title, description: job.description, status: job.status, customer_id: job.customer_id, items: (job.items || []).map(i => ({ kind: i.kind, name: i.name, description: i.description, qty: i.qty })) }, customer: c, visits: mine, invoices: [], expenses: [], costing: null };
@@ -104,7 +104,7 @@ route('GET', '/api/jobs/:id', async ctx => {
     sql`SELECT * FROM expenses WHERE job_id = ${id} AND tenant_id = ${tid} ORDER BY incurred_on DESC`,
     sql`SELECT COALESCE(sum(extract(epoch FROM (COALESCE(t.ended_at, now()) - t.started_at))), 0)::float AS secs FROM time_entries t JOIN visits v ON v.id = t.visit_id AND v.tenant_id = t.tenant_id WHERE v.job_id = ${id} AND t.tenant_id = ${tid}`]);
   const inv = invoices.map(shapeInvoice), revenue = r2(inv.filter(i => i.status !== 'void').reduce((a, i) => a + i.total, 0)), spent = r2(expenses.reduce((a, e) => a + Number(e.amount), 0));
-  return { job, customer: customer[0], visits, invoices: inv, expenses, costing: { invoiced: revenue, collected: r2(inv.reduce((a, i) => a + i.paid, 0)), expenses: spent, profit: r2(revenue - spent), hours: r2(time[0].secs / 3600) } };
+  return { job, customer: customer[0], visits: visits.map(visitOut), invoices: inv, expenses, costing: { invoiced: revenue, collected: r2(inv.reduce((a, i) => a + i.paid, 0)), expenses: spent, profit: r2(revenue - spent), hours: r2(time[0].secs / 3600) } };
 });
 route('PUT', '/api/jobs/:id', async ctx => {
   need(ctx, 'admin'); const [o] = await sql`SELECT * FROM jobs WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; if (!o) throw missing('Job not found'); const b = ctx.body;
@@ -119,7 +119,7 @@ route('POST', '/api/jobs/:id/visits', async ctx => {
   need(ctx, 'admin'); const [j] = await sql`SELECT id, customer_id FROM jobs WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; if (!j) throw missing('Job not found');
   const b = ctx.body, start = when(b.starts_at); if (!start) throw bad('Pick a date and time');
   const [v] = await sql`INSERT INTO visits (tenant_id, job_id, starts_at, ends_at, assigned, notes, checklist) VALUES (${ctx.tid}, ${j.id}, ${start}, ${when(b.ends_at)}, ${await validAssigned(ctx.tid, b.assigned)}, ${clean(b.notes, 2000)}, ${JSON.stringify(cleanChecklist(b.checklist))}::jsonb) RETURNING *`;
-  return { visit: v };
+  return { visit: visitOut(v) };
 });
 
 route('GET', '/api/visits', async ctx => {
@@ -130,7 +130,8 @@ route('GET', '/api/visits', async ctx => {
   const recJobs = await sql`SELECT id FROM jobs WHERE tenant_id = ${ctx.tid} AND status = 'active' AND recurrence IS NOT NULL`;
   const span = Math.max(90, Math.ceil((to - Date.now()) / 864e5) + 7);
   for (const r of recJobs) await extendVisits(ctx.tid, r.id, Math.min(span, 400));
-  const rows = await sql`SELECT v.*, j.title, j.number AS job_number, j.customer_id, c.name AS customer_name, c.phone AS customer_phone, p.address, p.city
+  const rows = await sql`SELECT v.id, v.tenant_id, v.job_id, v.starts_at, v.ends_at, v.assigned, v.status, v.notes, v.checklist, v.reminder_sent_at, v.completed_at, jsonb_array_length(v.photos) AS photo_count,
+      j.title, j.number AS job_number, j.customer_id, c.name AS customer_name, c.phone AS customer_phone, p.address, p.city, p.state, p.zip
     FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id JOIN customers c ON c.id = j.customer_id AND c.tenant_id = j.tenant_id LEFT JOIN properties p ON p.id = j.property_id AND p.tenant_id = j.tenant_id
     WHERE v.tenant_id = ${ctx.tid} AND v.starts_at >= ${from} AND v.starts_at < ${to} AND (${mineOnly}::int IS NULL OR ${mineOnly} = ANY(v.assigned)) ORDER BY v.starts_at LIMIT 1000`;
   return { visits: rows };
@@ -141,7 +142,7 @@ route('GET', '/api/visits/:id', async ctx => {
     WHERE v.id = ${Number(ctx.params.id) || 0} AND v.tenant_id = ${ctx.tid}`;
   if (!v) throw missing('Visit not found');
   if (ctx.user.role === 'worker' && !v.assigned.includes(ctx.user.id)) throw new HttpError(403, 'This visit is not assigned to you');
-  return { visit: v };
+  return { visit: visitOut(v) };
 });
 async function getVisit(ctx) {
   const [v] = await sql`SELECT v.*, j.customer_id, j.status AS job_status FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id WHERE v.id = ${Number(ctx.params.id) || 0} AND v.tenant_id = ${ctx.tid}`;
@@ -161,7 +162,7 @@ route('PUT', '/api/visits/:id', async ctx => {
     await logActivity(ctx.tid, o.customer_id, 'visit', 'Visit completed', ctx.user.id);
     try { await runReviewRequests(ctx.tid, baseUrl(ctx.req)); } catch (e) { console.error('review request check failed', e && e.message); } // never block completing the visit
   }
-  return { visit: v };
+  return { visit: visitOut(v) };
 });
 route('DELETE', '/api/visits/:id', async ctx => { need(ctx, 'admin'); await sql`DELETE FROM visits WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; return { ok: true }; });
 route('POST', '/api/visits/:id/photos', async ctx => {
@@ -169,7 +170,7 @@ route('POST', '/api/visits/:id/photos', async ctx => {
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(data) || data.length > 900000) throw bad('Send a JPEG, PNG or WebP photo under 600 KB');
   if ((o.photos || []).length >= 12) throw bad('That visit already has 12 photos');
   const photos = [...(o.photos || []), { data, by: ctx.user.id, at: new Date().toISOString(), caption: clean(ctx.body.caption, 120) }];
-  const [v] = await sql`UPDATE visits SET photos = ${JSON.stringify(photos)}::jsonb WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING id, photos`; return { photos: v.photos };
+  const [v] = await sql`UPDATE visits SET photos = ${JSON.stringify(photos)}::jsonb WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING id, photos`; return { photos: visitOut(v).photos };
 });
 
 // ---- time clock and expenses ----

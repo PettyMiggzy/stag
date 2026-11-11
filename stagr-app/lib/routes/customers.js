@@ -5,7 +5,7 @@ import { need } from '../auth.js';
 import { clean, email as cleanEmail, phone as cleanPhone, amt, token } from '../util.js';
 import { logActivity } from './activity.js';
 import { nextNumber } from './sales.js';
-import { shapeQuote, shapeInvoice } from './shapes.js';
+import { shapeQuote, shapeInvoice, requestOut } from './shapes.js';
 
 const cust = (b, old = {}) => ({
   name: clean(b.name ?? old.name, 120), company: clean(b.company ?? old.company, 120),
@@ -87,7 +87,17 @@ route('PUT', '/api/services/:id', async ctx => {
 });
 
 // ---- requests (new leads: from the booking page or typed in) ----
-route('GET', '/api/requests', async ctx => ({ requests: await sql`SELECT * FROM requests WHERE tenant_id = ${ctx.tid} ORDER BY created_at DESC LIMIT 300` }));
+route('GET', '/api/requests', async ctx => ({ requests: (await sql`SELECT id, tenant_id, customer_id, source, name, phone, email, service, address, message, status, contacted_at, created_at, company, availability, notes, email_ok, sms_ok,
+  (SELECT COALESCE(jsonb_agg(0), '[]'::jsonb) FROM jsonb_array_elements(photos)) AS photos FROM requests WHERE tenant_id = ${ctx.tid} ORDER BY created_at DESC LIMIT 300`).map(requestOut) }));
+// One photo, as an image. Request photos are for managers; a visit photo is also open to the crew assigned to that visit.
+route('GET', '/api/photos/:kind/:id/:idx', async ctx => {
+  const id = Number(ctx.params.id) || 0, idx = Number(ctx.params.idx), kind = ctx.params.kind; let data = '';
+  if (!Number.isInteger(idx) || idx < 0 || idx > 50) throw missing();
+  if (kind === 'request') { if (ctx.user.role === 'worker') throw new HttpError(403, 'Your role cannot do this'); const [r] = await sql`SELECT photos -> ${idx}::int AS p FROM requests WHERE id = ${id} AND tenant_id = ${ctx.tid}`; data = r && typeof r.p === 'string' ? r.p : ''; }
+  else if (kind === 'visit') { const [v] = await sql`SELECT photos -> ${idx}::int ->> 'data' AS p, assigned FROM visits WHERE id = ${id} AND tenant_id = ${ctx.tid}`; if (v && ctx.user.role === 'worker' && !v.assigned.includes(ctx.user.id)) throw new HttpError(403, 'This visit is not assigned to you'); data = (v && v.p) || ''; }
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(data); if (!m) throw missing('Photo not found');
+  return { __raw: true, headers: { 'content-type': m[1], 'cache-control': 'private, max-age=604800, immutable', 'x-content-type-options': 'nosniff' }, body: Buffer.from(m[2], 'base64') };
+});
 route('POST', '/api/requests', async ctx => {
   const b = ctx.body; if (!clean(b.name, 120)) throw bad('Enter a name');
   const [r] = await sql`INSERT INTO requests (tenant_id, source, name, phone, email, service, address, message) VALUES (${ctx.tid}, ${clean(b.source || 'manual', 30)}, ${clean(b.name, 120)}, ${cleanPhone(b.phone)}, ${cleanEmail(b.email)}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}) RETURNING *`;
@@ -111,11 +121,11 @@ const getRequest = async ctx => { const [r] = await sql`SELECT * FROM requests W
 route('GET', '/api/requests/:id', async ctx => {
   const r = await getRequest(ctx); let customer = null, quotes = [];
   if (r.customer_id) { [customer] = await sql`SELECT id, name FROM customers WHERE id = ${r.customer_id} AND tenant_id = ${ctx.tid}`; quotes = await sql`SELECT id, number, status FROM quotes WHERE request_id = ${r.id} AND tenant_id = ${ctx.tid} ORDER BY id`; }
-  return { request: r, customer, quotes };
+  return { request: requestOut(r), customer, quotes };
 });
 route('PUT', '/api/requests/:id', async ctx => {
   const o = await getRequest(ctx), b = ctx.body, st = ['new', 'contacted', 'converted', 'lost'].includes(b.status) ? b.status : o.status;
-  const [r] = await sql`UPDATE requests SET status = ${st}, contacted_at = ${st !== 'new' && !o.contacted_at ? new Date() : o.contacted_at}, notes = ${clean(b.notes ?? o.notes, 4000)}, service = ${clean(b.service ?? o.service, 120)} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`; return { request: r };
+  const [r] = await sql`UPDATE requests SET status = ${st}, contacted_at = ${st !== 'new' && !o.contacted_at ? new Date() : o.contacted_at}, notes = ${clean(b.notes ?? o.notes, 4000)}, service = ${clean(b.service ?? o.service, 120)} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`; return { request: requestOut(r) };
 });
 route('POST', '/api/requests/:id/convert', async ctx => ({ customer: await customerFromRequest(ctx, await getRequest(ctx)) }));
 // Jobber-style "Convert to Quote": makes the customer and a draft quote that already points back at this request.
