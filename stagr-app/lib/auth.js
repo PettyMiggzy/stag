@@ -31,7 +31,7 @@ function unsign(tok) {
   try { const p = JSON.parse(Buffer.from(b, 'base64url').toString()); return p.exp > Date.now() ? p : null; } catch { return null; }
 }
 export function setSession(res, user) {
-  const tok = sign({ uid: user.id, tid: user.tenant_id, exp: Date.now() + 14 * 864e5 });
+  const tok = sign({ uid: user.id, tid: user.tenant_id, v: Number(user.session_ver) || 0, exp: Date.now() + 14 * 864e5 });
   const secure = (process.env.NODE_ENV === 'production' || process.env.VERCEL) ? '; Secure' : '';
   res.setHeader('set-cookie', `${COOKIE}=${encodeURIComponent(tok)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${14 * 86400}${secure}`);
 }
@@ -39,8 +39,9 @@ export function clearSession(res) { res.setHeader('set-cookie', `${COOKIE}=; Pat
 // Resolve the signed-in user from the cookie. The tenant always comes from the database row, never from the client.
 export async function currentUser(req) {
   const p = unsign(parseCookies(req)[COOKIE]); if (!p) return null;
-  const [u] = await sql`SELECT id, tenant_id, email, name, role, phone, active FROM users WHERE id = ${p.uid} AND tenant_id = ${p.tid}`;
-  return u && u.active ? u : null;
+  const [u] = await sql`SELECT id, tenant_id, email, name, role, phone, active, session_ver FROM users WHERE id = ${p.uid} AND tenant_id = ${p.tid}`;
+  if (!u || !u.active || Number(u.session_ver) !== (Number(p.v) || 0)) return null;
+  delete u.session_ver; return u;
 }
 export const ROLE_RANK = { worker: 1, admin: 2, owner: 3 };
 export function need(ctx, role) {
@@ -51,7 +52,7 @@ export function need(ctx, role) {
 // phone carrier can put many real users behind one address.
 export async function checkLockout(keys) {
   for (const k of keys) {
-    const limit = /^(login-ip|signup):/.test(k) ? 30 : 10;
+    const limit = /^(login-ip|signup|forgot-ip):/.test(k) ? 30 : /^forgot:/.test(k) ? 4 : 10;
     const [r] = await sql`SELECT count(*)::int AS n FROM login_fails WHERE key = ${k} AND at > now() - interval '15 minutes'`;
     if (r.n >= limit) throw new HttpError(429, 'Too many tries. Wait 15 minutes and try again.');
   }

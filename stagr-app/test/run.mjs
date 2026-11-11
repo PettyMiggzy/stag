@@ -96,7 +96,14 @@ r = await W.put('/api/visits/' + vs[0].id, { checklist: [{ text: 'Photos before'
 r = await W.post('/api/time/start', { visit_id: vs[0].id }); ok('worker clocks in', r.s === 200, r); r = await W.post('/api/time/stop', {}); ok('worker clocks out', r.s === 200, r);
 r = await W.get('/api/visits/' + vs[0].id); ok('worker can open their own visit', r.s === 200 && r.j.visit.customer_name === 'Sam Rivera', r);
 r = await W.get('/api/visits/' + vs[0].id); r = await B.get('/api/visits/' + vs[0].id); ok('B cannot open A visit', r.s === 404, r);
-r = await W.get('/api/customers'); ok('worker can read customers', r.s === 200, r.s);
+// a worker's login reaches only their own work, never the business's customers or money
+for (const [m, path] of [['GET', '/api/customers'], ['GET', '/api/customers/' + cA.id], ['GET', '/api/quotes'], ['GET', '/api/invoices'], ['GET', '/api/requests'], ['GET', '/api/messages'], ['GET', '/api/jobs'], ['GET', '/api/export/invoices.csv'], ['GET', '/api/automations']]) { r = await W.req(m, path); ok('worker blocked: ' + m + ' ' + path, r.s === 403, r.s); }
+r = await W.post('/api/quotes', { customer_id: cA.id, items: [{ name: 'x', price: 1 }] }); ok('worker cannot create quotes', r.s === 403, r.s);
+r = await W.post('/api/messages', { customer_id: cA.id, body: 'hi' }); ok('worker cannot send messages', r.s === 403, r.s);
+r = await W.put('/api/customers/' + cA.id, { name: 'Hacked' }); ok('worker cannot edit customers', r.s === 403, r.s);
+r = await W.get('/api/team'); ok('worker team list has names only', r.s === 200 && r.j.team.length > 0 && r.j.team.every(t => t.email === undefined && t.phone === undefined), r.j.team?.[0]);
+r = await W.get('/api/jobs/' + vs[0].job_id); ok('worker opens their job without money', r.s === 200 && r.j.costing === null && r.j.invoices.length === 0 && r.j.job.items.every(i => i.price === undefined), r.j);
+r = await W.get('/api/expenses'); ok('worker sees only their own expenses', r.s === 200 && r.j.expenses.every(e => e.user_id === wally.id), r.j);
 r = await W.post('/api/visits/' + vs[0].id + '/photos', { data: 'data:image/png;base64,iVBORw0KGgo=' }); ok('worker adds a photo', r.s === 200 && r.j.photos.length === 1, r);
 r = await W.post('/api/visits/' + vs[0].id + '/photos', { data: 'javascript:alert(1)' }); ok('non-image photo rejected', r.s === 400, r);
 r = await B.put('/api/visits/' + vs[0].id, { notes: 'x' }); ok('B cannot edit A visit', r.s === 404, r);
@@ -347,6 +354,46 @@ ok('no cross-tenant references anywhere in the database', Number(cross[0].n) ===
   await E.post('/api/devices', { platform: 'ios', token: tok });
   r = await E.post('/api/auth/delete-account', { password: 'password6', confirm: 'DELETE' }); ok('deleting the account', r.s === 200, r);
   const n4 = await sql`SELECT count(*) AS n FROM devices WHERE token = ${tok}`; ok('deleting an account removes its devices', Number(n4[0].n) === 0, n4);
+}
+
+// ---------- money: concurrent payments, edits, deposits ----------
+{
+  const M = new Client(); r = await M.post('/api/auth/signup', { business: 'Mike Money', name: 'Mike', email: 'mike@money.test', password: 'password7' }); ok('signup money', r.s === 200, r);
+  r = await M.post('/api/customers', { name: 'Pat Payer', phone: '5553334444' }); const pc = r.j.customer;
+  r = await M.post('/api/invoices', { customer_id: pc.id, items: [{ name: 'Haul', price: 100 }], tax_pct: 0 }); const inv = r.j.invoice; ok('invoice made', r.s === 200 && inv.total === 100, r);
+  const both = await Promise.all([1, 2, 3, 4].map(() => M.post('/api/invoices/' + inv.id + '/payments', { amount: 25, method: 'cash' })));
+  r = await M.get('/api/invoices/' + inv.id); ok('four payments at the same moment are all kept', both.every(x => x.s === 200) && r.j.invoice.payments.length === 4 && r.j.invoice.paid === 100 && r.j.invoice.status === 'paid', { s: both.map(x => x.s), n: r.j.invoice.payments.length, paid: r.j.invoice.paid });
+  r = await M.post('/api/invoices/' + inv.id + '/payments', { amount: 1, method: 'cash' }); ok('cannot overpay', r.s === 400, r);
+  r = await M.put('/api/invoices/' + inv.id, { items: [{ name: 'Haul', price: 160 }] }); ok('raising a paid invoice makes it partial again', r.s === 200 && r.j.invoice.status === 'partial' && r.j.invoice.balance === 60 && !r.j.invoice.paid_at, r.j.invoice);
+  r = await M.put('/api/invoices/' + inv.id, { items: [{ name: 'Haul', price: 100 }] }); ok('lowering it back makes it paid', r.s === 200 && r.j.invoice.status === 'paid' && !!r.j.invoice.paid_at, r.j.invoice);
+  // deposit paid on the quote is credited to the first invoice from that quote, once
+  r = await M.post('/api/quotes', { customer_id: pc.id, items: [{ name: 'Big haul', price: 400 }], deposit: 100, tax_pct: 0 }); const q = r.j.quote; ok('quote with deposit', r.s === 200 && q.deposit_due === 100, r);
+  r = await M.post('/api/quotes/' + q.id + '/deposit-paid', { method: 'zelle' }); ok('deposit marked', r.s === 200, r);
+  r = await M.post('/api/invoices', { customer_id: pc.id, quote_id: q.id }); ok('deposit is credited on the invoice', r.s === 200 && r.j.invoice.paid === 100 && r.j.invoice.balance === 300 && r.j.invoice.status === 'partial' && r.j.invoice.payments[0].deposit === true, r.j.invoice);
+  r = await M.post('/api/invoices', { customer_id: pc.id, quote_id: q.id }); ok('deposit is not credited twice', r.s === 200 && r.j.invoice.paid === 0, r.j.invoice);
+}
+
+// ---------- forgot password, reset, and signing out other devices ----------
+{
+  const { createHash } = await import('node:crypto');
+  const P = new Client(), P2 = new Client(); r = await P.post('/api/auth/signup', { business: 'Reset Co', name: 'Rita', email: 'rita@reset.test', password: 'password8' }); ok('signup reset', r.s === 200, r);
+  r = await P2.post('/api/auth/login', { email: 'rita@reset.test', password: 'password8' }); ok('second device signed in', r.s === 200, r);
+  r = await anon.post('/api/auth/forgot', { email: 'nobody@nowhere.test' }); const unknown = JSON.stringify(r.j);
+  r = await anon.post('/api/auth/forgot', { email: 'rita@reset.test' }); ok('forgot answers the same for known and unknown emails', r.s === 200 && JSON.stringify(r.j) === unknown, r);
+  const rows = await sql`SELECT pr.token_hash FROM password_resets pr JOIN users u ON u.id = pr.user_id WHERE u.email = 'rita@reset.test'`; ok('one reset token stored, hashed', rows.length === 1 && /^[0-9a-f]{64}$/.test(rows[0].token_hash), rows);
+  r = await anon.post('/api/auth/reset', { token: 'not-the-token', password: 'newpassword9' }); ok('wrong reset token refused', r.s === 400, r);
+  const [u] = await sql`SELECT id FROM users WHERE email = 'rita@reset.test'`, known = 'known-test-token-0123456789';
+  await sql`UPDATE password_resets SET token_hash = ${createHash('sha256').update(known).digest('hex')} WHERE user_id = ${u.id}`;
+  r = await anon.post('/api/auth/reset', { token: known, password: 'short' }); ok('reset needs 8+ characters', r.s === 400, r);
+  const R = new Client(); r = await R.post('/api/auth/reset', { token: known, password: 'newpassword9' }); ok('reset works and signs in', r.s === 200 && !!R.cookie, r);
+  r = await R.get('/api/auth/me'); ok('signed in after reset', r.s === 200 && r.j.user.email === 'rita@reset.test', r);
+  r = await anon.post('/api/auth/reset', { token: known, password: 'another-pass1' }); ok('reset link works once', r.s === 400, r);
+  r = await P.get('/api/auth/me'); ok('old sessions are signed out after a reset', r.s === 401, r); r = await P2.get('/api/auth/me'); ok('every old device is signed out', r.s === 401, r);
+  r = await anon.post('/api/auth/login', { email: 'rita@reset.test', password: 'password8' }); ok('old password no longer works', r.s === 401, r); anon.cookie = '';
+  const R2 = new Client(); r = await R2.post('/api/auth/login', { email: 'rita@reset.test', password: 'newpassword9' }); ok('new password works', r.s === 200, r);
+  r = await R.post('/api/auth/password', { current: 'newpassword9', password: 'thirdpassword1' }); ok('change password', r.s === 200, r);
+  r = await R.get('/api/auth/me'); ok('the device that changed it stays signed in', r.s === 200, r); r = await R2.get('/api/auth/me'); ok('other devices are signed out on password change', r.s === 401, r);
+  for (let i = 0; i < 6; i++) r = await anon.post('/api/auth/forgot', { email: 'rita@reset.test' }); ok('forgot is rate limited per email', r.s === 429, r);
 }
 
 srv.close(); console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

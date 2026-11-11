@@ -108,6 +108,10 @@ STATEMENTS.push(
 `ALTER TABLE messages ADD COLUMN IF NOT EXISTS job_id INT`,
 `CREATE INDEX IF NOT EXISTS messages_provider ON messages(provider_id) WHERE provider_id <> ''`
 );
+STATEMENTS.push(
+`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_ver INT NOT NULL DEFAULT 0`,
+`CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`
+);
 let done = null;
 export function ensureSchema() {
   if (!done) done = (async () => { for (const s of STATEMENTS) await query(s); })().catch(e => { done = null; throw e; });

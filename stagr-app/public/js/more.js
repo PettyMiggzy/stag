@@ -1,7 +1,27 @@
 import { S, esc, get, post, put, del, money, money0, fmtDT, fmtDate, ago, statusChip, chip, empty, toast, hooks, modal, debounce, icon, $, $$ } from './core.js';
 
+// My account: every role reaches this on a phone (workers have it as a tab). Password, sign out and account deletion live here.
+async function signOut() { await import('./native.js').then(m => m.forgetDevice()).catch(() => {}); await post('/auth/logout').catch(() => {}); S.user = null; location.hash = ''; location.reload(); }
+function deleteAccountModal() {
+  const owner = S.user.role === 'owner';
+  modal(`<h2>Delete your account?</h2><p class="mute small" style="margin:-4px 0 12px">${owner ? 'This permanently deletes the business and all of its data.' : 'This permanently removes your login.'} It cannot be undone.</p><form class="col" id="df"><label class="field"><span>Your password</span><input type="password" name="password" autocomplete="current-password" required></label><label class="field"><span>Type DELETE to confirm</span><input name="confirm" autocapitalize="characters" autocomplete="off" required></label><div class="row"><button class="btn main" type="submit" style="background:#ff5a4d;border-color:#ff5a4d">Delete forever</button><button class="btn" type="button" data-close>Cancel</button></div></form>`, (el, close) => {
+    $('#df', el).addEventListener('submit', async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), btn = $('button[type=submit]', e.target); btn.disabled = true; try { await post('/auth/delete-account', f); close(); S.user = null; location.hash = ''; location.reload(); } catch (err) { toast(err.message, true); btn.disabled = false; } });
+  });
+}
+export function accountView() {
+  const owner = S.user.role === 'owner', main = document.getElementById('main');
+  setTimeout(() => {
+    $('#out2', main).addEventListener('click', signOut); $('#delAcct2', main).addEventListener('click', deleteAccountModal);
+    $('#pw2', main).addEventListener('submit', async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), btn = $('button[type=submit]', e.target); btn.disabled = true; try { await post('/auth/password', f); e.target.reset(); toast('Password changed. Other devices were signed out.'); } catch (err) { toast(err.message, true); } btn.disabled = false; });
+  }, 0);
+  return `<div class="top"><h1>My account</h1></div><div class="col" style="max-width:560px">
+  <section class="card col"><div><b>${esc(S.user.name)}</b><div class="mute small">${esc(S.user.email)} · ${esc(S.business.name)} · ${esc(S.user.role === 'admin' ? 'manager' : S.user.role)}</div></div><button class="btn" id="out2" type="button" style="align-self:flex-start">Sign out</button></section>
+  <form class="card col" id="pw2"><h3>Change your password</h3><label class="field"><span>Current password</span><input type="password" name="current" autocomplete="current-password" required></label><label class="field"><span>New password (8+)</span><input type="password" name="password" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">Change password</button></form>
+  <section class="card col"><h3>Delete my account</h3><p class="small mute" style="margin:-4px 0 4px">${owner ? 'You are the owner, so this permanently deletes your whole business: customers, jobs, quotes, invoices, messages and your team\'s logins. It cannot be undone.' : 'This permanently removes your login. The business and its records stay with the owner.'}</p><button class="btn small" type="button" id="delAcct2" style="align-self:flex-start;border-color:#ff5a4d;color:#ff5a4d">Delete my account…</button></section></div>`;
+}
+
 export function moreView() {
-  const L = [['requests', 'Requests', 'inbox'], ['quotes', 'Quotes', 'doc'], ['jobs', 'Jobs', 'job'], ['reports', 'Reports', 'chart'], ['messages', 'Messages and follow-ups', 'msg'], ['settings', 'Settings', 'gear']];
+  const L = [['requests', 'Requests', 'inbox'], ['quotes', 'Quotes', 'doc'], ['jobs', 'Jobs', 'job'], ['reports', 'Reports', 'chart'], ['messages', 'Messages and follow-ups', 'msg'], ['settings', 'Settings', 'gear'], ['account', 'My account', 'me']];
   setTimeout(() => $('#out')?.addEventListener('click', async () => { await import('./native.js').then(m => m.forgetDevice()).catch(() => {}); await post('/auth/logout'); location.hash = ''; location.reload(); }), 0);
   return `<div class="top"><h1>More</h1></div><div class="list">${L.map(l => `<a class="item" href="#/${l[0]}"><div class="row">${icon(l[2])}<b style="margin-left:6px">${l[1]}</b></div><span class="mute">›</span></a>`).join('')}</div><p style="margin-top:18px"><button class="btn" id="out">Sign out</button></p><p class="small mute">Signed in as ${esc(S.user.email)}</p>`;
 }
@@ -62,7 +82,7 @@ export async function settingsView() {
     $('#addM', main).addEventListener('click', () => memberModal()); $$('[data-m]', main).forEach(x => x.addEventListener('click', () => memberModal(team.find(t => t.id == x.dataset.m))));
     $('#addS', main).addEventListener('click', () => serviceModal()); $$('[data-s]', main).forEach(x => x.addEventListener('click', () => serviceModal(services.find(t => t.id == x.dataset.s))));
     $('#delAcct', main).addEventListener('click', () => modal(`<h2>Delete your account?</h2><p class="mute small" style="margin:-4px 0 12px">${owner ? 'This permanently deletes the business and all of its data.' : 'This permanently removes your login.'} It cannot be undone.</p><form class="col" id="df"><label class="field"><span>Your password</span><input type="password" name="password" autocomplete="current-password" required></label><label class="field"><span>Type DELETE to confirm</span><input name="confirm" autocapitalize="characters" autocomplete="off" required></label><div class="row"><button class="btn main" type="submit" style="background:#ff5a4d;border-color:#ff5a4d">Delete forever</button><button class="btn" type="button" data-close>Cancel</button></div></form>`, (el, close) => {
-      $('#df', el).addEventListener('submit', async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); try { await post('/auth/delete-account', f); close(); S.user = null; location.hash = ''; location.reload(); } catch (err) { toast(err.message); } });
+      $('#df', el).addEventListener('submit', async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); try { await post('/auth/delete-account', f); close(); S.user = null; location.hash = ''; location.reload(); } catch (err) { toast(err.message, true); } });
     }));
     $('#pw', main).addEventListener('submit', async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); try { await post('/auth/password', f); e.target.reset(); toast('Password changed'); } catch (err) { toast(err.message, true); } });
   }, 0);

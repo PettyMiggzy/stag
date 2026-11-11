@@ -2,8 +2,9 @@ import { route } from '../router.js';
 import { sql } from '../db.js';
 import { bad, HttpError } from '../http.js';
 import { hashPassword, verifyPassword, setSession, clearSession, checkLockout, recordFail, clearFails, need } from '../auth.js';
-import { clean, email as cleanEmail, phone as cleanPhone, slugify, amt } from '../util.js';
-import { DEFAULT_AUTOMATIONS } from './comms.js';
+import crypto from 'node:crypto';
+import { clean, email as cleanEmail, phone as cleanPhone, slugify, amt, token } from '../util.js';
+import { DEFAULT_AUTOMATIONS, baseUrl, sendSystemEmail } from './comms.js';
 
 const DEFAULT_SERVICES = [['Service call', 'Standard visit', 95], ['Hourly labor', 'Per hour, per person', 65], ['Materials', 'Materials at cost', 0]];
 
@@ -32,7 +33,7 @@ route('POST', '/api/auth/login', { public: true }, async ctx => {
   const em = cleanEmail(ctx.body.email), pw = String(ctx.body.password || '');
   const keys = ['login:' + em, 'login-ip:' + ctx.ip];
   await checkLockout(keys);
-  const [u] = em ? await sql`SELECT id, tenant_id, email, name, role, password_hash, active FROM users WHERE email = ${em}` : [];
+  const [u] = em ? await sql`SELECT id, tenant_id, email, name, role, password_hash, active, session_ver FROM users WHERE email = ${em}` : [];
   // always run a hash so response time does not reveal whether the email exists
   const ok = verifyPassword(pw, u ? u.password_hash : 's1$AAAAAAAAAAAAAAAAAAAAAA$AAAA') && u && u.active;
   if (!ok) { await recordFail(keys); throw new HttpError(401, 'Wrong email or password'); }
@@ -53,7 +54,38 @@ route('POST', '/api/auth/password', async ctx => {
   if (nw.length < 8) throw bad('New password must be at least 8 characters');
   const [u] = await sql`SELECT password_hash FROM users WHERE id = ${ctx.user.id} AND tenant_id = ${ctx.tid}`;
   if (!verifyPassword(cur, u.password_hash)) throw new HttpError(401, 'Current password is wrong');
-  await sql`UPDATE users SET password_hash = ${hashPassword(nw)} WHERE id = ${ctx.user.id} AND tenant_id = ${ctx.tid}`;
+  const [n] = await sql`UPDATE users SET password_hash = ${hashPassword(nw)}, session_ver = session_ver + 1 WHERE id = ${ctx.user.id} AND tenant_id = ${ctx.tid} RETURNING id, tenant_id, session_ver`;
+  setSession(ctx.res, n);
+  return { ok: true };
+});
+
+// ---- forgot password: a one-hour link by email. The answer is the same whether or not the email has an account. ----
+const hashTok = t => crypto.createHash('sha256').update(String(t)).digest('hex');
+route('POST', '/api/auth/forgot', { public: true }, async ctx => {
+  const em = cleanEmail(ctx.body.email); if (!em) throw bad('Enter the email you sign in with');
+  const keys = ['forgot:' + em, 'forgot-ip:' + ctx.ip]; await checkLockout(keys); await recordFail(keys);
+  const [u] = await sql`SELECT u.id, u.name, u.active, t.name AS business FROM users u JOIN tenants t ON t.id = u.tenant_id WHERE u.email = ${em}`;
+  let delivery = sendSystemEmail.configured() ? 'email' : 'none';
+  if (u && u.active) {
+    const tok = token(32);
+    await sql`DELETE FROM password_resets WHERE user_id = ${u.id} OR expires_at < now() - interval '1 day'`;
+    await sql`INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (${hashTok(tok)}, ${u.id}, ${new Date(Date.now() + 3600e3)})`;
+    const link = baseUrl(ctx.req) + '/app#/reset/' + tok;
+    const r = await sendSystemEmail({ to: em, subject: 'Reset your STAGR password', text: `Hi ${u.name.split(' ')[0]},\n\nUse this link to choose a new STAGR password. It works once and expires in 1 hour.\n\n${link}\n\nIf you did not ask for this, you can ignore this email. Your password stays the same.` });
+    if (!r.ok) console.error('password reset email not sent:', r.error);
+  }
+  return { ok: true, delivery };
+});
+route('POST', '/api/auth/reset', { public: true }, async ctx => {
+  const tok = String(ctx.body.token || ''), nw = String(ctx.body.password || '');
+  if (nw.length < 8) throw bad('Password must be at least 8 characters');
+  await checkLockout(['reset-ip:' + ctx.ip]);
+  const [r] = await sql`UPDATE password_resets SET used_at = now() WHERE token_hash = ${hashTok(tok)} AND used_at IS NULL AND expires_at > now() RETURNING user_id`;
+  if (!r) { await recordFail(['reset-ip:' + ctx.ip]); throw bad('That reset link has expired or was already used. Ask for a new one.'); }
+  const [u] = await sql`UPDATE users SET password_hash = ${hashPassword(nw)}, session_ver = session_ver + 1 WHERE id = ${r.user_id} AND active RETURNING id, tenant_id, email, name, role, session_ver`;
+  if (!u) throw bad('That account is turned off. Ask your manager.');
+  await clearFails(['login:' + u.email]);
+  setSession(ctx.res, u);
   return { ok: true };
 });
 
@@ -90,7 +122,8 @@ route('PUT', '/api/business', async ctx => {
   return { business: t };
 });
 
-route('GET', '/api/team', async ctx => ({ team: await sql`SELECT id, email, name, role, phone, active, created_at FROM users WHERE tenant_id = ${ctx.tid} ORDER BY id` }));
+route('GET', '/api/team', async ctx => ({ team: ctx.user.role === 'worker' ? await sql`SELECT id, name, role, active FROM users WHERE tenant_id = ${ctx.tid} ORDER BY id`
+  : await sql`SELECT id, email, name, role, phone, active, created_at FROM users WHERE tenant_id = ${ctx.tid} ORDER BY id` }));
 route('POST', '/api/team', async ctx => {
   need(ctx, 'admin'); const b = ctx.body, em = cleanEmail(b.email), role = ['admin', 'worker'].includes(b.role) ? b.role : 'worker';
   if (role === 'admin' && ctx.user.role !== 'owner') throw new HttpError(403, 'Only the owner can add an admin');
@@ -109,6 +142,6 @@ route('PUT', '/api/team/:id', async ctx => {
   const active = b.active === undefined ? m.active : !!b.active;
   if (m.role === 'owner' && !active) throw new HttpError(400, 'The owner cannot be turned off');
   const hash = b.password ? (String(b.password).length >= 8 ? hashPassword(b.password) : (() => { throw bad('Password must be at least 8 characters'); })()) : m.password_hash;
-  const [u] = await sql`UPDATE users SET name = ${clean(b.name ?? m.name, 80)}, phone = ${b.phone !== undefined ? cleanPhone(b.phone) : m.phone}, role = ${role}, active = ${active}, password_hash = ${hash} WHERE id = ${id} AND tenant_id = ${ctx.tid} RETURNING id, email, name, role, phone, active`;
+  const [u] = await sql`UPDATE users SET name = ${clean(b.name ?? m.name, 80)}, phone = ${b.phone !== undefined ? cleanPhone(b.phone) : m.phone}, role = ${role}, active = ${active}, password_hash = ${hash}, session_ver = session_ver + ${b.password && id !== ctx.user.id ? 1 : 0} WHERE id = ${id} AND tenant_id = ${ctx.tid} RETURNING id, email, name, role, phone, active`;
   return { member: u };
 });

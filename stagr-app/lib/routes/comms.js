@@ -25,6 +25,16 @@ export const DEFAULT_AUTOMATIONS = [
 const MARKETING = new Set(['monthly_followup']);
 export const fill = (tpl, v) => String(tpl).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '').replace(/\s+([.,!?])/g, '$1').replace(/ {2,}/g, ' ').trim();
 
+// Email from STAGR itself (password reset). Needs RESEND_API_KEY and EMAIL_FROM.
+export async function sendSystemEmail({ to, subject, text }) {
+  if (!sendSystemEmail.configured()) return { ok: false, error: 'Email is not connected' };
+  try {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: `STAGR <${process.env.EMAIL_FROM}>`, to: [to], subject, text }) });
+    const j = await r.json().catch(() => ({})); return r.ok ? { ok: true, id: j.id || '' } : { ok: false, error: String(j.message || r.status).slice(0, 200) };
+  } catch (e) { return { ok: false, error: String(e && e.message).slice(0, 200) }; }
+}
+sendSystemEmail.configured = () => !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+
 // ---- delivery. Without a provider connected, messages are saved as "preview" and nothing is sent. ----
 async function deliver(m, tenant) {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN, from = process.env.TWILIO_FROM;

@@ -49,7 +49,9 @@ export async function extendVisits(tid, jobId, horizonDays = 90) {
     if (rec.count && n >= rec.count) break;
     const at = occurrence(new Date(first.starts_at), rec, n, t.timezone);
     if (at.getTime() > horizon || (rec.until && at.toISOString().slice(0, 10) > rec.until)) break;
-    await sql`INSERT INTO visits (tenant_id, job_id, starts_at, ends_at, assigned, checklist) VALUES (${tid}, ${jobId}, ${at}, ${dur !== null ? new Date(at.getTime() + dur) : null}, ${first.assigned}, ${JSON.stringify((first.checklist || []).map(c => ({ ...c, done: false })))}::jsonb)`;
+    // two screens loading at once must not create the same repeat visit twice
+    await sql`INSERT INTO visits (tenant_id, job_id, starts_at, ends_at, assigned, checklist) SELECT ${tid}, ${jobId}, ${at}, ${dur !== null ? new Date(at.getTime() + dur) : null}, ${first.assigned}, ${JSON.stringify((first.checklist || []).map(c => ({ ...c, done: false })))}::jsonb
+      WHERE NOT EXISTS (SELECT 1 FROM visits WHERE tenant_id = ${tid} AND job_id = ${jobId} AND starts_at = ${at})`;
     n++; made++;
   }
   if (made) await sql`UPDATE jobs SET recurrence = ${{ ...rec, next_n: n }} WHERE id = ${jobId} AND tenant_id = ${tid}`;
@@ -88,6 +90,12 @@ route('GET', '/api/jobs', async ctx => {
 route('GET', '/api/jobs/:id', async ctx => {
   const id = Number(ctx.params.id) || 0, tid = ctx.tid;
   const [job] = await sql`SELECT * FROM jobs WHERE id = ${id} AND tenant_id = ${tid}`; if (!job) throw missing('Job not found');
+  if (ctx.user.role === 'worker') { // a worker sees a job only when one of its visits is theirs, and never the money
+    const mine = await sql`SELECT id, starts_at, ends_at, assigned, status, notes, checklist, completed_at FROM visits WHERE job_id = ${id} AND tenant_id = ${tid} AND ${ctx.user.id} = ANY(assigned) ORDER BY starts_at`;
+    if (!mine.length) throw new HttpError(403, 'This job is not assigned to you');
+    const [c] = await sql`SELECT id, name, phone FROM customers WHERE id = ${job.customer_id} AND tenant_id = ${tid}`;
+    return { job: { id: job.id, number: job.number, title: job.title, description: job.description, status: job.status, customer_id: job.customer_id, items: (job.items || []).map(i => ({ kind: i.kind, name: i.name, description: i.description, qty: i.qty })) }, customer: c, visits: mine, invoices: [], expenses: [], costing: null };
+  }
   await extendVisits(tid, id);
   const [customer, visits, invoices, expenses, time] = await Promise.all([
     sql`SELECT id, name, phone, email FROM customers WHERE id = ${job.customer_id} AND tenant_id = ${tid}`,
@@ -167,7 +175,7 @@ route('POST', '/api/visits/:id/photos', async ctx => {
 // ---- time clock and expenses ----
 route('POST', '/api/time/start', async ctx => {
   const [open] = await sql`SELECT id FROM time_entries WHERE tenant_id = ${ctx.tid} AND user_id = ${ctx.user.id} AND ended_at IS NULL`; if (open) throw bad('You are already clocked in');
-  let vid = null; if (ctx.body.visit_id) { const [v] = await sql`SELECT id FROM visits WHERE id = ${Number(ctx.body.visit_id) || 0} AND tenant_id = ${ctx.tid}`; if (!v) throw missing('Visit not found'); vid = v.id; }
+  let vid = null; if (ctx.body.visit_id) { const [v] = await sql`SELECT id, assigned FROM visits WHERE id = ${Number(ctx.body.visit_id) || 0} AND tenant_id = ${ctx.tid}`; if (!v) throw missing('Visit not found'); if (ctx.user.role === 'worker' && !v.assigned.includes(ctx.user.id)) throw new HttpError(403, 'This visit is not assigned to you'); vid = v.id; }
   const [t] = await sql`INSERT INTO time_entries (tenant_id, user_id, visit_id) VALUES (${ctx.tid}, ${ctx.user.id}, ${vid}) RETURNING *`; return { entry: t };
 });
 route('POST', '/api/time/stop', async ctx => {
@@ -181,8 +189,9 @@ route('GET', '/api/time', async ctx => {
 });
 route('POST', '/api/expenses', async ctx => {
   const b = ctx.body, a = Number(b.amount); if (!(a > 0 && a < 1e7)) throw bad('Enter the amount');
-  let jid = null; if (b.job_id) { const [j] = await sql`SELECT id FROM jobs WHERE id = ${Number(b.job_id) || 0} AND tenant_id = ${ctx.tid}`; if (!j) throw missing('Job not found'); jid = j.id; }
+  let jid = null; if (b.job_id) { const [j] = await sql`SELECT id FROM jobs WHERE id = ${Number(b.job_id) || 0} AND tenant_id = ${ctx.tid}`; if (!j) throw missing('Job not found'); jid = j.id;
+    if (ctx.user.role === 'worker') { const [mine] = await sql`SELECT 1 FROM visits WHERE job_id = ${jid} AND tenant_id = ${ctx.tid} AND ${ctx.user.id} = ANY(assigned) LIMIT 1`; if (!mine) throw new HttpError(403, 'This job is not assigned to you'); } }
   const [e] = await sql`INSERT INTO expenses (tenant_id, job_id, description, amount, incurred_on, user_id) VALUES (${ctx.tid}, ${jid}, ${clean(b.description, 200)}, ${r2(a)}, ${/^\d{4}-\d{2}-\d{2}$/.test(b.incurred_on || '') ? b.incurred_on : new Date().toISOString().slice(0, 10)}, ${ctx.user.id}) RETURNING *`; return { expense: e };
 });
-route('GET', '/api/expenses', async ctx => ({ expenses: await sql`SELECT * FROM expenses WHERE tenant_id = ${ctx.tid} ORDER BY incurred_on DESC, id DESC LIMIT 300` }));
+route('GET', '/api/expenses', async ctx => { const only = ctx.user.role === 'worker' ? ctx.user.id : null; return { expenses: await sql`SELECT * FROM expenses WHERE tenant_id = ${ctx.tid} AND (${only}::int IS NULL OR user_id = ${only}) ORDER BY incurred_on DESC, id DESC LIMIT 300` }; });
 route('DELETE', '/api/expenses/:id', async ctx => { need(ctx, 'admin'); await sql`DELETE FROM expenses WHERE id = ${Number(ctx.params.id) || 0} AND tenant_id = ${ctx.tid}`; return { ok: true }; });

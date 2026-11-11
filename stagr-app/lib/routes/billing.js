@@ -6,7 +6,7 @@ import { clean, amt, cleanItems, billable, token, totals, paidSum, r2 } from '..
 import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { nextNumber } from './sales.js';
-import { shapeInvoice } from './shapes.js';
+import { shapeInvoice, shapeQuote } from './shapes.js';
 import { queueMessage, baseUrl } from './comms.js';
 
 const getInvoice = async (tid, id) => { const [i] = await sql`SELECT * FROM invoices WHERE id = ${Number(id) || 0} AND tenant_id = ${tid}`; if (!i) throw missing('Invoice not found'); return i; };
@@ -28,8 +28,9 @@ route('POST', '/api/invoices', async ctx => {
   if (!items.length) throw bad('Add at least one line item');
   const [t] = await sql`SELECT tax_pct FROM tenants WHERE id = ${ctx.tid}`, n = await nextNumber(ctx.tid, 'invoice');
   const due = /^\d{4}-\d{2}-\d{2}$/.test(b.due_date || '') ? b.due_date : new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
-  const [i] = await sql`INSERT INTO invoices (tenant_id, number, customer_id, job_id, quote_id, items, discount_pct, tax_pct, due_date, message, token)
+  let [i] = await sql`INSERT INTO invoices (tenant_id, number, customer_id, job_id, quote_id, items, discount_pct, tax_pct, due_date, message, token)
     VALUES (${ctx.tid}, ${n}, ${c.id}, ${jid}, ${qid}, ${JSON.stringify(items)}::jsonb, ${b.discount_pct !== undefined ? Math.min(100, amt(b.discount_pct) ?? 0) : disc ?? 0}, ${b.tax_pct !== undefined ? Math.min(30, amt(b.tax_pct) ?? 0) : tax ?? t.tax_pct}, ${due}, ${clean(b.message, 1000)}, ${token()}) RETURNING *`;
+  if (qid) i = await creditDeposit(ctx.tid, i, qid);
   await logActivity(ctx.tid, c.id, 'invoice', `Invoice INV-${n} created`, ctx.user.id);
   return { invoice: shapeInvoice(i) };
 });
@@ -38,8 +39,10 @@ route('PUT', '/api/invoices/:id', async ctx => {
   need(ctx, 'admin'); const o = await getInvoice(ctx.tid, ctx.params.id); if (o.status === 'void') throw bad('This invoice is void');
   const b = ctx.body, items = b.items !== undefined ? cleanItems(b.items) : o.items; if (!items.length) throw bad('Add at least one line item');
   const t = totals(items, b.discount_pct ?? o.discount_pct, b.tax_pct ?? o.tax_pct); if (t.total < paidSum(o.payments)) throw bad('The total cannot be lower than what was already paid');
+  // the total may have moved, so the paid / partial / sent label is worked out again
+  const paid = paidSum(o.payments), status = paid > 0 ? (paid >= t.total - 0.005 ? 'paid' : 'partial') : (o.status === 'paid' || o.status === 'partial' ? 'sent' : o.status);
   const [i] = await sql`UPDATE invoices SET items = ${JSON.stringify(items)}::jsonb, discount_pct = ${b.discount_pct !== undefined ? Math.min(100, amt(b.discount_pct) ?? 0) : o.discount_pct}, tax_pct = ${b.tax_pct !== undefined ? Math.min(30, amt(b.tax_pct) ?? 0) : o.tax_pct},
-    due_date = ${/^\d{4}-\d{2}-\d{2}$/.test(b.due_date || '') ? b.due_date : o.due_date}, message = ${clean(b.message ?? o.message, 1000)} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`;
+    due_date = ${/^\d{4}-\d{2}-\d{2}$/.test(b.due_date || '') ? b.due_date : o.due_date}, message = ${clean(b.message ?? o.message, 1000)}, status = ${status}, paid_at = ${status === 'paid' ? (o.paid_at || new Date()) : null} WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`;
   return { invoice: shapeInvoice(i) };
 });
 route('POST', '/api/invoices/:id/send', async ctx => {
@@ -53,14 +56,31 @@ route('POST', '/api/invoices/:id/send', async ctx => {
   return { link, messages: sent };
 });
 // Record money received outside the app (cash, check, Zelle, card terminal). Online card payments are added later.
-export async function addPayment(tid, inv, { amount, method, note, userId = null, provider_id = '' }) {
-  const s = shapeInvoice(inv), a = amt(amount); if (!a || a <= 0) throw bad('Enter the amount received');
-  if (a > s.balance + 0.005) throw bad(`That is more than the balance of $${s.balance.toFixed(2)}`);
-  const pays = [...inv.payments, { amount: a, method: METHODS.includes(method) ? method : 'other', note: clean(note, 200), at: new Date().toISOString(), by: userId, provider_id }];
-  const paidAll = paidSum(pays) >= s.total - 0.005;
-  const [i] = await sql`UPDATE invoices SET payments = ${JSON.stringify(pays)}::jsonb, status = ${paidAll ? 'paid' : 'partial'}, paid_at = ${paidAll ? new Date() : null}, sent_at = COALESCE(sent_at, now()) WHERE id = ${inv.id} AND tenant_id = ${tid} RETURNING *`;
-  await logActivity(tid, inv.customer_id, 'payment', `Payment of $${a.toFixed(2)} (${method || 'other'}) on INV-${inv.number}`, userId);
-  return i;
+// The update only lands if the payment list is still the one we read. If someone else recorded a payment in between,
+// we read again and retry, so two payments at the same moment are both kept. A provider id is only ever recorded once.
+export async function addPayment(tid, inv, { amount, method, note, userId = null, provider_id = '', at = null, deposit = false }) {
+  const a = amt(amount); if (!a || a <= 0) throw bad('Enter the amount received');
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (inv.status === 'void') throw bad('This invoice is void');
+    if (provider_id && (inv.payments || []).some(p => p.provider_id === provider_id)) return inv;
+    const s = shapeInvoice(inv);
+    if (a > s.balance + 0.005) throw bad(`That is more than the balance of $${s.balance.toFixed(2)}`);
+    const pays = [...inv.payments, { amount: a, method: METHODS.includes(method) ? method : 'other', note: clean(note, 200), at: at || new Date().toISOString(), by: userId, provider_id, ...(deposit ? { deposit: true } : {}) }];
+    const paidAll = paidSum(pays) >= s.total - 0.005;
+    const [i] = await sql`UPDATE invoices SET payments = ${JSON.stringify(pays)}::jsonb, status = ${paidAll ? 'paid' : 'partial'}, paid_at = ${paidAll ? new Date() : null}, sent_at = COALESCE(sent_at, now())
+      WHERE id = ${inv.id} AND tenant_id = ${tid} AND payments = ${JSON.stringify(inv.payments)}::jsonb AND status <> 'void' RETURNING *`;
+    if (i) { await logActivity(tid, inv.customer_id, 'payment', `Payment of $${a.toFixed(2)} (${method || 'other'}) on INV-${inv.number}`, userId); return i; }
+    [inv] = await sql`SELECT * FROM invoices WHERE id = ${inv.id} AND tenant_id = ${tid}`; if (!inv) throw missing('Invoice not found');
+  }
+  throw bad('This invoice is busy. Try again.');
+}
+// A deposit already received on the quote counts toward the first invoice made from that quote.
+export async function creditDeposit(tid, inv, quoteId) {
+  const [q] = await sql`SELECT * FROM quotes WHERE id = ${quoteId} AND tenant_id = ${tid}`; if (!q || !q.deposit_paid_at) return inv;
+  const due = shapeQuote(q).deposit_due; if (!(due > 0)) return inv;
+  const [used] = await sql`SELECT 1 FROM invoices WHERE tenant_id = ${tid} AND quote_id = ${quoteId} AND id <> ${inv.id} AND status <> 'void' AND payments @> '[{"deposit": true}]'::jsonb LIMIT 1`; if (used) return inv;
+  const amount = Math.min(due, shapeInvoice(inv).total); if (!(amount > 0)) return inv;
+  return addPayment(tid, inv, { amount, method: q.deposit_paid_method, note: `Deposit received on Q-${q.number}`, at: new Date(q.deposit_paid_at).toISOString(), provider_id: 'deposit:q' + q.id, deposit: true });
 }
 route('POST', '/api/invoices/:id/payments', async ctx => {
   need(ctx, 'admin'); const o = await getInvoice(ctx.tid, ctx.params.id); if (o.status === 'void') throw bad('This invoice is void');
