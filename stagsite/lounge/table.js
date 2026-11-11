@@ -42,7 +42,7 @@ const CSS = `
 #tbl .seat .nm b{display:block;overflow:hidden;text-overflow:ellipsis;color:#fff}#tbl .seat .nm span{color:#9fe3b4}
 #tbl .seat.fold{opacity:.42}#tbl .seat.me .av{box-shadow:0 0 0 2px #39ff14}
 #tbl .seat.empty .av{background:rgba(0,0,0,.35);border:2px dashed rgba(233,201,122,.35);color:rgba(233,201,122,.5);font-size:11px;font-weight:600}
-#tbl .seat .btn{position:absolute;right:8px;top:-6px;width:18px;height:18px;border-radius:50%;background:#fff;color:#111;font-size:10px;font-weight:800;display:none;place-items:center;border:1px solid #333}
+#tbl .seat .btn{position:absolute;right:-10px;top:-8px;width:18px;height:18px;border-radius:50%;background:#fff;color:#111;font-size:10px;font-weight:800;display:none;place-items:center;border:1px solid #333}
 #tbl .seat.dl .btn{display:grid}
 #tbl .hole{position:absolute;display:flex;gap:2px;transform:translate(-50%,-50%);z-index:3}
 #tbl .bet{position:absolute;transform:translate(-50%,-50%);padding:1px 8px 1px 20px;border-radius:10px;background:rgba(0,0,0,.6);color:#ffd34d;font-size:12px;font-weight:700;z-index:3;white-space:nowrap;display:none}
