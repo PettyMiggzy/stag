@@ -778,7 +778,9 @@ async function boot(){
   if(!CAP){ import('./live.js').catch(e=>console.error('live layer failed',e));
     let last=performance.now();
     const loop=now=>{
-      const dt=Math.min(.05,(now-last)/1000);last=now;stepWorld(dt);
+      const dt=Math.min(.05,(now-last)/1000);last=now;
+      if(window.__lounge.pause3d){if(window.__lounge.hooks.tick)window.__lounge.hooks.tick(dt);setTimeout(()=>requestAnimationFrame(loop),200);return;} // seated at the poker table: the table view covers the room, so stop drawing it
+      stepWorld(dt);
       if(window.__lounge.hooks.tick)window.__lounge.hooks.tick(dt);else if(!orbit)placeCam(tAbs);else orbit.update();
       culling(dt);governor(dt);if(window.__archTick)window.__archTick(camera.position);if(SAFE||!FLAGS.bloom)renderer.render(scene,camera);else composer.render();probeFrame();requestAnimationFrame(loop);
     };requestAnimationFrame(loop);

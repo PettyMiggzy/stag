@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { initCasino } from './casino.js';
 import { initDuels } from './duels.js';
+import { initTable } from './table.js';
 const L = window.__lounge;
 const { THREE, scene, camera, M, STAGE_Y } = L;
 const Q = new URLSearchParams(location.search);
@@ -350,7 +351,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
     else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
     else if (m.t === 'rec') { if (m.on) recorders.add(m.id); else recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); if (m.on) say('sys', '', `${m.name} is recording in the studio`); }
   };
-  ws.onclose = () => { if (ws !== mine || denied) return; say('sys', '', retries ? 'Still trying to reconnect…' : 'Connection lost. Reconnecting…'); PK.seat = -1; PK.watching = false; setTimeout(() => { if (!denied) openSocket(); }, Math.min(8000, 1000 * 2 ** retries++)); };
+  ws.onclose = () => { if (ws !== mine || denied) return; say('sys', '', retries ? 'Still trying to reconnect…' : 'Connection lost. Reconnecting…'); PK.seat = -1; TB.close(); L.pause3d = false; PK.watching = false; setTimeout(() => { if (!denied) openSocket(); }, Math.min(8000, 1000 * 2 ** retries++)); };
 }
 const sendWs = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const DU = initDuels({ sendWs });
@@ -721,12 +722,12 @@ function pkUpdate(m) {
   PK.v = m.v; PK.chips = m.chips; PK.deadline = m.deadline || 0; PK.leaders = m.leaders || []; PK.rules = m.rules || PK.rules;
   dealerCall(m.v);
   const was = PK.seat; PK.seat = m.seat; L.cardRoom.mySeat = PK.seat; L.cardRoom.setTable(m.v); $('#pk').classList.toggle('seated', PK.seat >= 0);
-  if (PK.seat >= 0 && was < 0) { $('#pk').style.display = 'block'; say('sys', '', 'You sat down. Play chips only. Press E to stand up.'); }
-  if ($('#pk').style.display === 'block') pkRender();
+  if (PK.seat >= 0 && was < 0) say('sys', '', 'You sat down. Play chips only. Press E to stand up.');
+  if (PK.seat >= 0) { $('#pk').style.display = 'none'; TB.open(PK); L.pause3d = true; } else { if (TB.isOpen) { TB.close(); L.pause3d = false; } if ($('#pk').style.display === 'block') pkRender(); }
 }
 function pkLeft(m) {
   PK.seat = -1; const st = PK.v && PK.v.seats; say('sys', '', `${m.busted ? 'You ran out of chips. ' : ''}You left the table with ${m.net >= 0 ? '+' : ''}${m.net} play chips this session. Balance: ${m.chips}.`);
-  PK.chips = m.chips; L.cardRoom.mySeat = -1; $('#pk').classList.remove('seated'); $('#pk').style.display = 'none'; L.cardRoom.setTable(PK.v); pkRender();
+  PK.chips = m.chips; L.cardRoom.mySeat = -1; TB.close(); L.pause3d = false; $('#pk').classList.remove('seated'); $('#pk').style.display = 'none'; L.cardRoom.setTable(PK.v); pkRender();
 }
 function pokerSit() { // E at the table: take the nearest free seat with a sensible buy-in, and the table view opens by itself
   if (PK.seat >= 0) return; const v = PK.v; if (!v) { say('sys', '', 'Connecting to the table…'); return; }
@@ -737,6 +738,8 @@ function pokerSit() { // E at the table: take the nearest free seat with a sensi
 }
 addEventListener('keydown', (e) => { if ((e.key === 'e' || e.key === 'E') && !e.repeat && PK.seat >= 0 && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) pkSend({ t: 'pokerleave' }); });
 const pkSend = (o) => sendWs(o);
+const esc2 = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const TB = initTable({ send: pkSend, esc: esc2 }); // the seated view: real cards, dealer dealing, 3D paused underneath
 function pkRender() {
   const v = PK.v; if (!v) { $('#pkSeats').textContent = 'Connecting to the table…'; return; }
   $('#pkChips').textContent = `Your chips: ${PK.chips.toLocaleString()}`;
