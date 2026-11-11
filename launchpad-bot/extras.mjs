@@ -55,6 +55,20 @@ export function initExtras(X) {
       const r = await (await fetch(`${api}/sendVideo`, { method: "POST", body: fd })).json(); if (!r.ok) log("buyback send err:", r.description); return !!r.ok;
     } catch (e) { log("buyback send err:", e.message); return false; }
   }
+  // every dev buy in the last 24 hours as one card. Reads the chain history the bot already holds, so it also covers buys from before the wallet was saved.
+  async function bbToday(to, draft) {
+    const head = await provider.getBlockNumber(); const day = ST.buys.filter((b) => b.block > head - BLOCKS_PER_DAY);
+    for (let i = 0; i < day.length; i += 6) await Promise.all(day.slice(i, i + 6).map((b) => buyerOf(b.tx)));
+    const mine = day.filter((b) => DEVS.has(String(BUYER.get(b.tx) || "").toLowerCase())); if (!mine.length) return 0;
+    const secs = 86400 / BLOCKS_PER_DAY;
+    for (const b of mine) await bbQ("insert into dev_buys(tx, eth, tok, at) values ($1,$2,$3, now() - ($4 || ' seconds')::interval) on conflict do nothing", [b.tx, b.eth || 0, b.tok || 0, String(Math.max(0, Math.round((head - b.block) * secs)))]);
+    const eth = mine.reduce((x, b) => x + (b.eth || 0), 0), tok = mine.reduce((x, b) => x + (b.tok || 0), 0); const m = await market();
+    const cap = [draft ? "<i>DRAFT. Not posted anywhere. Send /buybacktoday post here to post it to the main group.</i>\n" : "",
+      "🦌🔥 <b>DEV BUYBACKS · LAST 24 HOURS</b> 🔥🦌", `🟩 <b>${mine.length}</b> buyback${mine.length === 1 ? "" : "s"}`, `💵 <b>${m.ethUsd ? usd(eth * m.ethUsd) : ""}</b> · ${fmt(eth, 4)} ETH`, `🪙 <b>${fmt(tok, 0)}</b> $STAG bought off the market`,
+      m.priceUsd ? `Price <b>${usd(m.priceUsd)}</b>${m.mcUsd ? ` · MC <b>${usd(m.mcUsd)}</b>` : ""}` : "", "👤 Dev wallet"].filter(Boolean).join("\n");
+    const [l] = await bbQ("select eth, tok, extract(epoch from at)::bigint as ts from dev_buys order by at desc limit 1"); if (l) bbLast = { eth: Number(l.eth), tok: Number(l.tok), ts: Number(l.ts) }; tokAt = 0;
+    return (await bbSend(to, cap)) ? mine.length : -1;
+  }
   // called for every buy card: true = this was a dev buyback and its own card went out, so the normal card is skipped
   async function sendBuyback(a) {
     try {
@@ -212,14 +226,16 @@ export function initExtras(X) {
         const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
         const ok = await wyteSend(chat, false); if (!ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); return reply("The post failed, nothing was marked as sent. Try again."); } return reply("✅ Posted to the main group.");
       }
-      if (["setdev", "cleardev", "buybackdraft", "buyback"].includes(cmd) && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, and only in the bot DM
+      if (["setdev", "cleardev", "buybackdraft", "buyback", "buybacktoday"].includes(cmd) && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, and only in the bot DM
         if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
         if (cmd === "setdev") { const a = (args[0] || "").toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(a)) return reply("Send it like this: /setdev 0x… (the full wallet address). You can add more than one wallet, one at a time.");
           DEVS.add(a); await stSet("devWallets", [...DEVS].join(",")); tgPost("deleteMessage", { chat_id: msg.chat.id, message_id: msg.message_id });
           return tgPost("sendMessage", { chat_id: msg.chat.id, text: `Saved dev wallet …${a.slice(-4)} (${DEVS.size} saved). I deleted your message so the address is not sitting in this chat. Next: /buybackdraft to see the alert, then /buyback on.`, parse_mode: "HTML" }); }
         if (cmd === "cleardev") { DEVS = new Set(); await stSet("devWallets", ""); return reply("Dev wallets cleared. Buyback alerts will not fire until you add one with /setdev."); }
         if (cmd === "buybackdraft") { const m = await market(); const eth = 0.05, px = m.priceUsd || 0; const ok = await bbSend(msg.chat.id, bbCaption({ eth, spentUsd: eth * (m.ethUsd || 0), tokens: px && m.ethUsd ? eth * m.ethUsd / px : 0, priceUsd: px, mcapUsd: m.mcUsd, txUrl: "" }, { n: 3, eth: 0.15, tok: px && m.ethUsd ? 0.15 * m.ethUsd / px : 0 }, true)); return ok ? null : reply("Could not send the draft. Try again."); }
-        const on = (args[0] || "").toLowerCase() === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
+        if (cmd === "buybacktoday") { const post = (args[0] || "").toLowerCase() === "post"; const n = await bbToday(post ? chat : msg.chat.id, !post); return n > 0 ? (post ? reply(`Posted to the main group: ${n} dev buyback${n === 1 ? "" : "s"} from the last 24 hours.`) : null) : reply(n === 0 ? (DEVS.size ? "No buys from the saved dev wallet in the last 24 hours." : "No dev wallet is saved yet. Send /setdev 0x… first.") : "The post failed. Try again."); }
+        const arg = (args[0] || "").toLowerCase(); if (arg !== "on" && arg !== "off") return reply(`Dev buyback alerts are ${BB_ON ? "ON" : "OFF"} · ${DEVS.size} dev wallet${DEVS.size === 1 ? "" : "s"} saved.\n/buyback on or /buyback off to change it.\n/buybacktoday shows a draft of the last 24 hours, /buybacktoday post sends it to the main group.`);
+        const on = arg === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
         return reply(on ? (DEVS.size ? `🔥 Dev buyback alerts are ON for ${DEVS.size} wallet${DEVS.size === 1 ? "" : "s"}. The next dev buy posts the DEV BUYBACK card in the main group. /buyback off stops it.` : "Alerts are ON, but no dev wallet is saved yet. Send /setdev 0x… first.") : "Dev buyback alerts are OFF. Dev buys post as normal buy cards.");
       }
       if (cmd === "invite" || cmd === "referral" || cmd === "ref") {
@@ -482,6 +498,12 @@ export function initExtras(X) {
   };
   async function start(head) {
     await bbLoad();
+    setTimeout(async () => { // the owner asked for today's dev buybacks in the main group: post that summary once
+      try { const [c] = await W.q("insert into bot_state(k,v) values('bbTodayOnce','1') on conflict(k) do nothing returning k"); if (!c) return;
+        const n = await bbToday(chat, false); if (n < 0) await W.q("delete from bot_state where k='bbTodayOnce'");
+        tgPost("sendMessage", { chat_id: ADMIN_TG, text: n > 0 ? `Posted to the main group: ${n} dev buyback${n === 1 ? "" : "s"} from the last 24 hours.` : n === 0 ? "I looked for buys from the saved dev wallet in the last 24 hours and found none, so nothing was posted to the main group." : "The buyback post failed. Send /buybacktoday post to try again." });
+      } catch (e) { log("bb today once err:", e.message); }
+    }, 90000);
     try { await W.q("create table if not exists song_sales(tx text not null, idx int not null, song_id int not null, buyer text not null, eth double precision not null, block bigint not null, at timestamptz default now(), primary key(tx, idx))"); } catch (e) { log("song_sales table err:", e.message); }
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
