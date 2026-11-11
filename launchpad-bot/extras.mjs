@@ -61,7 +61,7 @@ export function initExtras(X) {
     for (let i = 0; i < day.length; i += 6) await Promise.all(day.slice(i, i + 6).map((b) => buyerOf(b.tx)));
     const mine = day.filter((b) => DEVS.has(String(BUYER.get(b.tx) || "").toLowerCase())); if (!mine.length) return 0;
     const secs = 86400 / BLOCKS_PER_DAY;
-    for (const b of mine) await bbQ("insert into dev_buys(tx, eth, tok, at) values ($1,$2,$3, now() - ($4 || ' seconds')::interval) on conflict do nothing", [b.tx, b.eth || 0, b.tok || 0, String(Math.max(0, Math.round((head - b.block) * secs)))]);
+    for (const b of mine) await bbQ("insert into dev_buys(tx, eth, tok, at) values ($1,$2,$3, now() - ($4::text || ' seconds')::interval) on conflict do nothing", [b.tx, b.eth || 0, b.tok || 0, String(Math.max(0, Math.round((head - b.block) * secs)))]);
     const eth = mine.reduce((x, b) => x + (b.eth || 0), 0), tok = mine.reduce((x, b) => x + (b.tok || 0), 0); const m = await market();
     const cap = [draft ? "<i>DRAFT. Not posted anywhere. Send /buybacktoday post here to post it to the main group.</i>\n" : "",
       "🦌🔥 <b>DEV BUYBACKS · LAST 24 HOURS</b> 🔥🦌", `🟩 <b>${mine.length}</b> buyback${mine.length === 1 ? "" : "s"}`, `💵 <b>${m.ethUsd ? usd(eth * m.ethUsd) : ""}</b> · ${fmt(eth, 4)} ETH`, `🪙 <b>${fmt(tok, 0)}</b> $STAG bought off the market`,
