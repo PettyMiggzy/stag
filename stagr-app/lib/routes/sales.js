@@ -6,6 +6,8 @@ import { logActivity } from './activity.js';
 import { getCustomer } from './customers.js';
 import { shapeQuote } from './shapes.js';
 import { queueMessage, baseUrl } from './comms.js';
+import { settlePending, cardReady } from './payments.js';
+import { notify } from './devices.js';
 
 async function nextNumber(tid, col) {
   const [r] = col === 'quote' ? await sql`UPDATE tenants SET quote_seq = quote_seq + 1 WHERE id = ${tid} RETURNING quote_seq AS n`
@@ -73,13 +75,14 @@ route('POST', '/api/quotes/:id/send', async ctx => {
 
 // ---- the customer's view (no sign-in; the long random link is the key) ----
 route('GET', '/api/public/q/:token', { public: true }, async ctx => {
-  const [q] = await sql`SELECT * FROM quotes WHERE token = ${clean(ctx.params.token, 80)}`; if (!q || q.status === 'draft') throw missing('Quote not found');
+  let [q] = await sql`SELECT * FROM quotes WHERE token = ${clean(ctx.params.token, 80)}`; if (!q || q.status === 'draft') throw missing('Quote not found');
+  if (await settlePending(q.tenant_id, { quoteId: q.id }).catch(() => 0)) [q] = await sql`SELECT * FROM quotes WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
   const [t] = await sql`SELECT name, phone, email, city, state, brand_color FROM tenants WHERE id = ${q.tenant_id}`;
   const [c] = await sql`SELECT name FROM customers WHERE id = ${q.customer_id} AND tenant_id = ${q.tenant_id}`;
   const [p] = q.property_id ? await sql`SELECT address, city, state, zip FROM properties WHERE id = ${q.property_id} AND tenant_id = ${q.tenant_id}` : [];
   if (!q.viewed_at) await sql`UPDATE quotes SET viewed_at = now() WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
   const s = shapeQuote(q);
-  return { business: t, customer: c.name, property: p || null, quote: { label: s.label, title: s.title, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, discount_pct: s.discount_pct, tax: s.tax, tax_pct: s.tax_pct, total: s.total, deposit: s.deposit, deposit_pct: Number(s.deposit_pct) || 0, deposit_due: s.deposit_due, deposit_paid: !!s.deposit_paid_at, message: s.message, sent_at: s.sent_at, decided_at: s.decided_at, signed_name: s.signed_name } };
+  return { business: t, customer: c.name, property: p || null, quote: { label: s.label, title: s.title, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, discount_pct: s.discount_pct, tax: s.tax, tax_pct: s.tax_pct, total: s.total, deposit: s.deposit, deposit_pct: Number(s.deposit_pct) || 0, deposit_due: s.deposit_due, deposit_paid: !!s.deposit_paid_at, message: s.message, sent_at: s.sent_at, decided_at: s.decided_at, signed_name: s.signed_name }, online_payments: q.status === 'approved' && !q.deposit_paid_at && s.deposit_due >= 1 && await cardReady(q.tenant_id) };
 });
 route('POST', '/api/public/q/:token/decide', { public: true }, async ctx => {
   const [q] = await sql`SELECT * FROM quotes WHERE token = ${clean(ctx.params.token, 80)}`; if (!q || q.status === 'draft') throw missing('Quote not found');
@@ -93,6 +96,7 @@ route('POST', '/api/public/q/:token/decide', { public: true }, async ctx => {
   if (decision === 'approved' && !billable(items).length) throw bad('Pick at least one item');
   await sql`UPDATE quotes SET status = ${decision}, decided_at = now(), signed_name = ${name}, client_note = ${clean(ctx.body.note, 500)}, items = ${JSON.stringify(items)}::jsonb WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
   await logActivity(q.tenant_id, q.customer_id, 'quote', `Quote Q-${q.number} ${decision} by customer`);
+  await notify(q.tenant_id, { title: decision === 'approved' ? 'Quote approved' : 'Quote declined', body: `Q-${q.number} was ${decision}${name ? ' by ' + name : ''}`, path: '/quotes/' + q.id });
   return { ok: true, status: decision };
 });
 

@@ -6,6 +6,7 @@ import { clean, email as cleanEmail, phone as cleanPhone, amt, token } from '../
 import { logActivity } from './activity.js';
 import { nextNumber } from './sales.js';
 import { shapeQuote, shapeInvoice, requestOut } from './shapes.js';
+import { notify } from './devices.js';
 
 const cust = (b, old = {}) => ({
   name: clean(b.name ?? old.name, 120), company: clean(b.company ?? old.company, 120),
@@ -160,5 +161,6 @@ route('POST', '/api/public/b/:slug/request', { public: true }, async ctx => {
   // Consent is stored with the request and copied to the customer when the request is converted.
   await sql`INSERT INTO requests (tenant_id, source, name, company, phone, email, service, address, message, photos, availability, sms_ok, email_ok)
     VALUES (${t.id}, 'booking page', ${name}, ${clean(b.company, 120)}, ${ph}, ${em}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}, ${JSON.stringify(photos)}::jsonb, ${JSON.stringify({ dates, arrival })}::jsonb, ${b.sms_ok === true && !!ph}, ${b.email_ok === true && !!em})`;
+  await notify(t.id, { title: 'New request', body: `${name}${clean(b.service, 60) ? ' · ' + clean(b.service, 60) : ''}`, path: '/requests' });
   return { ok: true };
 });

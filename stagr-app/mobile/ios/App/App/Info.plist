@@ -45,5 +45,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>STAGR uses the camera so you can add before and after photos to a job.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>STAGR lets you pick photos from your library to add to a job, quote or request.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>STAGR can save job photos to your photo library when you choose to.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>STAGR uses your location to show directions to your next job.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

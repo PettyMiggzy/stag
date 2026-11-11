@@ -8,6 +8,7 @@ import { getCustomer } from './customers.js';
 import { nextNumber } from './sales.js';
 import { shapeInvoice, shapeQuote } from './shapes.js';
 import { queueMessage, baseUrl } from './comms.js';
+import { settlePending, cardReady } from './payments.js';
 
 const getInvoice = async (tid, id) => { const [i] = await sql`SELECT * FROM invoices WHERE id = ${Number(id) || 0} AND tenant_id = ${tid}`; if (!i) throw missing('Invoice not found'); return i; };
 const METHODS = ['cash', 'check', 'zelle', 'card', 'bank', 'other'];
@@ -91,11 +92,12 @@ route('POST', '/api/invoices/:id/void', async ctx => {
   const [i] = await sql`UPDATE invoices SET status = 'void' WHERE id = ${o.id} AND tenant_id = ${ctx.tid} RETURNING *`; return { invoice: shapeInvoice(i) };
 });
 route('GET', '/api/public/i/:token', { public: true }, async ctx => {
-  const [i] = await sql`SELECT * FROM invoices WHERE token = ${clean(ctx.params.token, 80)}`; if (!i || i.status === 'draft') throw missing('Invoice not found');
+  let [i] = await sql`SELECT * FROM invoices WHERE token = ${clean(ctx.params.token, 80)}`; if (!i || i.status === 'draft') throw missing('Invoice not found');
+  if (await settlePending(i.tenant_id, { invoiceId: i.id }).catch(() => 0)) [i] = await sql`SELECT * FROM invoices WHERE id = ${i.id} AND tenant_id = ${i.tenant_id}`;
   const [t] = await sql`SELECT name, phone, email, city, state, brand_color, settings FROM tenants WHERE id = ${i.tenant_id}`;
   const [c] = await sql`SELECT name FROM customers WHERE id = ${i.customer_id} AND tenant_id = ${i.tenant_id}`;
   if (!i.viewed_at) await sql`UPDATE invoices SET viewed_at = now() WHERE id = ${i.id} AND tenant_id = ${i.tenant_id}`;
   const s = shapeInvoice(i);
   return { business: { name: t.name, phone: t.phone, email: t.email, city: t.city, state: t.state, brand_color: t.brand_color, payment_note: (t.settings || {}).payment_note || '' }, customer: c.name,
-    invoice: { label: s.label, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, tax: s.tax, tax_pct: s.tax_pct, total: s.total, paid: s.paid, balance: s.balance, due_date: s.due_date, message: s.message, payments: s.payments.map(p => ({ amount: p.amount, method: p.method, at: p.at })) }, online_payments: false };
+    invoice: { label: s.label, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, tax: s.tax, tax_pct: s.tax_pct, total: s.total, paid: s.paid, balance: s.balance, due_date: s.due_date, message: s.message, payments: s.payments.map(p => ({ amount: p.amount, method: p.method, at: p.at })) }, online_payments: i.status !== 'void' && s.balance >= 1 && await cardReady(i.tenant_id) };
 });

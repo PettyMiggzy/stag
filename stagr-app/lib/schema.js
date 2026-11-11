@@ -112,6 +112,11 @@ STATEMENTS.push(
 `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_ver INT NOT NULL DEFAULT 0`,
 `CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`
 );
+STATEMENTS.push(
+`CREATE TABLE IF NOT EXISTS integrations (tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, provider TEXT NOT NULL, secret_enc TEXT NOT NULL, meta JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant_id, provider))`,
+`CREATE TABLE IF NOT EXISTS card_checkouts (id SERIAL PRIMARY KEY, tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, kind TEXT NOT NULL, invoice_id INT, quote_id INT, amount NUMERIC(10,2) NOT NULL, order_id TEXT NOT NULL, link_id TEXT NOT NULL DEFAULT '', url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), checked_at TIMESTAMPTZ)`,
+`CREATE INDEX IF NOT EXISTS card_checkouts_tenant ON card_checkouts(tenant_id, status, created_at DESC)`
+);
 let done = null;
 export function ensureSchema() {
   if (!done) done = (async () => { for (const s of STATEMENTS) await query(s); })().catch(e => { done = null; throw e; });

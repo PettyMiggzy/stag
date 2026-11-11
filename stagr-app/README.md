@@ -9,7 +9,7 @@ npm install
 export DATABASE_URL=postgres://...    # any Postgres. Neon works.
 export SESSION_SECRET=...             # 24+ random characters
 npm run dev                           # http://localhost:8790/app
-npm test                              # 109 API tests (needs local Postgres, see test/run.mjs)
+npm test                              # API tests (needs local Postgres, see test/run.mjs)
 node test/e2e.mjs                     # browser walk-through (Playwright)
 ```
 
@@ -25,6 +25,8 @@ Create a Vercel project with this folder (`stagr-app`) as the root. Set these en
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | for texting | Without these, texts are saved as **preview** and not sent. |
 | `PUBLIC_URL` | for delivery status | Your app's address, e.g. `https://stagr-app.vercel.app`. Texts then carry a status callback to `/api/webhooks/twilio` so "delivered" and "failed" show up on review requests. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | for email | Without these, emails are saved as **preview** and not sent. |
+| `SQUARE_APP_ID`, `SQUARE_APP_SECRET` | optional | A Square developer application, so owners connect with a "Connect Square" button (redirect URL: `PUBLIC_URL/api/square/oauth/callback`). Without these, an owner pastes their own Square access token in Settings. `SQUARE_ENV=sandbox` uses Square's test system. |
+| `FCM_SERVICE_ACCOUNT` | for push | The Firebase service-account JSON (raw or base64). Without it, no notifications are sent. |
 
 ## How it is built
 - `api/index.js` is one serverless function; `lib/router.js` dispatches `/api/*`. Routes are in `lib/routes/`.
@@ -36,8 +38,11 @@ Create a Vercel project with this folder (`stagr-app`) as the root. Set these en
 ## Matches Jobber's request-to-quote flow
 Request (booking page: separate email and text consent, availability dates, arrival times, photos) -> Convert to Quote or Convert to Job -> quote with title, rating, salesperson, reminder date, optional add-ons the customer ticks, text sections, line photos and a fixed or percent deposit -> customer approves from a link -> Convert to Job -> visits -> invoice (only the lines the customer chose) -> payments.
 
+## Card payments (Square)
+Each business connects its own Square account in Settings. Invoices and approved quotes with a deposit then show a Pay by card button on the customer's link. The customer pays on Square's hosted checkout page; STAGR never sees card numbers. When the customer returns (or within 15 minutes through the scheduled job) STAGR asks Square whether the order was paid and records the payment once. Square access tokens are stored encrypted.
+
 ## Not built yet
-- Online card payments, including paying the quote deposit by card or bank (ACH) on the approval page, with payouts to the owner's bank (needs a Stripe Connect account). Today the owner marks a deposit or payment as received.
+- Bank (ACH) payments and tips.
 - Two-way texting (replies and STOP handling need a Twilio webhook).
 - QuickBooks sync (CSV export of invoices and payments is available).
 - Subscription billing for STAGR itself, and a password reset email.

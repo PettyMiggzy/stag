@@ -9,6 +9,7 @@ const secret = () => {
   if (process.env.NODE_ENV === 'production' || process.env.VERCEL) throw new Error('SESSION_SECRET must be set (24+ characters)');
   return (globalThis.__devSecret ||= crypto.randomBytes(32).toString('hex'));
 };
+export const appKey = () => secret(); // for deriving other keys (stored integration secrets); never sent anywhere
 export function hashPassword(pw) {
   const salt = crypto.randomBytes(16);
   const h = crypto.scryptSync(String(pw), salt, 64, { N: 16384, r: 8, p: 1 });

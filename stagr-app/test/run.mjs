@@ -379,6 +379,71 @@ ok('no cross-tenant references anywhere in the database', Number(cross[0].n) ===
   r = await A.get('/api/requests/' + pr.id); ok('request detail has photo links', r.j.request.photos.length === 2 && !JSON.stringify(r.j).includes('base64'), r.j.request.photos);
 }
 
+// ---------- card payments through Square (a local stand-in for Square's API) ----------
+{
+  const http = await import('node:http'); const sqOrders = new Map(); let links = 0, seq = 0;
+  const mock = http.createServer(async (req, res) => {
+    const chunks = []; for await (const c of req) chunks.push(c); const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString() || '{}') : {}, auth = String(req.headers.authorization || '');
+    const send = (st, o) => { res.statusCode = st; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(o)); };
+    if (req.url === '/oauth2/token') return body.code === 'goodcode' || body.grant_type === 'refresh_token' ? send(200, { access_token: 'oauth-access-token-0123456789', refresh_token: 'oauth-refresh-token-0123456789', expires_at: new Date(Date.now() + 30 * 864e5).toISOString() }) : send(401, { errors: [{ code: 'UNAUTHORIZED', detail: 'bad code' }] });
+    if (!/Bearer (good-access-token-0123456789|oauth-access-token-0123456789|inactive-token-0123456789abc)$/.test(auth)) return send(401, { errors: [{ code: 'UNAUTHORIZED', detail: 'This request could not be authorized.' }] });
+    if (req.url === '/v2/locations') return send(200, { locations: /inactive/.test(auth) ? [{ id: 'L0', status: 'ACTIVE', capabilities: [], currency: 'USD' }] : [{ id: 'LOC1', merchant_id: 'M1', status: 'ACTIVE', business_name: 'Card Co Square', capabilities: ['CREDIT_CARD_PROCESSING'], currency: 'USD' }] });
+    if (req.url === '/v2/online-checkout/payment-links' && req.method === 'POST') { links++; const id = 'ORD' + (++seq); sqOrders.set(id, { amount: body.quick_pay.price_money.amount, paid: false, name: body.quick_pay.name, loc: body.quick_pay.location_id, redirect: body.checkout_options.redirect_url }); return send(200, { payment_link: { id: 'PL' + seq, url: 'https://square.link/u/' + id, order_id: id } }); }
+    const m = /^\/v2\/orders\/(\w+)$/.exec(req.url); if (m && sqOrders.has(m[1])) { const o = sqOrders.get(m[1]); return send(200, { order: { id: m[1], state: o.paid ? 'COMPLETED' : 'OPEN', tenders: o.paid ? [{ amount_money: { amount: o.amount, currency: 'USD' } }] : [] } }); }
+    send(404, { errors: [{ code: 'NOT_FOUND', detail: 'nope' }] });
+  });
+  await new Promise(r2 => mock.listen(8798, r2)); process.env.SQUARE_API_BASE = 'http://localhost:8798';
+  const C = new Client(), D = new Client(); r = await C.post('/api/auth/signup', { business: 'Card Co', name: 'Cora', email: 'cora@card.test', password: 'password10' }); ok('signup card co', r.s === 200, r);
+  await D.post('/api/auth/signup', { business: 'Dee Co', name: 'Dee', email: 'dee@dee.test', password: 'password10' });
+  r = await C.post('/api/team', { name: 'Mgr', email: 'mgr@card.test', password: 'password10', role: 'admin' }); const Mg = new Client(); await Mg.post('/api/auth/login', { email: 'mgr@card.test', password: 'password10' });
+  r = await C.post('/api/customers', { name: 'Paula Payer', phone: '5554445555' }); const pc = r.j.customer;
+  r = await C.post('/api/invoices', { customer_id: pc.id, items: [{ name: 'Haul', price: 250 }], tax_pct: 0 }); const inv = r.j.invoice; await C.post('/api/invoices/' + inv.id + '/send', { sms: false, email: false });
+  r = await anon.get('/api/public/i/' + inv.token); ok('no pay button before Square is connected', r.s === 200 && r.j.online_payments === false, r.j);
+  r = await anon.post('/api/public/i/' + inv.token + '/pay', {}); ok('cannot start a card payment before Square is connected', r.s === 400, r);
+  r = await Mg.post('/api/square/token', { access_token: 'good-access-token-0123456789' }); ok('a manager cannot connect Square (owner only)', r.s === 403, r);
+  r = await C.post('/api/square/token', { access_token: 'wrong-access-token-0123456789' }); ok('a bad Square token is refused with a clear message', r.s === 400 && /did not accept/.test(r.j.error), r);
+  r = await C.post('/api/square/token', { access_token: 'inactive-token-0123456789abc' }); ok('a Square account that cannot take cards is refused', r.s === 400 && /cannot take card/.test(r.j.error), r);
+  r = await C.post('/api/square/token', { access_token: 'good-access-token-0123456789' }); ok('owner connects Square', r.s === 200 && r.j.location_name === 'Card Co Square', r);
+  r = await Mg.get('/api/square'); ok('status shows connected and never the token', r.s === 200 && r.j.connected && !JSON.stringify(r.j).includes('good-access'), r.j);
+  const stored = await sql`SELECT secret_enc FROM integrations`; ok('the Square token is encrypted at rest', stored.length === 1 && !stored[0].secret_enc.includes('good-access-token'), stored);
+  r = await anon.get('/api/public/i/' + inv.token); ok('pay button offered once connected', r.j.online_payments === true, r.j);
+  r = await anon.post('/api/public/i/' + inv.token + '/pay', {}); const url1 = r.j && r.j.url; ok('checkout link created for the balance', r.s === 200 && /^https:\/\/square\.link\//.test(url1) && [...sqOrders.values()][0].amount === 25000 && [...sqOrders.values()][0].loc === 'LOC1' && /\/i\/.+\?paid=1$/.test([...sqOrders.values()][0].redirect), { r, o: [...sqOrders.values()] });
+  r = await anon.post('/api/public/i/' + inv.token + '/pay', {}); ok('tapping Pay twice reuses the same checkout', r.s === 200 && r.j.url === url1 && links === 1, { url: r.j, links });
+  r = await anon.get('/api/public/i/' + inv.token); ok('unpaid checkout leaves the balance', r.j.invoice.balance === 250, r.j.invoice);
+  sqOrders.get('ORD1').paid = true;
+  r = await anon.get('/api/public/i/' + inv.token); ok('paid checkout marks the invoice paid', r.j.invoice.balance === 0 && r.j.invoice.status === 'paid' && r.j.invoice.payments.length === 1 && r.j.invoice.payments[0].method === 'card' && r.j.online_payments === false, r.j);
+  await Promise.all([anon.get('/api/public/i/' + inv.token), anon.get('/api/public/i/' + inv.token), anon.get('/api/public/i/' + inv.token)]);
+  r = await C.get('/api/invoices/' + inv.id); ok('the card payment is recorded exactly once', r.j.invoice.payments.length === 1 && r.j.invoice.paid === 250 && r.j.invoice.payments[0].provider_id === 'sq:ORD1', r.j.invoice.payments);
+  r = await anon.post('/api/public/i/' + inv.token + '/pay', {}); ok('a paid invoice cannot be paid again', r.s === 400, r);
+  // deposit on a quote
+  r = await C.post('/api/quotes', { customer_id: pc.id, items: [{ name: 'Big job', price: 1000 }], deposit_pct: 25, tax_pct: 0 }); const q = r.j.quote; await C.post('/api/quotes/' + q.id + '/send', { sms: false, email: false });
+  r = await anon.post('/api/public/q/' + q.token + '/pay-deposit', {}); ok('deposit cannot be paid before approval', r.s === 400, r);
+  await anon.post('/api/public/q/' + q.token + '/decide', { decision: 'approve', name: 'Paula Payer' });
+  r = await anon.get('/api/public/q/' + q.token); ok('deposit pay button after approval', r.j.online_payments === true && r.j.quote.deposit_due === 250, r.j);
+  r = await anon.post('/api/public/q/' + q.token + '/pay-deposit', {}); ok('deposit checkout created', r.s === 200 && sqOrders.get('ORD2').amount === 25000, r); sqOrders.get('ORD2').paid = true;
+  r = await anon.get('/api/public/q/' + q.token); ok('paid deposit shows on the quote', r.j.quote.deposit_paid === true && r.j.online_payments === false, r.j.quote);
+  r = await C.post('/api/invoices', { customer_id: pc.id, quote_id: q.id }); ok('card deposit is credited on the invoice', r.j.invoice.paid === 250 && r.j.invoice.balance === 750, r.j.invoice);
+  // the scheduled job catches payments when the customer never comes back to the page
+  r = await C.post('/api/invoices', { customer_id: pc.id, items: [{ name: 'Small', price: 40 }], tax_pct: 0 }); const inv3 = r.j.invoice; await C.post('/api/invoices/' + inv3.id + '/send', { sms: false, email: false });
+  await anon.post('/api/public/i/' + inv3.token + '/pay', {}); sqOrders.get('ORD3').paid = true;
+  r = await anon.req('GET', '/api/cron/run', undefined, { authorization: 'Bearer cron-test' }); ok('scheduled job records a finished card payment', r.s === 200 && r.j.paid >= 1, r);
+  r = await C.get('/api/invoices/' + inv3.id); ok('invoice paid by the scheduled check', r.j.invoice.status === 'paid', r.j.invoice);
+  r = await D.get('/api/square'); ok('another business is not connected', r.j.connected === false, r.j);
+  r = await Mg.req('DELETE', '/api/square'); ok('a manager cannot disconnect Square', r.s === 403, r);
+  // sign in with Square (OAuth)
+  r = await D.get('/api/square/oauth/start'); ok('Square sign-in is off until the server has app keys', r.s === 400, r);
+  process.env.SQUARE_APP_ID = 'sq0idp-test'; process.env.SQUARE_APP_SECRET = 'sq0csp-test';
+  r = await D.get('/api/square/oauth/start'); const st = new URL(r.j.url).searchParams.get('state'); ok('Square sign-in link carries a signed state', r.s === 200 && /oauth2\/authorize\?client_id=sq0idp-test/.test(r.j.url) && !!st, r.j);
+  let cb = await fetch(BASE + '/api/square/oauth/callback?code=goodcode&state=' + encodeURIComponent(st.slice(0, -3) + 'abc'), { redirect: 'manual' }); ok('a tampered state is refused', cb.status === 302 && /square=expired/.test(cb.headers.get('location')), cb.headers.get('location'));
+  cb = await fetch(BASE + '/api/square/oauth/callback?code=badcode&state=' + encodeURIComponent(st), { redirect: 'manual' }); ok('a bad code does not connect', cb.status === 302 && /square=failed/.test(cb.headers.get('location')), cb.headers.get('location'));
+  cb = await fetch(BASE + '/api/square/oauth/callback?code=goodcode&state=' + encodeURIComponent(st), { redirect: 'manual' }); ok('Square sign-in connects the right business', cb.status === 302 && /square=connected/.test(cb.headers.get('location')), cb.headers.get('location'));
+  r = await D.get('/api/square'); ok('connected through Square sign-in', r.j.connected && r.j.mode === 'oauth', r.j);
+  r = await C.req('DELETE', '/api/square'); ok('owner disconnects Square', r.s === 200, r);
+  r = await anon.get('/api/public/i/' + inv3.token); r = await C.post('/api/invoices', { customer_id: pc.id, items: [{ name: 'After', price: 60 }] }); await C.post('/api/invoices/' + r.j.invoice.id + '/send', { sms: false, email: false });
+  r = await anon.get('/api/public/i/' + r.j.invoice.token); ok('no pay button after disconnecting', r.j.online_payments === false, r.j);
+  delete process.env.SQUARE_APP_ID; delete process.env.SQUARE_APP_SECRET; mock.close();
+}
+
 // ---------- money: concurrent payments, edits, deposits ----------
 {
   const M = new Client(); r = await M.post('/api/auth/signup', { business: 'Mike Money', name: 'Mike', email: 'mike@money.test', password: 'password7' }); ok('signup money', r.s === 200, r);

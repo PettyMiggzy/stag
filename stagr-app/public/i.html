@@ -2,7 +2,10 @@
 <script type="module">
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const money=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const tok=location.pathname.split('/').pop(),root=document.getElementById('root'),ph=p=>String(p||'').length===10?'('+p.slice(0,3)+') '+p.slice(3,6)+'-'+p.slice(6):p||'';
-const r=await fetch('/api/public/i/'+encodeURIComponent(tok));
+const back=new URLSearchParams(location.search).get('paid')==='1';
+let r=await fetch('/api/public/i/'+encodeURIComponent(tok));
+// coming back from the card page: Square can take a few seconds to confirm, so look again a few times before showing a balance
+if(back&&r.ok){for(let n=0;n<6;n++){const d0=await r.clone().json();if(!(d0.invoice.balance>0))break;root.innerHTML='<p class="mute">Checking your payment…</p>';await new Promise(s=>setTimeout(s,2500));r=await fetch('/api/public/i/'+encodeURIComponent(tok))}history.replaceState(null,'',location.pathname)}
 if(!r.ok){root.innerHTML='<div class="card">This invoice link is not valid. Please contact the business that sent it.</div>'}else{
  const d=await r.json(),i=d.invoice,b=d.business;document.title='Invoice '+i.label+' · '+b.name;document.documentElement.style.setProperty('--accent',b.brand_color||'#39ff14');
  root.innerHTML='<div class="top"><b>'+esc(b.name)+'</b><span class="mute small">'+(b.phone?'<a href="tel:'+esc(b.phone)+'" style="color:inherit">'+esc(ph(b.phone))+'</a>':'')+'</span></div>'
@@ -10,6 +13,9 @@ if(!r.ok){root.innerHTML='<div class="card">This invoice link is not valid. Plea
  +'<div class="card">'+i.items.map(x=>'<div class="line"><div><b>'+esc(x.name)+'</b>'+(x.description?'<div class="mute small">'+esc(x.description)+'</div>':'')+'<div class="mute small">'+esc(x.qty)+' × '+money(x.price)+'</div></div><b>'+money(x.qty*x.price)+'</b></div>').join('')
  +'<div class="tot"><div class="mute"><span>Subtotal</span><span>'+money(i.subtotal)+'</span></div>'+(i.discount?'<div class="mute"><span>Discount</span><span>−'+money(i.discount)+'</span></div>':'')+(i.tax?'<div class="mute"><span>Tax</span><span>'+money(i.tax)+'</span></div>':'')+(i.paid?'<div class="mute"><span>Paid</span><span>'+money(i.paid)+'</span></div>':'')+'<div class="big"><span>'+(i.balance>0?'Balance due':'Balance')+'</span><span>'+money(i.balance)+'</span></div></div></div>'
  +(i.message?'<div class="card"><p style="margin:0;white-space:pre-wrap">'+esc(i.message)+'</p></div>':'')
- +(i.balance>0?'<div class="card"><h3 style="margin-bottom:8px">How to pay</h3><p style="margin:0">'+(b.payment_note?esc(b.payment_note):'Please contact '+esc(b.name)+(b.phone?' at '+esc(ph(b.phone)):'')+' to arrange payment.')+'</p></div>':'<div class="card ok"><b>Paid in full. Thank you!</b></div>')
- +'<p class="foot">Powered by <a href="/">STAGR</a></p>'}
+ +(i.balance>0&&back?'<div class="card"><b>Your payment is still being confirmed.</b><p class="mute" style="margin:6px 0 0">If you finished paying, this page will show it within a few minutes. You do not need to pay again.</p></div>':'')
+ +(i.balance>0&&d.online_payments?'<div class="card"><h3 style="margin-bottom:8px">Pay online</h3><button class="btn main" id="pay" type="button" style="width:100%">Pay '+money(i.balance)+' by card</button><p class="err" id="payErr" role="alert"></p><p class="mute small" style="margin:8px 0 0">You will pay on a secure Square page. '+esc(b.name)+' never sees your card number.</p></div>':'')
+ +(i.balance>0?(d.online_payments&&!b.payment_note?'':'<div class="card"><h3 style="margin-bottom:8px">'+(d.online_payments?'Other ways to pay':'How to pay')+'</h3><p style="margin:0">'+(b.payment_note?esc(b.payment_note):'Please contact '+esc(b.name)+(b.phone?' at '+esc(ph(b.phone)):'')+' to arrange payment.')+'</p></div>'):'<div class="card ok"><b>Paid in full. Thank you!</b></div>')
+ +'<p class="foot">Powered by <a href="/">STAGR</a></p>';
+ const pb=document.getElementById('pay');if(pb)pb.addEventListener('click',async()=>{pb.disabled=true;pb.textContent='Opening secure checkout…';document.getElementById('payErr').textContent='';try{const x=await fetch('/api/public/i/'+encodeURIComponent(tok)+'/pay',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});const j=await x.json();if(!x.ok)throw new Error(j.error||'Could not start the payment');location.href=j.url}catch(e){document.getElementById('payErr').textContent=e.message;pb.disabled=false;pb.textContent='Pay '+money(i.balance)+' by card'}})}
 </script></body></html>

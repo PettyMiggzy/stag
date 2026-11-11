@@ -1,4 +1,5 @@
 import { route } from '../router.js';
+import { settlePending } from './payments.js';
 import { sql } from '../db.js';
 import { HttpError } from '../http.js';
 import { need } from '../auth.js';
@@ -54,5 +55,5 @@ route('POST', '/api/automations/run', async ctx => { need(ctx, 'admin'); return 
 route('GET', '/api/cron/run', { public: true }, async ctx => {
   const secret = process.env.CRON_SECRET, auth = String(ctx.req.headers.authorization || '');
   if (!secret || auth !== 'Bearer ' + secret) throw new HttpError(401, 'Not allowed');
-  let made = 0; for (const t of await sql`SELECT id FROM tenants`) made += (await runAutomations(t.id, baseUrl(ctx.req))).made; return { made };
+  let made = 0, paid = 0; for (const t of await sql`SELECT id FROM tenants`) { made += (await runAutomations(t.id, baseUrl(ctx.req))).made; paid += await settlePending(t.id).catch(() => 0); } return { made, paid };
 });
