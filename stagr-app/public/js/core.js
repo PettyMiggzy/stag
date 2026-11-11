@@ -11,10 +11,22 @@ export const debounce = (f, ms = 250) => { let t; return (...a) => { clearTimeou
 
 // ---- API ----
 export class ApiError extends Error { constructor(status, message) { super(message); this.status = status; } }
+// The screens a crew needs on site (today, schedule, a visit, the team) keep their last good answer on the phone, so they
+// still open with no signal. Nothing else is kept, and it is all cleared at sign out.
+const KEEP = /^\/(dashboard|visits(\/\d+)?(\?.*)?|auth\/me|team|services)$/, CK = 'stagr_c:';
+export function clearOffline() { try { Object.keys(localStorage).filter(k => k.startsWith(CK)).forEach(k => localStorage.removeItem(k)); } catch {} }
+let writes = 0; const busy = n => { writes += n; document.documentElement.classList.toggle('busy', writes > 0); };
 export async function api(method, path, body) {
-  const r = await fetch('/api' + path, { method, credentials: 'same-origin', headers: body !== undefined ? { 'content-type': 'application/json' } : {}, body: body !== undefined ? JSON.stringify(body) : undefined });
+  const write = method !== 'GET'; let r;
+  if (write) busy(1);
+  try { r = await fetch('/api' + path, { method, credentials: 'same-origin', headers: body !== undefined ? { 'content-type': 'application/json' } : {}, body: body !== undefined ? JSON.stringify(body) : undefined }); }
+  catch (e) {
+    if (!write && KEEP.test(path)) { try { const hit = JSON.parse(localStorage.getItem(CK + path) || 'null'); if (hit) { document.documentElement.classList.add('stale'); return hit; } } catch {} }
+    throw new ApiError(0, write ? 'No connection. Nothing was saved. Try again when you have signal.' : 'No connection. This screen has not been opened on this phone yet.');
+  } finally { if (write) busy(-1); }
+  if (!write && r.ok && KEEP.test(path)) { document.documentElement.classList.remove('stale'); r.clone().text().then(t => { if (t.length < 400000) try { localStorage.setItem(CK + path, t); } catch {} }).catch(() => {}); }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) { if (r.status === 401 && S.user) { S.user = null; location.hash = ''; location.reload(); } throw new ApiError(r.status, j.error || 'Something went wrong'); }
+  if (!r.ok) { if (r.status === 401 && S.user) { S.user = null; clearOffline(); location.hash = ''; location.reload(); } throw new ApiError(r.status, j.error || 'Something went wrong'); }
   return j;
 }
 export const get = p => api('GET', p), post = (p, b = {}) => api('POST', p, b), put = (p, b = {}) => api('PUT', p, b), del = (p, b) => api('DELETE', p, b);
@@ -59,6 +71,10 @@ export function modal(html, onMount) {
   const first = m.querySelector('input,select,textarea'); if (first) setTimeout(() => first.focus(), 30);
   if (onMount) onMount(m, close); return { el: m, close };
 }
+// A search box above a list: type to narrow what is shown.
+export const filterBox = label => `<input id="flt" type="search" placeholder="${esc(label)}" aria-label="${esc(label)}" style="margin-bottom:12px">`;
+export function wireFilter(root) { const i = $('#flt', root); if (!i) return; i.addEventListener('input', () => { const q = i.value.trim().toLowerCase(); $$('.list > .item', root).forEach(el => { el.style.display = !q || el.textContent.toLowerCase().includes(q) ? '' : 'none'; }); $$('.list', root).forEach(l => { const h = l.previousElementSibling; if (h && h.matches('h3.mono')) { const any = $$('.item', l).some(x => x.style.display !== 'none'); h.style.display = l.style.display = any ? '' : 'none'; } }); }); }
+export const mapsLink = parts => 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(parts.filter(Boolean).join(' '));
 export const chip = (text, kind = '') => `<span class="chip ${kind}">${esc(text)}</span>`;
 export const statusChip = s => chip(String(s).replace('_', ' '), { paid: 'ok', approved: 'ok', completed: 'ok', converted: 'ok', sent: 'blue', partial: 'warn', scheduled: 'blue', in_progress: 'warn', new: 'warn', draft: '', declined: 'bad', void: 'bad', cancelled: 'bad', lost: 'bad', blocked: 'bad', delivered: 'ok', preview: 'warn', failed: 'bad', active: 'blue' }[s] || '');
 export function empty(text, action = '') { return `<div class="empty"><p>${esc(text)}</p>${action}</div>`; }

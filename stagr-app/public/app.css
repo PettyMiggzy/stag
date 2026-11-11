@@ -97,3 +97,11 @@ input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px}
 .modal{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(14px + env(safe-area-inset-bottom))}
 .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
 .offline body::before{content:"You're offline. You can look around, but changes won't save until you're back online.";display:block;position:sticky;top:0;z-index:90;background:#3a2a00;color:#ffd166;text-align:center;font-size:.8rem;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top))}
+
+/* while a save is in flight, the buttons that started it cannot be pressed again */
+html.busy button[type=submit],html.busy .btn.main{pointer-events:none;opacity:.6}
+html.stale #main::before{content:"No connection. Showing what was saved on this phone.";display:block;background:rgba(240,180,41,.12);border:1px solid rgba(240,180,41,.5);color:var(--bone);padding:8px 12px;border-radius:10px;margin-bottom:12px;font-size:.9rem}
+.thread{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;padding:4px 2px}
+.bub{max-width:82%;padding:8px 12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);align-self:flex-start;white-space:pre-wrap;word-break:break-word}
+.bub.out{align-self:flex-end;background:color-mix(in srgb,var(--accent) 16%,var(--panel2));border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.bub span{display:block;font-size:.72rem;color:var(--mute);margin-top:3px}

@@ -1,4 +1,4 @@
-import { S, $, $$, esc, get, post, icon, toast, ApiError, hooks } from './core.js';
+import { S, $, $$, esc, get, post, icon, toast, ApiError, hooks, clearOffline } from './core.js';
 import { homeView, requestsView, requestView } from './home.js';
 import { customersView, customerView } from './people.js';
 import { quotesView, quoteView, invoicesView, invoiceView } from './sales.js';
@@ -64,7 +64,7 @@ function shell() {
     <div class="who"><b>${esc(S.user.name)}</b><div class="mute small">${esc(S.business.name)} · ${esc(S.user.role)}</div><button class="btn small" id="logout" style="margin-top:8px">Sign out</button></div></aside>
     <main class="main" id="main" tabindex="-1"></main></div>
     <nav class="tabbar" aria-label="Main">${TABS.filter(t => t === 'more' ? allowed('admin') : t === 'account' ? !allowed('admin') : NAV.find(n => n[0] === t && allowed(n[4]))).map(t => { const n = NAV.find(x => x[0] === t) || ['more', '/more', 'More', 'gear']; return `<a href="#${n[1]}" data-nav="${t}">${icon(n[3])}<span>${t === 'account' ? 'Me' : n[2]}</span></a>`; }).join('')}</nav>`;
-  $('#logout').addEventListener('click', async () => { await import('./native.js').then(m => m.forgetDevice()).catch(() => {}); await post('/auth/logout'); S.user = null; location.hash = ''; authScreen(); });
+  $('#logout').addEventListener('click', async () => { await import('./native.js').then(m => m.forgetDevice()).catch(() => {}); await post('/auth/logout').catch(() => {}); clearOffline(); S.user = null; location.hash = ''; authScreen(); });
   document.documentElement.style.setProperty('--accent', S.business.brand_color || '#39ff14');
 }
 let navToken = 0;

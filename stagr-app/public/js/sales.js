@@ -1,4 +1,4 @@
-import { S, esc, get, post, put, del, money, money0, fmtDate, fmtDateOnly, fmtDT, ago, statusChip, chip, empty, toast, hooks, modal, shrinkImage, $, $$ } from './core.js';
+import { S, esc, get, post, put, del, money, money0, fmtDate, fmtDateOnly, fmtDT, ago, statusChip, chip, empty, toast, hooks, modal, shrinkImage, filterBox, wireFilter, $, $$ } from './core.js';
 import { newCustomerModal } from './people.js';
 
 const totals = (items, disc, tax) => { const sub = Math.round(items.filter(i => i.kind !== 'text' && (!i.optional || i.selected)).reduce((a, i) => a + i.qty * i.price, 0) * 100) / 100, d = Math.round(sub * Math.min(100, Math.max(0, disc || 0))) / 100, t = Math.round((sub - d) * Math.min(30, Math.max(0, tax || 0))) / 100; return { sub, d, t, total: Math.round((sub - d + t) * 100) / 100 }; };
@@ -26,6 +26,19 @@ function editor(el, initial, allowExtras = true) {
   ['disc', 'tax'].forEach(id => $('#' + id, el).addEventListener('input', calc)); calc();
   return read;
 }
+// One-tap prices from Settings: truck-load sizes for hauling and an hourly rate for movers.
+const quickHtml = () => { const p = (S.business.settings || {}).pricing || {}, loads = p.loads || [], h = p.hourly || {};
+  if (!loads.length && !(h.rate > 0)) return '';
+  return `<div class="card" id="quick" style="padding:10px 12px"><div class="mono" style="margin-bottom:6px">Quick prices</div><div class="row wrap">${loads.map((l, i) => `<button type="button" class="btn small" data-load="${i}">${esc(l.label)} · ${money0(l.price)}</button>`).join('')}</div>
+    ${h.rate > 0 ? `<div class="row wrap" style="margin-top:8px;align-items:flex-end"><label class="field" style="width:86px"><span>Movers</span><input id="qm" inputmode="numeric" value="2"></label><label class="field" style="width:86px"><span>Hours</span><input id="qh" inputmode="decimal" value="${esc(h.min_hours || 2)}"></label><button type="button" class="btn small" id="qadd">+ Hourly labor at ${money0(h.rate)}/hr each</button></div>` : ''}</div>`; };
+function wireQuick(el) {
+  const box = $('#lines', el), q = $('#quick', el); if (!q) return; const p = (S.business.settings || {}).pricing || {}, h = p.hourly || {};
+  const add = item => { const rows = $$('[data-line]', box), first = rows[0]; const blank = rows.length === 1 && first.dataset.kind === 'item' && !$('[data-f=name]', first).value && !$('[data-f=price]', first).value;
+    const html = lineRow({ kind: 'item', description: '', qty: 1, optional: false, selected: true, image: '', ...item }); if (blank) first.outerHTML = html; else box.insertAdjacentHTML('beforeend', html); box.dispatchEvent(new Event('input', { bubbles: true })); };
+  q.addEventListener('click', e => { const b = e.target.closest('[data-load]'); if (b) { const l = p.loads[Number(b.dataset.load)]; add({ name: l.label, price: l.price }); return; }
+    if (e.target.closest('#qadd')) { const m = Math.max(1, Math.round(Number($('#qm', el).value) || 1)), hrs = Math.max(Number(h.min_hours) || 0, Number($('#qh', el).value) || 0); if (!(hrs > 0)) return toast('Enter the hours', true);
+      add({ name: 'Moving labor', description: `${m} mover${m === 1 ? '' : 's'} × ${hrs} hour${hrs === 1 ? '' : 's'}`, qty: Math.round(m * hrs * 100) / 100, price: h.rate }); if (h.truck_fee > 0) add({ name: 'Truck and travel fee', price: h.truck_fee }); } });
+}
 const svcList = () => `<datalist id="svc">${S.services.map(s => `<option value="${esc(s.name)}">`).join('')}</datalist>`;
 // Pick an existing customer (and one of their properties) inside a modal.
 async function customerPicker(el, customerId, propertyId) {
@@ -44,13 +57,13 @@ export function newQuoteModal(customerId, quote, prefill = {}) {
     <div class="grid g3"><div class="field"><span>Rate this opportunity</span><div class="row" id="stars" style="gap:2px;min-height:42px">${stars(quote?.rating || 0)}</div></div>
       <label class="field"><span>Salesperson</span><select id="sales"><option value="">—</option>${team.map(t => `<option value="${t.id}" ${t.id === (quote ? quote.salesperson_id : S.user.id) ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
       <label class="field"><span>Remind me to follow up on</span><input id="remind" type="date" value="${esc(String(quote?.reminder_date || '').slice(0, 10))}"></label></div>
-    <div class="lines" id="lines"></div><div class="row wrap"><button type="button" class="btn small" id="addLine">+ Add a line</button><button type="button" class="btn small" id="addText">+ Add text section</button></div>
+    ${quickHtml()}<div class="lines" id="lines"></div><div class="row wrap"><button type="button" class="btn small" id="addLine">+ Add a line</button><button type="button" class="btn small" id="addText">+ Add text section</button></div>
     <p class="small mute" style="margin:0">Tick “Optional add-on” on a line to let the customer choose it. “Pre-selected” adds it to their total until they untick it.</p>
     <div class="grid g3"><label class="field"><span>Discount %</span><input id="disc" inputmode="decimal" value="${esc(quote ? Number(quote.discount_pct) : 0)}"></label><label class="field"><span>Tax %</span><input id="tax" inputmode="decimal" value="${esc(quote ? Number(quote.tax_pct) : S.business.tax_pct)}"></label>
       <div class="field"><span>Required deposit</span><div class="row"><select id="deptype" style="width:64px;flex:none"><option value="$" ${Number(quote?.deposit_pct) > 0 ? '' : 'selected'}>$</option><option value="%" ${Number(quote?.deposit_pct) > 0 ? 'selected' : ''}>%</option></select><input id="dep" inputmode="decimal" value="${esc(Number(quote?.deposit_pct) > 0 ? Number(quote.deposit_pct) : quote ? Number(quote.deposit) : 0)}"></div></div></div>
     <div class="totals" id="tot"></div><p class="small mute right" id="depnote" style="margin:0"></p><label class="field"><span>Message to the customer</span><textarea id="qmsg" placeholder="Thanks for the chance to work with you!">${esc(quote?.message || '')}</textarea></label>
     <div class="row wrap"><button class="btn main" type="submit" data-send="1">Save and send</button><button class="btn" type="submit">Save as draft</button><button class="btn" type="button" data-close>Cancel</button></div></form>`, async (el, close) => {
-    await customerPicker(el, customerId || quote?.customer_id, quote?.property_id); const items0 = quote?.items || prefill.items; const read = editor(el, { items: items0 });
+    await customerPicker(el, customerId || quote?.customer_id, quote?.property_id); const items0 = quote?.items || prefill.items; const read = editor(el, { items: items0 }); wireQuick(el);
     let rating = quote?.rating || 0; $('#stars', el).addEventListener('click', e => { const b = e.target.closest('[data-star]'); if (!b) return; const n = Number(b.dataset.star); rating = rating === n ? 0 : n; $('#stars', el).innerHTML = stars(rating); });
     const depNote = () => { const t = totals(read(), Number($('#disc', el).value), Number($('#tax', el).value)), v = Number($('#dep', el).value) || 0, due = $('#deptype', el).value === '%' ? Math.round(t.total * v) / 100 : v; $('#depnote', el).textContent = due > 0 ? `Customer owes a deposit of ${money(due)} to begin.` : ''; };
     $('#lines', el).addEventListener('recalc', depNote); $('#dep', el).addEventListener('input', depNote); $('#deptype', el).addEventListener('change', depNote); depNote();
@@ -85,13 +98,13 @@ export function newInvoiceModal(customerId, invoice, prefill = {}) {
 
 export async function quotesView() {
   const { quotes } = await get('/quotes'), main = document.getElementById('main');
-  setTimeout(() => { $('#nq', main).addEventListener('click', () => newQuoteModal()); }, 0);
+  setTimeout(() => { $('#nq', main).addEventListener('click', () => newQuoteModal()); wireFilter(main); }, 0);
   const groups = [['Waiting on the customer', q => q.status === 'sent'], ['Approved', q => q.status === 'approved'], ['Drafts', q => q.status === 'draft'], ['Declined', q => q.status === 'declined']];
-  return `<div class="top"><h1>Quotes</h1><button class="btn main" id="nq">+ New quote</button></div>${quotes.length ? groups.map(([t, f]) => { const rows = quotes.filter(f); return rows.length ? `<h3 class="mono" style="margin:16px 0 8px">${t} · ${rows.length}</h3><div class="list">${rows.map(q => `<a class="item" href="#/quotes/${q.id}"><div class="grow"><div class="t">${esc(q.customer_name)} · ${esc(q.title || q.label)}</div><div class="s">${esc(q.label)} · ${q.status === 'approved' ? 'Approved ' + esc(fmtDate(q.decided_at)) : q.viewed_at ? 'Viewed ' + esc(ago(q.viewed_at)) : q.sent_at ? 'Sent ' + esc(ago(q.sent_at)) : 'Created ' + esc(ago(q.created_at))}</div></div><b>${money(q.total)}</b></a>`).join('')}</div>` : ''; }).join('') : empty('No quotes yet. Quote a customer and they can approve it from their phone.')}`;
+  return `<div class="top"><h1>Quotes</h1><button class="btn main" id="nq">+ New quote</button></div>${quotes.length > 6 ? filterBox('Search quotes') : ''}${quotes.length ? groups.map(([t, f]) => { const rows = quotes.filter(f); return rows.length ? `<h3 class="mono" style="margin:16px 0 8px">${t} · ${rows.length}</h3><div class="list">${rows.map(q => `<a class="item" href="#/quotes/${q.id}"><div class="grow"><div class="t">${esc(q.customer_name)} · ${esc(q.title || q.label)}</div><div class="s">${esc(q.label)} · ${q.status === 'approved' ? 'Approved ' + esc(fmtDate(q.decided_at)) : q.viewed_at ? 'Viewed ' + esc(ago(q.viewed_at)) : q.sent_at ? 'Sent ' + esc(ago(q.sent_at)) : 'Created ' + esc(ago(q.created_at))}</div></div><b>${money(q.total)}</b></a>`).join('')}</div>` : ''; }).join('') : empty('No quotes yet. Quote a customer and they can approve it from their phone.')}`;
 }
 export async function invoicesView() {
   const { invoices } = await get('/invoices'), main = document.getElementById('main'), today = new Date().toISOString().slice(0, 10);
-  setTimeout(() => { $('#ni', main).addEventListener('click', () => newInvoiceModal()); $('#csv', main).addEventListener('click', () => { location.href = '/api/export/invoices.csv'; }); }, 0);
+  setTimeout(() => { $('#ni', main).addEventListener('click', () => newInvoiceModal()); $('#csv', main).addEventListener('click', () => { location.href = '/api/export/invoices.csv'; }); wireFilter(main); }, 0);
   const due = invoices.filter(i => ['sent', 'partial'].includes(i.status)), over = due.filter(i => i.due_date && String(i.due_date).slice(0, 10) < today);
   const rows = list => list.map(i => `<a class="item" href="#/invoices/${i.id}"><div class="grow"><div class="t">${esc(i.customer_name)} · ${esc(i.label)}</div><div class="s">${i.status === 'paid' ? 'Paid ' + esc(fmtDate(i.paid_at)) : 'Due ' + esc(String(i.due_date || '').slice(0, 10))}</div></div><div class="right"><b>${money(i.status === 'paid' ? i.total : i.balance || i.total)}</b><div>${statusChip(i.status)}</div></div></a>`).join('');
   return `<div class="top"><h1>Invoices</h1><div class="row"><button class="btn small" id="csv">Export CSV</button><button class="btn main" id="ni">+ New invoice</button></div></div>
