@@ -26,6 +26,45 @@ export function initExtras(X) {
   // ---------- buyer lookup (cached) ----------
   const BUYER = new Map();
   let TEAM = "";
+  // ---------- dev buyback alerts ----------
+  // The dev wallets are saved from the owner's bot DM (/setdev) into the database: never in the code, the repo or a post.
+  // Alerts stay OFF until the owner approves a draft (/buybackdraft, then /buyback on).
+  let DEVS = new Set(), BB_ON = false, bbLast = null;
+  const bbQ = (s, p) => W.q(s, p).catch(() => []);
+  async function bbLoad() {
+    await bbQ("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())");
+    await bbQ("create table if not exists dev_buys(tx text primary key, eth double precision not null, tok double precision not null, at timestamptz not null default now())");
+    const rows = await bbQ("select k, v from bot_state where k in ('devWallets','buybackOn')"); const m = Object.fromEntries(rows.map((r) => [r.k, r.v]));
+    DEVS = new Set((m.devWallets || "").split(",").map((x) => x.trim().toLowerCase()).filter((x) => /^0x[0-9a-f]{40}$/.test(x))); BB_ON = m.buybackOn === "1";
+    const [l] = await bbQ("select eth, tok, extract(epoch from at)::bigint as ts from dev_buys order by at desc limit 1"); bbLast = l ? { eth: Number(l.eth), tok: Number(l.tok), ts: Number(l.ts) } : null;
+  }
+  const bbWeek = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys where at > now() - interval '7 days'"); return { n: w ? w.n : 0, eth: w ? Number(w.eth) : 0, tok: w ? Number(w.tok) : 0 }; };
+  function bbCaption(a, wk, draft) {
+    return [draft ? "<i>DRAFT with sample numbers. Not posted anywhere. Send /buyback on here to switch the alerts on.</i>\n" : "",
+      "🦌🔥 <b>DEV BUYBACK</b> 🔥🦌", `💵 <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`, `🟩 Bought <b>${fmt(a.tokens, 0)}</b> $STAG off the market`,
+      wk && wk.n ? `📅 Last 7 days: <b>${wk.n}</b> buyback${wk.n === 1 ? "" : "s"} · <b>${fmt(wk.eth, 3)} ETH</b> · <b>${fmt(wk.tok, 0)}</b> $STAG` : "",
+      a.priceUsd ? `Price <b>${usd(a.priceUsd)}</b>${a.mcapUsd ? ` · MC <b>${usd(a.mcapUsd)}</b>` : ""}` : "",
+      `👤 Dev wallet${a.txUrl ? ` · <a href="${a.txUrl}">Tx</a>` : ""}`].filter(Boolean).join("\n");
+  }
+  async function bbSend(to, caption) {
+    try {
+      const f = path.join(DIR, "buyback.mp4"); const markup = JSON.stringify({ inline_keyboard: [[{ text: "Buy $STAG", url: BUY, style: "success" }]] });
+      if (!existsSync(f)) { const r = await tgPost("sendMessage", { chat_id: to, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: JSON.parse(markup) }); return !!(r && r.ok); }
+      const fd = new FormData(); fd.append("chat_id", String(to)); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", markup);
+      fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "buyback.mp4");
+      const r = await (await fetch(`${api}/sendVideo`, { method: "POST", body: fd })).json(); if (!r.ok) log("buyback send err:", r.description); return !!r.ok;
+    } catch (e) { log("buyback send err:", e.message); return false; }
+  }
+  // called for every buy card: true = this was a dev buyback and its own card went out, so the normal card is skipped
+  async function sendBuyback(a) {
+    try {
+      if (!DEVS.has(String(a.buyer || "").toLowerCase())) return false;
+      const tx = String(a.txUrl || "").split("/").pop();
+      await bbQ("insert into dev_buys(tx, eth, tok) values ($1,$2,$3) on conflict do nothing", [tx, a.eth || 0, a.tokens || 0]); bbLast = { eth: a.eth || 0, tok: a.tokens || 0, ts: Math.floor(Date.now() / 1000) }; tokAt = 0;
+      if (!BB_ON || a.late) return false;
+      return await bbSend(chat, bbCaption(a, await bbWeek(), false));
+    } catch (e) { log("buyback err:", e.message); return false; }
+  }
   const isTeam = (tx) => !!TEAM && BUYER.get(tx) === TEAM;
   async function buyerOf(tx) {
     if (BUYER.has(tx)) return BUYER.get(tx);
@@ -139,7 +178,7 @@ export function initExtras(X) {
     let text = (msg.text || "").trim();
     if (!text.startsWith("/")) {
       const w = text.toLowerCase().replace(/^[$#]/, "").replace(/[?!.]+$/, "");
-      const WORDS = { ca: "ca", contract: "ca", "contract address": "ca", price: "price", mc: "price", chart: "chart", links: "links", website: "links", site: "links", lounge: "lounge", app: "app" };
+      const WORDS = { ca: "ca", contract: "ca", "contract address": "ca", price: "price", mc: "price", chart: "chart", links: "links", website: "links", site: "links", lounge: "lounge", app: "app", invite: "invite", invites: "invites", "invite link": "invite", referral: "invite", buybacks: "buybacks" };
       if (!WORDS[w]) return; const k = msg.chat.id + ":" + WORDS[w], now = Date.now(); if (now - (wordAt.get(k) || 0) < 20000) return; wordAt.set(k, now); text = "/" + WORDS[w];
     }
     const [raw, ...args] = text.split(/\s+/); const cmd = raw.slice(1).split("@")[0].toLowerCase();
@@ -173,6 +212,24 @@ export function initExtras(X) {
         const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
         const ok = await wyteSend(chat, false); if (!ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); return reply("The post failed, nothing was marked as sent. Try again."); } return reply("✅ Posted to the main group.");
       }
+      if (["setdev", "cleardev", "buybackdraft", "buyback"].includes(cmd) && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, and only in the bot DM
+        if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
+        if (cmd === "setdev") { const a = (args[0] || "").toLowerCase(); if (!/^0x[0-9a-f]{40}$/.test(a)) return reply("Send it like this: /setdev 0x… (the full wallet address). You can add more than one wallet, one at a time.");
+          DEVS.add(a); await stSet("devWallets", [...DEVS].join(",")); tgPost("deleteMessage", { chat_id: msg.chat.id, message_id: msg.message_id });
+          return tgPost("sendMessage", { chat_id: msg.chat.id, text: `Saved dev wallet …${a.slice(-4)} (${DEVS.size} saved). I deleted your message so the address is not sitting in this chat. Next: /buybackdraft to see the alert, then /buyback on.`, parse_mode: "HTML" }); }
+        if (cmd === "cleardev") { DEVS = new Set(); await stSet("devWallets", ""); return reply("Dev wallets cleared. Buyback alerts will not fire until you add one with /setdev."); }
+        if (cmd === "buybackdraft") { const m = await market(); const eth = 0.05, px = m.priceUsd || 0; const ok = await bbSend(msg.chat.id, bbCaption({ eth, spentUsd: eth * (m.ethUsd || 0), tokens: px && m.ethUsd ? eth * m.ethUsd / px : 0, priceUsd: px, mcapUsd: m.mcUsd, txUrl: "" }, { n: 3, eth: 0.15, tok: px && m.ethUsd ? 0.15 * m.ethUsd / px : 0 }, true)); return ok ? null : reply("Could not send the draft. Try again."); }
+        const on = (args[0] || "").toLowerCase() === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
+        return reply(on ? (DEVS.size ? `🔥 Dev buyback alerts are ON for ${DEVS.size} wallet${DEVS.size === 1 ? "" : "s"}. The next dev buy posts the DEV BUYBACK card in the main group. /buyback off stops it.` : "Alerts are ON, but no dev wallet is saved yet. Send /setdev 0x… first.") : "Dev buyback alerts are OFF. Dev buys post as normal buy cards.");
+      }
+      if (cmd === "invite" || cmd === "referral" || cmd === "ref") {
+        if (!msg.from || msg.from.is_bot) return; const link = await refLink(msg.from);
+        if (!link) return reply("I cannot make invite links yet. An admin needs to give me the 'invite users' right in the group.");
+        const [n] = await bbQ("select count(*)::int as n from ref_joins where inviter_id=$1 and here", [msg.from.id]);
+        return reply(`🤝 <b>${esc(refName(msg.from))}</b>, this is your personal invite link:\n${link}\n\nEveryone who joins through it counts for you${n && n.n ? ` (you have brought in <b>${n.n}</b> so far)` : ""}. Type <b>invites</b> to see the board.`);
+      }
+      if (cmd === "invites" || cmd === "referrals" || cmd === "inviteboard") return reply(await refBoard());
+      if (cmd === "buybacks") { const wk = await bbWeek(); return reply(BB_ON && wk.n ? `🦌🔥 <b>DEV BUYBACKS</b>\nLast 7 days: <b>${wk.n}</b> buyback${wk.n === 1 ? "" : "s"} · <b>${fmt(wk.eth, 3)} ETH</b> · <b>${fmt(wk.tok, 0)}</b> $STAG` : "No dev buybacks tracked in the last 7 days."); }
       if (cmd === "stagme") return STAGME.command(msg, args, reply);
       if (cmd === "burn" || cmd === "burned" || cmd === "burns") return reply(await BURN.text());
       if ((cmd === "burndraft" || cmd === "burnpost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM
@@ -209,14 +266,43 @@ export function initExtras(X) {
       if (cmd === "chart") return reply(`📈 <b>$STAG chart</b>\n${BUY}`, { reply_markup: { inline_keyboard: [[{ text: "📈 Open chart", url: CFG.chartUrl || BUY, style: "primary" }]] } });
       if (cmd === "links" || cmd === "socials" || cmd === "web") return reply(`<b>$STAG links</b>\n🟩 Buy: ${BUY}\n🌐 Site: https://stagwifhood.fun\n🏹 Game: https://stagwifhood.fun/play/\n🎵 Records: https://records.stagwifhood.fun\n🍸 Lounge: https://stagwifhood.fun/lounge/\n📱 StagR app: https://play.google.com/store/apps/details?id=com.stagr.app\n𝕏 X: https://x.com/stagwifhoodrh\n💬 Telegram: https://t.me/StagWifHood\n\nCA: <code>${CFG.token}</code>`);
       if (cmd === "game" || cmd === "play") return reply(`🏹 <b>Stag Shot</b> – 3D forest archery\n${process.env.MINIAPP_URL || "https://stagwifhood.fun/play/"}`);
-      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n<i>You can also just type: ca, price, chart, links</i>\n/ca – contract address\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/lounge – the 3D club · /records – the music · /app – StagR on Google Play\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
+      if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n<i>You can also just type: ca, price, chart, links</i>\n/ca – contract address\ninvite – your personal invite link · invites – the invite board\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/lounge – the 3D club · /records – the music · /app – StagR on Google Play\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
     } catch (e) { log("cmd err:", e.message); }
   }
+  // ---------- invite links: every member gets a personal link, and the bot counts who they bring in ----------
+  // Needs the bot to be an admin of the main group with the "invite users" right. A person only ever counts once, and stops counting if they leave.
+  const refName = (u) => [u.first_name, u.last_name].filter(Boolean).join(" ").slice(0, 40) || u.username || "Member";
+  async function refInit() {
+    await bbQ("create table if not exists ref_links(user_id bigint primary key, name text not null, link text not null unique, at timestamptz not null default now())");
+    await bbQ("create table if not exists ref_joins(joined_id bigint primary key, inviter_id bigint not null, here boolean not null default true, at timestamptz not null default now())");
+  }
+  async function refLink(u) {
+    const [have] = await bbQ("select link from ref_links where user_id=$1", [u.id]); if (have) return have.link;
+    const r = await tgPost("createChatInviteLink", { chat_id: chat, name: ("ref " + refName(u)).slice(0, 32) }); if (!r || !r.ok) { log("invite link err:", r && r.description); return null; }
+    await bbQ("insert into ref_links(user_id, name, link) values ($1,$2,$3) on conflict(user_id) do nothing", [u.id, refName(u), r.result.invite_link]); return r.result.invite_link;
+  }
+  async function refJoin(cm) {
+    try {
+      if (String(cm.chat.id) !== String(chat)) return; const who = cm.new_chat_member && cm.new_chat_member.user; if (!who || who.is_bot) return;
+      const st = cm.new_chat_member.status, was = cm.old_chat_member && cm.old_chat_member.status;
+      if (st === "left" || st === "kicked") { await bbQ("update ref_joins set here=false where joined_id=$1", [who.id]); return; }
+      if (!["member", "restricted"].includes(st) || ["member", "administrator", "creator", "restricted"].includes(was)) return;
+      const link = cm.invite_link && cm.invite_link.invite_link; if (!link) { await bbQ("update ref_joins set here=true where joined_id=$1", [who.id]); return; }
+      const [own] = await bbQ("select user_id from ref_links where link=$1", [link]); if (!own || String(own.user_id) === String(who.id)) return;
+      await bbQ("insert into ref_joins(joined_id, inviter_id) values ($1,$2) on conflict(joined_id) do update set here=true", [who.id, own.user_id]);
+    } catch (e) { log("ref join err:", e.message); }
+  }
+  async function refBoard() {
+    const rows = await bbQ("select l.name, count(*)::int as n, count(*) filter (where j.at > now() - interval '7 days')::int as wk from ref_joins j join ref_links l on l.user_id = j.inviter_id where j.here group by l.user_id, l.name order by n desc, min(j.at) limit 10");
+    if (!rows.length) return "🤝 <b>INVITE BOARD</b>\nNobody is on the board yet. Type <b>invite</b> to get your own link and be first.";
+    return ["🤝 <b>INVITE BOARD</b>", ...rows.map((r, i) => `${["🥇", "🥈", "🥉"][i] || `${i + 1}.`} <b>${esc(r.name)}</b> · ${r.n} brought in${r.wk ? ` (${r.wk} this week)` : ""}`), "", "Type <b>invite</b> to get your own link. People who leave stop counting."].join("\n");
+  }
   async function pollCommands() {
+    await refInit();
     for (;;) {
       try {
-        const r = await fetch(`${api}/getUpdates?timeout=25&offset=${offset}&allowed_updates=${encodeURIComponent('["message"]')}`).then((x) => x.json());
-        for (const u of r.result || []) { offset = u.update_id + 1; if (u.message) handle(u.message); }
+        const r = await fetch(`${api}/getUpdates?timeout=25&offset=${offset}&allowed_updates=${encodeURIComponent('["message","chat_member"]')}`).then((x) => x.json());
+        for (const u of r.result || []) { offset = u.update_id + 1; if (u.message) handle(u.message); else if (u.chat_member) refJoin(u.chat_member); }
       } catch (e) { await new Promise((r) => setTimeout(r, 3000)); }
     }
   }
@@ -378,7 +464,7 @@ export function initExtras(X) {
   const sendJson = (res, obj, age) => { res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=" + age, "access-control-allow-origin": "*" }); res.end(JSON.stringify(obj)); };
   API.h = async (req, res, u) => {
     if (u.pathname === "/api/token") {
-      if (!tokCache || Date.now() - tokAt > 20000) { try { const m = await market(); tokCache = { ok: true, token: CFG.token, priceUsd: m.priceUsd, mcUsd: m.mcUsd, ch24: m.ch24, holders: m.holders, buys24: m.buys24, vol24Eth: m.vol24, vol24Usd: m.vol24 * m.ethUsd, bondPct: m.bondPct, lastBuyBlock: m.lastBlock, head: m.head, buyUrl: CFG.buyUrl || CFG.chartUrl || `${CFG.launchpad}/${CFG.token}`, updated: Date.now() }; tokAt = Date.now(); } catch (e) { if (!tokCache) { sendJson(res, { ok: false }, 5); return true; } } }
+      if (!tokCache || Date.now() - tokAt > 20000) { try { const m = await market(); tokCache = { ok: true, token: CFG.token, priceUsd: m.priceUsd, mcUsd: m.mcUsd, ch24: m.ch24, holders: m.holders, buys24: m.buys24, vol24Eth: m.vol24, vol24Usd: m.vol24 * m.ethUsd, bondPct: m.bondPct, lastBuyBlock: m.lastBlock, head: m.head, buyUrl: CFG.buyUrl || CFG.chartUrl || `${CFG.launchpad}/${CFG.token}`, updated: Date.now() }; if (BB_ON && bbLast) { const wk = await bbWeek(); tokCache.buyback = { ts: bbLast.ts, eth: bbLast.eth, tok: bbLast.tok, weekN: wk.n, weekEth: wk.eth, weekTok: wk.tok }; } tokAt = Date.now(); } catch (e) { if (!tokCache) { sendJson(res, { ok: false }, 5); return true; } } }
       sendJson(res, tokCache, 15); return true;
     }
     if (u.pathname === "/api/collectors") {
@@ -395,6 +481,7 @@ export function initExtras(X) {
     return false;
   };
   async function start(head) {
+    await bbLoad();
     try { await W.q("create table if not exists song_sales(tx text not null, idx int not null, song_id int not null, buyer text not null, eth double precision not null, block bigint not null, at timestamptz default now(), primary key(tx, idx))"); } catch (e) { log("song_sales table err:", e.message); }
     await prefetchDay(head);
     W.startWeb(); W.refreshTiers(); setInterval(W.refreshTiers, 300000); setInterval(W.sweep, 20 * 60000);
@@ -423,5 +510,5 @@ export function initExtras(X) {
     setInterval(dailyCheck, 60000);
     log("extras ready: commands, milestones, leaderboard (dashboard off)");
   }
-  return { start, cardExtras, market, leaderboardText, isTeam, buyerCached: (tx) => BUYER.get(tx), setTeam: (a) => { TEAM = (a || "").toLowerCase(); } };
+  return { start, sendBuyback, cardExtras, market, leaderboardText, isTeam, buyerCached: (tx) => BUYER.get(tx), setTeam: (a) => { TEAM = (a || "").toLowerCase(); } };
 }

@@ -70,7 +70,7 @@ export function initLounge(X) {
       let rec = ""; try { rec = ethers.verifyMessage(msg, String(b.signature || "")).toLowerCase(); } catch {}
       if (rec !== a) { let ok1271 = false; try { if ((await rpc.getCode(a)).length > 2) { const c = new ethers.Contract(a, ["function isValidSignature(bytes32,bytes) view returns (bytes4)"], rpc); ok1271 = (await c.isValidSignature(ethers.hashMessage(msg), String(b.signature || ""))) === "0x1626ba7e"; } } catch {} if (!ok1271) { json(res, 200, { ok: false, error: "Signature did not match that wallet." }); return true; } }
       const r = await resolve(a);
-      const open = await isOpen(); if (!r.ok && open) { r.ok = true; r.tier = "Guest"; }
+      const open = await isOpen(); if (!r.ok && open) { r.ok = true; if (!r.tier) r.tier = "Guest"; } // open doors: smaller holders still wear their real herd rank
       if (!r.ok) { json(res, 200, { ok: false, locked: true, error: "The lounge opens at 10,000,000 $STAG (across your linked wallets) or with a Hooded 20, Sherwood Saints or WANTED NFT. Link wallets with /hoodrich in the Telegram bot." }); return true; }
       const tier = r.tier || "Founder";
       const tok = sign({ a, tier, founder: r.founder, lvl: LEVEL[r.tier] ?? 0, guest: r.tier === "Guest", exp: Date.now() + 12 * 3600e3 });
@@ -137,7 +137,7 @@ export function initLounge(X) {
         me = { id: HEX(4), addr: s.a, nw: !!s.nw, name, tier: s.tier, founder: !!s.founder, lvl: s.lvl, x: 0, z: 12, ry: Math.PI, anim: "idle", drink: "", ws, room };
         room.players.set(s.a, me); byAddr.set(s.a, me); clearTimeout(joinTimer);
         send(ws, { t: "welcome", id: me.id, room: room.n, cap: ROOM_CAP, epoch: EPOCH, now: Date.now(), dj: djState(), players: [...room.players.values()].filter((p) => p !== me).map(pub), you: pub(me) });
-        claimDaily(me.addr, me.name).then((n) => { if (n) send(ws, { t: "sys", text: `Daily gift: +${n} play chips. Come back tomorrow for another.` }); }).catch(() => {});
+        claimDaily(me.addr, me.name, me.lvl || 0, !!me.founder).then((n) => { if (n) send(ws, { t: "sys", text: n > 500 ? `Holder daily gift: +${n} play chips for your herd rank${me.tier && me.tier !== "Guest" ? ` (${me.tier})` : ""}. Come back tomorrow for another.` : `Daily gift: +${n} play chips. Holders get up to 3,000 a day. Come back tomorrow for another.` }); }).catch(() => {});
         allIn(room, { t: "join", p: pub(me) }, me.id); log("lounge: join", name, s.tier, "room", room.n, "online", room.players.size); return;
       }
       if (m.t === "pos") { me.x = num(m.x, -11, 11, me.x); me.z = num(m.z, -14.5, 14.5, me.z); me.ry = num(m.ry, -7, 7, me.ry); me.anim = ["idle", "walk", "wave"].includes(m.a) ? m.a : "idle"; me.moved = true; }

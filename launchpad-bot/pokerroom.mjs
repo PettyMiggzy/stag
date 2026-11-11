@@ -28,11 +28,13 @@ export async function chipsFor(addr, name) {
   return c;
 }
 const DAILY_BONUS = 500; const bonusMem = new Map();
-export async function claimDaily(addr, name) { // a small free play-chip gift the first time you walk in each day
+// Holders get a bigger gift: the herd rank (read from the wallet's own $STAG balance) sets the size. Play chips only.
+export const DAILY_BY_LEVEL = [500, 750, 1000, 1500, 2500]; export const FOUNDER_EXTRA = 500;
+export async function claimDaily(addr, name, lvl = 0, founder = false) { // a small free play-chip gift the first time you walk in each day
   const d = day(); if (bonusMem.get(addr) === d) return 0;
   if (Q && ready) { try { const r = await Q("insert into chip_bonus(addr, day) values ($1,$2) on conflict(addr) do update set day=excluded.day where chip_bonus.day <> excluded.day returning addr", [addr, d]); bonusMem.set(addr, d); if (!r.length) return 0; } catch { return 0; } }
   else bonusMem.set(addr, d);
-  const c = await chipsFor(addr, name); c.chips += DAILY_BONUS; await saveChips(c); return DAILY_BONUS;
+  const c = await chipsFor(addr, name); const gift = (DAILY_BY_LEVEL[Math.max(0, Math.min(4, lvl | 0))] || DAILY_BONUS) + (founder ? FOUNDER_EXTRA : 0); c.chips += gift; await saveChips(c); return gift;
 }
 export async function saveChips(c) { if (!Q || !ready) return; try { await Q("insert into poker_chips(addr, chips, net_week, week, topup_day, name, updated_at) values ($1,$2,$3,$4,$5,$6, now()) on conflict(addr) do update set chips=excluded.chips, net_week=excluded.net_week, week=excluded.week, topup_day=excluded.topup_day, name=excluded.name, updated_at=now()", [c.addr, c.chips, c.net, c.week, c.topup, c.name]); } catch {} }
 export async function pokerLeaders(limit = 10) {

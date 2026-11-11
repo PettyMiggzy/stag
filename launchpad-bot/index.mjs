@@ -288,6 +288,7 @@ function pickNft(addr) { // rotate through this wallet's NFTs so the alert isn't
 const SONG_REPLY = process.env.SONG_REPLY === "1"; // the separate 'tap to play' song message after each buy: off unless SONG_REPLY=1
 async function sendTelegram(a) {
   if (!CFG.tg || !CFG.tgChat) return;
+  if (EX && EX.sendBuyback && await EX.sendBuyback(a)) return; // a dev buyback gets its own card
   const sym = esc(META.symbol);
   const pk = pickNft(a.buyer);
   const holdLine = a.holds ? `👛 Holds ${fmt(a.holds, 0)} ${sym}${a.holdsUsd ? ` (${usd(a.holdsUsd)})` : ""} · ${a.isNew ? "🆕 <b>New holder</b>" : `Position <b>+${fmt(a.posPct, 0)}%</b>`}` : "";
