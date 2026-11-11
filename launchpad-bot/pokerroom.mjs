@@ -2,7 +2,7 @@
 // Everyone gets free chips and a daily top-up. House bots keep a table playable when few people are around. The weekly leaderboard is for bragging rights and club-chosen prizes.
 import { Table, bestHand } from "./poker.mjs";
 
-const START_CHIPS = 10000, TOPUP_BELOW = 2000, TOPUP_TO = 5000, MIN_BUY = 400, MAX_BUY = 5000, TURN_MS = parseInt(process.env.POKER_TURN_MS || "25000", 10), NEXT_HAND_MS = parseInt(process.env.POKER_NEXT_MS || "6500", 10), SEATS = 9;
+const START_CHIPS = 10000, TOPUP_BELOW = 2000, TOPUP_TO = 5000, MIN_BUY0 = 400, MAX_BUY0 = 5000, TURN_MS = parseInt(process.env.POKER_TURN_MS || "25000", 10), NEXT_HAND_MS = parseInt(process.env.POKER_NEXT_MS || "6500", 10), SEATS = 9;
 export const TOPUP_LEVEL = 2000;
 const day = () => new Date().toISOString().slice(0, 10);
 export const todayStr = day;
@@ -62,15 +62,15 @@ function botDecide(t, i) {
 }
 
 export class PokerRoom {
-  constructor(deps) { this.send = deps.send; this.t = new Table({ seats: SEATS }); this.watch = new Map(); this.players = new Map(); this.timer = null; this.deadline = 0; this.nextTimer = null; this.botN = 0; this.autoFolds = new Map(); }
+  constructor(deps) { this.send = deps.send; this.vip = !!deps.vip; this.o = this.vip ? { sb: 100, bb: 200, min: 4000, max: 20000, bot: 10000 } : { sb: 10, bb: 20, min: MIN_BUY0, max: MAX_BUY0, bot: 2000 }; this.t = new Table({ seats: SEATS, sb: this.o.sb, bb: this.o.bb }); this.watch = new Map(); this.players = new Map(); this.timer = null; this.deadline = 0; this.nextTimer = null; this.botN = 0; this.autoFolds = new Map(); }
   seatedHumans() { return this.t.seats.filter((s) => s && !s.bot).length; }
   async handle(me, m) {
     if (m.t === "pokerwatch") { if (m.on) { this.watch.set(me.addr, me); await this.pushTo(me); } else this.watch.delete(me.addr); return; }
     if (m.t === "pokersit") {
       if (this.t.seatOf(me.addr) >= 0) return; const seat = Math.floor(Number(m.seat)); const c = await chipsFor(me.addr, me.name);
       if (!(seat >= 0 && seat < SEATS) || this.t.seats[seat]) return this.err(me, "That seat is taken.");
-      const want = Math.floor(Number(m.buyin) || 2000); const buy = Math.max(MIN_BUY, Math.min(MAX_BUY, want, c.chips));
-      if (c.chips < MIN_BUY) return this.err(me, "You are out of play chips. You get a free top-up each day.");
+      const want = Math.floor(Number(m.buyin) || this.o.min); const buy = Math.max(this.o.min, Math.min(this.o.max, want, c.chips));
+      if (c.chips < this.o.min) return this.err(me, "You are out of play chips. You get a free top-up each day.");
       if (!this.t.sit(seat, { addr: me.addr, name: me.name }, buy)) return this.err(me, "Could not sit there.");
       c.chips -= buy; this.players.set(me.addr, { me, in: buy, c }); this.watch.set(me.addr, me); await saveChips(c); this.fill(); this.broadcast(); this.maybeStart(); return;
     }
@@ -79,21 +79,21 @@ export class PokerRoom {
       const r = this.t.act(me.addr, String(m.a), m.amt); if (!r.ok) return this.err(me, r.why); this.autoFolds.delete(me.addr); this.after(); return;
     }
   }
-  err(me, why) { this.send(me.ws, { t: "pokererr", why }); }
+  err(me, why) { this.send(me.ws, { t: "pokererr", vip: this.vip, why }); }
   async stand(me) {
     const p = this.players.get(me.addr); if (!p) return; const back = this.t.leave(me.addr); p.c.chips += back; p.c.net += back - p.in; this.players.delete(me.addr); await saveChips(p.c);
-    this.send(me.ws, { t: "pokerleft", chips: p.c.chips, net: back - p.in });
+    this.send(me.ws, { t: "pokerleft", vip: this.vip, chips: p.c.chips, net: back - p.in });
     if (this.seatedHumans() === 0) { this.reset(); this.broadcast(); return; } // nobody left to play: clear the bots and the timers
     this.fill(); this.after(); this.broadcast();
   }
-  reset() { clearTimeout(this.timer); clearTimeout(this.nextTimer); this.timer = null; this.nextTimer = null; this.deadline = 0; this.t = new Table({ seats: SEATS }); this.autoFolds.clear(); }
+  reset() { clearTimeout(this.timer); clearTimeout(this.nextTimer); this.timer = null; this.nextTimer = null; this.deadline = 0; this.t = new Table({ seats: SEATS, sb: this.o.sb, bb: this.o.bb }); this.autoFolds.clear(); }
   drop(me) { this.watch.delete(me.addr); if (this.players.has(me.addr)) this.stand(me); }
   fill() { // bots keep the table lively: 1 person -> 3 bots, 2 -> 2, 3 -> 1, 4+ -> none (bots leave between hands)
     if (this.t.inHand()) return; const h = this.seatedHumans();
     const want = h === 0 ? 0 : h === 1 ? 3 : h === 2 ? 2 : h === 3 ? 1 : 0; let bots = this.t.seats.map((s, i) => (s && s.bot ? i : -1)).filter((i) => i >= 0);
     while (bots.length > want) { const i = bots.pop(); this.t.seats[i] = null; }
-    for (let i = 0; bots.length < want && i < SEATS; i++) if (!this.t.seats[i]) { this.botN++; this.t.sit(i, { addr: "bot" + this.botN, name: ["Rack", "Velvet", "Antler", "Chip", "Gold"][this.botN % 5] + " (house)" }, 2000); this.t.seats[i].bot = true; bots.push(i); }
-    for (const s of this.t.seats) if (s && s.bot && s.stack < this.t.bb * 10) s.stack = 2000; // house bots always have chips
+    for (let i = 0; bots.length < want && i < SEATS; i++) if (!this.t.seats[i]) { this.botN++; this.t.sit(i, { addr: "bot" + this.botN, name: ["Rack", "Velvet", "Antler", "Chip", "Gold"][this.botN % 5] + " (house)" }, this.o.bot); this.t.seats[i].bot = true; bots.push(i); }
+    for (const s of this.t.seats) if (s && s.bot && s.stack < this.t.bb * 10) s.stack = this.o.bot; // house bots always have chips
   }
   maybeStart() {
     if (this.nextTimer || this.t.inHand()) return; const ready = this.t.seats.filter((s) => s && s.stack > 0).length; if (ready < 2) return;
@@ -106,15 +106,15 @@ export class PokerRoom {
       const i = this.t.toAct, s = this.t.seats[i];
       if (s.bot) { this.broadcast(); this.timer = setTimeout(() => { if (this.t.toAct !== i) return; const [a, amt] = botDecide(this.t, i); let r = this.t.act(s.addr, a, amt); if (!r.ok) r = this.t.act(s.addr, this.t.options(i).check ? "check" : "call"); this.after(); }, 900 + Math.random() * 1400); return; }
       this.deadline = Date.now() + TURN_MS; this.broadcast();
-      this.timer = setTimeout(() => { if (this.t.toAct !== i) return; const o = this.t.options(i); this.t.act(s.addr, o && o.check ? "check" : "fold"); const n = (this.autoFolds.get(s.addr) || 0) + 1; this.autoFolds.set(s.addr, n); if (n >= 3) { const pl = this.players.get(s.addr); if (pl) { this.send(pl.me.ws, { t: "pokererr", why: "You were away, so you stood up." }); this.after(); this.stand(pl.me); return; } } this.after(); }, TURN_MS);
+      this.timer = setTimeout(() => { if (this.t.toAct !== i) return; const o = this.t.options(i); this.t.act(s.addr, o && o.check ? "check" : "fold"); const n = (this.autoFolds.get(s.addr) || 0) + 1; this.autoFolds.set(s.addr, n); if (n >= 3) { const pl = this.players.get(s.addr); if (pl) { this.send(pl.me.ws, { t: "pokererr", vip: this.vip, why: "You were away, so you stood up." }); this.after(); this.stand(pl.me); return; } } this.after(); }, TURN_MS);
       return;
     }
     this.broadcast();
   }
   settleBusted() { // a human with no chips left gives up the seat; their play-chip balance stays as it is (it tops up daily)
-    for (let i = 0; i < SEATS; i++) { const s = this.t.seats[i]; if (s && !s.bot && s.stack === 0) { const p = this.players.get(s.addr); if (p) { p.c.net += -p.in; this.send(p.me.ws, { t: "pokerleft", chips: p.c.chips, net: -p.in, busted: true }); saveChips(p.c); this.players.delete(s.addr); } this.t.seats[i] = null; } }
+    for (let i = 0; i < SEATS; i++) { const s = this.t.seats[i]; if (s && !s.bot && s.stack === 0) { const p = this.players.get(s.addr); if (p) { p.c.net += -p.in; this.send(p.me.ws, { t: "pokerleft", vip: this.vip, chips: p.c.chips, net: -p.in, busted: true }); saveChips(p.c); this.players.delete(s.addr); } this.t.seats[i] = null; } }
     this.fill();
   }
-  async pushTo(me) { const c = await chipsFor(me.addr, me.name); this.send(me.ws, { t: "poker", v: this.t.view(me.addr), deadline: this.deadline, chips: c.chips, seat: this.t.seatOf(me.addr), leaders: await pokerLeaders(5), rules: { min: MIN_BUY, max: MAX_BUY } }); }
+  async pushTo(me) { const c = await chipsFor(me.addr, me.name); this.send(me.ws, { t: "poker", vip: this.vip, v: this.t.view(me.addr), deadline: this.deadline, chips: c.chips, seat: this.t.seatOf(me.addr), leaders: await pokerLeaders(5), rules: { min: this.o.min, max: this.o.max } }); }
   broadcast() { for (const me of this.watch.values()) if (me.ws.readyState === 1) this.pushTo(me); }
 }

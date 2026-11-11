@@ -5,6 +5,7 @@ const SUIT = ['♠', '♥', '♦', '♣'], RK = '23456789TJQKA';
 const CSS = `
 #tbl{position:fixed;inset:0;z-index:40;display:none;overflow:hidden;color:#f3e7c9;font:14px/1.3 system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(ellipse at 50% 38%,#16241b 0,#0a100c 55%,#040605 100%);user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #tbl.on{display:block}
+#tbl.vip .felt{background:radial-gradient(ellipse at 50% 40%,#5a1f6b 0,#3a1247 55%,#1f0a28 100%);border-color:#b8902f;box-shadow:0 0 0 3px #3a2a08,0 0 34px rgba(255,211,77,.35),0 18px 50px rgba(0,0,0,.75),inset 0 0 60px rgba(0,0,0,.55)}#tbl.vip .logo{color:rgba(255,211,77,.4)}#tbl.vip{background:radial-gradient(ellipse at 50% 38%,#24142b 0,#0d0810 55%,#040305 100%)}
 #tbl .top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:max(8px,env(safe-area-inset-top)) 10px 0;z-index:5}
 #tbl .top button{padding:8px 12px;border-radius:10px;border:1px solid rgba(233,201,122,.45);background:rgba(20,16,12,.9);color:#e9c97a;font-size:13px;cursor:pointer}
 #tbl .top .info{font-size:12px;text-align:right;color:#cfe9d5}#tbl .top .info b{color:#9fe3b4}
@@ -67,7 +68,7 @@ export function initTable({ send, esc }) {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
   const root = document.createElement('div'); root.id = 'tbl'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Poker table');
   root.innerHTML = `<div class="top"><button data-a="leave">← Stand up</button><div class="info" id="tbInfo"></div></div>
-    <div class="stage" id="tbStage"><div class="felt"></div><div class="logo">HOOD RICH CLUB</div>
+    <div class="stage" id="tbStage"><div class="felt"></div><div class="logo" id="tbLogo">HOOD RICH CLUB</div>
       <div class="dealer" id="tbDealer"><img src="./assets/dealer.webp" alt="Charlotte, the dealer"><span>Charlotte · Dealer</span></div>
       <div class="deck" id="tbDeck"><i style="transform:translate(-2px,-2px)"></i><i style="transform:translate(-1px,-1px)"></i><i></i></div>
       <div class="pot" id="tbPot"></div><div class="board" id="tbBoard"></div><div class="msg" id="tbMsg"></div><div id="tbSeats"></div></div>
@@ -106,7 +107,8 @@ export function initTable({ send, esc }) {
     const n = v.seats.length, S = $('#tbSeats'); if (+S.dataset.n !== n || +S.dataset.me !== PK.seat) { build(v); hand = -1; }
     const newHand = v.hand !== hand; if (newHand) { hand = v.hand; boardN = 0; dealt = false; lastBets = []; $('#tbBoard').innerHTML = ''; }
     const my = PK.seat >= 0 ? v.seats[PK.seat] : null, live = v.phase !== 'wait' && v.phase !== 'showdown';
-    $('#tbInfo').innerHTML = `Blinds ${n0(v.blinds[0])}/${n0(v.blinds[1])}<br>Your stack <b>${n0(my ? my.stack : 0)}</b>`;
+    root.classList.toggle('vip', !!PK.vip); $('#tbLogo').textContent = PK.vip ? 'VIP · HIGH ROLLERS' : 'HOOD RICH CLUB';
+    $('#tbInfo').innerHTML = `${PK.vip ? '👑 VIP table · ' : ''}Blinds ${n0(v.blinds[0])}/${n0(v.blinds[1])}<br>Your stack <b>${n0(my ? my.stack : 0)}</b>`;
     $('#tbPot').textContent = v.pot ? 'Pot ' + n0(v.pot) : ''; $('#tbPot').style.display = v.pot ? '' : 'none';
     // deal: the first time this hand shows cards, they fly out from the deck one at a time, twice round the table
     const holders = v.seats.map((s, i) => (s && (s.hasCards || (i === PK.seat && s.cards && s.cards.length)) ? i : -1)).filter((i) => i >= 0);

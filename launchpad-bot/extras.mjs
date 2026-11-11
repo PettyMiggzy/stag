@@ -419,7 +419,7 @@ export function initExtras(X) {
     const songs = X.CLIPS(); if (songs.length >= 4) { const pick = [...songs].sort(() => Math.random() - 0.5).slice(0, 4).map((s) => s.title.slice(0, 90)); await tgPost("sendPoll", { chat_id: chat, question: "🎵 Which Winslow Bankz song should we feature next week?", options: pick, is_anonymous: true }); }
   }
 
-  const WYTE_CAP = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>JellyRoll615</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
+  const WYTE_CAP = "🎸🔥 <b>NEW DROP: “WYTE BOYZ”</b> 🦌\n<b>Winslow Bankz</b> ft. <b>Jelly Roll</b> &amp; <b>Pyrexx</b>\nOut now on <b>Stag House Records</b>. Limited to <b>100 copies at $24.99</b> (0.01117 ETH on Robinhood Chain).\n🔥 <b>50% of sales go to $STAG buyback and burn.</b>\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎧 Hear it in the lounge DJ rotation: https://stagwifhood.fun/lounge/";
   const WYTE_KB = { inline_keyboard: [[{ text: "🛒 Collect WYTE BOYZ", url: "https://records.stagwifhood.fun/songs/" }]] };
   const KEYS_CAP = "🔑🔥 <b>NEW SINGLE: “WHO GOT THE KEYS”</b> 🦌\n<b>Winslow Bankz</b> · out now on <b>Stag House Records</b>\nLimited to <b>100 copies at $25</b> (0.0122 ETH on Robinhood Chain).\n\n🛒 Collect: https://records.stagwifhood.fun/songs/\n🎤 Meet the artist: https://records.stagwifhood.fun/artist/";
   const KEYS_KB = { inline_keyboard: [[{ text: "🛒 Collect Who Got the Keys", url: "https://records.stagwifhood.fun/songs/" }]] };
@@ -427,7 +427,7 @@ export function initExtras(X) {
   async function wyteSend(to, draft) { try { await X.sendVideoCard((draft ? "<i>DRAFT, not posted anywhere. Send /wytepost here to post it to the main group.</i>\n\n" : "") + WYTE_CAP, WYTE_KB, "9", to); return true; } catch (e) { log("wyte send err:", e.message); return false; } }
   // ---------- song NFT sale alerts: every purchase on the Stag House Records song shop gets announced in the main chat ----------
   const SONGS = (process.env.SONGS_CONTRACT || "0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4");
-  const SONG_NAMES = { 1: "Money on My Mind", 2: "Crown Too Heavy", 3: "First Heartbreak at School (Remix)", 4: "No Me Llames", 5: "Fresh Cut, White Tee", 6: "Back On Go", 7: "Walk Me Through the Fire", 8: "Still Ridin' Slow", 9: "Hood Rich (the full album)", 10: "WYTE BOYZ (feat. JellyRoll615 & Pyrexx)", 11: "Who Got the Keys", 12: "Who Got the Keys" };
+  const SONG_NAMES = { 1: "Money on My Mind", 2: "Crown Too Heavy", 3: "First Heartbreak at School (Remix)", 4: "No Me Llames", 5: "Fresh Cut, White Tee", 6: "Back On Go", 7: "Walk Me Through the Fire", 8: "Still Ridin' Slow", 9: "Hood Rich (the full album)", 10: "WYTE BOYZ (feat. Jelly Roll & Pyrexx)", 11: "Who Got the Keys", 12: "Who Got the Keys" };
   const SONG_IFACE = new ethers.Interface(["event Bought(address indexed buyer, uint256 indexed id, uint256 price)", "function songInfo(uint256) view returns (uint256 price, uint256 cap, uint256 minted, bool open, bool frozen, string metadataURI)"]);
   const BOUGHT_TOPIC = SONG_IFACE.getEvent("Bought").topicHash;
   const songContract = new ethers.Contract(SONGS, SONG_IFACE, provider);

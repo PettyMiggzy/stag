@@ -150,7 +150,13 @@ export function initLounge(X) {
         if (!DRINKS[m.id] || Date.now() - lastDrink < 15000) return; lastDrink = Date.now(); me.drink = m.id; me.moved = true;
         allIn(me.room, { t: "sys", text: `${DRINKS[m.id]} for ${me.name}` }); setTimeout(() => { if (me) { me.drink = ""; me.moved = true; } }, 60000);
       } else if (typeof m.t === "string" && m.t.startsWith("poker")) {
-        const room = me.room; room.poker = room.poker || new PokerRoom({ send }); await room.poker.handle(me, m);
+        const room = me.room; room.poker = room.poker || new PokerRoom({ send });
+        if (m.vip) { // the high-roller table: any herd rank (100,000 $STAG or more) or a Founder NFT. Play chips only, bigger blinds.
+          if (!((me.lvl || 0) >= 1 || me.founder)) return send(ws, { t: "pokererr", vip: true, why: "The VIP table is for holders: 100,000 $STAG or more, or a Founder NFT. Sign in with your holder wallet." });
+          room.pokerVip = room.pokerVip || new PokerRoom({ send, vip: true });
+          if (m.t === "pokersit" && room.poker.t.seatOf(me.addr) >= 0) return send(ws, { t: "pokererr", vip: true, why: "Stand up from the main table first." });
+          await room.pokerVip.handle(me, m);
+        } else { if (m.t === "pokersit" && room.pokerVip && room.pokerVip.t.seatOf(me.addr) >= 0) return send(ws, { t: "pokererr", why: "Stand up from the VIP table first." }); await room.poker.handle(me, m); }
       } else if (typeof m.t === "string" && m.t.startsWith("cg")) {
         const room = me.room; room.casino = room.casino || new Casino({ send }); await room.casino.handle(me, m);
       } else if (typeof m.t === "string" && m.t.startsWith("du")) {
@@ -165,7 +171,7 @@ export function initLounge(X) {
         const v = await voicePass(me); send(ws, v ? { t: "voice", ...v } : { t: "voice", error: "Voice is not available right now." });
       }
     });
-    ws.on("close", () => { clearTimeout(joinTimer); if (me && byAddr.get(me.addr) === me) { try { me.room.poker && me.room.poker.drop(me); me.room.casino && me.room.casino.drop(me); me.room.duels && me.room.duels.drop(me); } catch {} me.room.players.delete(me.addr); byAddr.delete(me.addr); allIn(me.room, { t: "leave", id: me.id }); log("lounge: leave", me.name, "room", me.room.n, "online", me.room.players.size); } });
+    ws.on("close", () => { clearTimeout(joinTimer); if (me && byAddr.get(me.addr) === me) { try { me.room.poker && me.room.poker.drop(me); me.room.pokerVip && me.room.pokerVip.drop(me); me.room.casino && me.room.casino.drop(me); me.room.duels && me.room.duels.drop(me); } catch {} me.room.players.delete(me.addr); byAddr.delete(me.addr); allIn(me.room, { t: "leave", id: me.id }); log("lounge: leave", me.name, "room", me.room.n, "online", me.room.players.size); } });
     ws.on("error", () => {});
   }
   const pub = (p) => ({ id: p.id, name: p.name, tier: p.tier, founder: p.founder, lvl: p.lvl, x: p.x, z: p.z, ry: p.ry, anim: p.anim, drink: p.drink });

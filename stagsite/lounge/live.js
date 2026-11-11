@@ -102,7 +102,7 @@ ui.innerHTML = `
   <div class="r"><button id="srec">● Record</button><button id="splay" disabled>▶ Play</button></div>
   <div class="r"><a class="dl" id="sdl" style="display:none" download>⬇ Download take</a></div>
   <small>Use headphones, or the beat will bleed into your mic. Nothing is uploaded or saved: your take lives on this device until you download it.</small></div>
-<div id="pk"><h3><span>CARD ROOM</span><span class="chips" id="pkChips"></span><button id="pkX" style="padding:3px 8px">✕</button></h3><div id="pkBoard" class="pkrow"></div><div id="pkPot"></div><div id="pkSeats" class="pkrow"></div><div id="pkMe" class="pkrow"></div><div id="pkAct"></div><div id="pkTimer"><i></i></div><div id="pkLog"></div><div id="pkLead"></div><small class="pkfoot" style="opacity:.7">Play chips only. No cash value, nothing to buy or cash out. Prizes are chosen by the club.</small></div>
+<div id="pk"><h3><span>CARD ROOM</span><span class="chips" id="pkChips"></span><button id="pkX" style="padding:3px 8px">✕</button></h3><div id="pkBoard" class="pkrow"></div><div id="pkPot"></div><div id="pkSeats" class="pkrow"></div><div id="pkMe" class="pkrow"></div><div id="pkAct"></div><button id="pkVip" style="width:100%;margin-top:6px;border-color:#ffd34d;color:#ffd34d">👑 VIP table · holders only · blinds 100/200</button><div id="pkTimer"><i></i></div><div id="pkLog"></div><div id="pkLead"></div><small class="pkfoot" style="opacity:.7">Play chips only. No cash value, nothing to buy or cash out. Prizes are chosen by the club.</small></div>
 <div id="talkp"><h3 id="tpName"></h3><div id="tpSub"></div><div id="tpBtns"></div></div>
 <div id="djp"><h3>DJ BOOTH</h3><div id="djNow"></div><div id="djList"></div><small style="opacity:.75">Tap a track to vote. The most votes plays next.</small></div>
 <div id="dock"><button id="safeBtn" title="If part of the screen goes black, tap this">🛠 Display</button><button id="cardBtn" style="display:none">🃏 Cards</button><button id="talkBtn" style="display:none">💬 Talk</button><button id="djBtn">🎧 DJ</button><button id="studioBtn" style="display:none">🎙 Studio</button><button id="drink">🍸 Bar</button><button id="mic">🎤 Voice</button></div>
@@ -346,7 +346,7 @@ function openSocket() { // if the connection drops, quietly reconnect and rejoin
     else if (m.t === 'poker') pkUpdate(m);
     else if (m.t === 'cg') CG.onMsg(m);
     else if (m.t === 'du') DU.onMsg(m);
-    else if (m.t === 'pokererr') say('sys', '', m.why);
+    else if (m.t === 'pokererr') { say('sys', '', m.why); if (m.vip && PK.seat < 0) vipOff(); }
     else if (m.t === 'pokerleft') pkLeft(m);
     else if (m.t === 'dj') { const was = DJ.idx; djSync(m); if (m.changed && was !== m.idx) djChanged(); }
     else if (m.t === 'rec') { if (m.on) recorders.add(m.id); else recorders.delete(m.id); L.studio.setOnAir(recorders.size > 0); if (m.on) say('sys', '', `${m.name} is recording in the studio`); }
@@ -428,7 +428,7 @@ L.hooks.tick = (dt) => {
   if (keys['a'] || keys['arrowleft']) s -= 1; if (keys['d'] || keys['arrowright']) s += 1;
   f += -joy.y; s += joy.x;
   if (keys['q']) pos.yaw += dt * 1.8; if (keys['e']) pos.yaw -= dt * 1.8;
-  if (PK.seat >= 0) { f = 0; s = 0; const st = L.cardRoom.seats[PK.seat]; if (st) { pos.x = st.x; pos.z = st.z; pos.ry = st.ry; } } // seated: you stay at your seat until you leave the table
+  if (PK.seat >= 0) { f = 0; s = 0; const st = (PK.vip ? null : L.cardRoom.seats[PK.seat]); if (st) { pos.x = st.x; pos.z = st.z; pos.ry = st.ry; } } // seated: you stay at your seat until you leave the table
   const len = Math.hypot(f, s); const moving = len > .08;
   if (moving) {
     const sp = 2.4 * dt / Math.max(1, len); const Fx = -Math.sin(pos.yaw), Fz = -Math.cos(pos.yaw), Rx = Math.cos(pos.yaw), Rz = -Math.sin(pos.yaw);
@@ -459,7 +459,7 @@ L.hooks.tick = (dt) => {
   }
   const cx = pos.x + Math.sin(pos.yaw) * camD, cz = pos.z + Math.cos(pos.yaw) * camD;
   camT.set(Math.max(-11.3, Math.min(11.3, cx)), (inRoom() || inCard()) ? (portrait ? 2.2 : 1.9) : (portrait ? 3.1 : 2.3), Math.max(-15.3, Math.min(15.3, cz))); lookT.set(pos.x, portrait ? 1.6 : 1.35, pos.z); camClip(pos.x, pos.z, camT);
-  if (PK.seat >= 0) { const st = L.cardRoom.seats[PK.seat], c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; const R = L.cardRoom.room; camT.set(Math.min(R.x1 - .2, Math.max(R.x0 + .3, st.x + dx / l * 1.1)), 2.05, Math.min(R.z1 - .25, Math.max(R.z0 + .25, st.z + dz / l * 1.1))); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
+  if (PK.seat >= 0) { const st = (PK.vip ? null : L.cardRoom.seats[PK.seat]), c = L.cardRoom.center; if (st) { const dx = st.x - c[0], dz = st.z - c[1], l = Math.hypot(dx, dz) || 1; const R = L.cardRoom.room; camT.set(Math.min(R.x1 - .2, Math.max(R.x0 + .3, st.x + dx / l * 1.1)), 2.05, Math.min(R.z1 - .25, Math.max(R.z0 + .25, st.z + dz / l * 1.1))); lookT.set(c[0], .8, c[1]); } } // seated: look over your shoulder at the table
   camera.position.lerp(camT, Math.min(1, dt * 6)); camera.lookAt(lookT);
   if (L.camOverride) { const c = L.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); }
   voiceTick(); subscribeNearby(dt); studioTick(); npcTick(dt); djTick(dt); cardTick();
@@ -698,18 +698,19 @@ function djTick() { // volume follows distance to the booth; softer inside the s
 
 
 /* ---------- card room: Texas Hold'em on play chips ---------- */
-const PK = { v: null, seat: -1, chips: 0, deadline: 0, leaders: [], rules: { min: 400, max: 5000 }, watching: false, buy: 2000, raise: 0 };
+const PK = { v: null, seat: -1, chips: 0, deadline: 0, leaders: [], rules: { min: 400, max: 5000 }, watching: false, buy: 2000, raise: 0, vip: false, vipWant: false };
 const inCard = () => { const r = L.cardRoom.room; return pos.x > r.x0 - .5 && pos.x < r.x1 && pos.z > r.z0 && pos.z < r.z1; };
 const SUIT = ['♠', '♥', '♦', '♣'], RK = '23456789TJQKA';
 const cardH = (c, big) => c == null ? `<span class="pc back${big ? ' big' : ''}">♠</span>` : `<span class="pc${(Math.floor(c / 13) === 1 || Math.floor(c / 13) === 2) ? ' r' : ''}${big ? ' big' : ''}">${RK[c % 13] === 'T' ? '10' : RK[c % 13]}${SUIT[Math.floor(c / 13)]}</span>`;
 function cardTick() {
   const inside = !!me && inCard(); $('#cardBtn').style.display = inside || PK.seat >= 0 ? 'inline-block' : 'none';
-  if (inside && !PK.watching) { PK.watching = true; sendWs({ t: 'pokerwatch', on: true }); }
-  if (!inside && PK.watching && PK.seat < 0) { PK.watching = false; sendWs({ t: 'pokerwatch', on: false }); L.cardRoom.setTable(null); $('#pk').style.display = 'none'; }
+  if (inside && !PK.watching && !PK.vip) { PK.watching = true; sendWs({ t: 'pokerwatch', on: true }); }
+  if (!inside && PK.watching && PK.seat < 0 && !PK.vip) { PK.watching = false; sendWs({ t: 'pokerwatch', on: false }); L.cardRoom.setTable(null); $('#pk').style.display = 'none'; }
 }
 $('#safeBtn').onclick = () => { const on = !L.isSafe(); L.setSafe(on, true); say('sys', '', on ? 'Compatibility display on (no glow or mirror floor). Tap again to switch back.' : 'Full display back on.'); };
 $('#cardBtn').onclick = () => { const p = $('#pk'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; if (p.style.display === 'block') pkRender(); };
 $('#pkX').onclick = () => { $('#pk').style.display = 'none'; };
+$('#pkVip').onclick = goVip;
 let dcPhase = '', dcHand = -1, dcAt = 0;
 function dealerCall(v) { // the dealer announces each street once, for anyone in or watching the card room
   const n = NPCS.dealer; if (!n || !v) return; const now = performance.now(); const key = v.hand + ':' + v.phase;
@@ -718,15 +719,29 @@ function dealerCall(v) { // the dealer announces each street once, for anyone in
   const k = { preflop: 'newhand', flop: 'flop', turn: 'turn', river: 'river', showdown: 'show' }[v.phase]; if (!k) return; dcAt = now;
   setTimeout(() => { n.greetAnim = k === 'show' ? 'agree' : 'chat'; n.greetUntil = performance.now() + 2200; npcSay(n, k); }, 400);
 }
+function vipOff() { if (!PK.vip) return; sendWs({ t: 'pokerwatch', on: false, vip: true }); PK.vip = false; PK.vipWant = false; PK.v = null; PK.watching = false; PK.rules = { min: 400, max: 5000 }; }
+function goVip() { // the high-roller table: holders only (the server checks), bigger blinds, same play chips
+  if (PK.seat >= 0) return;
+  if (!SELF.tier || SELF.tier === 'Guest') { say('sys', '', 'The VIP table is for holders: 100,000 $STAG or more, or a Founder NFT. Sign in with your holder wallet to sit.'); return; }
+  sendWs({ t: 'pokerwatch', on: false }); L.cardRoom.setTable(null); $('#pk').style.display = 'none'; PK.vip = true; PK.vipWant = true; PK.v = null; sendWs({ t: 'pokerwatch', on: true, vip: true }); say('sys', '', 'Taking you to the VIP table…');
+}
 function pkUpdate(m) {
+  if (!!m.vip !== !!PK.vip) return; // only the table you are at
   PK.v = m.v; PK.chips = m.chips; PK.deadline = m.deadline || 0; PK.leaders = m.leaders || []; PK.rules = m.rules || PK.rules;
-  dealerCall(m.v);
-  const was = PK.seat; PK.seat = m.seat; L.cardRoom.mySeat = PK.seat; L.cardRoom.setTable(m.v); $('#pk').classList.toggle('seated', PK.seat >= 0);
+  if (!PK.vip) dealerCall(m.v);
+  const was = PK.seat; PK.seat = m.seat; L.cardRoom.mySeat = PK.vip ? -1 : PK.seat; if (!PK.vip) L.cardRoom.setTable(m.v);
+  if (PK.vip && PK.vipWant && PK.seat < 0) { // walked over to the VIP table: take the first open seat
+    PK.vipWant = false; const free = (m.v.seats || []).findIndex((x) => !x), min = PK.rules.min;
+    if (PK.chips < min) { say('sys', '', `The VIP table needs ${min.toLocaleString()} play chips to sit. You have ${PK.chips.toLocaleString()}.`); vipOff(); return; }
+    if (free < 0) { say('sys', '', 'The VIP table is full right now.'); vipOff(); return; }
+    pkSend({ t: 'pokersit', seat: free, buyin: Math.min(PK.rules.max, PK.chips, Math.max(min, 6000)) }); return;
+  }
+ $('#pk').classList.toggle('seated', PK.seat >= 0);
   if (PK.seat >= 0 && was < 0) say('sys', '', 'You sat down. Play chips only. Press E to stand up.');
   if (PK.seat >= 0) { $('#pk').style.display = 'none'; TB.open(PK); L.pause3d = true; } else { if (TB.isOpen) { TB.close(); L.pause3d = false; } if ($('#pk').style.display === 'block') pkRender(); }
 }
 function pkLeft(m) {
-  PK.seat = -1; const st = PK.v && PK.v.seats; say('sys', '', `${m.busted ? 'You ran out of chips. ' : ''}You left the table with ${m.net >= 0 ? '+' : ''}${m.net} play chips this session. Balance: ${m.chips}.`);
+  PK.seat = -1; if (m.vip) vipOff(); const st = PK.v && PK.v.seats; say('sys', '', `${m.busted ? 'You ran out of chips. ' : ''}You left the table with ${m.net >= 0 ? '+' : ''}${m.net} play chips this session. Balance: ${m.chips}.`);
   PK.chips = m.chips; L.cardRoom.mySeat = -1; TB.close(); L.pause3d = false; $('#pk').classList.remove('seated'); $('#pk').style.display = 'none'; L.cardRoom.setTable(PK.v); pkRender();
 }
 function pokerSit() { // E at the table: take the nearest free seat with a sensible buy-in, and the table view opens by itself
@@ -737,7 +752,7 @@ function pokerSit() { // E at the table: take the nearest free seat with a sensi
   const buy = Math.max(min, Math.min(PK.buy, max)); pkSend({ t: 'pokersit', seat: best, buyin: Math.floor(buy / 100) * 100 });
 }
 addEventListener('keydown', (e) => { if ((e.key === 'e' || e.key === 'E') && !e.repeat && PK.seat >= 0 && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) pkSend({ t: 'pokerleave' }); });
-const pkSend = (o) => sendWs(o);
+const pkSend = (o) => sendWs(PK.vip ? { ...o, vip: true } : o);
 const esc2 = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TB = initTable({ send: pkSend, esc: esc2 }); // the seated view: real cards, dealer dealing, 3D paused underneath
 function pkRender() {
