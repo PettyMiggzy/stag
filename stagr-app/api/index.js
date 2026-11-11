@@ -12,4 +12,6 @@ import '../lib/routes/automations.js';
 import '../lib/routes/insights.js';
 import '../lib/routes/devices.js';
 import '../lib/routes/payments.js';
+import '../lib/routes/inbox.js';
+import '../lib/routes/tools.js';
 export default handle;

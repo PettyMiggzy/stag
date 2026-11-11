@@ -145,7 +145,9 @@ route('GET', '/api/public/b/:slug', { public: true }, async ctx => {
   const [t] = await sql`SELECT id, name, slug, phone, city, state, brand_color, settings FROM tenants WHERE slug = ${clean(ctx.params.slug, 60)}`;
   if (!t || (t.settings || {}).booking_enabled === false) throw missing('Booking page not found');
   const services = await sql`SELECT name, description FROM services WHERE tenant_id = ${t.id} AND active ORDER BY name`;
-  return { business: { name: t.name, phone: t.phone, city: t.city, state: t.state, brand_color: t.brand_color, intro: (t.settings || {}).booking_intro || '' }, services };
+  const st = t.settings || {}, pr = st.pricing || {};
+  return { business: { name: t.name, phone: t.phone, city: t.city, state: t.state, brand_color: t.brand_color, intro: st.booking_intro || '', logo: st.logo || '' }, services,
+    pricing: pr.show_on_booking ? { loads: pr.loads || [], hourly: pr.hourly && pr.hourly.rate > 0 ? pr.hourly : null } : null };
 });
 route('POST', '/api/public/b/:slug/request', { public: true }, async ctx => {
   const [t] = await sql`SELECT id, settings FROM tenants WHERE slug = ${clean(ctx.params.slug, 60)}`;

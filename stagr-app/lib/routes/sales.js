@@ -30,7 +30,7 @@ const getQuote = async (tid, id) => { const [q] = await sql`SELECT * FROM quotes
 
 route('GET', '/api/quotes', async ctx => {
   const rows = await sql`SELECT q.*, c.name AS customer_name FROM quotes q JOIN customers c ON c.id = q.customer_id AND c.tenant_id = q.tenant_id WHERE q.tenant_id = ${ctx.tid} ORDER BY q.created_at DESC LIMIT 300`;
-  return { quotes: rows.map(shapeQuote) };
+  return { quotes: rows.map(q => { const s = shapeQuote(q); s.has_signature = !!s.signature; delete s.signature; return s; }) };
 });
 route('POST', '/api/quotes', async ctx => {
   const b = ctx.body, c = await getCustomer(ctx.tid, b.customer_id), pid = await ownProperty(ctx.tid, c.id, b.property_id);
@@ -77,12 +77,12 @@ route('POST', '/api/quotes/:id/send', async ctx => {
 route('GET', '/api/public/q/:token', { public: true }, async ctx => {
   let [q] = await sql`SELECT * FROM quotes WHERE token = ${clean(ctx.params.token, 80)}`; if (!q || q.status === 'draft') throw missing('Quote not found');
   if (await settlePending(q.tenant_id, { quoteId: q.id }).catch(() => 0)) [q] = await sql`SELECT * FROM quotes WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
-  const [t] = await sql`SELECT name, phone, email, city, state, brand_color FROM tenants WHERE id = ${q.tenant_id}`;
+  const [t] = await sql`SELECT name, phone, email, city, state, brand_color, COALESCE(settings ->> 'logo', '') AS logo FROM tenants WHERE id = ${q.tenant_id}`;
   const [c] = await sql`SELECT name FROM customers WHERE id = ${q.customer_id} AND tenant_id = ${q.tenant_id}`;
   const [p] = q.property_id ? await sql`SELECT address, city, state, zip FROM properties WHERE id = ${q.property_id} AND tenant_id = ${q.tenant_id}` : [];
   if (!q.viewed_at) await sql`UPDATE quotes SET viewed_at = now() WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
   const s = shapeQuote(q);
-  return { business: t, customer: c.name, property: p || null, quote: { label: s.label, title: s.title, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, discount_pct: s.discount_pct, tax: s.tax, tax_pct: s.tax_pct, total: s.total, deposit: s.deposit, deposit_pct: Number(s.deposit_pct) || 0, deposit_due: s.deposit_due, deposit_paid: !!s.deposit_paid_at, message: s.message, sent_at: s.sent_at, decided_at: s.decided_at, signed_name: s.signed_name }, online_payments: q.status === 'approved' && !q.deposit_paid_at && s.deposit_due >= 1 && await cardReady(q.tenant_id) };
+  return { business: t, customer: c.name, property: p || null, quote: { label: s.label, title: s.title, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, discount_pct: s.discount_pct, tax: s.tax, tax_pct: s.tax_pct, total: s.total, deposit: s.deposit, deposit_pct: Number(s.deposit_pct) || 0, deposit_due: s.deposit_due, deposit_paid: !!s.deposit_paid_at, message: s.message, sent_at: s.sent_at, decided_at: s.decided_at, signed_name: s.signed_name, signature: s.signature || '' }, online_payments: q.status === 'approved' && !q.deposit_paid_at && s.deposit_due >= 1 && await cardReady(q.tenant_id) };
 });
 route('POST', '/api/public/q/:token/decide', { public: true }, async ctx => {
   const [q] = await sql`SELECT * FROM quotes WHERE token = ${clean(ctx.params.token, 80)}`; if (!q || q.status === 'draft') throw missing('Quote not found');
@@ -94,7 +94,10 @@ route('POST', '/api/public/q/:token/decide', { public: true }, async ctx => {
     const pick = new Set(ctx.body.selected.map(Number)); items = q.items.map((it, idx) => it.optional ? { ...it, selected: pick.has(idx) } : it);
   }
   if (decision === 'approved' && !billable(items).length) throw bad('Pick at least one item');
-  await sql`UPDATE quotes SET status = ${decision}, decided_at = now(), signed_name = ${name}, client_note = ${clean(ctx.body.note, 500)}, items = ${JSON.stringify(items)}::jsonb WHERE id = ${q.id} AND tenant_id = ${q.tenant_id}`;
+  const sig = String(ctx.body.signature || ''), signature = decision === 'approved' && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(sig) && sig.length < 120000 ? sig : '';
+  const [done] = await sql`UPDATE quotes SET status = ${decision}, decided_at = now(), signed_name = ${name}, client_note = ${clean(ctx.body.note, 500)}, items = ${JSON.stringify(items)}::jsonb, signature = ${signature}, signed_ip = ${clean(ctx.ip, 60)}
+    WHERE id = ${q.id} AND tenant_id = ${q.tenant_id} AND status = 'sent' RETURNING id`;
+  if (!done) throw bad('This quote has already been answered');
   await logActivity(q.tenant_id, q.customer_id, 'quote', `Quote Q-${q.number} ${decision} by customer`);
   await notify(q.tenant_id, { title: decision === 'approved' ? 'Quote approved' : 'Quote declined', body: `Q-${q.number} was ${decision}${name ? ' by ' + name : ''}`, path: '/quotes/' + q.id });
   return { ok: true, status: decision };

@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 const PGBIN = process.env.PGBIN || '/usr/lib/postgresql/16/bin', DB = 'stagr_test';
 const psql = c => execSync(`${PGBIN}/psql -h /tmp -p 5544 -U postgres -qAt -c "${c}"`, { stdio: ['ignore', 'pipe', 'pipe'] });
 try { psql(`DROP DATABASE IF EXISTS ${DB}`); psql(`CREATE DATABASE ${DB}`); } catch (e) { console.error('Could not reach local Postgres on port 5544:', String(e.stderr || e)); process.exit(2); }
-process.env.DATABASE_URL = `postgresql://postgres@/${DB}?host=/tmp&port=5544`; process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret'; process.env.CRON_SECRET = 'cron-test';
+process.env.DATABASE_URL = `postgresql://postgres@/${DB}?host=/tmp&port=5544`; process.env.QUIET_HOURS = 'off'; process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret'; process.env.CRON_SECRET = 'cron-test';
 delete process.env.TWILIO_ACCOUNT_SID; delete process.env.RESEND_API_KEY;
 const { start } = await import('../dev/server.mjs'); const { sql } = await import('../lib/db.js');
 const srv = await start(8795), BASE = 'http://localhost:8795';
@@ -442,6 +442,82 @@ ok('no cross-tenant references anywhere in the database', Number(cross[0].n) ===
   r = await anon.get('/api/public/i/' + inv3.token); r = await C.post('/api/invoices', { customer_id: pc.id, items: [{ name: 'After', price: 60 }] }); await C.post('/api/invoices/' + r.j.invoice.id + '/send', { sms: false, email: false });
   r = await anon.get('/api/public/i/' + r.j.invoice.token); ok('no pay button after disconnecting', r.j.online_payments === false, r.j);
   delete process.env.SQUARE_APP_ID; delete process.env.SQUARE_APP_SECRET; mock.close();
+}
+
+// ---------- two-way texting, STOP, on my way, quiet hours ----------
+{
+  const { twilioSignature } = await import('../lib/routes/reviews.js'); const { quietUntil } = await import('../lib/routes/comms.js');
+  const T1 = new Client(), T2 = new Client(), TW = new Client();
+  r = await T1.post('/api/auth/signup', { business: 'Text Co', name: 'Tina Texter', email: 'tina@text.test', password: 'password11' }); ok('signup text co', r.s === 200, r);
+  await T2.post('/api/auth/signup', { business: 'Other Text', name: 'Omar', email: 'omar@text2.test', password: 'password11' });
+  r = await T1.post('/api/team', { name: 'Wes Worker', email: 'wes@text.test', password: 'password11', role: 'worker' }); const wes = r.j.member; await TW.post('/api/auth/login', { email: 'wes@text.test', password: 'password11' });
+  r = await T1.post('/api/customers', { name: 'Rita Reply', phone: '5559990001', sms_opt_in: true }); const rc = r.j.customer;
+  r = await T1.post('/api/messages', { customer_id: rc.id, body: 'Hi Rita, see you at 9' }); ok('outbound text saved', r.s === 200, r);
+  const inbound = async (params, { sign = true, token = 'twilio-test-token' } = {}) => { const url = BASE + '/api/webhooks/twilio/inbound', body = new URLSearchParams(params).toString();
+    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-twilio-signature': sign ? twilioSignature(token, url, params) : 'nope' }, body }); return { s: res.status, t: await res.text(), ct: res.headers.get('content-type') }; };
+  r = await inbound({ From: '+15559990001', Body: 'ok thanks', MessageSid: 'SMin1' }); ok('inbound webhook is off until Twilio is configured', r.s === 404, r);
+  process.env.TWILIO_AUTH_TOKEN = 'twilio-test-token'; process.env.PUBLIC_URL = BASE;
+  r = await inbound({ From: '+15559990001', Body: 'ok thanks', MessageSid: 'SMin1' }, { sign: false }); ok('unsigned inbound text is refused', r.s === 403, r);
+  r = await inbound({ From: '+15559990001', Body: 'ok thanks', MessageSid: 'SMin1' }); ok('signed inbound text accepted with TwiML', r.s === 200 && /<Response>/.test(r.t) && /xml/.test(r.ct), r);
+  await inbound({ From: '+15559990001', Body: 'ok thanks', MessageSid: 'SMin1' });
+  r = await T1.get('/api/inbox'); ok('reply shows in the right business inbox, once, unread', r.s === 200 && r.j.conversations.length === 1 && r.j.conversations[0].unread === 1 && r.j.conversations[0].body === 'ok thanks' && r.j.unread === 1, r.j);
+  r = await T2.get('/api/inbox'); ok('another business does not see the reply', r.j.conversations.length === 0, r.j);
+  r = await TW.get('/api/inbox'); ok('workers cannot read the inbox', r.s === 403, r.s);
+  r = await T1.get('/api/inbox/' + rc.id); ok('thread shows both directions in order', r.j.messages.length === 2 && r.j.messages[0].direction === 'out' && r.j.messages[1].direction === 'in', r.j.messages);
+  r = await T1.get('/api/inbox'); ok('opening the thread marks it read', r.j.unread === 0, r.j);
+  r = await T2.get('/api/inbox/' + rc.id); ok('another business cannot open the thread', r.s === 404, r.s);
+  r = await inbound({ From: '+15559990001', Body: ' Stop. ', MessageSid: 'SMin2' }); const [oc] = await sql`SELECT sms_opt_in, sms_opt_out_at FROM customers WHERE id = ${rc.id}`; ok('STOP turns off texting for that customer', r.s === 200 && oc.sms_opt_in === false && !!oc.sms_opt_out_at, oc);
+  r = await T1.post('/api/messages', { customer_id: rc.id, body: 'one more thing' }); ok('texts to a customer who said STOP are blocked', r.s === 200 && r.j.message.status === 'blocked', r.j);
+  await inbound({ From: '+15559990001', Body: 'START', MessageSid: 'SMin3' }); const [oc2] = await sql`SELECT sms_opt_out_at FROM customers WHERE id = ${rc.id}`; ok('START lifts the block', oc2.sms_opt_out_at === null, oc2);
+  r = await inbound({ From: '+15550000000', Body: 'who dis', MessageSid: 'SMin4' }); ok('a text from an unknown number is ignored quietly', r.s === 200, r);
+  delete process.env.TWILIO_AUTH_TOKEN; delete process.env.PUBLIC_URL;
+  // on my way
+  r = await T1.post('/api/jobs', { customer_id: rc.id, title: 'Haul', visit: { starts_at: new Date(Date.now() + 3600e3).toISOString(), assigned: [wes.id] } }); const oj = r.j.job; r = await T1.get('/api/jobs/' + oj.id); const ov = r.j.visits[0];
+  r = await TW.post('/api/visits/' + ov.id + '/omw', { eta_minutes: 20 }); ok('assigned worker sends on-my-way', r.s === 200 && r.j.status === 'preview', r);
+  const [om] = await sql`SELECT body, kind FROM messages WHERE tenant_id = (SELECT tenant_id FROM users WHERE email = 'tina@text.test') AND kind = 'on_my_way'`; ok('on-my-way text names the worker and the wait', !!om && /Wes from Text Co is on the way/.test(om.body) && /20 minutes/.test(om.body), om);
+  r = await TW.post('/api/visits/' + ov.id + '/omw', {}); ok('on-my-way is sent once per visit per day', r.s === 200 && r.j.already === true, r);
+  r = await T1.post('/api/jobs', { customer_id: rc.id, title: 'Not his', visit: { starts_at: new Date(Date.now() + 7200e3).toISOString() } }); r = await T1.get('/api/jobs/' + r.j.job.id);
+  r = await TW.post('/api/visits/' + r.j.visits[0].id + '/omw', {}); ok('worker cannot send on-my-way for a visit that is not theirs', r.s === 403, r.s);
+  // quiet hours: automatic texts wait for 8 AM local, hand-sent ones do not
+  const at = h => new Date(Date.UTC(2026, 5, 10, h, 0, 0)); // June: Chicago is UTC-5
+  ok('11 PM local holds a reminder until 8 AM local', quietUntil('appointment_reminder', 'America/Chicago', at(4)).toISOString() === '2026-06-10T13:00:00.000Z', quietUntil('appointment_reminder', 'America/Chicago', at(4)));
+  ok('7 AM local still holds', !!quietUntil('review_request', 'America/Chicago', at(12)), 1); ok('8 AM local sends', quietUntil('invoice_reminder', 'America/Chicago', at(13)) === null, 1);
+  ok('8:59 PM local sends, 9 PM holds', quietUntil('quote_followup', 'America/Chicago', new Date(Date.UTC(2026, 5, 11, 1, 59))) === null && !!quietUntil('quote_followup', 'America/Chicago', new Date(Date.UTC(2026, 5, 11, 2, 0))), 1);
+  ok('texts a person sends are never held', quietUntil('manual', 'America/Chicago', at(4)) === null && quietUntil('on_my_way', 'America/Chicago', at(4)) === null && quietUntil('invoice', 'America/Chicago', at(4)) === null, 1);
+}
+
+// ---------- import, export, quick prices, logo, signature ----------
+{
+  const I = new Client(), I2 = new Client(), IW = new Client(); r = await I.post('/api/auth/signup', { business: 'Import Co', name: 'Ivy', email: 'ivy@import.test', password: 'password12' }); ok('signup import co', r.s === 200, r);
+  await I.post('/api/team', { name: 'Wyn', email: 'wyn@import.test', password: 'password12', role: 'worker' }); await IW.post('/api/auth/login', { email: 'wyn@import.test', password: 'password12' });
+  await I.post('/api/customers', { name: 'Already Here', phone: '5551110000' });
+  const rows = [{ name: 'New One', phone: '(555) 222-0000', email: 'one@x.test', address: '1 Main St', city: 'Avon', state: 'in', zip: '46123' }, { name: 'Dup Phone', phone: '555-111-0000' }, { name: '', phone: '5553330000' }, { name: 'New Two', email: 'two@x.test' }, { name: 'Dup In File', email: 'TWO@x.test' }, { name: '=HYPERLINK("http://evil")', phone: '5554440000' }];
+  r = await I.post('/api/import/customers', { rows }); ok('import adds new people and skips duplicates and blanks', r.s === 200 && r.j.added === 3 && r.j.skipped === 2 && r.j.invalid === 1, r.j);
+  r = await I.post('/api/import/customers', { rows }); ok('importing the same file again adds nothing', r.j.added === 0, r.j);
+  r = await IW.post('/api/import/customers', { rows }); ok('workers cannot import', r.s === 403, r.s);
+  r = await I.post('/api/import/customers', { rows: Array.from({ length: 2001 }, (_, i) => ({ name: 'N' + i })) }); ok('import size is capped', r.s === 400, r.s);
+  r = await I.get('/api/export/customers.csv'); ok('customer export has the imported address', r.s === 200 && /New One,,5552220000,one@x\.test,1 Main St,Avon,IN,46123/.test(r.text), r.text.slice(0, 300));
+  ok('a formula in a name is defused in the export', r.text.includes(`"'=HYPERLINK(""http://evil"")"`), r.text);
+  r = await IW.get('/api/export/customers.csv'); ok('workers cannot export customers', r.s === 403, r.s);
+  r = await I.put('/api/business/pricing', { loads: [{ label: '1/4 truck', price: '$225' }, { label: 'Full truck', price: 650 }, { label: '', price: 5 }, { label: 'Free', price: 0 }], hourly: { rate: 65, min_hours: 2, truck_fee: 50 }, show_on_booking: true });
+  ok('quick prices saved and cleaned', r.s === 200 && r.j.pricing.loads.length === 2 && r.j.pricing.loads[0].price === 225 && r.j.pricing.hourly.rate === 65, r.j);
+  const slug = (await I.get('/api/auth/me')).j.business.slug; r = await anon.get('/api/public/b/' + slug); ok('booking page shows the price guide when turned on', r.j.pricing && r.j.pricing.loads.length === 2 && r.j.pricing.hourly.min_hours === 2, r.j);
+  await I.put('/api/business/pricing', { loads: [{ label: 'Full truck', price: 650 }], show_on_booking: false }); r = await anon.get('/api/public/b/' + slug); ok('price guide hidden when turned off', r.j.pricing === null, r.j);
+  r = await I.get('/api/auth/me'); ok('saving prices did not wipe other settings', r.j.business.settings.pricing.loads.length === 1, r.j.business.settings);
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  r = await I.put('/api/business/logo', { data: 'data:text/html;base64,PGI+' }); ok('logo must be an image', r.s === 400, r.s);
+  r = await I.put('/api/business/logo', { data: png }); ok('logo saved', r.s === 200 && r.j.business.settings.logo === png && r.j.business.settings.pricing.loads.length === 1, Object.keys(r.j.business.settings));
+  r = await I.get('/api/customers'); const ic = r.j.customers.find(c => c.name === 'New One');
+  r = await I.post('/api/quotes', { customer_id: ic.id, items: [{ name: 'Full truck', price: 650 }] }); const iq = r.j.quote; await I.post('/api/quotes/' + iq.id + '/send', { sms: false, email: false });
+  r = await anon.get('/api/public/q/' + iq.token); ok('customer quote page carries the logo', r.j.business.logo === png, Object.keys(r.j.business));
+  r = await anon.post('/api/public/q/' + iq.token + '/decide', { decision: 'approve', name: 'New One', signature: 'data:image/svg+xml;base64,AAAA' }); ok('approve with a bad signature image still approves, without it', r.s === 200, r);
+  r = await anon.get('/api/public/q/' + iq.token); ok('bad signature was not stored', r.j.quote.signature === '', r.j.quote.signature);
+  r = await anon.post('/api/public/q/' + iq.token + '/decide', { decision: 'approve', name: 'Again' }); ok('a quote cannot be answered twice', r.s === 400, r);
+  r = await I.post('/api/quotes', { customer_id: ic.id, items: [{ name: 'Half truck', price: 400 }] }); const iq2 = r.j.quote; await I.post('/api/quotes/' + iq2.id + '/send', { sms: false, email: false });
+  r = await anon.post('/api/public/q/' + iq2.token + '/decide', { decision: 'approve', name: 'New One', signature: png }); ok('approve with a drawn signature', r.s === 200, r);
+  r = await I.get('/api/quotes/' + iq2.id); ok('signature is kept with the approval', r.j.quote.signature === png && r.j.quote.signed_name === 'New One' && !!r.j.quote.signed_ip, { n: r.j.quote.signed_name, ip: r.j.quote.signed_ip });
+  r = await I.get('/api/quotes'); ok('quote list flags the signature without carrying the image', r.j.quotes.find(q => q.id === iq2.id).has_signature === true && !JSON.stringify(r.j).includes('iVBOR'), 1);
+  r = await anon.get('/api/public/i/nope'); const hd = await fetch(BASE + '/app'); ok('pages carry a content security policy', /default-src 'self'/.test(hd.headers.get('content-security-policy') || ''), hd.headers.get('content-security-policy'));
 }
 
 // ---------- money: concurrent payments, edits, deposits ----------

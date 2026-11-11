@@ -2,7 +2,7 @@ import { route } from '../router.js';
 import { sql } from '../db.js';
 import { bad, missing, HttpError } from '../http.js';
 import { need } from '../auth.js';
-import { clean, phone as cleanPhone } from '../util.js';
+import { clean, phone as cleanPhone, nextLocalHour } from '../util.js';
 import { shapeInvoice } from './shapes.js';
 
 export const baseUrl = req => (process.env.PUBLIC_URL || (req ? `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-host'] || req.headers.host}` : '')).replace(/\/$/, '');
@@ -34,6 +34,15 @@ export async function sendSystemEmail({ to, subject, text }) {
   } catch (e) { return { ok: false, error: String(e && e.message).slice(0, 200) }; }
 }
 sendSystemEmail.configured = () => !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+export const smsReady = () => !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+// Automatic texts (reminders, follow-ups, offers, review requests) never go out late at night: between 9 PM and 8 AM
+// in the business's time zone they wait for 8 AM. Texts a person sends by hand are not held.
+const AUTO_KINDS = new Set(['appointment_reminder', 'quote_followup', 'invoice_reminder', 'monthly_followup', 'review_request']);
+export function quietUntil(kind, tz, now = new Date()) {
+  if (!AUTO_KINDS.has(kind)) return null;
+  let h; try { h = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz || 'America/Chicago', hourCycle: 'h23', hour: '2-digit' }).format(now)); } catch { return null; }
+  return h >= 21 || h < 8 ? nextLocalHour(now, tz || 'America/Chicago', 8) : null;
+}
 
 // ---- delivery. Without a provider connected, messages are saved as "preview" and nothing is sent. ----
 async function deliver(m, tenant) {
@@ -61,6 +70,8 @@ export async function queueMessage({ tid, customer, channel, kind, body, ref = '
   else if (channel === 'sms' && customer.sms_opt_out_at && !customer.sms_opt_in) { status = 'blocked'; error = 'Customer opted out of texts'; }
   else if (channel === 'sms' && marketing && !customer.sms_opt_in) { status = 'blocked'; error = 'No text consent on file'; }
   else if (channel === 'email' && customer.email_opt_out && marketing) { status = 'blocked'; error = 'Customer opted out of email'; }
+  // held texts are simply not created yet: the scheduled job tries again every 15 minutes and sends them once it is 8 AM
+  if (channel === 'sms' && AUTO_KINDS.has(kind) && !scheduled_for && process.env.QUIET_HOURS !== 'off') { const [tz] = await sql`SELECT timezone FROM tenants WHERE id = ${tid}`; if (quietUntil(kind, tz && tz.timezone)) return null; }
   let row;
   try { [row] = await sql`INSERT INTO messages (tenant_id, customer_id, channel, direction, kind, body, to_addr, status, error, ref, scheduled_for, visit_id, job_id) VALUES (${tid}, ${customer.id}, ${channel}, 'out', ${kind}, ${text}, ${to || ''}, ${status}, ${error}, ${ref}, ${scheduled_for || new Date()}, ${visit_id}, ${job_id}) RETURNING *`; }
   catch (e) { if (/messages_ref/.test(String(e.message))) return null; throw e; } // already queued for this ref

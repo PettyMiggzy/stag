@@ -21,4 +21,6 @@ export async function readBody(req) {
   if (!chunks.length) return {};
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw bad('Invalid JSON'); }
 }
-export const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+// Behind one proxy (ours), the address it appended is the last entry; earlier entries are whatever the caller sent and cannot be trusted.
+// TRUST_PROXY_HOPS says how many proxies of ours sit in front (default 1).
+export const clientIp = req => { const list = String(req.headers['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean), hops = Math.max(1, Number(process.env.TRUST_PROXY_HOPS) || 1); return list.length ? list[Math.max(0, list.length - hops)] : String(req.socket?.remoteAddress || ''); };

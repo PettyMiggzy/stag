@@ -8,6 +8,8 @@ export function start(port = Number(process.env.PORT) || 8790) {
     const u = new URL(req.url, 'http://x');
     // same headers vercel.json sets, so the app is protected the same way when it runs on our own server
     res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'same-origin'); res.setHeader('X-Frame-Options', 'DENY');
+    if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
     if (u.pathname === '/sw.js') { res.setHeader('Cache-Control', 'no-cache'); res.setHeader('Service-Worker-Allowed', '/'); }
     const lg = u.pathname.match(/^\/(privacy|sms-terms)\/([^/]+)$/); if (lg) { return handle(req, res); }
     if (u.pathname.startsWith('/api/')) return handle(req, res);

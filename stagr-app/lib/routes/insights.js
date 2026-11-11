@@ -3,7 +3,10 @@ import { sql } from '../db.js';
 import { need } from '../auth.js';
 import { r2, paidSum, totals } from '../util.js';
 import { shapeInvoice, shapeQuote } from './shapes.js';
+import { csvText } from './tools.js';
 
+// The calendar date in a time zone, as YYYY-MM-DD.
+const localParts = (d, tz) => { try { return { date: new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d) }; } catch { return { date: d.toISOString().slice(0, 10) }; } };
 route('GET', '/api/dashboard', async ctx => {
   const tid = ctx.tid, worker = ctx.user.role === 'worker', now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), startDay = new Date(now.getTime() - 12 * 3600e3);
   const upcoming = await sql`SELECT v.id, v.starts_at, v.ends_at, v.status, v.assigned, j.title, j.id AS job_id, c.name AS customer_name, p.address FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id JOIN customers c ON c.id = j.customer_id AND c.tenant_id = j.tenant_id LEFT JOIN properties p ON p.id = j.property_id AND p.tenant_id = j.tenant_id
@@ -14,10 +17,10 @@ route('GET', '/api/dashboard', async ctx => {
     sql`SELECT q.*, c.name AS customer_name FROM quotes q JOIN customers c ON c.id = q.customer_id AND c.tenant_id = q.tenant_id WHERE q.tenant_id = ${tid} AND q.status = 'sent' ORDER BY q.sent_at DESC LIMIT 30`,
     sql`SELECT i.*, c.name AS customer_name FROM invoices i JOIN customers c ON c.id = i.customer_id AND c.tenant_id = i.tenant_id WHERE i.tenant_id = ${tid} AND i.status IN ('sent', 'partial') ORDER BY i.due_date NULLS LAST LIMIT 60`,
     sql`SELECT count(*)::int AS n FROM visits WHERE tenant_id = ${tid} AND status = 'completed' AND completed_at >= date_trunc('month', now())`]);
-  const inv = unpaid.map(shapeInvoice), today = new Date().toISOString().slice(0, 10);
+  const [tzr] = await sql`SELECT timezone FROM tenants WHERE id = ${tid}`, local = localParts(now, tzr.timezone);
+  const inv = unpaid.map(shapeInvoice), today = local.date;
   const month = await sql`SELECT payments FROM invoices WHERE tenant_id = ${tid} AND payments <> '[]'::jsonb AND created_at > now() - interval '400 days'`;
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  let collected = 0; month.forEach(r => r.payments.forEach(p => { if (new Date(p.at).getTime() >= monthStart) collected += Number(p.amount); }));
+  let collected = 0; month.forEach(r => r.payments.forEach(p => { if (localParts(new Date(p.at), tzr.timezone).date.slice(0, 7) === local.date.slice(0, 7)) collected += Number(p.amount); }));
   return { upcoming, new_requests: newReq, open_quotes: openQuotes.map(shapeQuote), receivables: { total: r2(inv.reduce((a, i) => a + i.balance, 0)), overdue: r2(inv.filter(i => i.due_date && String(i.due_date).slice(0, 10) < today).reduce((a, i) => a + i.balance, 0)), invoices: inv.slice(0, 10) }, month: { collected: r2(collected), visits_completed: doneMonth[0].n } };
 });
 
@@ -40,7 +43,7 @@ route('GET', '/api/reports', async ctx => {
     quotes: { sent: q.sent, approved: q.approved, approval_rate: q.sent ? Math.round(q.approved / q.sent * 100) : null }, requests: { total: r.total, converted: r.converted, median_reply_minutes: r.median_reply_secs ? Math.round(r.median_reply_secs / 60) : null }, top_customers: top };
 });
 // CSV exports for your accountant or QuickBooks (invoices and payments)
-const csv = rows => rows.map(r => r.map(v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\r\n');
+const csv = csvText;
 route('GET', '/api/export/invoices.csv', async ctx => {
   need(ctx, 'admin');
   const rows = await sql`SELECT i.*, c.name AS customer_name, c.email AS customer_email FROM invoices i JOIN customers c ON c.id = i.customer_id AND c.tenant_id = i.tenant_id WHERE i.tenant_id = ${ctx.tid} ORDER BY i.number`;

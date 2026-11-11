@@ -117,6 +117,12 @@ STATEMENTS.push(
 `CREATE TABLE IF NOT EXISTS card_checkouts (id SERIAL PRIMARY KEY, tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, kind TEXT NOT NULL, invoice_id INT, quote_id INT, amount NUMERIC(10,2) NOT NULL, order_id TEXT NOT NULL, link_id TEXT NOT NULL DEFAULT '', url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), checked_at TIMESTAMPTZ)`,
 `CREATE INDEX IF NOT EXISTS card_checkouts_tenant ON card_checkouts(tenant_id, status, created_at DESC)`
 );
+STATEMENTS.push(
+`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ`,
+`CREATE INDEX IF NOT EXISTS messages_inbox ON messages(tenant_id, customer_id, created_at DESC)`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signature TEXT NOT NULL DEFAULT ''`,
+`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signed_ip TEXT NOT NULL DEFAULT ''`
+);
 let done = null;
 export function ensureSchema() {
   if (!done) done = (async () => { for (const s of STATEMENTS) await query(s); })().catch(e => { done = null; throw e; });

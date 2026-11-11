@@ -4,7 +4,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const PGBIN = '/usr/lib/postgresql/16/bin', DB = 'stagr_e2e';
 const psql = c => execSync(`${PGBIN}/psql -h /tmp -p 5544 -U postgres -qAt -c "${c}"`);
 psql(`DROP DATABASE IF EXISTS ${DB}`); psql(`CREATE DATABASE ${DB}`);
-process.env.DATABASE_URL = `postgresql://postgres@/${DB}?host=/tmp&port=5544`; process.env.SESSION_SECRET = 'e2e-secret-e2e-secret-e2e-secret';
+process.env.DATABASE_URL = `postgresql://postgres@/${DB}?host=/tmp&port=5544`; process.env.QUIET_HOURS = 'off'; process.env.SESSION_SECRET = 'e2e-secret-e2e-secret-e2e-secret';
 const { start } = await import('../dev/server.mjs'); const srv = await start(8796); const BASE = 'http://localhost:8796';
 const ok = (n, c, x) => console.log(c ? 'PASS' : 'FAIL', n, c ? '' : String(x ?? '').slice(0, 200));
 const b = await chromium.launch(); let errs = [];

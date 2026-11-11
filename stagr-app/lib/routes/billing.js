@@ -98,6 +98,6 @@ route('GET', '/api/public/i/:token', { public: true }, async ctx => {
   const [c] = await sql`SELECT name FROM customers WHERE id = ${i.customer_id} AND tenant_id = ${i.tenant_id}`;
   if (!i.viewed_at) await sql`UPDATE invoices SET viewed_at = now() WHERE id = ${i.id} AND tenant_id = ${i.tenant_id}`;
   const s = shapeInvoice(i);
-  return { business: { name: t.name, phone: t.phone, email: t.email, city: t.city, state: t.state, brand_color: t.brand_color, payment_note: (t.settings || {}).payment_note || '' }, customer: c.name,
+  return { business: { name: t.name, phone: t.phone, email: t.email, city: t.city, state: t.state, brand_color: t.brand_color, payment_note: (t.settings || {}).payment_note || '', logo: (t.settings || {}).logo || '' }, customer: c.name,
     invoice: { label: s.label, status: s.status, items: s.items, subtotal: s.subtotal, discount: s.discount, tax: s.tax, tax_pct: s.tax_pct, total: s.total, paid: s.paid, balance: s.balance, due_date: s.due_date, message: s.message, payments: s.payments.map(p => ({ amount: p.amount, method: p.method, at: p.at })) }, online_payments: i.status !== 'void' && s.balance >= 1 && await cardReady(i.tenant_id) };
 });
