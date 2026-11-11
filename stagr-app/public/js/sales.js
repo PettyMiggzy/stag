@@ -26,18 +26,18 @@ function editor(el, initial, allowExtras = true) {
   ['disc', 'tax'].forEach(id => $('#' + id, el).addEventListener('input', calc)); calc();
   return read;
 }
-// One-tap prices from Settings: truck-load sizes for hauling and an hourly rate for movers.
+// One-tap prices from Settings: the packages or sizes a business sells most, and an hourly rate.
 const quickHtml = () => { const p = (S.business.settings || {}).pricing || {}, loads = p.loads || [], h = p.hourly || {};
   if (!loads.length && !(h.rate > 0)) return '';
   return `<div class="card" id="quick" style="padding:10px 12px"><div class="mono" style="margin-bottom:6px">Quick prices</div><div class="row wrap">${loads.map((l, i) => `<button type="button" class="btn small" data-load="${i}">${esc(l.label)} · ${money0(l.price)}</button>`).join('')}</div>
-    ${h.rate > 0 ? `<div class="row wrap" style="margin-top:8px;align-items:flex-end"><label class="field" style="width:86px"><span>Movers</span><input id="qm" inputmode="numeric" value="2"></label><label class="field" style="width:86px"><span>Hours</span><input id="qh" inputmode="decimal" value="${esc(h.min_hours || 2)}"></label><button type="button" class="btn small" id="qadd">+ Hourly labor at ${money0(h.rate)}/hr each</button></div>` : ''}</div>`; };
+    ${h.rate > 0 ? `<div class="row wrap" style="margin-top:8px;align-items:flex-end"><label class="field" style="width:86px"><span>People</span><input id="qm" inputmode="numeric" value="2"></label><label class="field" style="width:86px"><span>Hours</span><input id="qh" inputmode="decimal" value="${esc(h.min_hours || 2)}"></label><button type="button" class="btn small" id="qadd">+ Hourly labor at ${money0(h.rate)}/hr each</button></div>` : ''}</div>`; };
 function wireQuick(el) {
   const box = $('#lines', el), q = $('#quick', el); if (!q) return; const p = (S.business.settings || {}).pricing || {}, h = p.hourly || {};
   const add = item => { const rows = $$('[data-line]', box), first = rows[0]; const blank = rows.length === 1 && first.dataset.kind === 'item' && !$('[data-f=name]', first).value && !$('[data-f=price]', first).value;
     const html = lineRow({ kind: 'item', description: '', qty: 1, optional: false, selected: true, image: '', ...item }); if (blank) first.outerHTML = html; else box.insertAdjacentHTML('beforeend', html); box.dispatchEvent(new Event('input', { bubbles: true })); };
   q.addEventListener('click', e => { const b = e.target.closest('[data-load]'); if (b) { const l = p.loads[Number(b.dataset.load)]; add({ name: l.label, price: l.price }); return; }
     if (e.target.closest('#qadd')) { const m = Math.max(1, Math.round(Number($('#qm', el).value) || 1)), hrs = Math.max(Number(h.min_hours) || 0, Number($('#qh', el).value) || 0); if (!(hrs > 0)) return toast('Enter the hours', true);
-      add({ name: 'Moving labor', description: `${m} mover${m === 1 ? '' : 's'} × ${hrs} hour${hrs === 1 ? '' : 's'}`, qty: Math.round(m * hrs * 100) / 100, price: h.rate }); if (h.truck_fee > 0) add({ name: 'Truck and travel fee', price: h.truck_fee }); } });
+      add({ name: 'Hourly labor', description: `${m} ${m === 1 ? 'person' : 'people'} × ${hrs} hour${hrs === 1 ? '' : 's'}`, qty: Math.round(m * hrs * 100) / 100, price: h.rate }); if (h.truck_fee > 0) add({ name: 'Trip fee', price: h.truck_fee }); } });
 }
 const svcList = () => `<datalist id="svc">${S.services.map(s => `<option value="${esc(s.name)}">`).join('')}</datalist>`;
 // Pick an existing customer (and one of their properties) inside a modal.

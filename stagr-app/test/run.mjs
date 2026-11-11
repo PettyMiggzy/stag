@@ -520,6 +520,16 @@ ok('no cross-tenant references anywhere in the database', Number(cross[0].n) ===
   r = await anon.get('/api/public/i/nope'); const hd = await fetch(BASE + '/app'); ok('pages carry a content security policy', /default-src 'self'/.test(hd.headers.get('content-security-policy') || ''), hd.headers.get('content-security-policy'));
 }
 
+// ---------- any kind of service business: the trade only chooses the starting price list ----------
+{
+  r = await anon.get('/api/public/trades'); ok('trade list is public and broad', r.s === 200 && r.j.trades.length >= 8 && r.j.trades.some(t => t.key === 'cleaning') && r.j.trades.some(t => t.key === 'other'), r.j);
+  const G = new Client(); r = await G.post('/api/auth/signup', { business: 'Sparkle Clean', name: 'Gia', email: 'gia@clean.test', password: 'password13', trade: 'cleaning' }); ok('signup as a cleaning business', r.s === 200, r);
+  r = await G.get('/api/services'); ok('cleaning business starts with cleaning prices', r.j.services.some(x => x.name === 'Deep clean') && !r.j.services.some(x => /truck/i.test(x.name)), r.j.services.map(x => x.name));
+  r = await G.get('/api/auth/me'); ok('trade is remembered', r.j.business.settings.trade === 'cleaning', r.j.business.settings);
+  const G2 = new Client(); r = await G2.post('/api/auth/signup', { business: 'Mystery Co', name: 'Max', email: 'max@mystery.test', password: 'password13', trade: 'not-a-trade' }); r = await G2.get('/api/services');
+  ok('an unknown or missing trade gets the general price list', r.j.services.some(x => x.name === 'Service call') && r.j.services.length === 3, r.j.services.map(x => x.name));
+}
+
 // ---------- money: concurrent payments, edits, deposits ----------
 {
   const M = new Client(); r = await M.post('/api/auth/signup', { business: 'Mike Money', name: 'Mike', email: 'mike@money.test', password: 'password7' }); ok('signup money', r.s === 200, r);

@@ -1,4 +1,4 @@
-// Business tools: customer import and export, quick-price presets (truck loads, hourly movers) and the business logo.
+// Business tools: customer import and export, quick-price presets (packages and an hourly rate) and the business logo.
 import { route } from '../router.js';
 import { sql } from '../db.js';
 import { bad } from '../http.js';
@@ -43,7 +43,7 @@ route('POST', '/api/import/customers', async ctx => {
   return { added, skipped, invalid };
 });
 
-// Quick prices: named load sizes for junk hauling and an hourly rate for movers. Shown as one-tap buttons in the quote builder
+// Quick prices: the named packages or sizes a business sells most, and an hourly rate per person. Shown as one-tap buttons in the quote builder
 // and, if the owner chooses, as a price guide on the public booking page.
 export function cleanPricing(p) {
   p = p && typeof p === 'object' ? p : {};

@@ -21,6 +21,7 @@ function authScreen(mode = 'login') {
   root.innerHTML = `<div class="auth"><div class="box"><a class="brand" href="/" style="flex-direction:column"><img src="/logo-full.webp" alt="STAGR" style="width:200px;height:200px;filter:none"></a>
     <form class="card col" id="authForm" novalidate><h2 style="font-size:2rem">${signup ? 'Start your business' : 'Sign in'}</h2>
     ${signup ? `<label class="field"><span>Business name</span><input name="business" required autocomplete="organization" maxlength="80"></label>
+      <label class="field"><span>What kind of work do you do?</span><select name="trade" id="trade"><option value="other">Choose one…</option></select></label>
       <div class="grid g2"><label class="field"><span>Your name</span><input name="name" required autocomplete="name" maxlength="80"></label><label class="field"><span>Business phone</span><input name="phone" inputmode="tel" autocomplete="tel"></label></div>
       <div class="grid g2"><label class="field"><span>City</span><input name="city" maxlength="60"></label><label class="field"><span>State</span><input name="state" maxlength="2" placeholder="TX"></label></div>` : ''}
     <label class="field"><span>Email</span><input name="email" type="email" required autocomplete="email"></label>
@@ -31,6 +32,7 @@ function authScreen(mode = 'login') {
     <p class="small mute" style="margin:0;text-align:center;display:flex;gap:8px;align-items:center;justify-content:center"><img src="/logo.webp" alt="" width="22" height="22" style="object-fit:contain"> STAGR field service CRM</p>
     <p class="small mute" style="margin:0;text-align:center">${signup ? 'Already have an account? <a href="#" data-mode="login">Sign in</a>' : 'New to STAGR? <a href="#" data-mode="signup">Create an account</a>'}</p></form></div></div>`;
   $('[data-mode]').addEventListener('click', e => { e.preventDefault(); authScreen(e.target.dataset.mode); });
+  if (signup) get('/public/trades').then(r => { const s = $('#trade'); if (s) s.insertAdjacentHTML('beforeend', r.trades.filter(t => t.key !== 'other').map(t => `<option value="${esc(t.key)}">${esc(t.label)}</option>`).join('') + '<option value="other">Something else</option>'); }).catch(() => {});
   $('#forgot')?.addEventListener('click', e => { e.preventDefault(); forgotScreen($('input[name=email]').value); });
   $('#authForm').addEventListener('submit', async e => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), btn = $('button[type=submit]', e.target); btn.disabled = true; $('#authErr').textContent = '';

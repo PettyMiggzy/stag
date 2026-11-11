@@ -7,6 +7,20 @@ import { clean, email as cleanEmail, phone as cleanPhone, slugify, amt, token } 
 import { DEFAULT_AUTOMATIONS, baseUrl, sendSystemEmail } from './comms.js';
 
 const DEFAULT_SERVICES = [['Service call', 'Standard visit', 95], ['Hourly labor', 'Per hour, per person', 65], ['Materials', 'Materials at cost', 0]];
+// Starting price lists by trade. They are only a first draft the owner edits in Settings; every trade works the same way after that.
+export const TRADES = {
+  junk: ['Junk removal and hauling', [['Minimum pickup', 'Single item or small load', 95], ['1/4 truck load', '', 225], ['1/2 truck load', '', 375], ['Full truck load', '', 650]]],
+  moving: ['Moving', [['Hourly movers', 'Per hour, per mover', 65], ['Truck fee', 'Truck, fuel and equipment', 95], ['Packing materials', 'Boxes, tape and wrap', 0]]],
+  cleaning: ['Cleaning', [['Standard clean', 'Regular home cleaning', 140], ['Deep clean', 'Top to bottom', 260], ['Move-out clean', '', 320], ['Hourly cleaning', 'Per hour, per cleaner', 45]]],
+  lawn: ['Lawn care and landscaping', [['Mow, edge and blow', 'Standard yard', 55], ['Hedge trimming', '', 85], ['Mulch install', 'Per yard, installed', 95], ['Yard cleanup', 'Per hour, per person', 55]]],
+  handyman: ['Handyman and repairs', [['Service call', 'First hour on site', 95], ['Hourly labor', 'Per hour', 75], ['Materials', 'Materials at cost', 0]]],
+  washing: ['Pressure washing', [['Driveway', 'Standard two-car driveway', 150], ['House wash', 'Single story', 300], ['Deck or patio', '', 175]]],
+  painting: ['Painting', [['Interior room', 'Walls, standard room', 350], ['Exterior painting', 'Per hour, per painter', 60], ['Paint and supplies', 'At cost', 0]]],
+  trades: ['Plumbing, electrical or HVAC', [['Diagnostic visit', 'Find the problem and quote the fix', 95], ['Hourly labor', 'Per hour', 110], ['Parts', 'Parts at cost', 0]]],
+  pets: ['Pet care and grooming', [['Full groom', '', 75], ['Bath and brush', '', 45], ['Nail trim', '', 15]]],
+  other: ['Something else', DEFAULT_SERVICES]
+};
+route('GET', '/api/public/trades', { public: true }, async () => ({ trades: Object.entries(TRADES).map(([key, [label]]) => ({ key, label })) }));
 
 route('POST', '/api/auth/signup', { public: true }, async ctx => {
   const b = ctx.body, business = clean(b.business, 80), name = clean(b.name, 80), em = cleanEmail(b.email), pw = String(b.password || '');
@@ -21,9 +35,10 @@ route('POST', '/api/auth/signup', { public: true }, async ctx => {
   let slug = slugify(business);
   const [taken] = await sql`SELECT 1 FROM tenants WHERE slug = ${slug}`;
   if (taken) slug = slug + '-' + Math.random().toString(36).slice(2, 6);
-  const [t] = await sql`INSERT INTO tenants (name, slug, phone, email, city, state) VALUES (${business}, ${slug}, ${cleanPhone(b.phone)}, ${em}, ${clean(b.city, 60)}, ${clean(b.state, 2).toUpperCase()}) RETURNING id, name, slug`;
+  const trade = TRADES[b.trade] ? b.trade : 'other';
+  const [t] = await sql`INSERT INTO tenants (name, slug, phone, email, city, state, settings) VALUES (${business}, ${slug}, ${cleanPhone(b.phone)}, ${em}, ${clean(b.city, 60)}, ${clean(b.state, 2).toUpperCase()}, ${{ trade }}) RETURNING id, name, slug`;
   const [u] = await sql`INSERT INTO users (tenant_id, email, name, role, phone, password_hash) VALUES (${t.id}, ${em}, ${name}, 'owner', ${cleanPhone(b.phone)}, ${hashPassword(pw)}) RETURNING id, tenant_id, email, name, role`;
-  for (const [n, d, p] of DEFAULT_SERVICES) await sql`INSERT INTO services (tenant_id, name, description, unit_price) VALUES (${t.id}, ${n}, ${d}, ${p})`;
+  for (const [n, d, p] of TRADES[trade][1]) await sql`INSERT INTO services (tenant_id, name, description, unit_price) VALUES (${t.id}, ${n}, ${d}, ${p})`;
   for (const [kind, enabled, config] of DEFAULT_AUTOMATIONS) await sql`INSERT INTO automations (tenant_id, kind, enabled, config) VALUES (${t.id}, ${kind}, ${enabled}, ${config})`;
   setSession(ctx.res, u);
   return { user: u, business: t };
