@@ -251,7 +251,8 @@ export function initExtras(X) {
         if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
         if (cmd === "invitedraft") { const ok = await invitePromo(msg.chat.id, true); return ok ? null : reply("Could not send the draft. Try again."); }
         const arg = (args[0] || "").toLowerCase(), cur = (await stGet("invitePostOn")) === "1";
-        if (arg !== "on" && arg !== "off") return reply(`Invite reminders in the main group are ${cur ? "ON" : "OFF"}.\n/invitepost on or /invitepost off to change it. /invitedraft shows you one first.`);
+        if (arg === "now") { const ok = await inviteNow(); return reply(ok ? "Posted one invite reminder to the main group just now." : "The post failed. Try again in a minute."); }
+        if (arg !== "on" && arg !== "off") return reply(`Invite reminders in the main group are ${cur ? "ON" : "OFF"}.\n/invitepost on or /invitepost off to change it. /invitepost now posts one right away. /invitedraft shows you one first.`);
         await stSet("invitePostOn", arg === "on" ? "1" : "0"); if (arg === "on") await stSet("invitePostNext", "0");
         return reply(arg === "on" ? "🤝 Invite reminders are ON. The first one posts in the main group within about an hour and a half, then one every 5 to 10 hours at random, between 8 AM and 10 PM Central. Each new one replaces the last. /invitepost off stops them." : "Invite reminders are OFF.");
       }
@@ -380,6 +381,10 @@ export function initExtras(X) {
       else r = await tgPost("sendMessage", { chat_id: to, text: cap, parse_mode: "HTML", disable_web_page_preview: true, ...(markup ? { reply_markup: JSON.parse(markup) } : {}) });
       if (!r || !r.ok) { log("invite promo err:", r && r.description); return 0; } return r.result.message_id;
     } catch (e) { log("invite promo err:", e.message); return 0; }
+  }
+  async function inviteNow() { // post one reminder right away, whatever the hour, and start the random gap from here
+    const prev = await stGet("invitePostMsg"); const id = await invitePromo(chat, false); if (!id) return false;
+    await stSet("invitePostMsg", id); await stSet("invitePostNext", Date.now() + (5 + Math.random() * 5) * 3600000); if (prev) tgPost("deleteMessage", { chat_id: chat, message_id: Number(prev) }); log("invite reminder sent (now)"); return true;
   }
   async function inviteTick() { // random gap of 5 to 10 hours between reminders, only from 8 AM to 10 PM Central, and the previous reminder is removed so they never pile up
     try {
@@ -577,6 +582,11 @@ export function initExtras(X) {
   async function start(head) {
     await bbLoad();
     setInterval(inviteTick, 5 * 60000);
+    setTimeout(async () => { // the owner switched reminders on during quiet hours and asked for the first one straight away: post it once
+      try { if ((await stGet("invitePostOn")) !== "1" || (await stGet("invitePostMsg"))) return; const [c] = await W.q("insert into bot_state(k,v) values('inviteFirstNow','1') on conflict(k) do nothing returning k"); if (!c) return;
+        const ok = await inviteNow(); if (!ok) await W.q("delete from bot_state where k='inviteFirstNow'"); tgPost("sendMessage", { chat_id: ADMIN_TG, text: ok ? "Posted the first invite reminder to the main group. The next ones come at random, 5 to 10 hours apart, between 8 AM and 10 PM Central." : "The first invite reminder failed to post. Send /invitepost now to try again." });
+      } catch (e) { log("invite first err:", e.message); }
+    }, 75000);
     setTimeout(async () => { // one draft of the invite reminder to the owner's DM, so it can be approved before anything posts
       try { const [c] = await W.q("insert into bot_state(k,v) values('inviteDraftDM','1') on conflict(k) do nothing returning k"); if (!c) return; const ok = await invitePromo(ADMIN_TG, true); if (!ok) await W.q("delete from bot_state where k='inviteDraftDM'"); } catch (e) { log("invite draft err:", e.message); }
     }, 60000);
