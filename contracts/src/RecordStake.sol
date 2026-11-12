@@ -11,12 +11,15 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///         no yield, no rewards, no fees, no penalties. What staking earns is "antler points" (tokens x time), which
 ///         the label uses off-chain for perks such as early access and collector editions. Taking tokens out of a
 ///         record resets the points on that record.
-/// @dev    The owner can add records and stop NEW stakes. The owner can never touch staked tokens and can never
+/// @dev    Built for a plain fixed-supply ERC-20. Tokens that rebase, or that take a fee on transfer, are not supported.
+///         The owner can add records and stop NEW stakes. The owner can never touch staked tokens and can never
 ///         stop anyone from unstaking.
 contract RecordStake is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable stag;
+    /// @notice The least a wallet can hold on a record after staking: one whole token. Keeps dust wallets out of the staker count.
+    uint256 public constant MIN_POSITION = 1e18;
 
     struct Position {
         uint128 amount; // tokens this wallet has on this record
@@ -37,6 +40,7 @@ contract RecordStake is Ownable2Step, ReentrancyGuard {
     error ZeroAmount();
     error TooMuch();
     error NotSpare();
+    error TooLittle();
 
     constructor(address _stag, address _owner) Ownable(_owner) {
         require(_stag != address(0), "stag=0");
@@ -63,12 +67,14 @@ contract RecordStake is Ownable2Step, ReentrancyGuard {
         uint256 old = p.amount;
         uint256 next = old + got;
         if (next > type(uint128).max) revert TooMuch();
+        if (next < MIN_POSITION) revert TooLittle();
         if (old == 0) {
             p.since = uint64(block.timestamp);
             recordStakers[recordId] += 1;
         } else {
             // adding more keeps the points already earned: the start time becomes the amount-weighted average
-            p.since = uint64((uint256(p.since) * old + block.timestamp * got) / next);
+            // rounded UP, so rounding can never hand the staker time they did not earn
+            p.since = uint64((uint256(p.since) * old + block.timestamp * got + next - 1) / next);
         }
         p.amount = uint128(next);
         recordTotal[recordId] += got;
@@ -100,10 +106,10 @@ contract RecordStake is Ownable2Step, ReentrancyGuard {
     }
 
     /// @notice Return tokens sent here by mistake. Staked $STAG can never be taken: only the spare above `totalStaked`.
-    function rescue(address token, address to, uint256 amount) external onlyOwner {
+    function rescue(address token, address to, uint256 amount) external onlyOwner nonReentrant {
         if (token == address(stag)) {
-            uint256 spare = stag.balanceOf(address(this)) - totalStaked;
-            if (amount > spare) revert NotSpare();
+            uint256 bal = stag.balanceOf(address(this));
+            if (bal < totalStaked || amount > bal - totalStaked) revert NotSpare();
         }
         IERC20(token).safeTransfer(to, amount);
     }

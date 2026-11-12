@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Launchpad admin | Stag House Records</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#050806;color:#e9f2e5;font:17px/1.55 system-ui,sans-serif}main{max-width:640px;margin:0 auto;padding:28px 16px 60px}h1{font-size:26px;margin:0 0 6px}h2{font-size:19px;margin:0 0 8px;color:#f4dc8f}
+.card{background:#0a110c;border:1px solid #1d3022;border-radius:16px;padding:18px;margin-top:16px}p{margin:0 0 10px;color:#c4d6c0}
+button{padding:13px 18px;border-radius:999px;border:2px solid #39ff14;background:#39ff14;color:#031005;font:700 15px/1 system-ui;cursor:pointer;margin:4px 6px 4px 0}button.g{background:transparent;color:#39ff14}button[disabled]{opacity:.5}
+input{width:100%;box-sizing:border-box;padding:13px;border-radius:12px;border:1px solid #2a4d32;background:#06100a;color:#e9f2e5;font:16px system-ui;margin:4px 0 8px}
+#msg{margin-top:14px;min-height:24px;overflow-wrap:anywhere}#msg.err{color:#ff8a80}#msg.ok{color:#39ff14}code{overflow-wrap:anywhere;color:#f4dc8f}</style>
+<main><h1>Launchpad admin</h1><p>For the label owner only. Everything here is signed by your own wallet; this page holds no keys.</p>
+<button id="conn" class="g">Connect wallet</button><div id="msg" role="status"></div>
+<div class="card"><h2>1 · Deploy the staking contract (once)</h2><p>Creates the RecordStake contract for $STAG with your connected wallet as its owner. Costs a small network fee in ETH. Do this one time only.</p><button id="dep">Deploy contract</button><p id="depout"></p></div>
+<div class="card"><h2>2 · Open or close a record</h2><p>Open lets people stake on that record number. Close stops new stakes; people can always take their tokens back.</p>
+<label>Contract address<input id="addr" placeholder="0x…" autocomplete="off" spellcheck="false"></label><label>Record number (same as the catalog number, for example 11)<input id="rid" inputmode="numeric" placeholder="11"></label>
+<button id="open">Open record</button><button id="close" class="g">Close record</button><button id="chk" class="g">Check status</button></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script><script src="/launch/config.js"></script><script src="/launch/artifact.js"></script>
+<script>
+(function(){var $=function(i){return document.getElementById(i)},C=window.LAUNCH||{},A=window.RECORD_STAKE,acct=null,busy=false;
+function say(t,k){$('msg').textContent=t||'';$('msg').className=k||''}
+function why(e){var s=(e&&(e.shortMessage||e.reason||e.message))||String(e);if(/user rejected|denied/i.test(s))return'You cancelled it in your wallet. Nothing was sent.';if(/OwnableUnauthorizedAccount/.test(s))return'This wallet is not the owner of that contract.';return s.slice(0,200)}
+var CHAIN={chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:[C.rpc],blockExplorerUrls:['https://robinhoodchain.blockscout.com']};
+async function signer(){if(!window.ethereum)throw new Error('No wallet found. Open this page in your wallet browser.');var a=await window.ethereum.request({method:'eth_requestAccounts'});acct=ethers.getAddress(a[0]);
+  try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN.chainId}]})}catch(e){if(e&&(e.code===4902||/Unrecogniz|not been added/i.test(e.message||'')))await window.ethereum.request({method:'wallet_addEthereumChain',params:[CHAIN]});else throw e}
+  var p=new ethers.BrowserProvider(window.ethereum);if(Number((await p.getNetwork()).chainId)!==4663)throw new Error('Switch your wallet to Robinhood Chain first.');$('conn').textContent='Connected '+acct.slice(0,6)+'…'+acct.slice(-4);return p.getSigner()}
+$('conn').onclick=function(){signer().then(function(){say('')}).catch(function(e){say(why(e),'err')})};
+if(C.contract){$('addr').value=C.contract;$('dep').disabled=true;$('depout').textContent='Already deployed: '+C.contract}
+$('dep').onclick=async function(){if(busy)return;if(!confirm('Deploy the staking contract now, with the connected wallet as owner? Do this only once.'))return;busy=true;
+  try{var s=await signer();say('Confirm the deployment in your wallet…');var f=new ethers.ContractFactory(A.abi,A.bytecode,s),c=await f.deploy(C.stag,acct);say('Sent. Waiting for the chain…');await c.waitForDeployment();var at=await c.getAddress();
+    $('addr').value=at;$('depout').innerHTML='Deployed at <code>'+at+'</code>. Copy this address and send it to Claude so the launchpad page can be switched on. Then open your first record below.';say('Contract deployed.','ok');$('dep').disabled=true}catch(e){say(why(e),'err')}busy=false};
+function ct(s){var a=$('addr').value.trim();if(!ethers.isAddress(a))throw new Error('Paste the contract address first.');var id=parseInt($('rid').value,10);if(!(id>0))throw new Error('Type the record number.');return[new ethers.Contract(a,A.abi,s),id]}
+async function set(v){if(busy)return;busy=true;try{var s=await signer(),x=ct(s);say('Confirm in your wallet…');await(await x[0].setRecord(x[1],v)).wait();say('Record '+x[1]+' is now '+(v?'OPEN for staking.':'CLOSED to new stakes.'),'ok')}catch(e){say(why(e),'err')}busy=false}
+$('open').onclick=function(){set(true)};$('close').onclick=function(){set(false)};
+$('chk').onclick=async function(){try{var p=new ethers.JsonRpcProvider(C.rpc,4663,{staticNetwork:true}),x=ct(p),v=await Promise.all([x[0].recordOpen(x[1]),x[0].recordTotal(x[1]),x[0].recordStakers(x[1]),x[0].owner()]);
+  say('Record '+x[1]+': '+(v[0]?'open':'closed')+' · '+Number(ethers.formatUnits(v[1],18)).toLocaleString('en-US',{maximumFractionDigits:0})+' $STAG staked · '+v[2]+' backers · owner '+v[3],'ok')}catch(e){say(why(e),'err')}};
+})();
+</script></html>

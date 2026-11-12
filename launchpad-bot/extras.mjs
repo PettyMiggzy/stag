@@ -294,6 +294,33 @@ export function initExtras(X) {
       if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n<i>You can also just type: ca, price, chart, links</i>\n/ca – contract address\ninvite – your personal invite link · invites – the invite board\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/lounge – the 3D club · /records – the music · /app – StagR on Google Play\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
     } catch (e) { log("cmd err:", e.message); }
   }
+  // ---------- record launchpad: who is backing which record (read from the RecordStake contract's events) ----------
+  // Off until RECORD_STAKE (the contract address) is set. Positions are rebuilt from Staked / Unstaked events only.
+  const RS_ADDR = (process.env.RECORD_STAKE || "").toLowerCase(), RS_FROM = parseInt(process.env.RECORD_STAKE_FROM || "0", 10);
+  const RS_IFACE = new ethers.Interface(["event Staked(address indexed user, uint256 indexed recordId, uint256 amount, uint256 newAmount, uint64 since)", "event Unstaked(address indexed user, uint256 indexed recordId, uint256 amount, uint256 newAmount)"]);
+  let rsBusy = false, rsCache = null, rsAt = 0;
+  async function rsSync() {
+    if (!/^0x[0-9a-f]{40}$/.test(RS_ADDR) || rsBusy) return; rsBusy = true;
+    try {
+      await bbQ("create table if not exists rs_pos(addr text not null, record int not null, amount numeric not null, since bigint not null, primary key(addr, record))");
+      const head = await provider.getBlockNumber(); let from = Math.max(RS_FROM, parseInt((await stGet("rsScanned")) || "0", 10) + 1);
+      while (from <= head) {
+        const to = Math.min(head, from + 49999); const logs = await provider.getLogs({ address: RS_ADDR, fromBlock: from, toBlock: to });
+        for (const lg of logs) { let ev; try { ev = RS_IFACE.parseLog(lg); } catch { continue; } if (!ev) continue;
+          const since = ev.name === "Staked" ? Number(ev.args.since) : (await provider.getBlock(lg.blockNumber)).timestamp;
+          await W.q("insert into rs_pos(addr, record, amount, since) values ($1,$2,$3,$4) on conflict(addr, record) do update set amount=excluded.amount, since=excluded.since", [ev.args.user.toLowerCase(), Number(ev.args.recordId), ev.args.newAmount.toString(), since]); rsAt = 0; }
+        await stSet("rsScanned", to); from = to + 1;
+      }
+    } catch (e) { log("record stake sync err:", e.shortMessage || e.message); } finally { rsBusy = false; }
+  }
+  async function rsBoards() {
+    if (rsCache && Date.now() - rsAt < 30000) return rsCache; const out = {};
+    if (/^0x[0-9a-f]{40}$/.test(RS_ADDR)) { const now = Math.floor(Date.now() / 1000);
+      const rows = await bbQ("select addr, record, amount::text as amount, since from rs_pos where amount >= 1000000000000000000"); // a backer holds at least one whole token on the record
+      for (const r of rows) { const amt = Number(ethers.formatUnits(BigInt(r.amount), 18)); (out[r.record] = out[r.record] || []).push({ who: r.addr.slice(0, 6) + "…" + r.addr.slice(-4), amount: amt, points: Math.floor(amt * Math.max(0, now - Number(r.since)) / 86400) }); }
+      for (const k of Object.keys(out)) out[k] = out[k].sort((a, b) => b.points - a.points || b.amount - a.amount).slice(0, 25); }
+    rsCache = { ok: true, records: out }; rsAt = Date.now(); return rsCache;
+  }
   // ---------- invite links: every member gets a personal link, and the bot counts who they bring in ----------
   // Needs the bot to be an admin of the main group with the "invite users" right. A person only ever counts once, and stops counting if they leave.
   const refName = (u) => [u.first_name, u.last_name].filter(Boolean).join(" ").slice(0, 40) || u.username || "Member";
@@ -492,6 +519,7 @@ export function initExtras(X) {
       if (!tokCache || Date.now() - tokAt > 20000) { try { const m = await market(); tokCache = { ok: true, token: CFG.token, priceUsd: m.priceUsd, mcUsd: m.mcUsd, ch24: m.ch24, holders: m.holders, buys24: m.buys24, vol24Eth: m.vol24, vol24Usd: m.vol24 * m.ethUsd, bondPct: m.bondPct, lastBuyBlock: m.lastBlock, head: m.head, buyUrl: CFG.buyUrl || CFG.chartUrl || `${CFG.launchpad}/${CFG.token}`, updated: Date.now() }; if (BB_ON && bbLast) { const wk = await bbWeek(); tokCache.buyback = { ts: bbLast.ts, eth: bbLast.eth, tok: bbLast.tok, weekN: wk.n, weekEth: wk.eth, weekTok: wk.tok }; } tokAt = Date.now(); } catch (e) { if (!tokCache) { sendJson(res, { ok: false }, 5); return true; } } }
       sendJson(res, tokCache, 15); return true;
     }
+    if (u.pathname === "/api/backers") { sendJson(res, await rsBoards(), 20); return true; }
     if (u.pathname === "/api/collectors") {
       const id = parseInt(u.searchParams.get("id") || "0", 10) || 0; const k = String(id); const c = colCache.get(k);
       if (c && Date.now() - c.at < 20000) { sendJson(res, c.v, 15); return true; }
@@ -507,6 +535,7 @@ export function initExtras(X) {
   };
   async function start(head) {
     await bbLoad();
+    if (RS_ADDR) { setTimeout(rsSync, 20000); setInterval(rsSync, 60000); }
     setTimeout(async () => { // the owner asked for today's dev buybacks in the main group: post that summary once
       try { const [c] = await W.q("insert into bot_state(k,v) values('bbTodayOnce','1') on conflict(k) do nothing returning k"); if (!c) return;
         const n = await bbToday(chat, false); if (n < 0) await W.q("delete from bot_state where k='bbTodayOnce'");

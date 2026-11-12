@@ -3,10 +3,10 @@
   var rec = /^records\./.test(location.hostname) || document.documentElement.hasAttribute('data-records');
   var M = 'https://stagwifhood.fun', R = 'https://records.stagwifhood.fun';
   var links = rec ? [
-    ['Records home', '/'], ['The album', '/album/'], ['WYTE BOYZ single', '/songs/'], ['Winslow Bankz', '/artist/'],
+    ['Records home', '/'], ['The album', '/album/'], ['WYTE BOYZ single', '/songs/'], ['Winslow Bankz', '/artist/'], ['The Launchpad', '/launch/'],
     ['$STAG main site', M + '/'], ['Hood Rich Club lounge', M + '/lounge/'], ['StagR CRM', M + '/stagr/'], ['Telegram', 'https://t.me/StagWifHood']
   ] : [
-    ['Home', '/'], ['StagR CRM', '/stagr/'], ['Stag House Records', R + '/'], ['Winslow Bankz', R + '/artist/'], ['Hood Rich Club lounge', '/lounge/'],
+    ['Home', '/'], ['StagR CRM', '/stagr/'], ['Stag House Records', R + '/'], ['Winslow Bankz', R + '/artist/'], ['The Launchpad', R + '/launch/'], ['Hood Rich Club lounge', '/lounge/'],
     ['Stag Shot game', '/play/'], ['Claim rewards', '/claim/'], ['Telegram', 'https://t.me/StagWifHood'], ['X', 'https://x.com/stagwifhoodrh']
   ];
   var bar = document.querySelector('header .in'); if (!bar) return;
