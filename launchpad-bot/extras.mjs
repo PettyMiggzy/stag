@@ -247,6 +247,17 @@ export function initExtras(X) {
         const on = arg === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
         return reply(on ? (DEVS.size ? `🔥 Dev buyback alerts are ON for ${DEVS.size} wallet${DEVS.size === 1 ? "" : "s"}. The next dev buy posts the DEV BUYBACK card in the main group. /buyback off stops it.` : "Alerts are ON, but no dev wallet is saved yet. Send /setdev 0x… first.") : "Dev buyback alerts are OFF. Dev buys post as normal buy cards.");
       }
+      if ((cmd === "invitedraft" || cmd === "invitepost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, in the bot DM
+        if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
+        if (cmd === "invitedraft") { const ok = await invitePromo(msg.chat.id, true); return ok ? null : reply("Could not send the draft. Try again."); }
+        const arg = (args[0] || "").toLowerCase(), cur = (await stGet("invitePostOn")) === "1";
+        if (arg !== "on" && arg !== "off") return reply(`Invite reminders in the main group are ${cur ? "ON" : "OFF"}.\n/invitepost on or /invitepost off to change it. /invitedraft shows you one first.`);
+        await stSet("invitePostOn", arg === "on" ? "1" : "0"); if (arg === "on") await stSet("invitePostNext", "0");
+        return reply(arg === "on" ? "🤝 Invite reminders are ON. The first one posts in the main group within about an hour and a half, then one every 5 to 10 hours at random, between 8 AM and 10 PM Central. Each new one replaces the last. /invitepost off stops them." : "Invite reminders are OFF.");
+      }
+      if (cmd === "start" && (args[0] || "").toLowerCase() === "invite" && msg.chat.type === "private") { // came from the "Get my invite link" button
+        const link = await refLink(msg.from); return reply(link ? `🤝 Here is your personal invite link:\n${link}\n\nSend it to anyone. Everyone who joins the group through it counts for you. Type <b>invites</b> in the group to see the board.` : "I cannot make invite links yet. An admin needs to give me the 'invite users' right in the group.");
+      }
       if (cmd === "invite" || cmd === "referral" || cmd === "ref") {
         if (!msg.from || msg.from.is_bot) return; const link = await refLink(msg.from);
         if (!link) return reply("I cannot make invite links yet. An admin needs to give me the 'invite users' right in the group.");
@@ -348,6 +359,36 @@ export function initExtras(X) {
     const rows = await bbQ("select l.name, count(*)::int as n, count(*) filter (where j.at > now() - interval '7 days')::int as wk from ref_joins j join ref_links l on l.user_id = j.inviter_id where j.here group by l.user_id, l.name order by n desc, min(j.at) limit 10");
     if (!rows.length) return "🤝 <b>INVITE BOARD</b>\nNobody is on the board yet. Type <b>invite</b> to get your own link and be first.";
     return ["🤝 <b>INVITE BOARD</b>", ...rows.map((r, i) => `${["🥇", "🥈", "🥉"][i] || `${i + 1}.`} <b>${esc(r.name)}</b> · ${r.n} brought in${r.wk ? ` (${r.wk} this week)` : ""}`), "", "Type <b>invite</b> to get your own link. People who leave stop counting."].join("\n");
+  }
+  // The bot reminds the group about invite links a few times a day, at random gaps, with a banner. OFF until the owner sends /invitepost on.
+  const INV_LINES = [
+    "🤝 <b>BRING THE HERD</b>\nType <b>invite</b> and I will give you your own link. Everyone who joins through it counts for you on the invite board.",
+    "🦌 <b>Know someone who should be in here?</b>\nType <b>invite</b> for your personal link and send it to them. Every person you bring in goes on the board under your name.",
+    "📣 <b>The invite board is open.</b>\nType <b>invite</b> to get your link, and <b>invites</b> to see who has brought in the most people.",
+    "🔗 <b>Your own invite link is one word away.</b>\nType <b>invite</b>. Share it anywhere. The bot counts everyone who joins through it.",
+  ];
+  let botUser = "";
+  async function invitePromo(to, draft) {
+    try {
+      if (!botUser) { const me = await tgPost("getMe", {}); botUser = (me && me.ok && me.result.username) || ""; }
+      const top = await bbQ("select l.name, count(*)::int as n from ref_joins j join ref_links l on l.user_id = j.inviter_id where j.here group by l.user_id, l.name order by n desc, min(j.at) limit 3");
+      const cap = (draft ? "<i>DRAFT. Not posted anywhere. Send /invitepost on here to start the reminders in the main group.</i>\n\n" : "") + INV_LINES[Math.floor(Math.random() * INV_LINES.length)]
+        + (top.length ? "\n\n<b>On the board right now</b>\n" + top.map((r, i) => `${["🥇", "🥈", "🥉"][i]} ${esc(r.name)} · ${r.n}`).join("\n") : "");
+      const markup = botUser ? JSON.stringify({ inline_keyboard: [[{ text: "Get my invite link", url: `https://t.me/${botUser}?start=invite` }]] }) : "";
+      const f = path.join(DIR, "invite.jpg"); let r;
+      if (existsSync(f)) { const fd = new FormData(); fd.append("chat_id", String(to)); fd.append("caption", cap); fd.append("parse_mode", "HTML"); if (markup) fd.append("reply_markup", markup); fd.append("photo", new Blob([readFileSync(f)], { type: "image/jpeg" }), "invite.jpg"); r = await (await fetch(`${api}/sendPhoto`, { method: "POST", body: fd })).json(); }
+      else r = await tgPost("sendMessage", { chat_id: to, text: cap, parse_mode: "HTML", disable_web_page_preview: true, ...(markup ? { reply_markup: JSON.parse(markup) } : {}) });
+      if (!r || !r.ok) { log("invite promo err:", r && r.description); return 0; } return r.result.message_id;
+    } catch (e) { log("invite promo err:", e.message); return 0; }
+  }
+  async function inviteTick() { // random gap of 5 to 10 hours between reminders, only from 8 AM to 10 PM Central, and the previous reminder is removed so they never pile up
+    try {
+      if ((await stGet("invitePostOn")) !== "1" || !chat) return; const now = Date.now(), next = parseInt((await stGet("invitePostNext")) || "0", 10);
+      if (!next) { await stSet("invitePostNext", now + (20 + Math.random() * 70) * 60000); return; } if (now < next) return;
+      const h = new Date(now).getUTCHours(); if (h >= 4 && h < 14) return;
+      await stSet("invitePostNext", now + (5 + Math.random() * 5) * 3600000); const prev = await stGet("invitePostMsg");
+      const id = await invitePromo(chat, false); if (id) { await stSet("invitePostMsg", id); if (prev) tgPost("deleteMessage", { chat_id: chat, message_id: Number(prev) }); log("invite reminder sent"); }
+    } catch (e) { log("invite tick err:", e.message); }
   }
   async function pollCommands() {
     await refInit();
@@ -535,6 +576,10 @@ export function initExtras(X) {
   };
   async function start(head) {
     await bbLoad();
+    setInterval(inviteTick, 5 * 60000);
+    setTimeout(async () => { // one draft of the invite reminder to the owner's DM, so it can be approved before anything posts
+      try { const [c] = await W.q("insert into bot_state(k,v) values('inviteDraftDM','1') on conflict(k) do nothing returning k"); if (!c) return; const ok = await invitePromo(ADMIN_TG, true); if (!ok) await W.q("delete from bot_state where k='inviteDraftDM'"); } catch (e) { log("invite draft err:", e.message); }
+    }, 60000);
     if (RS_ADDR) { setTimeout(rsSync, 20000); setInterval(rsSync, 60000); }
     setTimeout(async () => { // the owner asked for today's dev buybacks in the main group: post that summary once
       try { const [c] = await W.q("insert into bot_state(k,v) values('bbTodayOnce','1') on conflict(k) do nothing returning k"); if (!c) return;
