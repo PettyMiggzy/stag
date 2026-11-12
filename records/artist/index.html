@@ -121,8 +121,11 @@ footer a{margin-right:16px}
     <article class="rel"><img src="/assets/covers/wyteboyz.jpg" alt="WYTE BOYZ cover" width="600" height="600" loading="lazy">
       <div class="b"><span class="k">Exclusive single</span><h3>WYTE BOYZ</h3><p>Featuring Jelly Roll and Pyrexx. 100 copies.</p>
       <div class="row"><button class="btn" type="button" data-p="8">&#9654; Clip</button><a class="btn solid" href="/songs/">Collect</a></div></div></article>
+    <article class="rel"><img src="/assets/covers/stackitup.jpg" alt="Stack It Up cover" width="600" height="600" loading="lazy">
+      <div class="b"><span class="k">New single</span><h3>Stack It Up</h3><p id="stackLine">100 copies. Sale opens soon.</p>
+      <div class="row" id="stackBtns"><button class="btn" type="button" data-p="11">&#9654; Clip</button></div></div></article>
     <article class="rel"><img src="/assets/covers/whogotthekeys.jpg" alt="Who Got the Keys cover" width="600" height="600" loading="lazy">
-      <div class="b"><span class="k">New single</span><h3>Who Got the Keys</h3><p id="keysLine">100 copies. Sale opens soon.</p>
+      <div class="b"><span class="k">Single</span><h3>Who Got the Keys</h3><p id="keysLine">100 copies. Sale opens soon.</p>
       <div class="row" id="keysBtns"><button class="btn" type="button" data-p="10">&#9654; Clip</button></div></div></article>
   </div>
 </div></section>
@@ -172,7 +175,7 @@ document.getElementById('vids').addEventListener('click',function(e){var b=e.tar
 </script>
 <script>
 (function(){
-  var TR=[['Money on My Mind','money'],['Crown Too Heavy','crown'],['First Heartbreak at School (Remix)','heartbreak'],['No Me Llames','nomellames'],['Fresh Cut, White Tee','whitetee'],['Back On Go','backongo'],['Walk Me Through the Fire','walkfire'],["Still Ridin' Slow",'ridinslow'],['WYTE BOYZ','wyteboyz'],['Choosin You','choosing'],['Who Got the Keys','whogotthekeys']];
+  var TR=[['Money on My Mind','money'],['Crown Too Heavy','crown'],['First Heartbreak at School (Remix)','heartbreak'],['No Me Llames','nomellames'],['Fresh Cut, White Tee','whitetee'],['Back On Go','backongo'],['Walk Me Through the Fire','walkfire'],["Still Ridin' Slow",'ridinslow'],['WYTE BOYZ','wyteboyz'],['Choosin You','choosing'],['Who Got the Keys','whogotthekeys'],['Stack It Up','stackitup']];
   var ALBUM=[0,1,2,3,4,5,6,7,9];
   var PLAY='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',PAUSE='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
   var a=document.getElementById('a'),now=document.getElementById('now'),tl=document.getElementById('tl'),sh=document.getElementById('shuffle');
@@ -213,6 +216,13 @@ var h=j.result.slice(2),price=Number(BigInt('0x'+h.slice(0,64)))/1e18,cap=Number
 if(!open||price<0.008)return;var line=document.getElementById('keysLine'),row=document.getElementById('keysBtns');if(!line||!row)return;
 line.textContent=minted>=cap?'Sold out. All '+cap+' copies are gone.':(minted>0?(cap-minted)+' of '+cap+' copies left. ':'A new single. Only '+cap+' copies. ')+(minted>=cap?'':'On sale now.');
 if(minted<cap&&!document.getElementById('keysBuy')){var a=document.createElement('a');a.id='keysBuy';a.className='btn solid';a.href='/songs/';a.textContent='Collect it';row.appendChild(a)}
+}).catch(function(){})})();
+/* Stack It Up (item #13): the Collect button appears by itself once the sale is open at its real price */
+(function(){fetch('https://rpc.mainnet.chain.robinhood.com',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:'0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4',data:'0x4e692b50'+'d'.padStart(64,'0')},'latest']})}).then(function(r){return r.json()}).then(function(j){
+var h=j.result.slice(2),price=Number(BigInt('0x'+h.slice(0,64)))/1e18,cap=Number(BigInt('0x'+h.slice(64,128))),minted=Number(BigInt('0x'+h.slice(128,192))),open=BigInt('0x'+h.slice(192,256))===1n;
+if(!open||price<0.008)return;var line=document.getElementById('stackLine'),row=document.getElementById('stackBtns');if(!line||!row)return;
+line.textContent=minted>=cap?'Sold out. All '+cap+' copies are gone.':(minted>0?(cap-minted)+' of '+cap+' copies left. ':'A new single. Only '+cap+' copies. ')+(minted>=cap?'':'On sale now.');
+if(minted<cap&&!document.getElementById('stackBuy')){var a=document.createElement('a');a.id='stackBuy';a.className='btn solid';a.href='/songs/';a.textContent='Collect it';row.appendChild(a)}
 }).catch(function(){})})();
 </script>
 <script src="/assets/menu.js" defer></script>

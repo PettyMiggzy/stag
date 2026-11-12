@@ -331,11 +331,22 @@ footer .links a:hover{color:var(--neon)}
 
 
 <section class="band" id="listen"><div class="in">
+  <div class="special drop" id="stackdrop">
+    <div class="bulbs top" aria-hidden="true"></div><div class="bulbs bot" aria-hidden="true"></div>
+    <div class="scover"><img src="assets/covers/stackitup.jpg" alt="Cover art for Stack It Up by Winslow Bankz" width="1000" height="1000" loading="lazy"></div>
+    <div class="sinfo">
+      <span class="ribbon">&#9733; New drop</span>
+      <h3>Stack It Up</h3>
+      <p class="sfeat">Winslow Bankz</p>
+      <p class="sline" id="stackLine">A new single. Only 100 copies at <b>$24.99</b>. Sale opens soon.</p>
+      <div class="abtns" id="stackBtns"><button type="button" class="btn solid" id="stackPlay"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Play the clip</span></button></div>
+    </div>
+  </div>
   <div class="special drop" id="keysdrop">
     <div class="bulbs top" aria-hidden="true"></div><div class="bulbs bot" aria-hidden="true"></div>
     <div class="scover"><img src="assets/covers/whogotthekeys.jpg" alt="Cover art for Who Got the Keys by Winslow Bankz" width="1000" height="1000" loading="lazy"></div>
     <div class="sinfo">
-      <span class="ribbon">&#9733; New drop</span>
+      <span class="ribbon">&#9733; Single</span>
       <h3>Who Got the Keys</h3>
       <p class="sfeat">Winslow Bankz</p>
       <p class="sline" id="keysLine">A new single. Only 100 copies at <b>$25</b>. Sale opens soon.</p>
@@ -401,7 +412,8 @@ footer .links a:hover{color:var(--neon)}
     {t:"Still Ridin' Slow",a:'Winslow Bankz',f:'assets/preview/ridinslow.mp3'},
     {t:'WYTE BOYZ (feat. Jelly Roll & Pyrexx)',a:'Winslow Bankz',f:'assets/preview/wyteboyz.mp3'},
     {t:'Choosin You',a:'Winslow Bankz',f:'assets/preview/choosing.mp3'},
-    {t:'Who Got the Keys',a:'Winslow Bankz',f:'assets/preview/whogotthekeys.mp3'}];
+    {t:'Who Got the Keys',a:'Winslow Bankz',f:'assets/preview/whogotthekeys.mp3'},
+    {t:'Stack It Up',a:'Winslow Bankz',f:'assets/preview/stackitup.mp3'}];
   var $=function(id){return document.getElementById(id)};
   var player=$('player'),btn=$('play'),ico=$('ico'),identEl=$('ident'),st=$('pstate'),prog=$('prog'),seek=$('seek'),eq=$('eq'),ptitle=$('ptitle'),tcur=$('tcur'),tdur=$('tdur');
   var PLAY='<path d="M8 5v14l11-7z"/>',PAUSE='<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
@@ -421,6 +433,7 @@ footer .links a:hover{color:var(--neon)}
     if(apb){apb.querySelector('span').textContent=(on1&&inA)?'Pause':'Play the album';apb.querySelector('svg').innerHTML=(on1&&inA)?PAUSE:PLAY;apb.classList.toggle('on',on1&&inA)}
     if(wpb){wpb.querySelector('span').textContent=(on1&&cur===8)?'Pause':'Play the clip';wpb.querySelector('svg').innerHTML=(on1&&cur===8)?PAUSE:PLAY}
     var kpb=$('keysPlay');if(kpb){kpb.querySelector('span').textContent=(on1&&cur===10)?'Pause':'Play the clip';kpb.querySelector('svg').innerHTML=(on1&&cur===10)?PAUSE:PLAY}
+    var spb=$('stackPlay');if(spb){spb.querySelector('span').textContent=(on1&&cur===11)?'Pause':'Play the clip';spb.querySelector('svg').innerHTML=(on1&&cur===11)?PAUSE:PLAY}
     if(nowEl)nowEl.textContent=(playing&&inA)?('Now playing a clip: '+TR[cur].t):NOW0;
     rows.forEach(function(r){var on=(+r.dataset.i)===cur;r.classList.toggle('cur',on);r.querySelector('.tplay svg').innerHTML=(on&&(playing||mode==='ident'))?PAUSE:PLAY});
   }
@@ -515,6 +528,7 @@ footer .links a:hover{color:var(--neon)}
   if(apB)apB.addEventListener('click',function(){if(ALBUM_POOL.indexOf(cur)>=0&&mode!=='idle'){toggle();return}toggle(pickAlbum(cur))});
   if(wpB)wpB.addEventListener('click',function(){toggle(8)});
   var kpB=$('keysPlay');if(kpB)kpB.addEventListener('click',function(){toggle(10)});
+  var spB=$('stackPlay');if(spB)spB.addEventListener('click',function(){toggle(11)});
   rows.forEach(function(r){var n=+r.dataset.i;r.querySelector('.tplay').addEventListener('click',function(){toggle(n)})});
   audio.addEventListener('loadedmetadata',function(){tdur.textContent=fmt(audio.duration)});
   audio.addEventListener('timeupdate',function(){var d=audio.duration||0;if(d){prog.style.width=(audio.currentTime/d*100)+'%';var mp=$('miniP');if(mp)mp.style.width=prog.style.width;seek.setAttribute('aria-valuenow',Math.round(audio.currentTime/d*100))}tcur.textContent=fmt(audio.currentTime)});
@@ -539,6 +553,13 @@ var h=j.result.slice(2),price=Number(BigInt('0x'+h.slice(0,64)))/1e18,cap=Number
 if(!open||price<0.008)return;var line=document.getElementById('keysLine'),row=document.getElementById('keysBtns');if(!line||!row)return;
 line.textContent=minted>=cap?'Sold out. All '+cap+' copies are gone.':(minted>0?(cap-minted)+' of '+cap+' copies left. ':'A new single. Only '+cap+' copies. ')+(minted>=cap?'':'On sale now.');
 if(minted<cap&&!document.getElementById('keysBuy')){var a=document.createElement('a');a.id='keysBuy';a.className='btn solid';a.href='/songs/';a.textContent='Collect it';row.appendChild(a)}
+}).catch(function(){})})();
+/* Stack It Up (item #13): the Collect button appears by itself once the sale is open at its real price */
+(function(){fetch('https://rpc.mainnet.chain.robinhood.com',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:'0x895c3c2cC2790Db976EB03b0Fae17EB5594aaCA4',data:'0x4e692b50'+'d'.padStart(64,'0')},'latest']})}).then(function(r){return r.json()}).then(function(j){
+var h=j.result.slice(2),price=Number(BigInt('0x'+h.slice(0,64)))/1e18,cap=Number(BigInt('0x'+h.slice(64,128))),minted=Number(BigInt('0x'+h.slice(128,192))),open=BigInt('0x'+h.slice(192,256))===1n;
+if(!open||price<0.008)return;var line=document.getElementById('stackLine'),row=document.getElementById('stackBtns');if(!line||!row)return;
+line.textContent=minted>=cap?'Sold out. All '+cap+' copies are gone.':(minted>0?(cap-minted)+' of '+cap+' copies left. ':'A new single. Only '+cap+' copies. ')+(minted>=cap?'':'On sale now.');
+if(minted<cap&&!document.getElementById('stackBuy')){var a=document.createElement('a');a.id='stackBuy';a.className='btn solid';a.href='/songs/';a.textContent='Collect it';row.appendChild(a)}
 }).catch(function(){})})();
 </script>
 <script src="/assets/menu.js" defer></script>
