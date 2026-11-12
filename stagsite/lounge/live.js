@@ -550,6 +550,16 @@ const NPC_DEFS = [
       { p: [-2.2, -14.25], face: 0, a: 'chat', t: [7, 10] }, { p: [0.2, -14.25], face: Math.PI, a: 'look', t: [5, 7] }, { p: [2.4, -14.25], face: 0, a: 'agree', t: [6, 9] },
       { p: [0.2, -14.25], face: 0, a: 'drink', t: [5, 7] }, { p: [-2.2, -14.25], face: Math.PI * .9, a: 'look', t: [4, 6] },
     ], hello: ['hi', 'evening'] },
+  // a running joke: every few minutes a very confident stag in a suit strolls in from the door, pumps his fist, says his piece and leaves again
+  { id: 'prez', name: 'The Stag-in-Chief', file: 'prez', x: 0, z: 13.4, ry: Math.PI, h: 1.95, reach: 2.8, speed: 1.25, hidden: true, anims: ['idle', 'pump', 'talk', 'wave', 'walk'],
+    routine: [
+      { p: [0, 13.4], a: 'idle', t: [200, 420], hide: true },
+      { p: [0, 9.2], face: Math.PI, a: 'wave', t: [2.5, 3.5] },
+      { p: [0.4, 2.2], face: 0, a: 'pump', t: [4.5, 5.5], say: ['msga', 'winning'] },
+      { p: [-3.6, -7.6], face: Math.PI * .1, a: 'talk', t: [5, 6.5], say: ['huge', 'built', 'nobody'] },
+      { p: [3.8, -5.2], face: Math.PI * 1.9, a: 'pump', t: [4.5, 5.5], say: ['msga', 'nobody', 'winning'] },
+      { p: [0, 9.6], face: 0, a: 'wave', t: [2, 3] },
+    ] },
   // the special guest: a big country-rap stag holding down the far end of the bar
   { id: 'guest', name: 'Special Guest', file: 'guest', x: 1.8, z: -12.1, ry: Math.PI, h: 1.9, reach: 2.8, anims: ['idle', 'drink', 'chat', 'look', 'agree'],
     routine: [{ p: null, face: Math.PI, a: 'idle', t: [5, 8] }, { p: null, face: Math.PI, a: 'drink', t: [6, 9] }, { p: null, face: Math.PI * 1.12, a: 'chat', t: [4, 6] }, { p: null, face: Math.PI * .9, a: 'look', t: [4, 6] }, { p: null, face: Math.PI, a: 'agree', t: [3, 5] }], hello: ['hi'] },
@@ -561,7 +571,7 @@ const NPCS = {}; let LINES = {}; let talking = null;
 const voiceVol = (npc) => { if (!me) return .6; const d = Math.hypot(npc.obj.position.x - pos.x, npc.obj.position.z - pos.z); return Math.max(.25, Math.min(1, 1.2 - d / 14)); };
 async function loadNpcs() {
   try { LINES = await (await fetch('./assets/npc/voices/lines.json')).json(); } catch {}
-  const PRI = ['door', 'bar', 'patron', 'guest', 'dj', 'patrol', 'dealer', 'eng', 'artist', 'rl', 'bj']; const queue = [...NPC_DEFS].sort((a, b) => PRI.indexOf(a.id) - PRI.indexOf(b.id));
+  const PRI = ['door', 'bar', 'patron', 'guest', 'dj', 'prez', 'patrol', 'dealer', 'eng', 'artist', 'rl', 'bj']; const queue = [...NPC_DEFS].sort((a, b) => PRI.indexOf(a.id) - PRI.indexOf(b.id));
   const loadOne = async (d) => {
     try {
       const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
@@ -574,7 +584,7 @@ async function loadNpcs() {
         const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
       const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
       const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
-      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', guest: 'In the building tonight', dealer: 'Poker dealer', artist: 'Recording a demo', bj: 'Blackjack dealer', rl: 'Roulette croupier' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
+      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', guest: 'In the building tonight', prez: 'Making Stag great again', dealer: 'Poker dealer', artist: 'Recording a demo', bj: 'Blackjack dealer', rl: 'Roulette croupier' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
     } catch (e) { console.warn('npc failed', d.file, e); }
   };
   await Promise.all([0, 1, 2].map(async () => { while (queue.length) await loadOne(queue.shift()); })); // three at a time, the door and the bar first
@@ -600,7 +610,8 @@ function runRoutine(n, now, dt) { // walk to the next station, do the job there 
   const r = n.routine || []; if (!r.length) { npcPlay(n, n.base); return; } const s = r[n.step % r.length];
   if (n.st === 'walk') {
     const dx = s.p[0] - n.obj.position.x, dz = s.p[1] - n.obj.position.z, dist = Math.hypot(dx, dz);
-    if (dist < .12) { n.st = 'act'; n.until = now + (s.t[0] + Math.random() * (s.t[1] - s.t[0])) * 1000 * NK; npcPlay(n, s.a); return; }
+    if (dist < .12) { n.st = 'act'; n.until = now + (s.t[0] + Math.random() * (s.t[1] - s.t[0])) * 1000 * NK; npcPlay(n, s.a); n.hidden = !!s.hide; if (s.say && me) npcSay(n, s.say[Math.floor(Math.random() * s.say.length)]); return; }
+    n.hidden = false;
     const sp = Math.min(dist, (n.speed || 1.0) * NSP * dt); n.obj.position.x += dx / dist * sp; n.obj.position.z += dz / dist * sp;
     n.obj.rotation.y += angDiff(Math.atan2(dx, dz), n.obj.rotation.y) * Math.min(1, dt * 7); npcPlay(n, n.acts.walk ? 'walk' : n.base); return;
   }
@@ -615,7 +626,7 @@ function npcTick(dt) {
     const d = Math.hypot(n.obj.position.x - pos.x, n.obj.position.z - pos.z);
     const inV = d < 3 || inView(n.obj.position.x, 1, n.obj.position.z);
     if (n.id === 'artist') { const inB = pos.x > -11.9 && pos.x < -6.4 && pos.z > 10.0 && pos.z < 13.8; if (inB || L.studio.onAir) n.away = now + 12000; const tv = now < (n.away || 0) ? 0 : 1; n.vis += (tv - n.vis) * Math.min(1, dt * 3); for (const m of n.mats || []) m.opacity = n.vis; n.obj.visible = n.vis > .03 && inV; if (!n.obj.visible) continue; }
-    if (n.id !== 'artist') n.obj.visible = inV;
+    if (n.id !== 'artist') n.obj.visible = inV && !n.hidden;
     if (d < 30 && inV) n.mixer.update(dt);
     const speaking = now < n.talkUntil, greeting = n.greetUntil && now < n.greetUntil, busy = speaking || talking === n || greeting;
     if (greeting && !(talking === n)) { npcPlay(n, n.acts[n.greetAnim] ? n.greetAnim : n.base); if (d < 12) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 5); } n.until = Math.max(n.until, now + 2000); }
@@ -626,7 +637,7 @@ function npcTick(dt) {
       if (d < 9) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 6); }
       n.until = Math.max(n.until, now + 2500);
     } else runRoutine(n, now, dt);
-    if (d < n.reach && d < nd) { near = n; nd = d; }
+    if (d < n.reach && d < nd && !n.hidden) { near = n; nd = d; }
   }
   const btn = $('#talkBtn'); if (near) { btn.style.display = 'inline-block'; btn.textContent = innerWidth <= 640 ? '💬 Talk' : '💬 Talk to ' + near.name; btn.dataset.n = near.id; } else { btn.style.display = 'none'; if (talking && !ST.on) closeTalk(); }
 }
@@ -649,6 +660,9 @@ function openTalk(n) {
   } else if (n.id === 'bar') {
     sub.textContent = "Evening. What can I get you? It's all on the house right now."; npcSay(n, 'greet');
     add('🍸 See the menu', () => { npcSay(n, 'menu'); $('#bar').style.display = 'flex'; closeTalk(); }); add('Just looking', () => { npcSay(n, 'thanks'); closeTalk(); });
+  } else if (n.id === 'prez') {
+    sub.textContent = 'This lounge? Tremendous. The best lounge. Everybody says so.'; npcSay(n, 'huge');
+    add('Make Stag great again!', () => { npcSay(n, 'msga'); n.greetAnim = 'pump'; n.greetUntil = performance.now() + 4200; }); add('Is it going to be huge?', () => { sub.textContent = "Nobody holds Stag like me. Nobody. It's going to be huge."; npcSay(n, 'nobody'); }); add('Thank you, sir', () => { npcSay(n, 'winning'); closeTalk(); });
   } else if (n.id === 'guest') {
     sub.textContent = "Hey now. Pull up a stool. I'm just here for the music tonight."; npcSay(n, 'hi');
     add('🥂 Cheers', () => { npcSay(n, 'cheers'); n.greetAnim = 'drink'; n.greetUntil = performance.now() + 2600; }); add('What should I play?', () => { sub.textContent = 'Go vote for Wyte Boyz at the DJ booth. That one hits different in here.'; npcSay(n, 'song'); }); add('Enjoy', () => { npcSay(n, 'enjoy'); closeTalk(); });
