@@ -552,13 +552,16 @@ const NPC_DEFS = [
     ], hello: ['hi', 'evening'] },
   // a running joke: every few minutes a very confident stag in a suit strolls in from the door, pumps his fist, says his piece and leaves again
   { id: 'prez', name: 'The Stag-in-Chief', file: 'prez', x: 0, z: 13.4, ry: Math.PI, h: 1.95, reach: 2.8, speed: 1.25, hidden: true, anims: ['idle', 'pump', 'talk', 'wave', 'walk'],
-    routine: [
+    routine: [ // he keeps to the floor: down the middle to the foot of the stage, round the left side, behind it past the bar crowd, and back up the right
       { p: [0, 13.4], a: 'idle', t: [200, 420], hide: true },
-      { p: [0, 9.2], face: Math.PI, a: 'wave', t: [2.5, 3.5] },
-      { p: [0.4, 2.2], face: 0, a: 'pump', t: [4.5, 5.5], say: ['msga', 'winning'] },
-      { p: [-3.6, -7.6], face: Math.PI * .1, a: 'talk', t: [5, 6.5], say: ['huge', 'built', 'nobody'] },
-      { p: [3.8, -5.2], face: Math.PI * 1.9, a: 'pump', t: [4.5, 5.5], say: ['msga', 'nobody', 'winning'] },
-      { p: [0, 9.6], face: 0, a: 'wave', t: [2, 3] },
+      { p: [0, 9.2], face: 0, a: 'wave', t: [2.5, 3.5] },
+      { p: [0.2, 5.3], face: 0, a: 'pump', t: [5, 6], say: ['msga', 'winning'] },
+      { p: [-3.7, 3.6], a: 'walk', t: [0, .1] },
+      { p: [-3.7, -6.6], face: Math.PI * .5, a: 'talk', t: [5, 6.5], say: ['huge', 'built', 'nobody'] },
+      { p: [-3.7, -10.4], a: 'walk', t: [0, .1] }, { p: [3.7, -10.4], a: 'walk', t: [0, .1] },
+      { p: [3.7, -5.0], face: -Math.PI * .5, a: 'pump', t: [5, 6], say: ['msga', 'nobody', 'winning'] },
+      { p: [3.7, 4.4], a: 'walk', t: [0, .1] },
+      { p: [0, 9.6], face: Math.PI, a: 'wave', t: [2, 3] },
     ] },
   // the special guest: a big country-rap stag holding down the far end of the bar
   { id: 'guest', name: 'Special Guest', file: 'guest', x: 1.8, z: -12.1, ry: Math.PI, h: 1.9, reach: 2.8, anims: ['idle', 'drink', 'chat', 'look', 'agree'],
@@ -610,8 +613,8 @@ function runRoutine(n, now, dt) { // walk to the next station, do the job there 
   const r = n.routine || []; if (!r.length) { npcPlay(n, n.base); return; } const s = r[n.step % r.length];
   if (n.st === 'walk') {
     const dx = s.p[0] - n.obj.position.x, dz = s.p[1] - n.obj.position.z, dist = Math.hypot(dx, dz);
-    if (dist < .12) { n.st = 'act'; n.until = now + (s.t[0] + Math.random() * (s.t[1] - s.t[0])) * 1000 * NK; npcPlay(n, s.a); n.hidden = !!s.hide; if (s.say && me) npcSay(n, s.say[Math.floor(Math.random() * s.say.length)]); return; }
-    n.hidden = false;
+    if (dist < .12) { n.st = 'act'; n.until = now + (s.t[0] + Math.random() * (s.t[1] - s.t[0])) * 1000 * NK; npcPlay(n, s.a); n.hidden = !!s.hide; n.sayAnim = s.say ? s.a : ''; if (s.say && me) npcSay(n, s.say[Math.floor(Math.random() * s.say.length)]); return; }
+    n.hidden = false; n.sayAnim = '';
     const sp = Math.min(dist, (n.speed || 1.0) * NSP * dt); n.obj.position.x += dx / dist * sp; n.obj.position.z += dz / dist * sp;
     n.obj.rotation.y += angDiff(Math.atan2(dx, dz), n.obj.rotation.y) * Math.min(1, dt * 7); npcPlay(n, n.acts.walk ? 'walk' : n.base); return;
   }
@@ -633,7 +636,7 @@ function npcTick(dt) {
     else if (n.hello && me && d < (n.helloD || 2.6) && now > (n.nextHello || 0) && !busy) { n.nextHello = now + 70000 + Math.random() * 30000; n.greetAnim = 'agree'; n.greetUntil = now + 2800; npcSay(n, n.hello[Math.floor(Math.random() * n.hello.length)]); }
     else
     if (busy) { // someone is talking to them: stop, face the player, and talk
-      npcPlay(n, speaking ? (n.acts.talk ? 'talk' : (n.acts.chat ? 'chat' : (n.acts.wave ? 'wave' : n.base))) : (n.acts.idle ? 'idle' : n.base));
+      npcPlay(n, speaking && n.sayAnim && n.acts[n.sayAnim] && talking !== n ? n.sayAnim : speaking ? (n.acts.talk ? 'talk' : (n.acts.chat ? 'chat' : (n.acts.wave ? 'wave' : n.base))) : (n.acts.idle ? 'idle' : n.base));
       if (d < 9) { const t = Math.atan2(pos.x - n.obj.position.x, pos.z - n.obj.position.z); n.obj.rotation.y += angDiff(t, n.obj.rotation.y) * Math.min(1, dt * 6); }
       n.until = Math.max(n.until, now + 2500);
     } else runRoutine(n, now, dt);
