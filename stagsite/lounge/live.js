@@ -550,6 +550,9 @@ const NPC_DEFS = [
       { p: [-2.2, -14.25], face: 0, a: 'chat', t: [7, 10] }, { p: [0.2, -14.25], face: Math.PI, a: 'look', t: [5, 7] }, { p: [2.4, -14.25], face: 0, a: 'agree', t: [6, 9] },
       { p: [0.2, -14.25], face: 0, a: 'drink', t: [5, 7] }, { p: [-2.2, -14.25], face: Math.PI * .9, a: 'look', t: [4, 6] },
     ], hello: ['hi', 'evening'] },
+  // the special guest: a big country-rap stag holding down the far end of the bar
+  { id: 'guest', name: 'Special Guest', file: 'guest', x: 1.8, z: -12.1, ry: Math.PI, h: 1.9, reach: 2.8, anims: ['idle', 'drink', 'chat', 'look', 'agree'],
+    routine: [{ p: null, face: Math.PI, a: 'idle', t: [5, 8] }, { p: null, face: Math.PI, a: 'drink', t: [6, 9] }, { p: null, face: Math.PI * 1.12, a: 'chat', t: [4, 6] }, { p: null, face: Math.PI * .9, a: 'look', t: [4, 6] }, { p: null, face: Math.PI, a: 'agree', t: [3, 5] }], hello: ['hi'] },
   { id: 'patron', name: 'Big Mike', file: 'patron', x: -1.68, z: -12.1, ry: Math.PI, h: 1.8, reach: 2.8, anims: ['idle', 'drink', 'chat', 'look', 'agree'],
     routine: [{ p: null, face: Math.PI, a: 'drink', t: [6, 9] }, { p: null, face: Math.PI, a: 'idle', t: [5, 8] }, { p: null, face: Math.PI * .85, a: 'chat', t: [4, 6] }, { p: null, face: Math.PI, a: 'drink', t: [7, 10] }, { p: null, face: Math.PI * 1.1, a: 'look', t: [4, 6] }], hello: ['hi'] },
 
@@ -558,7 +561,7 @@ const NPCS = {}; let LINES = {}; let talking = null;
 const voiceVol = (npc) => { if (!me) return .6; const d = Math.hypot(npc.obj.position.x - pos.x, npc.obj.position.z - pos.z); return Math.max(.25, Math.min(1, 1.2 - d / 14)); };
 async function loadNpcs() {
   try { LINES = await (await fetch('./assets/npc/voices/lines.json')).json(); } catch {}
-  const PRI = ['door', 'bar', 'patron', 'dj', 'patrol', 'dealer', 'eng', 'artist', 'rl', 'bj']; const queue = [...NPC_DEFS].sort((a, b) => PRI.indexOf(a.id) - PRI.indexOf(b.id));
+  const PRI = ['door', 'bar', 'patron', 'guest', 'dj', 'patrol', 'dealer', 'eng', 'artist', 'rl', 'bj']; const queue = [...NPC_DEFS].sort((a, b) => PRI.indexOf(a.id) - PRI.indexOf(b.id));
   const loadOne = async (d) => {
     try {
       const g = await loadGLB(`./assets/npc/${d.file}.glb`); g.scene.updateMatrixWorld(true);
@@ -571,7 +574,7 @@ async function loadNpcs() {
         const act = mixer.clipAction(c); act.setLoop(THREE.LoopRepeat, Infinity); acts[a] = act; } catch (e) { console.warn('npc anim', d.file, a); } }
       const base = d.id === 'dj' ? (acts.groove ? 'groove' : 'idle') : 'idle';
       const npc = { ...d, obj: grp, mixer, acts, base, cur: null, curName: '', talkUntil: 0, step: 0, st: 'act', until: performance.now() + 3000 + Math.random() * 3000, home: [d.x, d.z], walking: false }; NPCS[d.id] = npc; npcPlay(npc, base); mixer.update(Math.random() * 2);
-      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', dealer: 'Poker dealer', artist: 'Recording a demo', bj: 'Blackjack dealer', rl: 'Roulette croupier' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
+      const tag = nameTag(d.name + '  ·  ' + ({ eng: 'Studio engineer', dj: 'Resident DJ', door: 'Door', patrol: 'Floor security', bar: 'Bartender', patron: 'Regular', guest: 'In the building tonight', dealer: 'Poker dealer', artist: 'Recording a demo', bj: 'Blackjack dealer', rl: 'Roulette croupier' }[d.id] || ''), 0xe9c97a); tag.position.y = (d.h || 1.8) + .4; grp.add(tag); if (d.id === 'artist') { npc.mats = []; npc.vis = 1; g.scene.traverse((o) => { if (o.material) { o.material.transparent = true; npc.mats.push(o.material); } }); }
     } catch (e) { console.warn('npc failed', d.file, e); }
   };
   await Promise.all([0, 1, 2].map(async () => { while (queue.length) await loadOne(queue.shift()); })); // three at a time, the door and the bar first
@@ -646,6 +649,9 @@ function openTalk(n) {
   } else if (n.id === 'bar') {
     sub.textContent = "Evening. What can I get you? It's all on the house right now."; npcSay(n, 'greet');
     add('🍸 See the menu', () => { npcSay(n, 'menu'); $('#bar').style.display = 'flex'; closeTalk(); }); add('Just looking', () => { npcSay(n, 'thanks'); closeTalk(); });
+  } else if (n.id === 'guest') {
+    sub.textContent = "Hey now. Pull up a stool. I'm just here for the music tonight."; npcSay(n, 'hi');
+    add('🥂 Cheers', () => { npcSay(n, 'cheers'); n.greetAnim = 'drink'; n.greetUntil = performance.now() + 2600; }); add('What should I play?', () => { sub.textContent = 'Go vote for Wyte Boyz at the DJ booth. That one hits different in here.'; npcSay(n, 'song'); }); add('Enjoy', () => { npcSay(n, 'enjoy'); closeTalk(); });
   } else if (n.id === 'patron') {
     sub.textContent = 'Pull up a stool, friend.'; npcSay(n, 'hi');
     add('🥂 Cheers', () => { npcSay(n, 'cheers'); n.greetAnim = 'drink'; n.greetUntil = performance.now() + 2600; }); add('Any tips?', () => { sub.textContent = 'Try the pink one. Trust me.'; npcSay(n, 'tip'); }); add('Enjoy', () => { npcSay(n, 'enjoy'); closeTalk(); });

@@ -26,6 +26,7 @@ export function initExtras(X) {
   // ---------- buyer lookup (cached) ----------
   const BUYER = new Map();
   let TEAM = "";
+  const EP = new Set(["0x0000000071727de22e5e9d8baf0edac6f37da032", "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789", "0x4337084d9e255ff0702461cf8895ce9e3b5ff108"]); // ERC-4337 EntryPoint contracts
   // ---------- dev buyback alerts ----------
   // The dev wallets are saved from the owner's bot DM (/setdev) into the database: never in the code, the repo or a post.
   // Alerts stay OFF until the owner approves a draft (/buybackdraft, then /buyback on).
@@ -82,7 +83,15 @@ export function initExtras(X) {
   const isTeam = (tx) => !!TEAM && BUYER.get(tx) === TEAM;
   async function buyerOf(tx) {
     if (BUYER.has(tx)) return BUYER.get(tx);
-    try { const t = await provider.getTransaction(tx); const b = (t?.from || "").toLowerCase(); BUYER.set(tx, b); return b; } catch { return ""; }
+    try {
+      const t = await provider.getTransaction(tx); let b = (t?.from || "").toLowerCase();
+      if (EP.has((t?.to || "").toLowerCase())) { // a smart wallet's buy is sent by a relayer: the buyer is the wallet the pool paid the tokens to
+        const rc = await provider.getTransactionReceipt(tx); const poolT = ethers.zeroPadValue(CFG.pool, 32).toLowerCase();
+        const lg = rc.logs.filter((l) => l.address.toLowerCase() === CFG.token.toLowerCase() && l.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" && (l.topics[1] || "").toLowerCase() === poolT).pop();
+        if (lg) b = ("0x" + lg.topics[2].slice(-40)).toLowerCase();
+      }
+      BUYER.set(tx, b); return b;
+    } catch { return ""; }
   }
   async function prefetchDay(head) {
     const day = ST.buys.filter((b) => b.block > head - BLOCKS_PER_DAY);

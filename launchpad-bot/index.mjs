@@ -411,6 +411,7 @@ async function announce(raw) {
 
 
 // ---- on-chain stats (holders, top-10, 24h volume, price multiple) built from logs; idempotent ----
+const ENTRYPOINTS = new Set(["0x0000000071727de22e5e9d8baf0edac6f37da032", "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789", "0x4337084d9e255ff0702461cf8895ce9e3b5ff108"]); // ERC-4337 EntryPoint v0.7, v0.6, v0.8
 const CURVE_BUY = "0xec36bf571f136799e8dc0b0b8bea4b04d8bd3d43de838aab0d5fc21d4cbfc455";
 const BLOCKS_PER_DAY = parseInt(E("BLOCKS_PER_DAY", "830000"), 10);
 const STATS_FROM = parseInt(E("STATS_FROM_BLOCK", "105516351"), 10);
@@ -482,7 +483,10 @@ async function scan(fromBlock, toBlock) {
     seen.add(lg.transactionHash);
     let tx;
     try { tx = await provider.getTransaction(lg.transactionHash); } catch { tx = null; }
-    const buyer = (tx?.from || "0x" + (lg.topics[2] || "").slice(-40)).toLowerCase();
+    let buyer = (tx?.from || "0x" + (lg.topics[2] || "").slice(-40)).toLowerCase();
+    // smart wallets (Robinhood Wallet and other account-abstraction wallets) do not send their own transactions: a relayer does, through the
+    // EntryPoint contract. There the real buyer is the wallet the tokens ended up in, not the relayer that sent the transaction.
+    if (ENTRYPOINTS.has((tx?.to || "").toLowerCase())) buyer = ("0x" + (lg.topics[2] || "").slice(-40)).toLowerCase();
     if (buyer === CFG.pool || buyer === "0x0000000000000000000000000000000000000000") continue;
     // tokens the buyer actually received in this tx (sum of token transfers to the buyer, else the pool outflow)
     let tokens = 0;
