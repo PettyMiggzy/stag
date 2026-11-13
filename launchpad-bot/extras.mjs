@@ -247,6 +247,11 @@ export function initExtras(X) {
         const on = arg === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
         return reply(on ? (DEVS.size ? `🔥 Dev buyback alerts are ON for ${DEVS.size} wallet${DEVS.size === 1 ? "" : "s"}. The next dev buy posts the DEV BUYBACK card in the main group. /buyback off stops it.` : "Alerts are ON, but no dev wallet is saved yet. Send /setdev 0x… first.") : "Dev buyback alerts are OFF. Dev buys post as normal buy cards.");
       }
+      if (cmd === "alerts" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, private DM only
+        if (msg.chat.type !== "private") return; const a0 = (args[0] || "").toLowerCase(), n = parseFloat((args[1] || "").replace(/,/g, ""));
+        if (a0 === "on" || a0 === "off") await stSet("watchOn", a0 === "on" ? "1" : "0"); else if (a0 === "sell" && n > 0) await stSet("watchSellMin", n); else if (a0 === "holder" && n > 0 && n < 100) { await stSet("watchHolderPct", n); await stSet("watchHolders", "{}"); }
+        const c = await wCfg(); return reply(`Private alerts are ${c.on ? "ON" : "OFF"}. They only ever come to this DM.\n• Big sell: ${fmt(c.sell, 0)} $STAG or more in one sale (${fmt(c.sell / SUPPLY * 100, 2)}% of supply)\n• Big holder: any wallet at ${c.pct}% of supply or more\n\nChange them:\n/alerts sell 5000000\n/alerts holder 3\n/alerts off`);
+      }
       if ((cmd === "invitedraft" || cmd === "invitepost") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, in the bot DM
         if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
         if (cmd === "invitedraft") { const ok = await invitePromo(msg.chat.id, true); return ok ? null : reply("Could not send the draft. Try again."); }
@@ -305,6 +310,55 @@ export function initExtras(X) {
       if (cmd === "game" || cmd === "play") return reply(`🏹 <b>Stag Shot</b> – 3D forest archery\n${process.env.MINIAPP_URL || "https://stagwifhood.fun/play/"}`);
       if (cmd === "help" || cmd === "start") return reply("<b>$STAG bot</b>\n<i>You can also just type: ca, price, chart, links</i>\n/ca – contract address\ninvite – your personal invite link · invites – the invite board\n/buy – buy link · /chart – chart\n/links – all links · /game – play Stag Shot\n/lounge – the 3D club · /records – the music · /app – StagR on Google Play\n/price · /mc · /stats – live market\n/bonding – progress to graduation\n/holders – holder count\n/top – top buyers (24h)\n/last – last buy\n/me 0x… – look up a wallet\n/song – play a Winslow Bankz clip\n/stagme <outfit or vibe> – make your own stag picture");
     } catch (e) { log("cmd err:", e.message); }
+  }
+  // ---------- owner-only watch: big sells and big holders ----------
+  // Everything here goes to the owner's private DM with the bot and nowhere else. Nothing in this block ever posts to a group.
+  const WT = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", SUPPLY = 1e9, STATS_START = parseInt(process.env.STATS_FROM_BLOCK || "105516351", 10);
+  const wPad = (a) => ethers.zeroPadValue(a, 32).toLowerCase(), wAddr = (t) => ("0x" + t.slice(-40)).toLowerCase(), wAmt = (d) => Number(ethers.formatUnits(BigInt(d), 18));
+  const ownerDM = (text) => tgPost("sendMessage", { chat_id: ADMIN_TG, text, parse_mode: "HTML", disable_web_page_preview: true });
+  const wLink = (a) => `<a href="${CFG.explorer}/address/${a}">${a}</a>`;
+  async function wLogs(filter, a, b, step = 2000000) { const out = []; for (let x = a; x <= b; x += step) { const to = Math.min(b, x + step - 1); try { out.push(...await provider.getLogs({ ...filter, fromBlock: x, toBlock: to })); } catch (e) { if (step > 20000) out.push(...await wLogs(filter, x, to, Math.floor(step / 5))); else throw e; } } return out; }
+  // where a wallet's $STAG came from: bought on the curve, or sent in by another wallet
+  async function wSources(w, head) {
+    const pool = CFG.pool.toLowerCase(), token = CFG.token.toLowerCase(); let bought = 0; const from = new Map();
+    const ins = (await wLogs({ address: CFG.token, topics: [WT, null, wPad(w)] }, STATS_START, head)).slice(-40);
+    for (const l of ins) { const src = wAddr(l.topics[1]), a = wAmt(l.data); if (src === pool) { bought += a; continue; }
+      let viaCurve = false; try { const rc = await provider.getTransactionReceipt(l.transactionHash); viaCurve = rc.logs.some((x) => x.address.toLowerCase() === token && x.topics[0] === WT && wAddr(x.topics[1]) === pool); } catch {}
+      if (viaCurve) bought += a; else from.set(src, (from.get(src) || 0) + a); }
+    const lines = []; if (bought > 0) lines.push(`• Bought on the market: <b>${fmt(bought, 0)}</b>`);
+    for (const [a, v] of [...from.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6)) lines.push(`• Sent in by ${DEVS.has(a) ? "<b>the dev wallet</b>" : wLink(a)}: <b>${fmt(v, 0)}</b>`);
+    return lines.length ? lines.join("\n") : "• No incoming transfers found";
+  }
+  const wCfg = async () => ({ on: (await stGet("watchOn")) !== "0", sell: parseFloat((await stGet("watchSellMin")) || "5000000") || 5000000, pct: parseFloat((await stGet("watchHolderPct")) || "3") || 3 });
+  let wBusy = false;
+  async function watchSells() {
+    if (wBusy) return; wBusy = true;
+    try {
+      const c = await wCfg(); const head = await provider.getBlockNumber(); const last = parseInt((await stGet("watchSellBlock")) || "0", 10);
+      if (!last) { await stSet("watchSellBlock", head); return; } if (head <= last) return;
+      const pool = CFG.pool.toLowerCase(), token = CFG.token.toLowerCase(); const logs = await wLogs({ address: CFG.token, topics: [WT, null, wPad(CFG.pool)] }, last + 1, head, 200000); await stSet("watchSellBlock", head);
+      if (!c.on) return; const seen = new Set();
+      for (const lg of logs) { if (seen.has(lg.transactionHash)) continue; seen.add(lg.transactionHash);
+        const rc = await provider.getTransactionReceipt(lg.transactionHash); const tl = rc.logs.filter((l) => l.address.toLowerCase() === token && l.topics[0] === WT); const tos = new Set(tl.map((l) => wAddr(l.topics[2])));
+        const first = tl.find((l) => !tos.has(wAddr(l.topics[1]))) || tl[0]; const seller = wAddr(first.topics[1]); const tok = tl.filter((l) => wAddr(l.topics[2]) === pool).reduce((x, l) => x + wAmt(l.data), 0);
+        if (tok < c.sell || seller === pool) continue; const m = await market().catch(() => ({})); const left = Number(ethers.formatUnits(ST.bal.get(seller) || 0n, 18));
+        await ownerDM([`🚨 <b>BIG SELL</b> (only you see this)`, `Sold: <b>${fmt(tok, 0)}</b> $STAG · ${fmt(tok / SUPPLY * 100, 2)}% of supply${m.priceUsd ? ` · about ${usd(tok * m.priceUsd)}` : ""}`, `Wallet: ${DEVS.has(seller) ? "<b>the dev wallet</b>" : wLink(seller)}`, `Still holding: <b>${fmt(Math.max(0, left), 0)}</b>`, `<a href="${CFG.explorer}/tx/${lg.transactionHash}">Transaction</a>`, "", "<b>Where its $STAG came from</b>", await wSources(seller, head)].join("\n"));
+      }
+    } catch (e) { log("watch sells err:", e.shortMessage || e.message); } finally { wBusy = false; }
+  }
+  async function watchHolders() {
+    try {
+      const c = await wCfg(); if (!c.on) return; const skip = new Set([CFG.pool.toLowerCase(), "0x000000000000000000000000000000000000dead", "0x0000000000000000000000000000000000000000", RS_ADDR]);
+      let known = {}; try { known = JSON.parse((await stGet("watchHolders")) || "{}"); } catch {} const first = (await stGet("watchHoldersInit")) !== "1"; const head = await provider.getBlockNumber(); const cur = [];
+      for (const [a, v] of ST.bal.entries()) { if (v <= 0n || skip.has(a) || DEVS.has(a)) continue; const bal = Number(ethers.formatUnits(v, 18)), pct = bal / SUPPLY * 100; if (pct >= c.pct) cur.push({ a, bal, pct, lvl: Math.floor(pct / c.pct) }); }
+      cur.sort((x, y) => y.bal - x.bal);
+      if (first) { await stSet("watchHoldersInit", "1"); for (const h of cur) known[h.a] = h.lvl; await stSet("watchHolders", JSON.stringify(known));
+        await ownerDM(cur.length ? [`👀 <b>BIG HOLDERS RIGHT NOW</b> (only you see this)`, `Wallets holding ${c.pct}% of supply or more, not counting the curve or the dev wallet:`, "", ...cur.slice(0, 15).map((h) => `${wLink(h.a)}\n<b>${fmt(h.bal, 0)}</b> · ${fmt(h.pct, 2)}%`), "", "From now on I will message you when a new wallet crosses that line, and whenever a big sell hits."].join("\n") : `👀 Big-holder watch is on. No wallet other than the curve and the dev wallet holds ${c.pct}% of supply or more right now.`); return; }
+      for (const h of cur) { if ((known[h.a] || 0) >= h.lvl) continue; known[h.a] = h.lvl;
+        await ownerDM([`👀 <b>BIG HOLDER</b> (only you see this)`, `A wallet now holds <b>${fmt(h.pct, 2)}%</b> of supply: <b>${fmt(h.bal, 0)}</b> $STAG`, `Wallet: ${wLink(h.a)}`, "", "<b>Where its $STAG came from</b>", await wSources(h.a, head)].join("\n")); }
+      for (const a of Object.keys(known)) if (!cur.find((h) => h.a === a)) delete known[a]; // dropped back under the line: alert again if they climb back
+      await stSet("watchHolders", JSON.stringify(known));
+    } catch (e) { log("watch holders err:", e.shortMessage || e.message); }
   }
   // ---------- record launchpad: who is backing which record (read from the RecordStake contract's events) ----------
   // Off until RECORD_STAKE (the contract address) is set. Positions are rebuilt from Staked / Unstaked events only.
@@ -581,6 +635,7 @@ export function initExtras(X) {
   async function start(head) {
     await bbLoad();
     setInterval(inviteTick, 5 * 60000);
+    setTimeout(watchSells, 45000); setInterval(watchSells, 60000); setTimeout(watchHolders, 150000); setInterval(watchHolders, 10 * 60000);
     setTimeout(async () => { // the owner switched reminders on during quiet hours and asked for the first one straight away: post it once
       try { if ((await stGet("invitePostOn")) !== "1" || (await stGet("invitePostMsg"))) return; const [c] = await W.q("insert into bot_state(k,v) values('inviteFirstNow','1') on conflict(k) do nothing returning k"); if (!c) return;
         const ok = await inviteNow(); if (!ok) await W.q("delete from bot_state where k='inviteFirstNow'"); tgPost("sendMessage", { chat_id: ADMIN_TG, text: ok ? "Posted the first invite reminder to the main group. The next ones come at random, 5 to 10 hours apart, day and night." : "The first invite reminder failed to post. Send /invitepost now to try again." });
