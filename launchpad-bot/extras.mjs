@@ -247,6 +247,13 @@ export function initExtras(X) {
         const on = arg === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
         return reply(on ? (DEVS.size ? `🔥 Dev buyback alerts are ON for ${DEVS.size} wallet${DEVS.size === 1 ? "" : "s"}. The next dev buy posts the DEV BUYBACK card in the main group. /buyback off stops it.` : "Alerts are ON, but no dev wallet is saved yet. Send /setdev 0x… first.") : "Dev buyback alerts are OFF. Dev buys post as normal buy cards.");
       }
+      if ((cmd === "watch" || cmd === "unwatch" || cmd === "watching") && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, private DM only
+        if (msg.chat.type !== "private") return; const list = await wlGet(); const a = (args[0] || "").toLowerCase();
+        if (cmd === "watch" && /^0x[0-9a-f]{40}$/.test(a)) { list[a] = args.slice(1).join(" ").slice(0, 60); await stSet("watchList", JSON.stringify(list)); await stSet("wlEth:" + a, (await provider.getBalance(a)).toString()); await stSet("wlNonce:" + a, String(await provider.getTransactionCount(a))); }
+        else if (cmd === "unwatch" && list[a] !== undefined) { delete list[a]; await stSet("watchList", JSON.stringify(list)); }
+        else if (cmd !== "watching") return reply("Send it like this:\n/watch 0x… optional note\n/unwatch 0x…\n/watching");
+        const keys = Object.keys(list); return reply(keys.length ? `👁 Watching ${keys.length} wallet${keys.length === 1 ? "" : "s"}. Any token in or out, and any ETH change, comes to this DM only:\n\n` + keys.map((k) => `${wLink(k)}${list[k] ? `\n   ${esc(list[k])}` : ""}`).join("\n") : "Not watching any wallets. /watch 0x… to add one.");
+      }
       if (cmd === "alerts" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, private DM only
         if (msg.chat.type !== "private") return; const a0 = (args[0] || "").toLowerCase(), n = parseFloat((args[1] || "").replace(/,/g, ""));
         if (a0 === "on" || a0 === "off") await stSet("watchOn", a0 === "on" ? "1" : "0"); else if (a0 === "sell" && n > 0) await stSet("watchSellMin", n); else if (a0 === "holder" && n > 0 && n < 100) { await stSet("watchHolderPct", n); await stSet("watchHolders", "{}"); }
@@ -359,6 +366,34 @@ export function initExtras(X) {
       for (const a of Object.keys(known)) if (!cur.find((h) => h.a === a)) delete known[a]; // dropped back under the line: alert again if they climb back
       await stSet("watchHolders", JSON.stringify(known));
     } catch (e) { log("watch holders err:", e.shortMessage || e.message); }
+  }
+  // ---------- watch list: any wallet the owner names, private DM alerts only ----------
+  // Reports every ERC-20 transfer in or out (any token) and any change in ETH. Nothing here ever posts to a group.
+  const WL_DEFAULT = { "0x1c0a3c077551bee6baa2e9919fcb21dca38451e9": "the wallet that got 15M $STAG from 0xa026" };
+  const tokMeta = new Map(); let wlBusy = false;
+  async function tokInfo(a) { a = a.toLowerCase(); if (!tokMeta.has(a)) { const c = new ethers.Contract(a, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], provider); let sym = "?", dec = 18; try { sym = await c.symbol(); } catch {} try { dec = Number(await c.decimals()); } catch {} tokMeta.set(a, { sym: String(sym).slice(0, 12), dec }); } return tokMeta.get(a); }
+  async function wlGet() { try { return JSON.parse((await stGet("watchList")) || "{}"); } catch { return {}; } }
+  async function wlTick() {
+    if (wlBusy) return; wlBusy = true;
+    try {
+      if ((await stGet("wlSeeded")) !== "1") { const cur = await wlGet(); for (const [a, l] of Object.entries(WL_DEFAULT)) if (!cur[a]) cur[a] = l; await stSet("watchList", JSON.stringify(cur)); await stSet("wlSeeded", "1"); }
+      const list = await wlGet(); const addrs = Object.keys(list); if (!addrs.length) return; const head = await provider.getBlockNumber(); const last = parseInt((await stGet("wlBlock")) || "0", 10);
+      if (!last) { await stSet("wlBlock", head); for (const a of addrs) { await stSet("wlEth:" + a, (await provider.getBalance(a)).toString()); await stSet("wlNonce:" + a, String(await provider.getTransactionCount(a))); } return; } 
+      const sentTx = {}; for (const a of addrs) { const n = await provider.getTransactionCount(a); const prev = parseInt((await stGet("wlNonce:" + a)) ?? String(n), 10); if (n !== prev) { sentTx[a] = { n, by: n - prev }; await stSet("wlNonce:" + a, String(n)); } }
+      let ethMoved = {}; for (const a of addrs) { const now = await provider.getBalance(a); const prev = BigInt((await stGet("wlEth:" + a)) || now.toString()); if (now !== prev) { ethMoved[a] = { prev, now }; await stSet("wlEth:" + a, now.toString()); } }
+      if (head > last) {
+        const seen = new Set(); const events = [];
+        for (const a of addrs) for (const dir of ["IN", "OUT"]) { const topics = dir === "IN" ? [WT, null, wPad(a)] : [WT, wPad(a)]; const ls = await wLogs({ topics }, last + 1, head, 200000); for (const l of ls) { if (l.topics.length !== 3) continue; const k = l.transactionHash + ":" + l.index + ":" + dir; if (seen.has(k)) continue; seen.add(k); events.push({ a, dir, l }); } }
+        await stSet("wlBlock", head); events.sort((x, y) => x.l.blockNumber - y.l.blockNumber || x.l.index - y.l.index);
+        for (const e of events) { const m = await tokInfo(e.l.address); const amount = Number(ethers.formatUnits(BigInt(e.l.data), m.dec)); const other = e.dir === "IN" ? wAddr(e.l.topics[1]) : wAddr(e.l.topics[2]); const pool = CFG.pool.toLowerCase();
+          let what = e.dir === "IN" ? `⬇️ <b>RECEIVED</b> ${fmt(amount, amount < 1000 ? 4 : 0)} ${esc(m.sym)}` : `⬆️ <b>SENT</b> ${fmt(amount, amount < 1000 ? 4 : 0)} ${esc(m.sym)}`; const isStag = e.l.address.toLowerCase() === CFG.token.toLowerCase();
+          if (isStag && other === pool) what = e.dir === "IN" ? `🟢 <b>BOUGHT</b> ${fmt(amount, 0)} $STAG on the curve` : `🔴 <b>SOLD</b> ${fmt(amount, 0)} $STAG on the curve`;
+          let bal = ""; try { const c = new ethers.Contract(e.l.address, ["function balanceOf(address) view returns (uint256)"], provider); bal = `\nBalance now: <b>${fmt(Number(ethers.formatUnits(await c.balanceOf(e.a), m.dec)), amount < 1000 ? 4 : 0)}</b> ${esc(m.sym)}`; } catch {}
+          await ownerDM([`👁 <b>WATCHED WALLET</b> (only you see this)`, what, `Wallet: ${wLink(e.a)}${list[e.a] ? ` · ${esc(list[e.a])}` : ""}`, `${e.dir === "IN" ? "From" : "To"}: ${other === pool ? "the curve" : DEVS.has(other) ? "<b>the dev wallet</b>" : wLink(other)}${bal}`, `<a href="${CFG.explorer}/tx/${e.l.transactionHash}">Transaction</a>`].join("\n")); }
+      }
+      for (const [a, v] of Object.entries(sentTx)) await ownerDM([`👁 <b>WATCHED WALLET</b> (only you see this)`, `✍️ This wallet just sent <b>${v.by}</b> transaction${v.by === 1 ? "" : "s"} of its own (total sent: ${v.n}). Any token movement from it follows in separate alerts.`, `Wallet: ${wLink(a)}${list[a] ? ` · ${esc(list[a])}` : ""}`].join("\n"));
+      for (const [a, v] of Object.entries(ethMoved)) { const d = Number(ethers.formatEther(v.now - v.prev)); await ownerDM([`👁 <b>WATCHED WALLET</b> (only you see this)`, `${d > 0 ? "⬇️ ETH in" : "⬆️ ETH out"}: <b>${fmt(Math.abs(d), 5)} ETH</b>`, `Wallet: ${wLink(a)}${list[a] ? ` · ${esc(list[a])}` : ""}`, `ETH balance now: <b>${fmt(Number(ethers.formatEther(v.now)), 5)}</b>`].join("\n")); }
+    } catch (e) { log("watchlist err:", e.shortMessage || e.message); } finally { wlBusy = false; }
   }
   // ---------- record launchpad: who is backing which record (read from the RecordStake contract's events) ----------
   // Off until RECORD_STAKE (the contract address) is set. Positions are rebuilt from Staked / Unstaked events only.
@@ -635,6 +670,7 @@ export function initExtras(X) {
   async function start(head) {
     await bbLoad();
     setInterval(inviteTick, 5 * 60000);
+    setTimeout(wlTick, 30000); setInterval(wlTick, 60000);
     setTimeout(watchSells, 45000); setInterval(watchSells, 60000); setTimeout(watchHolders, 150000); setInterval(watchHolders, 10 * 60000);
     setTimeout(async () => { // the owner switched reminders on during quiet hours and asked for the first one straight away: post it once
       try { if ((await stGet("invitePostOn")) !== "1" || (await stGet("invitePostMsg"))) return; const [c] = await W.q("insert into bot_state(k,v) values('inviteFirstNow','1') on conflict(k) do nothing returning k"); if (!c) return;
