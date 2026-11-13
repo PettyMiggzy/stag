@@ -30,13 +30,14 @@ export function initExtras(X) {
   // ---------- dev buyback alerts ----------
   // The dev wallets are saved from the owner's bot DM (/setdev) into the database: never in the code, the repo or a post.
   // Alerts stay OFF until the owner approves a draft (/buybackdraft, then /buyback on).
-  let DEVS = new Set(), TEAMS = new Set(), BB_ON = false, bbLast = null; // TEAMS: wallets the owner labelled as team wallets (kept in the database, never in the code)
+  let DEVS = new Set(), TEAMS = new Set(), DEVOWN = new Set(), BB_ON = false, bbLast = null; // TEAMS: wallets the owner labelled as team wallets (kept in the database, never in the code)
   const bbQ = (s, p) => W.q(s, p).catch(() => []);
   async function bbLoad() {
     await bbQ("create table if not exists bot_state(k text primary key, v text not null, updated_at timestamptz default now())");
     await bbQ("create table if not exists dev_buys(tx text primary key, eth double precision not null, tok double precision not null, at timestamptz not null default now())");
-    const rows = await bbQ("select k, v from bot_state where k in ('devWallets','buybackOn','teamWallets')"); const m = Object.fromEntries(rows.map((r) => [r.k, r.v]));
+    const rows = await bbQ("select k, v from bot_state where k in ('devWallets','buybackOn','teamWallets','devOwnWallets')"); const m = Object.fromEntries(rows.map((r) => [r.k, r.v]));
     try { TEAMS = new Set(JSON.parse(m.teamWallets || "[]").map((x) => String(x).toLowerCase())); } catch { TEAMS = new Set(); }
+    try { DEVOWN = new Set(JSON.parse(m.devOwnWallets || "[]").map((x) => String(x).toLowerCase())); } catch { DEVOWN = new Set(); }
     DEVS = new Set((m.devWallets || "").split(",").map((x) => x.trim().toLowerCase()).filter((x) => /^0x[0-9a-f]{40}$/.test(x))); BB_ON = m.buybackOn === "1";
     const [l] = await bbQ("select eth, tok, extract(epoch from at)::bigint as ts from dev_buys order by at desc limit 1"); bbLast = l ? { eth: Number(l.eth), tok: Number(l.tok), ts: Number(l.ts) } : null;
   }
@@ -248,6 +249,11 @@ export function initExtras(X) {
         const on = arg === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
         return reply(on ? (DEVS.size ? `🔥 Dev buyback alerts are ON for ${DEVS.size} wallet${DEVS.size === 1 ? "" : "s"}. The next dev buy posts the DEV BUYBACK card in the main group. /buyback off stops it.` : "Alerts are ON, but no dev wallet is saved yet. Send /setdev 0x… first.") : "Dev buyback alerts are OFF. Dev buys post as normal buy cards.");
       }
+      if (cmd === "own" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, private DM only: wallets that belong to the dev himself
+        if (msg.chat.type !== "private") return; const a0 = (args[0] || "").toLowerCase(), a1 = (args[1] || "").toLowerCase();
+        if (a0 === "add" && /^0x[0-9a-f]{40}$/.test(a1)) DEVOWN.add(a1); else if (a0 === "remove" && DEVOWN.has(a1)) DEVOWN.delete(a1); else if (a0 && a0 !== "list") return reply("Send it like this:\n/own add 0x…\n/own remove 0x…\n/own list");
+        await stSet("devOwnWallets", JSON.stringify([...DEVOWN])); return reply(`🏷 ${DEVOWN.size} wallet${DEVOWN.size === 1 ? "" : "s"} labelled as the dev's own. My private alerts show that label next to them.` + (a0 === "list" || !a0 ? "\n\n" + [...DEVOWN].map((x) => wLink(x)).join("\n") : ""));
+      }
       if (cmd === "team" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, private DM only
         if (msg.chat.type !== "private") return; const a0 = (args[0] || "").toLowerCase(), a1 = (args[1] || "").toLowerCase();
         if (a0 === "add" && /^0x[0-9a-f]{40}$/.test(a1)) TEAMS.add(a1); else if (a0 === "remove" && TEAMS.has(a1)) TEAMS.delete(a1); else if (a0 && a0 !== "list") return reply("Send it like this:\n/team add 0x…\n/team remove 0x…\n/team list");
@@ -329,7 +335,7 @@ export function initExtras(X) {
   const WT = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", SUPPLY = 1e9, STATS_START = parseInt(process.env.STATS_FROM_BLOCK || "105516351", 10);
   const wPad = (a) => ethers.zeroPadValue(a, 32).toLowerCase(), wAddr = (t) => ("0x" + t.slice(-40)).toLowerCase(), wAmt = (d) => Number(ethers.formatUnits(BigInt(d), 18));
   const ownerDM = (text) => tgPost("sendMessage", { chat_id: ADMIN_TG, text, parse_mode: "HTML", disable_web_page_preview: true });
-  const wLink = (a) => `${TEAMS.has(String(a).toLowerCase()) ? "🏷 <b>team wallet</b> " : ""}<a href="${CFG.explorer}/address/${a}">${a}</a>`;
+  const wLink = (a) => `${TEAMS.has(String(a).toLowerCase()) ? "🏷 <b>team wallet</b> " : DEVOWN.has(String(a).toLowerCase()) ? "🏷 <b>dev's own wallet</b> " : ""}<a href="${CFG.explorer}/address/${a}">${a}</a>`;
   async function wLogs(filter, a, b, step = 2000000) { const out = []; for (let x = a; x <= b; x += step) { const to = Math.min(b, x + step - 1); try { out.push(...await provider.getLogs({ ...filter, fromBlock: x, toBlock: to })); } catch (e) { if (step > 20000) out.push(...await wLogs(filter, x, to, Math.floor(step / 5))); else throw e; } } return out; }
   // where a wallet's $STAG came from: bought on the curve, or sent in by another wallet
   async function wSources(w, head) {
