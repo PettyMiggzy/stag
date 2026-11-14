@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // READBACK CHECKLIST: verifies a deployed system against the expectations. Read-only. Exit code 1 if anything fails.
 //   RPC=https://rpc.mainnet.chain.robinhood.com DEPLOYER=0x.. MULTISIG=0x.. node scripts/readback.js
-// (DEPLOYER is the PadDeployer address; everything else is read from it.) Optional: PM, QUOTE, EXPECT_OWNER_ACCEPTED=1.
+// (DEPLOYER is the PadDeployer address.) Mainnet REQUIRES: RPC2 SALT_FILE DEPLOY_TX EXPECT_OWNERS EXPECT_THRESHOLD EXPECT_SINGLETON EXPECT_PROXY_CODEHASH EXPECT_SAFE_CREATION_TX EXPECT_MANIFEST_DIGEST. Optional: EXPECT_FALLBACK, EXPECT_OWNER_ACCEPTED=1. PM/QUOTE only on rehearsal chains. See README.
 const fs = require("fs"), path = require("path");
 const { ethers } = require("ethers");
 const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe, safeChecks } = require("./lib");
@@ -126,7 +126,7 @@ async function readback(provider, cfg) {
     rows.push({ name: "ACTION: multisig must now call hook.acceptOwner() promptly (until then the PadDeployer contract, which has no functions, is the owner)", ok: true, detail: "then re-run with EXPECT_OWNER_ACCEPTED=1" });
   }
   ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
-  const sc = await safeChecks(provider, cfg.multisig, { expectOwners: cfg.expectOwners, expectThreshold: cfg.expectThreshold, expectSingleton: cfg.expectSingleton, expectProxyCodehash: cfg.expectProxyCodehash, expectFallback: cfg.expectFallback, dry: cfg.dry, allowNonSafe: cfg.allowNonSafeOwner });   // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
+  const sc = await safeChecks(provider, cfg.multisig, { expectOwners: cfg.expectOwners, expectThreshold: cfg.expectThreshold, expectSingleton: cfg.expectSingleton, expectProxyCodehash: cfg.expectProxyCodehash, safeCreationTx: cfg.safeCreationTx, expectFallback: cfg.expectFallback, dry: cfg.dry, allowNonSafe: cfg.allowNonSafeOwner });   // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
   rows.push(...sc.rows);
 
   // 5b. the deployment transaction itself: its calldata must START WITH the pinned PadDeployer creation code (which embeds the hook/factory/battle
@@ -171,6 +171,7 @@ module.exports = { readback };
 
 if (require.main === module) {
   (async () => {
+    for (const k of Object.keys(process.env)) if (/^(EXPECT_|DEPLOY_TX|RPC2?$|SALT_FILE|DEPLOYER$|MULTISIG$)/.test(k)) process.env[k] = process.env[k].trim();
     const need = (k) => { if (!process.env[k]) { console.error("missing env " + k); process.exit(2); } return process.env[k]; };
     const provider = new ethers.JsonRpcProvider(need("RPC"));
     const p2 = process.env.RPC2 ? new ethers.JsonRpcProvider(process.env.RPC2) : null;
@@ -178,13 +179,13 @@ if (require.main === module) {
     const real = chainId === 4663n || chain2 === 4663n;                 // either endpoint on the real chain => real: DRYRUN and all rehearsal shortcuts are ignored
     const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
-    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
+    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
     if (real && new URL(process.env.RPC).host === new URL(process.env.RPC2).host) { console.error("RPC2 must be on a different host than RPC"); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
     const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
       salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
       expectOwners: process.env.EXPECT_OWNERS ? process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())) : null,
-      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, expectFallback: process.env.EXPECT_FALLBACK, deployTx: process.env.DEPLOY_TX };
+      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFallback: process.env.EXPECT_FALLBACK, deployTx: process.env.DEPLOY_TX };
     const rows = await readback(provider, cfg);
     if (p2) {                                                            // the WHOLE readback again on the second endpoint; any difference is a failure
       const rows2 = await readback(p2, cfg);
@@ -198,7 +199,7 @@ if (require.main === module) {
     { const dg = MAN.load() ? ethers.keccak256(fs.readFileSync(MAN.FILE)) : null;
       if (process.env.EXPECT_MANIFEST_DIGEST || real) rows.push({ name: "manifest digest == EXPECT_MANIFEST_DIGEST (published with the audit report)", ok: !!dg && dg.toLowerCase() === String(process.env.EXPECT_MANIFEST_DIGEST || "").toLowerCase(), detail: String(dg) }); }
     let bad = 0;
-    for (const r of rows) { console.log(`${r.warn ? "WARN" : r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  [" + r.detail + "]" : ""}`); if (!r.ok) bad++; }
+    for (const r of rows) { console.log(`${r.warn ? "WARN" : r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  [" + JSON.stringify(String(r.detail)).slice(1, -1) + "]" : ""}`); if (!r.ok) bad++; }
     console.log(bad ? `\n${bad} CHECK(S) FAILED` : "\nALL CHECKS PASSED");
     process.exit(bad ? 1 : 0);
   })().catch((e) => { console.error(e); process.exit(1); });

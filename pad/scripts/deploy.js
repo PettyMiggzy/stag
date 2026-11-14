@@ -1,4 +1,4 @@
-// Deploy script (hardhat):   MULTISIG=0x.. DEPLOYER_KEY=0x.. [SALT_FILE=salt.json] npx hardhat run scripts/deploy.js --network robinhood   (DRYRUN=1 to rehearse on a fork)
+// Deploy script (hardhat):   MULTISIG=0x.. DEPLOYER_KEY=0x.. SALT_FILE=salt.json + (mainnet) EXPECT_OWNERS EXPECT_THRESHOLD EXPECT_SINGLETON EXPECT_PROXY_CODEHASH EXPECT_SAFE_CREATION_TX EXPECT_MANIFEST_DIGEST   npx hardhat run scripts/deploy.js --network robinhood   (DRYRUN=1 to rehearse on the in-process fork). See README.
 // 1. node scripts/mine-salt.js --eoa <deployer EOA> --nonce <its CURRENT nonce> --out salt.json   (off-chain, offline)
 // 2. run this: it refuses to send unless the signer, nonce and compiled bytecode match what the salt was mined for.
 // 3. multisig calls hook.acceptOwner();  4. node scripts/readback.js (and again with EXPECT_OWNER_ACCEPTED=1)
@@ -40,6 +40,7 @@ if (require.main === module) {
     const realMainnet = net.chainId === 4663n && network.name !== "hardhat";     // the in-process hardhat network is a fork: never the real thing
     if (!realMainnet && !process.env.DRYRUN) throw new Error("refusing to run: use --network robinhood (chain 4663) with DEPLOYER_KEY set, or DRYRUN=1 on the in-process fork for a rehearsal");   // DRYRUN is ignored on the real chain
     if (process.env.MUST_BE_CONTRACT === "0") console.warn("WARNING: MUST_BE_CONTRACT=0 allows an EOA as owner. Use a multisig contract on mainnet.");
+    for (const k of Object.keys(process.env)) if (/^(EXPECT_|SALT_FILE|MULTISIG$)/.test(k)) process.env[k] = process.env[k].trim();
     const [signer] = await ethers.getSigners();
     const saltInfo = JSON.parse(fs.readFileSync(process.env.SALT_FILE || "salt.json", "utf8"));
     if (!realMainnet) console.warn("*** DRY RUN on the in-process fork: nothing real is being deployed ***");
@@ -47,12 +48,13 @@ if (require.main === module) {
     if (digest) console.log("manifest digest:", digest);
     let safeOpts = null;
     if (realMainnet) {
-      for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
+      for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
       if (!digest || digest.toLowerCase() !== process.env.EXPECT_MANIFEST_DIGEST.toLowerCase()) throw new Error("manifest digest != EXPECT_MANIFEST_DIGEST (the digest published with the audit report)");
       if (process.env.ALLOW_UNPINNED) console.warn("ALLOW_UNPINNED is ignored on mainnet");
-      safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, expectFallback: process.env.EXPECT_FALLBACK };
+      safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFallback: process.env.EXPECT_FALLBACK };
     }
     const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0" || realMainnet, saltInfo, requireManifest: realMainnet, safeOpts });
+    console.log("deployment tx:", r.deployer.deploymentTransaction() && r.deployer.deploymentTransaction().hash);
     console.log({ deployer: await r.deployer.getAddress(), hook: await r.hook.getAddress(), factory: await r.factory.getAddress(), battle: await r.battle.getAddress() });
     console.log("NEXT: the multisig must call hook.acceptOwner(); then run scripts/readback.js");
   })().catch((e) => { console.error(e); process.exit(1); });

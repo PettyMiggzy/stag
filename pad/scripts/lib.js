@@ -43,6 +43,19 @@ async function safeChecks(provider, addr, o = {}) {
   ck("multisig threshold >= 2", sp.threshold >= 2n || !!o.dry, String(sp.threshold));
   if (o.expectProxyCodehash) ck("multisig runtime code hash == EXPECT_PROXY_CODEHASH (canonical Safe proxy: not a lookalike contract)", lc(ethers.keccak256(await provider.getCode(addr))) === lc(o.expectProxyCodehash), ethers.keccak256(await provider.getCode(addr)));
   else ck("EXPECT_PROXY_CODEHASH supplied (the canonical SafeProxy runtime hash)", !!o.dry);
+  // The Safe's creation tx: exactly one SafeSetup log from this proxy with initializer == 0 (so setup() made NO delegatecall that could plant
+  // unlisted owners/modules or pre-approved hashes), owners/threshold equal to the current ones, and the tx must be a plain creation of THIS address's setup.
+  if (o.safeCreationTx) {
+    const rc = await provider.getTransactionReceipt(o.safeCreationTx);
+    const topic = ethers.id("SafeSetup(address,address[],uint256,address,address)");
+    const logs = rc && rc.status === 1 ? rc.logs.filter((l) => lc(l.address) === lc(addr) && l.topics[0] === topic) : [];
+    ck("Safe creation tx has exactly one SafeSetup log from the multisig", logs.length === 1, rc ? `${logs.length} logs` : "tx not found");
+    if (logs.length === 1) {
+      const d = ethers.AbiCoder.defaultAbiCoder().decode(["address[]", "uint256", "address"], logs[0].data);
+      ck("Safe setup() used NO initializer delegatecall (initializer == 0)", d[2] === ethers.ZeroAddress, d[2]);
+      ck("Safe setup owners/threshold == current owners/threshold (no later change)", d[0].map(lc).join() === sp.owners.map(lc).join() && d[1] === sp.threshold);
+    }
+  } else ck("EXPECT_SAFE_CREATION_TX supplied (the Safe's setup() must be provably clean)", !!o.dry);
   if (o.dry && !o.expectSingleton) return { rows, sp };
   if (o.expectSingleton) ck("Safe singleton (storage slot 0) == EXPECT_SINGLETON", lc(await word(ethers.ZeroHash)) === lc(o.expectSingleton), await word(ethers.ZeroHash));
   else ck("EXPECT_SINGLETON supplied (the verified Safe implementation address)", false);

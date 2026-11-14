@@ -191,4 +191,19 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
       await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo: si, requireManifest: false })).to.not.be.rejectedWith(/differs from audited-manifest/);   // rehearsal escape hatch still works off mainnet
     } finally { delete process.env.ALLOW_UNPINNED; fs.writeFileSync(MAN.FILE, orig); }
   });
+
+  it("Safe creation tx: a setup() with an initializer delegatecall (or no SafeSetup log) FAILS; a clean one passes", async () => {
+    const addr = await msContract.getAddress();
+    const topic = ethers.id("SafeSetup(address,address[],uint256,address,address)");
+    const enc = (init) => ethers.AbiCoder.defaultAbiCoder().encode(["address[]", "uint256", "address"], [[ms.address], 1, init]);
+    const mk = (logs) => new Proxy(ethers.provider, { get: (t0, k) => (k === "getTransactionReceipt" ? async () => ({ status: 1, logs }) : typeof t0[k] === "function" ? t0[k].bind(t0) : t0[k]) });
+    const log = (init) => ({ address: addr, topics: [topic, ethers.zeroPadValue(other.address, 32), ethers.zeroPadValue(ethers.ZeroAddress, 32)], data: enc(init) });
+    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: addr, ownerAccepted: false, safeCreationTx: ethers.ZeroHash };
+    const bad = await readback(mk([log(other.address)]), base);
+    expect(bad.some((r) => !r.ok && /initializer/.test(r.name))).to.equal(true);
+    const none = await readback(mk([]), base);
+    expect(none.some((r) => !r.ok && /exactly one SafeSetup/.test(r.name))).to.equal(true);
+    const good = await readback(mk([log(ethers.ZeroAddress)]), base);
+    expect(good.filter((r) => !r.ok && /Safe/.test(r.name))).to.deep.equal([]);
+  });
 });
