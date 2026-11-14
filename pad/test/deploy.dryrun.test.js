@@ -200,7 +200,7 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     const pc13 = (idx, p, s) => ({ address: fac, index: idx, topics: [pcT], data: abi.encode(["address", "address"], [p, s]) });
     const pc14 = (idx, p, s) => ({ address: fac, index: idx, topics: [pcT, ethers.zeroPadValue(p, 32)], data: ethers.zeroPadValue(s, 32) });
     const mk = (logs, to) => new Proxy(ethers.provider, { get: (t0, k) => (k === "getTransactionReceipt" ? async () => ({ status: 1, logs }) : k === "getTransaction" ? async () => ({ to }) : typeof t0[k] === "function" ? t0[k].bind(t0) : t0[k]) });
-    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: addr, ownerAccepted: false, safeCreationTx: ethers.ZeroHash, expectFactory: fac, expectSingleton: single };
+    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: addr, ownerAccepted: false, safeCreationTx: ethers.ZeroHash, expectFactory: fac, expectSingleton: single, expectFactoryCodehash: ethers.keccak256("0x") };
     const failed = (rows, re) => rows.some((r) => !r.ok && re.test(r.name));
     expect(failed(await readback(mk([setup(other.address, 0), pc13(1, addr, single)], fac), base), /initializer/)).to.equal(true);
     expect(failed(await readback(mk([], fac), base), /exactly one SafeSetup/)).to.equal(true);
@@ -212,5 +212,22 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
       const good = await readback(mk([setup(ethers.ZeroAddress, 0), pcf(1, addr, single)], fac), base);
       expect(good.filter((r) => !r.ok && /SafeSetup|factory|ProxyCreation|setup\(\)|initializer/i.test(r.name))).to.deep.equal([]);
     }
+  });
+
+  it("fallback handler: our own contracts / STAG / unpinned code are refused even when the address is pinned (confused-deputy handler)", async () => {
+    const addr = await msContract.getAddress(), hookA = await R.hook.getAddress();
+    const slot = ethers.id("fallback_manager.handler.address");
+    const withHandler = (h) => new Proxy(ethers.provider, { get: (t0, k) => (k === "getStorage" ? async (a, s) => (s === slot ? ethers.zeroPadValue(h, 32) : t0.getStorage(a, s)) : typeof t0[k] === "function" ? t0[k].bind(t0) : t0[k]) });
+    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: addr, ownerAccepted: false, expectSingleton: other.address };
+    const failed = (rows, re) => rows.some((r) => !r.ok && re.test(r.name));
+    for (const h of [hookA, STAG, addr]) {
+      const rows = await readback(withHandler(h), { ...base, expectFallback: h, expectFallbackCodehash: ethers.keccak256(await ethers.provider.getCode(h)) });
+      expect(failed(rows, /none of this system's contracts/)).to.equal(true);
+    }
+    const stranger = ethers.Wallet.createRandom().address;
+    const r2 = await readback(withHandler(stranger), { ...base, expectFallback: stranger });
+    expect(failed(r2, /EXPECT_FALLBACK_CODEHASH/)).to.equal(true);                       // address pinned but code not pinned: refused
+    const r3 = await readback(withHandler(stranger), { ...base, expectFallback: other.address });
+    expect(failed(r3, /exactly EXPECT_FALLBACK/)).to.equal(true);
   });
 });

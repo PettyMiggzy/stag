@@ -29,7 +29,7 @@ async function probeSafe(provider, addr) {
 }
 /// Safe hardening rows. A lookalike or a Safe with a hostile singleton/module/guard/handler can answer the three getters and still be backdoored.
 /// Needs the operator's out-of-band knowledge: EXPECT_SINGLETON (the Safe singleton address they verified in the Safe app / docs).
-const SLOT_GUARD = ethers.id("guard_manager.guard.address"), SLOT_FALLBACK = ethers.id("fallback_manager.handler.address");
+const SLOT_GUARD = ethers.id("guard_manager.guard.address"), SLOT_FALLBACK = ethers.id("fallback_manager.handler.address"), SLOT_MODGUARD = ethers.id("module_manager.module_guard.address");
 async function safeChecks(provider, addr, o = {}) {
   const rows = [], ck = (name, ok, detail = "") => rows.push({ name, ok: !!ok, detail });
   const word = async (slot) => ethers.getAddress(ethers.dataSlice(await provider.getStorage(addr, slot), 12));
@@ -78,7 +78,17 @@ async function safeChecks(provider, addr, o = {}) {
   ck("Safe has NO enabled modules (modules move funds/ownership without signatures)", mods !== null && mods[0].length === 0, mods ? String(mods[0].length) : "getModulesPaginated failed");
   ck("Safe guard slot is empty", (await word(SLOT_GUARD)) === ethers.ZeroAddress);
   const fb = await word(SLOT_FALLBACK);
-  ck("Safe fallback handler is empty or EXPECT_FALLBACK", fb === ethers.ZeroAddress || (o.expectFallback && lc(fb) === lc(o.expectFallback)), fb);
+  // the fallback handler is called by the Safe with msg.sender == Safe for ANY unknown selector: it must never be one of OUR contracts (hook/factory/battle/
+  // deployer/PM/STAG/the Safe itself/the throwaway EOA), or anyone could make the Safe act as its own owner/payer. Pinning an address is not enough: pin its CODE too.
+  const forbid = (o.forbid || []).concat([addr]).map(lc);
+  ck("Safe fallback handler is empty, or exactly EXPECT_FALLBACK", fb === ethers.ZeroAddress || (!!o.expectFallback && lc(fb) === lc(o.expectFallback)), fb);
+  ck("Safe fallback handler is none of this system's contracts, PM, STAG, the Safe itself or the deployer EOA", !forbid.includes(lc(fb)), fb);
+  if (fb !== ethers.ZeroAddress) { const h = ethers.keccak256(await provider.getCode(fb)); ck("fallback handler runtime hash == EXPECT_FALLBACK_CODEHASH (the official CompatibilityFallbackHandler)", !!o.expectFallbackCodehash && lc(h) === lc(o.expectFallbackCodehash), h); }
+  if (o.expectSingleton) { const h = ethers.keccak256(await provider.getCode(o.expectSingleton)); ck("singleton runtime hash == EXPECT_SINGLETON_CODEHASH (the official Safe/SafeL2 code)", !!o.expectSingletonCodehash && lc(h) === lc(o.expectSingletonCodehash), h); }
+  if (o.expectFactory) { const h = ethers.keccak256(await provider.getCode(o.expectFactory)); ck("factory runtime hash == EXPECT_FACTORY_CODEHASH (the official SafeProxyFactory)", !!o.expectFactoryCodehash && lc(h) === lc(o.expectFactoryCodehash), h); }
+  ck("Safe module-guard slot is empty (Safe 1.5)", (await word(SLOT_MODGUARD)) === ethers.ZeroAddress);
+  for (const w of sp.owners) { if (o.forbid && o.forbid.map(lc).includes(lc(w))) ck("no owner is one of this system's addresses or the throwaway deployer EOA", false, w); }
+  rows.push({ name: "info: owners that are contracts (EIP-1271/upgradeable/another Safe sign without a key: confirm each is intended)", ok: true, warn: (await Promise.all(sp.owners.map(async (w) => (await provider.getCode(w)).length > 2))).some(Boolean), detail: "" });
   return { rows, sp };
 }
 module.exports = { safeChecks, PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt, probeSafe };
