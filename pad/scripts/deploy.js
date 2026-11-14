@@ -7,7 +7,7 @@ const { ethers } = require("hardhat");
 const { PM_DEFAULT, STAG_DEFAULT, hookInitCode, predictDeployer, FLAG_MASK, FLAGS, probeSafe } = require("./lib");
 const MAN = require("./manifest");
 
-async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm = PM_DEFAULT, quote = STAG_DEFAULT }) {
+async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm = PM_DEFAULT, quote = STAG_DEFAULT, requireManifest = false }) {
   const nonce = await signer.getNonce("latest");
   if (nonce !== (await signer.getNonce("pending"))) throw new Error("this account has a pending transaction: the mined salt would be for the wrong nonce. Wait for it or re-mine.");
   const dep = predictDeployer(signer.address, nonce);
@@ -20,6 +20,7 @@ async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm
   const D = await ethers.getContractFactory("PadDeployer", signer);
   if (mustBeContract) { const sp = await probeSafe(signer.provider, multisig); if (!sp.ok) throw new Error("the hand-over target does not answer like a Safe (VERSION/getThreshold/getOwners): it could never accept ownership. Refusing."); }
   const man = MAN.load();
+  if (!man && requireManifest) throw new Error("audited-manifest.json is missing: refusing to deploy an unpinned build on mainnet");
   if (man && ethers.keccak256(D.bytecode) !== man.deployerCreationCode && !process.env.ALLOW_UNPINNED) throw new Error("PadDeployer build differs from audited-manifest.json (modified sources or a different compile). Refusing; ALLOW_UNPINNED=1 only for rehearsals.");
   const tx = await D.getDeployTransaction(pm, quote, multisig, mustBeContract, saltInfo.salt);
   const gasLimit = ((await signer.estimateGas(tx)) * 13n) / 10n;      // 30% margin: an L1-fee swing must not run the 38 KB constructor out of gas (that would burn the nonce and the mined salt)
@@ -40,7 +41,9 @@ if (require.main === module) {
     if (process.env.MUST_BE_CONTRACT === "0") console.warn("WARNING: MUST_BE_CONTRACT=0 allows an EOA as owner. Use a multisig contract on mainnet.");
     const [signer] = await ethers.getSigners();
     const saltInfo = JSON.parse(fs.readFileSync(process.env.SALT_FILE || "salt.json", "utf8"));
-    const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0", saltInfo });
+    if (!realMainnet) console.warn("*** DRY RUN on the in-process fork: nothing real is being deployed ***");
+    if (MAN.load()) console.log("manifest digest (compare out of band):", ethers.keccak256(fs.readFileSync(MAN.FILE)));
+    const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0" || realMainnet, saltInfo, requireManifest: realMainnet });
     console.log({ deployer: await r.deployer.getAddress(), hook: await r.hook.getAddress(), factory: await r.factory.getAddress(), battle: await r.battle.getAddress() });
     console.log("NEXT: the multisig must call hook.acceptOwner(); then run scripts/readback.js");
   })().catch((e) => { console.error(e); process.exit(1); });

@@ -73,7 +73,7 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
   });
 
   it("readback BEFORE accept: everything passes, hand-over pending", async () => {
-    const rows = await readback(ethers.provider, { deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false });
+    const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false });
     for (const r of rows) if (!r.ok) console.log("FAIL", r.name, r.detail);
     expect(rows.filter((r) => !r.ok)).to.deep.equal([]);
     expect(await R.hook.owner()).to.equal(await R.deployer.getAddress());
@@ -100,7 +100,7 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     expect(await R.hook.owner()).to.equal(await msContract.getAddress());
     expect(await R.hook.pendingOwner()).to.equal(ethers.ZeroAddress);
     await expect(R.hook.connect(eoa).setOwner(eoa.address)).to.be.reverted;
-    const rows = await readback(ethers.provider, { deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: true });
+    const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: true });
     expect(rows.filter((r) => !r.ok)).to.deep.equal([]);
   });
 
@@ -120,14 +120,25 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     await expect(R.hook.connect(eoa).claimPlatform(eoa.address)).to.be.reverted;
     await msContract.connect(ms).exec(await R.hook.getAddress(), R.hook.interface.encodeFunctionData("claimPlatform", [ms.address]));
     expect((await P.stag.balanceOf(ms.address)) - b0).to.equal(owed);
-    const rows = await readback(ethers.provider, { deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: true });
+    const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: true });
     expect(rows.filter((r) => !r.ok)).to.deep.equal([]);
     expect(rows.some((r) => /solvency.*2 launches/.test(r.name))).to.equal(true);
   });
 
   it("readback detects a mis-deployment (a spoofed hook address in the deployer slot)", async () => {
     // point the checklist at a fresh PadDeployer-like world where multisig differs: must FAIL the multisig checks
-    const rows = await readback(ethers.provider, { deployer: await R.deployer.getAddress(), multisig: other.address, ownerAccepted: true });
+    const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: other.address, ownerAccepted: true });
     expect(rows.filter((r) => !r.ok).length).to.be.gte(2);
+  });
+
+  it("strict readback: non-dry run without salt/owners/threshold FAILS, wrong owners FAIL", async () => {
+    const base = { deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false };
+    const rows = await readback(ethers.provider, { ...base, dry: false, allowAnyChain: true, allowOverrides: true });
+    const fails = rows.filter((r) => !r.ok).map((r) => r.name);
+    expect(fails.some((n) => /salt/i.test(n))).to.equal(true);
+    expect(fails.some((n) => /EXPECT_OWNERS/.test(n))).to.equal(true);
+    expect(fails.some((n) => /EXPECT_THRESHOLD/.test(n))).to.equal(true);
+    const bad = await readback(ethers.provider, { ...base, dry: true, expectOwners: [ethers.Wallet.createRandom().address], expectThreshold: 2 });
+    expect(bad.some((r) => !r.ok && /owners/.test(r.name))).to.equal(true);
   });
 });

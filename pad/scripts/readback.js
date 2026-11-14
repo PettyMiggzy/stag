@@ -64,13 +64,18 @@ async function readback(provider, cfg) {
   ck("PadDeployer runtime == compiled PadDeployer (immutables masked)", sameRuntime(await code(cfg.deployer), "PadDeployer"));
   ck("factory address == CREATE(deployer, nonce 2)", eq(ethers.getCreateAddress({ from: cfg.deployer, nonce: 2 }), facA), ethers.getCreateAddress({ from: cfg.deployer, nonce: 2 }));
   ck("battle address == CREATE(deployer, nonce 3)", eq(ethers.getCreateAddress({ from: cfg.deployer, nonce: 3 }), batA), ethers.getCreateAddress({ from: cfg.deployer, nonce: 3 }));
-  if (cfg.hookCreate2) ck("hook address == CREATE2(deployer, salt, initcode hash) from salt.json", eq(ethers.getCreate2Address(cfg.deployer, cfg.hookCreate2.salt, cfg.hookCreate2.initcodeHash), hookA), hookA);
+  if (cfg.salt) {
+    ck("salt.json has initcodeHash", !!cfg.salt.initcodeHash);
+    ck("DEPLOYER == CREATE(salt.eoa, salt.nonce)", eq(ethers.getCreateAddress({ from: cfg.salt.eoa, nonce: cfg.salt.nonce }), cfg.deployer), cfg.deployer);
+    if (cfg.salt.initcodeHash) ck("hook address == CREATE2(deployer, salt, initcode hash) from salt.json", eq(ethers.getCreate2Address(cfg.deployer, cfg.salt.salt, cfg.salt.initcodeHash), hookA), hookA);
+  } else ck("salt.json supplied (ties DEPLOYER to the operator's salt and proves the hook address)", !!cfg.dry);
   ck("hook runtime == compiled PadHook (immutables masked)", sameRuntime(await code(hookA), "PadHook"));
   ck("factory runtime == compiled PadFactory", sameRuntime(await code(facA), "PadFactory"));
   ck("battle runtime == compiled PadBattle", sameRuntime(await code(batA), "PadBattle"));
   const man = MAN.load();
-  if (!man) warn("audited-manifest.json present (pins the audited build)", false);
-  else for (const [n, a] of [["PadHook", hookA], ["PadFactory", facA], ["PadBattle", batA], ["PadDeployer", cfg.deployer]]) {
+  if (!man) ck("audited-manifest.json present (pins the audited build)", !!cfg.dry);
+  else rows.push({ name: "manifest digest: compare with the value published out of band", ok: true, detail: ethers.keccak256(fs.readFileSync(MAN.FILE)) });
+  if (man) for (const [n, a] of [["PadHook", hookA], ["PadFactory", facA], ["PadBattle", batA], ["PadDeployer", cfg.deployer]]) {
     const art = MAN.artifact(n);
     ck(`PINNED: ${n} runtime hash == audited manifest`, MAN.maskedHash(await code(a), art.refs) === man.runtime[n], a);
   }
@@ -123,7 +128,13 @@ async function readback(provider, cfg) {
   ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
   const sp = await probeSafe(provider, cfg.multisig);       // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
   ck("multisig answers like a Safe (VERSION, getThreshold >= 1, getOwners)", sp.ok || !!cfg.allowNonSafeOwner, sp.ok ? `Safe ${sp.version}, threshold ${sp.threshold}, owners ${sp.owners.length}` : "no Safe answers");
-  if (sp.ok) warn(`multisig threshold ${sp.threshold} (want >= 2)`, sp.threshold >= 2n);
+  if (sp.ok) {
+    if (cfg.expectOwners) { const a = sp.owners.map((x) => x.toLowerCase()).sort(), b = cfg.expectOwners.map((x) => x.toLowerCase()).sort(); ck("multisig owners == EXPECT_OWNERS (exact list)", a.length === b.length && a.every((x, i) => x === b[i]), sp.owners.join(",")); }
+    else ck("EXPECT_OWNERS supplied (the full owner list is checked, not just the count)", !!cfg.dry);
+    if (cfg.expectThreshold !== undefined) ck(`multisig threshold == EXPECT_THRESHOLD (${cfg.expectThreshold})`, sp.threshold === BigInt(cfg.expectThreshold), String(sp.threshold));
+    else ck("EXPECT_THRESHOLD supplied", !!cfg.dry);
+    ck("multisig threshold >= 2", sp.threshold >= 2n || !!cfg.dry, String(sp.threshold));
+  }
 
   // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed))
   const n = Number(await F.launchCount());
@@ -148,20 +159,25 @@ if (require.main === module) {
   (async () => {
     const need = (k) => { if (!process.env[k]) { console.error("missing env " + k); process.exit(2); } return process.env[k]; };
     const provider = new ethers.JsonRpcProvider(need("RPC"));
-    const chainId = (await provider.getNetwork()).chainId;
-    const dry = !!process.env.DRYRUN && chainId !== 4663n;           // DRYRUN is ignored on the real chain, even if left set in the shell
+    const p2 = process.env.RPC2 ? new ethers.JsonRpcProvider(process.env.RPC2) : null;
+    const chainId = (await provider.getNetwork()).chainId, chain2 = p2 ? (await p2.getNetwork()).chainId : null;
+    const real = chainId === 4663n || chain2 === 4663n;                 // either endpoint on the real chain => real: DRYRUN and all rehearsal shortcuts are ignored
+    const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
-    if (chainId === 4663n && !process.env.SALT_FILE) { console.error("SALT_FILE (the mined salt.json) is required on mainnet: it proves the hook address"); process.exit(2); }
+    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
-    const rows = await readback(provider, { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1", hookCreate2: salt && salt.initcodeHash ? { salt: salt.salt, initcodeHash: salt.initcodeHash } : null, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1" });
-    if (process.env.RPC2) {                                          // cross-check a second, independent RPC (never trust a single endpoint)
-      const p2 = new ethers.JsonRpcProvider(process.env.RPC2);
-      const D = new ethers.Contract(ethers.getAddress(need("DEPLOYER")), ["function hook() view returns (address)", "function factory() view returns (address)", "function battle() view returns (address)"], provider);
-      const addrs = [ethers.getAddress(need("DEPLOYER")), await D.hook(), await D.factory(), await D.battle()];
-      const same = (await Promise.all(addrs.map(async (a) => (await provider.getCode(a)) === (await p2.getCode(a))))).every(Boolean);
-      rows.push({ name: "second RPC returns identical code for deployer, hook, factory, battle", ok: same, detail: "" });
-      rows.push({ name: "second RPC chainId == 4663", ok: (await p2.getNetwork()).chainId === 4663n || dry, detail: "" });
-    } else rows.push({ name: "WARN no RPC2 set: single RPC trusted (set RPC2 to a second independent endpoint)", ok: true, warn: true, detail: "" });
+    const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
+      salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
+      expectOwners: process.env.EXPECT_OWNERS ? process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())) : null,
+      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1" };
+    const rows = await readback(provider, cfg);
+    if (p2) {                                                            // the WHOLE readback again on the second endpoint; any difference is a failure
+      const rows2 = await readback(p2, cfg);
+      const key = (r) => JSON.stringify([r.name, r.ok, r.detail || ""]);
+      const same = rows.length === rows2.length && rows.every((r, i) => key(r) === key(rows2[i]));
+      rows.push({ name: "RPC2 produced the identical readback (every row, every value)", ok: same, detail: same ? "" : "RPC1 and RPC2 disagree: do not trust either until resolved" });
+      if (!same) for (let i = 0; i < Math.max(rows.length - 1, rows2.length); i++) if (!rows[i] || !rows2[i] || key(rows[i]) !== key(rows2[i])) rows.push({ name: "DISAGREEMENT at: " + ((rows[i] || rows2[i]).name), ok: false, detail: "RPC1=" + (rows[i] ? rows[i].ok + " " + rows[i].detail : "-") + " | RPC2=" + (rows2[i] ? rows2[i].ok + " " + rows2[i].detail : "-") });
+    } else rows.push({ name: "WARN no RPC2 set: a single endpoint is trusted (rehearsal only)", ok: true, warn: true, detail: "" });
     let bad = 0;
     for (const r of rows) { console.log(`${r.warn ? "WARN" : r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  [" + r.detail + "]" : ""}`); if (!r.ok) bad++; }
     console.log(bad ? `\n${bad} CHECK(S) FAILED` : "\nALL CHECKS PASSED");
