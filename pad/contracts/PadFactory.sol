@@ -63,6 +63,7 @@ contract PadFactory {
     function keyAt(uint256 i) external view returns (PoolKey memory) { return _keys[i]; }
 
     /// @param startFdv starting fully-diluted value of the token, in quote tokens (wei). Price can rise ~1000x from here.
+    ///        The start is rounded down to the pool's 60-tick grid, so the real start can differ by up to ~0.6%.
     function launch(string calldata name, string calldata symbol, uint256 startFdv, bool war)
         external
         returns (PoolKey memory key, address token)
@@ -125,11 +126,14 @@ contract PadFactory {
         return t - r;
     }
 
+    /// @dev letters, digits, space and . _ - + ! ? : # only
     function _checkString(bytes memory s, uint256 maxLen) internal pure {
         if (s.length == 0 || s.length > maxLen) revert BadString();
         for (uint256 i; i < s.length; i++) {
-            bytes1 c = s[i];
-            if (c < 0x20 || c > 0x7E || c == 0x3C || c == 0x3E || c == 0x26 || c == 0x22 || c == 0x27) revert BadString(); // printable ASCII, no < > & " '
+            uint8 c = uint8(s[i]);
+            bool ok = (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || c == 0x20 || c == 0x2E
+                || c == 0x5F || c == 0x2D || c == 0x2B || c == 0x21 || c == 0x3F || c == 0x3A || c == 0x23;
+            if (!ok) revert BadString();
         }
     }
 

@@ -10,7 +10,7 @@ const erc20 = ["function balanceOf(address) view returns (uint256)", "function t
 function mineSalt(deployer, initHash) {
   for (let i = 0n; ; i++) {
     const salt = ethers.zeroPadValue(ethers.toBeHex(i), 32);
-    if ((BigInt(ethers.getCreate2Address(deployer, salt, initHash)) & 0x3fffn) === 0x20ccn) return salt;
+    if ((BigInt(ethers.getCreate2Address(deployer, salt, initHash)) & 0x3fffn) === 0x28ccn) return salt;
   }
 }
 async function fundStag(signers, amount) {
@@ -23,7 +23,7 @@ async function fundStag(signers, amount) {
     if ((await stag.balanceOf(s.address)) !== amount) throw new Error("funding STAG by storage slot 0 failed");
   }
 }
-async function deployStack(owner) {
+async function deployStack(owner, doWire = true) {
   const Hd = await (await ethers.getContractFactory("HookDeployer")).deploy();
   const H = await ethers.getContractFactory("PadHook");
   const init = ethers.concat([H.bytecode, ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "address"], [PM, owner.address, STAG])]);
@@ -32,7 +32,7 @@ async function deployStack(owner) {
   const hook = H.attach(ethers.getCreate2Address(await Hd.getAddress(), salt, ethers.keccak256(init)));
   const factory = await (await ethers.getContractFactory("PadFactory")).deploy(PM, await hook.getAddress(), STAG);
   const battle = await (await ethers.getContractFactory("PadBattle")).deploy(await hook.getAddress());
-  await hook.wire(await factory.getAddress(), await battle.getAddress());
+  if (doWire) await hook.wire(await factory.getAddress(), await battle.getAddress());
   const router = await (await ethers.getContractFactory("PoolSwapTest")).deploy(PM);
   const stag = new ethers.Contract(STAG, erc20, owner);
   const stateView = new ethers.Contract(STATEVIEW, ["function getSlot0(bytes32) view returns (uint160,int24,uint24,uint24)"], owner);

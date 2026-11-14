@@ -116,10 +116,14 @@ describe("pad v2 on a mainnet fork ($STAG pair)", function () {
       expect(i.holderOwed).to.equal(E(20_000));                       // waiting: nobody has been paid yet
       await P.buy(pp, carol, E(1_000_000));                          // this swap first flushes bob's 20k to the token (bob is the only holder)
       expect((await P.inf(pp)).holderOwed).to.equal(E(20_000));       // now carol's buy is waiting
-      expect(await pp.tok.claimable(bob.address)).to.be.closeTo(E(20_000), E(1));
+      await ethers.provider.send("hardhat_mine", ["0x1"]);            // holders are credited from the next block on (flash loans earn nothing)
+      // credit uses the holders as they stand at the first interaction of the next block: bob AND carol (she bought in the flushing swap)
+      const cb = await pp.tok.claimable(bob.address), cc = await pp.tok.claimable(carol.address);
+      expect(cb + cc).to.be.closeTo(E(20_000), E(1));
+      expect(cb).to.be.gt(cc);                                        // bob held more of it
       const before = await P.stag.balanceOf(bob.address);
       await pp.tok.connect(bob).claim();
-      expect((await P.stag.balanceOf(bob.address)) - before).to.be.closeTo(E(20_000), E(1));
+      expect((await P.stag.balanceOf(bob.address)) - before).to.be.closeTo(cb, E(1));
       await P.hook.pushHolders(pp.key);                              // anyone can push the waiting share
       expect((await P.inf(pp)).holderOwed).to.equal(0n);
       await P.hook.connect(alice).claimCreator(pp.key, alice.address);
@@ -133,7 +137,7 @@ describe("pad v2 on a mainnet fork ($STAG pair)", function () {
       await tp.tok.connect(dave).burn(bal - 1n);                      // eligible supply is now 1 wei
       expect(await tp.tok.eligibleSupply()).to.equal(1n);
       await P.buy(tp, bob, E(500_000));                               // tax lands while eligible is ~0: must park, not blow up
-      expect(await tp.tok.pendingDividends()).to.be.gt(0n);
+      expect((await tp.tok.pendingDividends()) + (await tp.tok.staged())).to.be.gt(0n);   // parked or staged: never blew up
       const got = await tp.tok.balanceOf(bob.address);
       expect(got).to.be.gt(E(1000));
       await tp.tok.connect(bob).transfer(carol.address, got / 2n);   // big transfers still work
@@ -171,7 +175,7 @@ describe("pad v2 on a mainnet fork ($STAG pair)", function () {
       await expect(P.hook.register(pools.q0.key, bob.address, pools.q0.key.currency1, true, true)).to.be.reverted; // not the factory
     });
     it("hostile names and out-of-range prices are refused", async () => {
-      for (const bad of ["", "x".repeat(33), "<script>", "a&b", 'q"q', "tab\t", "nöpe"]) await expect(P.factory.connect(alice).launch(bad, "PT", E(10_000_000), true)).to.be.reverted;
+      for (const bad of ["", "x".repeat(33), "<script>", "a&b", 'q"q', "tab\t", "nöpe", "a$b", "a`b", "a\\b", "{x}", "a\nb"]) await expect(P.factory.connect(alice).launch(bad, "PT", E(10_000_000), true)).to.be.reverted;
       await expect(P.factory.connect(alice).launch("ok", "x".repeat(13), E(10_000_000), true)).to.be.reverted;
       await expect(P.factory.connect(alice).launch("ok", "OK", 1n, true)).to.be.reverted;
       await expect(P.factory.connect(alice).launch("ok", "OK", ethers.parseEther("1" + "0".repeat(13)), true)).to.be.reverted;

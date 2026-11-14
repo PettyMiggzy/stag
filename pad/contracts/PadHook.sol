@@ -9,11 +9,15 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta, toBeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
-import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
+import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+
+interface IHookRef {
+    function hook() external view returns (address);
+}
 
 interface IPadToken {
     function burn(uint256 amount) external;
@@ -109,6 +113,7 @@ contract PadHook is BaseHook {
     function wire(address f, address b) external onlyOwner {
         if (factory != address(0) || battle != address(0)) revert NotAllowed();
         if (f == address(0) || b == address(0)) revert ZeroAddress();
+        if (IHookRef(f).hook() != address(this) || IHookRef(b).hook() != address(this)) revert BadPool();
         factory = f;
         battle = b;
     }
@@ -163,6 +168,7 @@ contract PadHook is BaseHook {
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory p) {
         p.beforeInitialize = true;
+        p.beforeAddLiquidity = true;
         p.beforeSwap = true;
         p.afterSwap = true;
         p.beforeSwapReturnDelta = true;
@@ -176,6 +182,18 @@ contract PadHook is BaseHook {
         address c1 = Currency.unwrap(key.currency1);
         if (i.quoteIs0 ? (c0 != QUOTE || c1 != i.token) : (c0 != i.token || c1 != QUOTE)) revert BadPool();
         return this.beforeInitialize.selector;
+    }
+
+    /// @dev Only the factory may add liquidity. A private or just-in-time LP next to the price could otherwise soak up
+    ///      a chest burn and withdraw the chest as $STAG. (Zero-liquidity pokes, used to collect fees, are not adds.)
+    function _beforeAddLiquidity(address sender, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        view
+        override
+        returns (bytes4)
+    {
+        if (sender != factory) revert NotAllowed();
+        return this.beforeAddLiquidity.selector;
     }
 
     // ----------------------------------------------------------------- swaps
@@ -218,7 +236,7 @@ contract PadHook is BaseHook {
             uint256 amt = exactIn ? uint256(-p.amountSpecified) : uint256(p.amountSpecified);
             uint256 fee = (amt * TAX_BPS) / BPS;
             if (filled != (exactIn ? amt - fee : amt + fee)) revert PartialFill();
-            _book(id, buy, amt, fee);
+            _book(id, buy, filled, fee);
             return (this.afterSwap.selector, 0);
         }
         // quote is the unspecified side: tax what really moved
@@ -230,7 +248,7 @@ contract PadHook is BaseHook {
 
     function _book(PoolId id, bool buy, uint256 vol, uint256 fee) internal {
         Info storage i = info[id];
-        if (!i.locked || block.timestamp <= i.freezeAt) i.volume += vol;
+        if (!i.locked || block.timestamp < i.freezeAt) i.volume += vol;
         if (!buy) {
             platformOwed += fee;
         } else if (i.war) {
@@ -239,6 +257,8 @@ contract PadHook is BaseHook {
             uint256 c = fee / 3;                  // creator's 1%
             i.creatorOwed += c.toUint128();
             i.holderOwed += (fee - c).toUint128();   // holders' 2%
+            bytes32 slot = PoolId.unwrap(id);
+            assembly { tstore(slot, 1) }             // booked in this transaction: its claims are not settled yet
         }
         emit Taxed(id, buy, vol, fee);
     }
@@ -273,9 +293,13 @@ contract PadHook is BaseHook {
 
     /// @dev inside a swap the pool manager is already unlocked: turn claims into real $STAG for the token. The
     ///      claims are backed by earlier, already-settled swaps, so the pool manager holds the tokens.
-    function _flush(PoolId, Info storage i) internal {
+    function _flush(PoolId id, Info storage i) internal {
         uint256 a = i.holderOwed;
         if (a == 0) return;
+        bytes32 slot = PoolId.unwrap(id);
+        uint256 booked;
+        assembly { booked := tload(slot) }
+        if (booked != 0) return;                     // an earlier swap in this transaction booked claims the pool manager does not hold yet
         i.holderOwed = 0;
         poolManager.burn(address(this), _qid(), a);
         poolManager.take(Currency.wrap(QUOTE), i.token, a);
@@ -335,16 +359,21 @@ contract PadHook is BaseHook {
         emit ChestBurned(id, paid, burned);
     }
 
-    /// @dev Battle contract only: move the loser's chest into the winner's and mark the combined chest for burning.
-    function settleChests(PoolKey calldata loser, PoolKey calldata winner) external {
+    /// @dev Battle contract only. Only what each pool EARNED during the fight is at stake: the part of a chest above the
+    ///      level it had when the battle started. The loser's fight earnings join the winner's chest, and the winner's
+    ///      fight earnings plus that loot are marked for burning. Older chest money stays with its pool.
+    function settleChests(PoolKey calldata loser, PoolKey calldata winner, uint128 loserStart, uint128 winnerStart) external {
         if (msg.sender != battle) revert NotAllowed();
         PoolId l = loser.toId();
         PoolId w = winner.toId();
-        uint128 a = info[l].chest;
-        info[l].chest = 0;
+        uint128 lc = info[l].chest;
+        uint128 wc = info[w].chest;
+        uint128 lootL = lc > loserStart ? lc - loserStart : 0;
+        uint128 earnW = wc > winnerStart ? wc - winnerStart : 0;
+        info[l].chest = lc - lootL;
+        info[w].chest = wc + lootL;
         forced[l] = 0;
-        info[w].chest += a;
-        forced[w] = info[w].chest;
+        forced[w] = earnW + lootL;
     }
 
     function unlockCallback(bytes calldata data) external returns (bytes memory) {
@@ -364,9 +393,14 @@ contract PadHook is BaseHook {
         int24 limitTick = q0 ? tick - MAX_BURN_IMPACT_TICKS : tick + MAX_BURN_IMPACT_TICKS;
         if (limitTick < TickMath.MIN_TICK + 1) limitTick = TickMath.MIN_TICK + 1;
         if (limitTick > TickMath.MAX_TICK - 1) limitTick = TickMath.MAX_TICK - 1;
+        uint160 limit = TickMath.getSqrtPriceAtTick(limitTick);
+        {
+            (uint160 sqrtP,,,) = poolManager.getSlot0(id);
+            if (q0 ? limit >= sqrtP : limit <= sqrtP) return abi.encode(uint256(0), uint256(0));   // pool at its edge: nothing to buy now
+        }
         BalanceDelta d = poolManager.swap(
             key,
-            SwapParams({zeroForOne: q0, amountSpecified: -int256(amt), sqrtPriceLimitX96: TickMath.getSqrtPriceAtTick(limitTick)}),
+            SwapParams({zeroForOne: q0, amountSpecified: -int256(amt), sqrtPriceLimitX96: limit}),
             ""
         );
         int128 qd = q0 ? d.amount0() : d.amount1();

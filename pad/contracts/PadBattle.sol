@@ -10,7 +10,7 @@ import {PadHook} from "./PadHook.sol";
 ///         challenger's pool (no mode change, no burning) so the opponent knows what they are accepting. The other creator
 ///         accepts on chain or the offer lapses; once accepted both pools stay locked and the hook stops counting volume
 ///         for each pool after the end time. When the clock runs out anyone can settle. The pool with more gross volume
-///         since the start wins; the loser's war chest joins the winner's and the combined chest is marked for burning.
+///         since the start wins; only what each pool earned during the fight is at stake: the loser's fight earnings join the winner's chest and the winner's fight earnings plus that loot are marked for burning. Older chest money stays with its pool.
 ///         A tie moves nothing. Nobody, platform included, can pick or change a result.
 contract PadBattle {
     using PoolIdLibrary for PoolKey;
@@ -31,6 +31,8 @@ contract PadBattle {
         uint64 end;
         uint256 volA0;
         uint256 volB0;
+        uint128 chestA0;      // chests when the clock started: only earnings above these are at stake
+        uint128 chestB0;
         State state;
     }
 
@@ -62,6 +64,7 @@ contract PadBattle {
         PoolId ia = a.toId();
         PoolId ib = b.toId();
         (address ca, bool ra, bool wa, bool la,,) = hook.poolState(ia);
+        if (hook.forced(ia) > 0) revert BadTerms();                   // burn your last win before starting another fight
         (, bool rb,,,,) = hook.poolState(ib);
         if (msg.sender != ca || !ra || !rb || PoolId.unwrap(ia) == PoolId.unwrap(ib)) revert NotAllowed();
         if (!wa || la) revert BadTerms();                             // must be in war mode and not already in a fight
@@ -81,12 +84,14 @@ contract PadBattle {
     function accept(uint256 id) external {
         Battle storage x = battles[id];
         if (x.state != State.Offered || block.timestamp > x.offerExpiry) revert BadState();
-        (, , bool wa,, , uint256 va) = hook.poolState(x.a.toId());      // locked since challenge
-        (address cb,, bool wb, bool lb,, uint256 vb) = hook.poolState(x.b.toId());
+        (, , bool wa,, uint128 chA, uint256 va) = hook.poolState(x.a.toId());      // locked since challenge
+        (address cb,, bool wb, bool lb, uint128 chB, uint256 vb) = hook.poolState(x.b.toId());
         if (msg.sender != cb) revert NotAllowed();
-        if (!wa || !wb || lb) revert BadTerms();                      // both at war, opponent free
+        if (!wa || !wb || lb || hook.forced(x.b.toId()) > 0) revert BadTerms();                      // both at war, opponent free
         x.volA0 = va;
         x.volB0 = vb;
+        x.chestA0 = chA;
+        x.chestB0 = chB;
         x.start = uint64(block.timestamp);
         x.end = uint64(block.timestamp) + x.duration;
         x.state = State.Live;
@@ -126,8 +131,10 @@ contract PadBattle {
         bool aWins = va > vb;
         PoolKey memory w = aWins ? x.a : x.b;
         PoolKey memory l = aWins ? x.b : x.a;
-        (,,,, uint128 lostChest,) = hook.poolState(l.toId());
-        hook.settleChests(l, w);
-        emit Settled(id, w.toId(), l.toId(), aWins ? va : vb, aWins ? vb : va, lostChest);
+        (,,,, uint128 lostNow,) = hook.poolState(l.toId());
+        uint128 loserStart = aWins ? x.chestB0 : x.chestA0;
+        uint128 winnerStart = aWins ? x.chestA0 : x.chestB0;
+        hook.settleChests(l, w, loserStart, winnerStart);
+        emit Settled(id, w.toId(), l.toId(), aWins ? va : vb, aWins ? vb : va, lostNow > loserStart ? lostNow - loserStart : 0);
     }
 }
