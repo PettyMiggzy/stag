@@ -141,4 +141,26 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     const bad = await readback(ethers.provider, { ...base, dry: true, expectOwners: [ethers.Wallet.createRandom().address], expectThreshold: 2 });
     expect(bad.some((r) => !r.ok && /owners/.test(r.name))).to.equal(true);
   });
+
+  it("deploy-tx verification: genuine creation tx passes; a different creator/nonce/args or patched calldata fails", async () => {
+    const hash = R.deployer.deploymentTransaction().hash;
+    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false, deployTx: hash,
+      salt: { salt: saltInfo.salt, eoa: eoa.address, nonce: 0 } };
+    const tx = await ethers.provider.getTransaction(hash);
+    base.salt.nonce = tx.nonce;
+    const good = await readback(ethers.provider, base);
+    expect(good.filter((r) => !r.ok && /deploy tx/.test(r.name))).to.deep.equal([]);
+    expect(good.some((r) => /PINNED PadDeployer creation code/.test(r.name) && r.ok)).to.equal(true);
+    const wrongEoa = await readback(ethers.provider, { ...base, salt: { ...base.salt, eoa: other.address } });
+    expect(wrongEoa.some((r) => !r.ok && /from == salt.eoa/.test(r.name))).to.equal(true);
+    const wrongSalt = await readback(ethers.provider, { ...base, salt: { ...base.salt, salt: ethers.ZeroHash } });
+    expect(wrongSalt.some((r) => !r.ok && /constructor args/.test(r.name))).to.equal(true);
+  });
+
+  it("hardening: a Safe-lookalike without the expected singleton fails; deployAll ignores ALLOW_UNPINNED when requireManifest", async () => {
+    const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false, expectSingleton: other.address });
+    expect(rows.some((r) => !r.ok && /singleton/.test(r.name))).to.equal(true);
+    process.env.ALLOW_UNPINNED = "1";
+    try { await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo, requireManifest: true, safeOpts: { dry: true } })).to.be.rejected; } finally { delete process.env.ALLOW_UNPINNED; }
+  });
 });

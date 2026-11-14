@@ -27,4 +27,28 @@ async function probeSafe(provider, addr) {
   try { const [version, threshold, owners] = await Promise.all([S.VERSION(), S.getThreshold(), S.getOwners()]); return { ok: threshold >= 1n && owners.length >= 1, version, threshold, owners }; }
   catch (e) { return { ok: false }; }
 }
-module.exports = { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt, probeSafe };
+/// Safe hardening rows. A lookalike or a Safe with a hostile singleton/module/guard/handler can answer the three getters and still be backdoored.
+/// Needs the operator's out-of-band knowledge: EXPECT_SINGLETON (the Safe singleton address they verified in the Safe app / docs).
+const SLOT_GUARD = ethers.id("guard_manager.guard.address"), SLOT_FALLBACK = ethers.id("fallback_manager.handler.address");
+async function safeChecks(provider, addr, o = {}) {
+  const rows = [], ck = (name, ok, detail = "") => rows.push({ name, ok: !!ok, detail });
+  const word = async (slot) => ethers.getAddress(ethers.dataSlice(await provider.getStorage(addr, slot), 12));
+  const lc = (x) => String(x).toLowerCase();
+  const sp = await probeSafe(provider, addr);
+  ck("multisig answers like a Safe (VERSION, getThreshold >= 1, getOwners)", sp.ok || !!o.allowNonSafe, sp.ok ? `Safe ${sp.version}, threshold ${sp.threshold}, owners ${sp.owners.length}` : "no Safe answers");
+  if (!sp.ok) return { rows, sp };
+  if (o.expectOwners) { const a = sp.owners.map(lc).sort(), b = o.expectOwners.map(lc).sort(); ck("multisig owners == EXPECT_OWNERS (exact list)", a.length === b.length && a.every((x, i) => x === b[i]), sp.owners.join(",")); }
+  else ck("EXPECT_OWNERS supplied (the full owner list is checked, not just the count)", !!o.dry);
+  if (o.expectThreshold !== undefined && o.expectThreshold !== null) ck(`multisig threshold == EXPECT_THRESHOLD (${o.expectThreshold})`, sp.threshold === BigInt(o.expectThreshold), String(sp.threshold)); else ck("EXPECT_THRESHOLD supplied", !!o.dry);
+  ck("multisig threshold >= 2", sp.threshold >= 2n || !!o.dry, String(sp.threshold));
+  if (o.dry && !o.expectSingleton) return { rows, sp };
+  if (o.expectSingleton) ck("Safe singleton (storage slot 0) == EXPECT_SINGLETON", lc(await word(ethers.ZeroHash)) === lc(o.expectSingleton), await word(ethers.ZeroHash));
+  else ck("EXPECT_SINGLETON supplied (the verified Safe implementation address)", false);
+  let mods = null; try { mods = await new ethers.Contract(addr, ["function getModulesPaginated(address,uint256) view returns (address[],address)"], provider).getModulesPaginated("0x0000000000000000000000000000000000000001", 10); } catch (e) {}
+  ck("Safe has NO enabled modules (modules move funds/ownership without signatures)", mods !== null && mods[0].length === 0, mods ? String(mods[0].length) : "getModulesPaginated failed");
+  ck("Safe guard slot is empty", (await word(SLOT_GUARD)) === ethers.ZeroAddress);
+  const fb = await word(SLOT_FALLBACK);
+  ck("Safe fallback handler is empty or EXPECT_FALLBACK", fb === ethers.ZeroAddress || (o.expectFallback && lc(fb) === lc(o.expectFallback)), fb);
+  return { rows, sp };
+}
+module.exports = { safeChecks, PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt, probeSafe };

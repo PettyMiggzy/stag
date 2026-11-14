@@ -4,7 +4,7 @@
 // (DEPLOYER is the PadDeployer address; everything else is read from it.) Optional: PM, QUOTE, EXPECT_OWNER_ACCEPTED=1.
 const fs = require("fs"), path = require("path");
 const { ethers } = require("ethers");
-const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe } = require("./lib");
+const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe, safeChecks } = require("./lib");
 const MAN = require("./manifest");
 
 const ABI = {
@@ -126,15 +126,28 @@ async function readback(provider, cfg) {
     rows.push({ name: "ACTION: multisig must now call hook.acceptOwner() promptly (until then the PadDeployer contract, which has no functions, is the owner)", ok: true, detail: "then re-run with EXPECT_OWNER_ACCEPTED=1" });
   }
   ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
-  const sp = await probeSafe(provider, cfg.multisig);       // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
-  ck("multisig answers like a Safe (VERSION, getThreshold >= 1, getOwners)", sp.ok || !!cfg.allowNonSafeOwner, sp.ok ? `Safe ${sp.version}, threshold ${sp.threshold}, owners ${sp.owners.length}` : "no Safe answers");
-  if (sp.ok) {
-    if (cfg.expectOwners) { const a = sp.owners.map((x) => x.toLowerCase()).sort(), b = cfg.expectOwners.map((x) => x.toLowerCase()).sort(); ck("multisig owners == EXPECT_OWNERS (exact list)", a.length === b.length && a.every((x, i) => x === b[i]), sp.owners.join(",")); }
-    else ck("EXPECT_OWNERS supplied (the full owner list is checked, not just the count)", !!cfg.dry);
-    if (cfg.expectThreshold !== undefined) ck(`multisig threshold == EXPECT_THRESHOLD (${cfg.expectThreshold})`, sp.threshold === BigInt(cfg.expectThreshold), String(sp.threshold));
-    else ck("EXPECT_THRESHOLD supplied", !!cfg.dry);
-    ck("multisig threshold >= 2", sp.threshold >= 2n || !!cfg.dry, String(sp.threshold));
-  }
+  const sc = await safeChecks(provider, cfg.multisig, { expectOwners: cfg.expectOwners, expectThreshold: cfg.expectThreshold, expectSingleton: cfg.expectSingleton, expectFallback: cfg.expectFallback, dry: cfg.dry, allowNonSafe: cfg.allowNonSafeOwner });   // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
+  rows.push(...sc.rows);
+
+  // 5b. the deployment transaction itself: its calldata must START WITH the pinned PadDeployer creation code (which embeds the hook/factory/battle
+  //     creation code, constructors included) and END WITH the exact expected constructor args. Closes "same runtime, patched constructor".
+  if (cfg.deployTx) {
+    const tx = await provider.getTransaction(cfg.deployTx), rc = await provider.getTransactionReceipt(cfg.deployTx);
+    ck("deploy tx found and succeeded", !!tx && !!rc && rc.status === 1);
+    if (tx && rc) {
+      const man = MAN.load();
+      ck("deploy tx: from == salt.eoa, nonce == salt.nonce, to == null (plain creation)", !!cfg.salt && eq(tx.from, cfg.salt.eoa) && tx.nonce === Number(cfg.salt.nonce) && tx.to === null, `${tx.from} #${tx.nonce}`);
+      ck("deploy tx created the DEPLOYER address", eq(rc.contractAddress || "", cfg.deployer), rc.contractAddress);
+      const input = ethers.getBytes(tx.data);
+      const want = ethers.getBytes(MAN.artifact("PadDeployer").creation);
+      const head = ethers.keccak256(input.slice(0, want.length));
+      ck("deploy tx calldata starts with the PINNED PadDeployer creation code (constructors of hook/factory/battle included)", !!man && head === man.deployerCreationCode, head);
+      const args = ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "address", "bool", "bytes32"], [pmAddr, quote, cfg.multisig, true, cfg.salt ? cfg.salt.salt : ethers.ZeroHash]);
+      ck("deploy tx constructor args == (PM, STAG, MULTISIG, mustBeContract=true, salt)", ethers.hexlify(input.slice(want.length)).toLowerCase() === args.toLowerCase());
+    }
+  } else ck("DEPLOY_TX supplied (the creation transaction is verified, not just the runtime code)", !!cfg.dry);
+  // nothing may have been approved away from the system's contracts before launch
+  ck("factory.launchCount and battle.count visible", true, `${await F.launchCount()} launches, ${await B.count()} battles`);
 
   // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed))
   const n = Number(await F.launchCount());
@@ -164,20 +177,23 @@ if (require.main === module) {
     const real = chainId === 4663n || chain2 === 4663n;                 // either endpoint on the real chain => real: DRYRUN and all rehearsal shortcuts are ignored
     const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
-    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
+    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
+    if (real && new URL(process.env.RPC).host === new URL(process.env.RPC2).host) { console.error("RPC2 must be on a different host than RPC"); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
     const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
       salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
       expectOwners: process.env.EXPECT_OWNERS ? process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())) : null,
-      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1" };
+      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectFallback: process.env.EXPECT_FALLBACK, deployTx: process.env.DEPLOY_TX };
     const rows = await readback(provider, cfg);
     if (p2) {                                                            // the WHOLE readback again on the second endpoint; any difference is a failure
       const rows2 = await readback(p2, cfg);
-      const key = (r) => JSON.stringify([r.name, r.ok, r.detail || ""]);
+      const key = (r) => JSON.stringify([r.name, r.ok]);   // live balances differ between two reads; every ok/fail verdict must match
       const same = rows.length === rows2.length && rows.every((r, i) => key(r) === key(rows2[i]));
       rows.push({ name: "RPC2 produced the identical readback (every row, every value)", ok: same, detail: same ? "" : "RPC1 and RPC2 disagree: do not trust either until resolved" });
       if (!same) for (let i = 0; i < Math.max(rows.length - 1, rows2.length); i++) if (!rows[i] || !rows2[i] || key(rows[i]) !== key(rows2[i])) rows.push({ name: "DISAGREEMENT at: " + ((rows[i] || rows2[i]).name), ok: false, detail: "RPC1=" + (rows[i] ? rows[i].ok + " " + rows[i].detail : "-") + " | RPC2=" + (rows2[i] ? rows2[i].ok + " " + rows2[i].detail : "-") });
     } else rows.push({ name: "WARN no RPC2 set: a single endpoint is trusted (rehearsal only)", ok: true, warn: true, detail: "" });
+    { const dg = MAN.load() ? ethers.keccak256(fs.readFileSync(MAN.FILE)) : null;
+      if (process.env.EXPECT_MANIFEST_DIGEST || real) rows.push({ name: "manifest digest == EXPECT_MANIFEST_DIGEST (published with the audit report)", ok: !!dg && dg.toLowerCase() === String(process.env.EXPECT_MANIFEST_DIGEST || "").toLowerCase(), detail: String(dg) }); }
     let bad = 0;
     for (const r of rows) { console.log(`${r.warn ? "WARN" : r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  [" + r.detail + "]" : ""}`); if (!r.ok) bad++; }
     console.log(bad ? `\n${bad} CHECK(S) FAILED` : "\nALL CHECKS PASSED");
