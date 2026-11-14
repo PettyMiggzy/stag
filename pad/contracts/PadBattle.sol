@@ -131,12 +131,11 @@ contract PadBattle {
         bool aWins = va > vb;
         PoolKey memory w = aWins ? x.a : x.b;
         PoolKey memory l = aWins ? x.b : x.a;
-        (,,,, uint128 lostNow,) = hook.poolState(l.toId());
         uint128 loserStart = aWins ? x.chestB0 : x.chestA0;
         uint128 winnerStart = aWins ? x.chestA0 : x.chestB0;
-        hook.settleChests(l, w, loserStart, winnerStart);                 // while both pools are still locked: the hook uses its end-of-fight snapshots
+        uint128 loot = hook.settleChests(l, w, loserStart, winnerStart);                 // while both pools are still locked: the hook uses its end-of-fight snapshots
         hook.setLocked(x.a, false, 0);
         hook.setLocked(x.b, false, 0);
-        emit Settled(id, w.toId(), l.toId(), aWins ? va : vb, aWins ? vb : va, lostNow > loserStart ? lostNow - loserStart : 0);
+        emit Settled(id, w.toId(), l.toId(), aWins ? va : vb, aWins ? vb : va, loot);
     }
 }

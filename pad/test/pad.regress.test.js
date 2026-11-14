@@ -66,14 +66,17 @@ describe("pad v3 regressions from the audit rounds", function () {
       expect(await P.solvent(all)).to.equal(true);
     });
 
-    it("a burn against an exhausted pool does not revert; the chest just stays", async () => {
+    it("REGRESSION a burn against a sold-out pool reverts and moves nothing: no free price shoves, no timer wasted", async () => {
       const p = await launchOrd(alice, true, q0);
       await P.buy(p, bob, E(1_000_000));
-      // exact-out buy of almost the whole supply with a loose limit: the pool runs dry, price runs to the edge
+      // exact-out buy of almost the whole supply with a loose limit: the pool sells out and the price runs to the end of the range
       await P.buyOut(p, carol, E(999_999_000)).catch(() => {});
       const c0 = (await P.inf(p)).chest;
-      await P.hook.connect(alice).burnChest(p.key, 0);
-      expect((await P.inf(p)).chest).to.be.lte(c0);
+      const t0 = await P.tick(p);
+      for (let i = 0; i < 3; i++) await expect(P.hook.connect(alice).burnChest(p.key, 0)).to.be.reverted;   // repeating does not walk the price
+      expect(await P.tick(p)).to.equal(t0);
+      expect((await P.inf(p)).chest).to.equal(c0);
+      expect(await P.hook.lastBurn(p.id)).to.equal(0n);
       expect(await P.solvent(all)).to.equal(true);
     });
   });
@@ -139,5 +142,19 @@ describe("pad v3 regressions from the audit rounds", function () {
     expect((await P.inf(p)).holderOwed).to.be.gt(owed0);                                // flush was skipped, nothing broke
     await P.buy(p, dave, E(1_000));                                                      // the next normal swap flushes it
     expect(await P.solvent(all)).to.equal(true);
+  });
+
+  for (const q0 of [true, false]) it(`the real starting value is never below what was asked, even at the minimum (${q0 ? "q0" : "q1"})`, async () => {
+    for (let n = 0; n < 40; n++) {
+      const p = await P.launch(alice, true, E(1_000_000)); all.push(p);
+      if (p.quoteIs0 !== q0) continue;
+      const sq = (await P.stateView.getSlot0(p.id))[0];
+      const price = Number(sq) ** 2 / 2 ** 192;                                   // token1 per token0
+      const fdv = q0 ? 1e9 / price : 1e9 * price;                                 // in STAG
+      console.log(`   [${q0 ? "q0" : "q1"}] asked 1,000,000 STAG, real start ${fdv.toFixed(0)}`);
+      expect(fdv).to.be.gte(1_000_000 * 0.9999);                                  // float tolerance only
+      return;
+    }
+    throw new Error("ordering not found");
   });
 });

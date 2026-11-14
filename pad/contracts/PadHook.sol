@@ -52,6 +52,7 @@ contract PadHook is BaseHook {
     uint256 public constant TAX_BPS = 300;   // 3% each way
     uint256 public constant BPS = 10_000;
     int24 public constant MAX_BURN_IMPACT_TICKS = 150;   // a burn may move the price at most ~1.5% per call
+    uint256 public constant STRANGER_DELAY = 15 minutes;  // strangers wait this much longer than the creator after the gap
     uint256 public constant BURN_GAP = 1 hours;          // minimum time between burns on one pool, creator included
     uint256 public constant FORCED_MIN_STEP = 50_000e18; // quote tokens
 
@@ -371,6 +372,7 @@ contract PadHook is BaseHook {
         if (f == 0) revert NothingToDo();
         uint256 step = f;
         if (msg.sender != i.creator) {
+            if (block.timestamp < uint256(lastBurn[id]) + BURN_GAP + STRANGER_DELAY) revert BurnTooSoon();   // the creator gets the first shot each hour
             uint256 tenth = f / 10;
             step = f <= FORCED_MIN_STEP ? f : (tenth > FORCED_MIN_STEP ? tenth : FORCED_MIN_STEP);
         }
@@ -402,13 +404,13 @@ contract PadHook is BaseHook {
     ///      stood when the fight ended, above the level it had when the battle started. The loser's fight earnings join the
     ///      winner's chest, and the winner's fight earnings plus that loot are marked for burning. Older chest money and
     ///      anything taxed after the end stays with its pool.
-    function settleChests(PoolKey calldata loser, PoolKey calldata winner, uint128 loserStart, uint128 winnerStart) external {
+    function settleChests(PoolKey calldata loser, PoolKey calldata winner, uint128 loserStart, uint128 winnerStart) external returns (uint128 lootL) {
         if (msg.sender != battle) revert NotAllowed();
         PoolId l = loser.toId();
         PoolId w = winner.toId();
         uint128 lAtEnd = info[l].endSnapped ? info[l].chestAtEnd : info[l].chest;
         uint128 wAtEnd = info[w].endSnapped ? info[w].chestAtEnd : info[w].chest;
-        uint128 lootL = lAtEnd > loserStart ? lAtEnd - loserStart : 0;
+        lootL = lAtEnd > loserStart ? lAtEnd - loserStart : 0;
         uint128 earnW = wAtEnd > winnerStart ? wAtEnd - winnerStart : 0;
         info[l].chest -= lootL;
         info[w].chest += lootL;
@@ -436,10 +438,7 @@ contract PadHook is BaseHook {
         uint160 limit = TickMath.getSqrtPriceAtTick(limitTick);
         {
             (uint160 sqrtP,,,) = poolManager.getSlot0(id);
-            if (q0 ? limit >= sqrtP : limit <= sqrtP) {                  // pool at its edge: nothing to buy now
-                if (minOut > 0) revert Slippage();
-                return abi.encode(uint256(0), uint256(0));
-            }
+            if (q0 ? limit >= sqrtP : limit <= sqrtP) revert NothingToDo();   // pool at the end of the price scale: nothing to buy
         }
         BalanceDelta d = poolManager.swap(
             key,
@@ -450,6 +449,7 @@ contract PadHook is BaseHook {
         int128 td = q0 ? d.amount1() : d.amount0();
         uint256 paid = qd < 0 ? uint256(uint128(-qd)) : 0;
         uint256 got = td > 0 ? uint256(uint128(td)) : 0;
+        if (got == 0) revert NothingToDo();                              // a burn that buys nothing must not move the price (the whole unlock reverts)
         if (got < minOut) revert Slippage();
         if (paid > 0) poolManager.burn(address(this), _qid(), paid);  // pay the swap with our claims: no token transfer
         if (got > 0) {

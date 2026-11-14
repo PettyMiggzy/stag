@@ -63,7 +63,7 @@ contract PadFactory {
     function keyAt(uint256 i) external view returns (PoolKey memory) { return _keys[i]; }
 
     /// @param startFdv starting fully-diluted value of the token, in quote tokens (wei). Price can rise ~1000x from here.
-    ///        The start is rounded down to the pool's 60-tick grid, so the real start can differ by up to ~0.6%.
+    ///        The start is rounded down to the pool's 60-tick grid, so the real start is at or slightly above the request (never below), by up to ~0.6%.
     function launch(string calldata name, string calldata symbol, uint256 startFdv, bool war)
         external
         returns (PoolKey memory key, address token)
@@ -108,6 +108,7 @@ contract PadFactory {
         if (sq <= TickMath.MIN_SQRT_PRICE || sq >= TickMath.MAX_SQRT_PRICE) revert BadFdv();
         int24 tick = TickMath.getTickAtSqrtPrice(uint160(sq));
         start = _floor(tick);
+        if (!quoteIs0 && start != tick) start += SPACING;   // token is currency0: price is quote-per-token, so round UP and never start below the requested value
         if (quoteIs0) {
             hi = start;
             lo = start - RANGE_TICKS;

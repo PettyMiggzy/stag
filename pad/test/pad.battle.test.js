@@ -67,6 +67,8 @@ describe("pad v2 battles on a mainnet fork", function () {
     expect(await A.tok.totalSupply()).to.be.lt(s0);
     await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // too soon
     await time.increase(HOUR + 1);
+    await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // the creator gets the first 15 minutes after the hour
+    await time.increase(15 * 60);
     await P.hook.connect(dave).burnForced(A.key, 0);
     expect(await P.solvent([A, B, C])).to.equal(true);
   });
