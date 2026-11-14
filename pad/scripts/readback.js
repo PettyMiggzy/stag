@@ -149,20 +149,31 @@ async function readback(provider, cfg) {
   // nothing may have been approved away from the system's contracts before launch
   rows.push({ name: "info: launches and battles so far", ok: true, info: true, detail: `${await F.launchCount()} launches, ${await B.count()} battles` });
 
-  // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed))
+  // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed)).
+  //    Launches are permissionless, so the scan is batched, pinned to ONE block (a payout between reads cannot cause a false FAIL) and bounded by SCAN_MAX
+  //    (default 300): above it the scan is skipped with a loud WARN and must be done by a monitor. Everything above (code, wiring, ownership, Safe) is O(1).
   const n = Number(await F.launchCount());
-  let owed = await H.platformOwed(), allReg = true;
+  const SCAN_MAX = Number(cfg.scanMax || 300);
   const PMc = new ethers.Contract(pmAddr, ABI.pm, provider);
-  for (let i = 0; i < n; i++) {
-    const k = await F.keyAt(i);
-    const id = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "uint24", "int24", "address"], [k.currency0, k.currency1, k.fee, k.tickSpacing, k.hooks]));
-    const inf = await H.info(id);
-    allReg = allReg && inf.registered && eq(k.hooks, hookA);
-    owed += inf.chest + inf.creatorOwed + inf.holderOwed;
+  if (n > SCAN_MAX) {
+    warn(`solvency scan SKIPPED: more launches than SCAN_MAX (raise SCAN_MAX or run a monitor)`, false, `${n} launches`);
+  } else {
+    const bn = await provider.getBlockNumber();
+    const ov = { blockTag: bn };
+    let owed = await H.platformOwed(ov), allReg = true;
+    for (let i0 = 0; i0 < n; i0 += 20) {
+      const idx = Array.from({ length: Math.min(20, n - i0) }, (_, j) => i0 + j);
+      const infos = await Promise.all(idx.map(async (i) => {
+        const k = await F.keyAt(i, ov);
+        const id = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "uint24", "int24", "address"], [k.currency0, k.currency1, k.fee, k.tickSpacing, k.hooks]));
+        return { k, inf: await H.info(id, ov) };
+      }));
+      for (const { k, inf } of infos) { allReg = allReg && inf.registered && eq(k.hooks, hookA); owed += inf.chest + inf.creatorOwed + inf.holderOwed; }
+    }
+    ck("every launch is registered and uses this hook", allReg, `${n} launches`);
+    const claims = await PMc.balanceOf(hookA, BigInt(quote), ov);
+    ck("solvency: hook 6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed)", claims >= owed, `claims ${claims} owed ${owed} at block ${bn}`);
   }
-  ck("every launch is registered and uses this hook", allReg, `${n} launches`);
-  const claims = await PMc.balanceOf(hookA, BigInt(quote));
-  ck("solvency: hook 6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed)", claims >= owed, `claims ${claims} owed ${owed}`);
   warn("hook holds no real STAG (a 1-wei donation can make this warn; harmless)", (await Q.balanceOf(hookA)) === 0n, String(await Q.balanceOf(hookA)));
   warn("factory holds no STAG (a donation can make this warn; harmless)", (await Q.balanceOf(facA)) === 0n);
   return rows;
@@ -180,9 +191,13 @@ if (require.main === module) {
     const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
     if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_SAFE_FACTORY", "EXPECT_SINGLETON_CODEHASH", "EXPECT_FACTORY_CODEHASH", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
-    if (real && new URL(process.env.RPC).host === new URL(process.env.RPC2).host) { console.error("RPC2 must be on a different host than RPC"); process.exit(2); }
+    const lb = (u) => ["127.0.0.1", "localhost", "[::1]"].includes(new URL(u).hostname);
+    if (!lb(process.env.RPC) && new URL(process.env.RPC).protocol !== "https:") { console.error("RPC must be https (http only for a loopback rehearsal node)"); process.exit(2); }
+    if (process.env.RPC2 && !lb(process.env.RPC2) && new URL(process.env.RPC2).protocol !== "https:") { console.error("RPC2 must be https"); process.exit(2); }
+    if (process.env.DRYRUN && !(lb(process.env.RPC) && (!process.env.RPC2 || lb(process.env.RPC2)))) { console.error("DRYRUN is only honoured with loopback RPC URLs; unset it"); process.exit(2); }
+    if (real && new URL(process.env.RPC).hostname.toLowerCase() === new URL(process.env.RPC2).hostname.toLowerCase()) { console.error("RPC2 must be on a different hostname than RPC"); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
-    const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
+    const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, scanMax: process.env.SCAN_MAX, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
       salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
       expectOwners: process.env.EXPECT_OWNERS ? process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())) : null,
       expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFactory: process.env.EXPECT_SAFE_FACTORY, expectFallback: process.env.EXPECT_FALLBACK, expectFallbackCodehash: process.env.EXPECT_FALLBACK_CODEHASH, expectSingletonCodehash: process.env.EXPECT_SINGLETON_CODEHASH, expectFactoryCodehash: process.env.EXPECT_FACTORY_CODEHASH, deployTx: process.env.DEPLOY_TX };

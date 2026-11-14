@@ -88,6 +88,8 @@ async function safeChecks(provider, addr, o = {}) {
   if (o.expectFactory) { const h = ethers.keccak256(await provider.getCode(o.expectFactory)); ck("factory runtime hash == EXPECT_FACTORY_CODEHASH (the official SafeProxyFactory)", !!o.expectFactoryCodehash && lc(h) === lc(o.expectFactoryCodehash), h); }
   ck("Safe module-guard slot is empty (Safe 1.5)", (await word(SLOT_MODGUARD)) === ethers.ZeroAddress);
   for (const w of sp.owners) { if (o.forbid && o.forbid.map(lc).includes(lc(w))) ck("no owner is one of this system's addresses or the throwaway deployer EOA", false, w); }
+  { const cf = (await Promise.all(sp.owners.map(async (w) => (await provider.getCode(w)).length <= 2 && (await provider.getTransactionCount(w)) === 0))).some(Boolean);
+    rows.push({ name: "info: owners with no code and no transactions (could be counterfactual contracts that sign without a key: confirm each is a real, used key)", ok: true, warn: cf, detail: "" }); }
   rows.push({ name: "info: owners that are contracts (EIP-1271/upgradeable/another Safe sign without a key: confirm each is intended)", ok: true, warn: (await Promise.all(sp.owners.map(async (w) => (await provider.getCode(w)).length > 2))).some(Boolean), detail: "" });
   return { rows, sp };
 }

@@ -27,6 +27,7 @@ async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm
   const tx = await D.getDeployTransaction(pm, quote, multisig, mustBeContract, saltInfo.salt);
   const gasLimit = ((await signer.estimateGas(tx)) * 13n) / 10n;      // 30% margin: an L1-fee swing must not run the 38 KB constructor out of gas (that would burn the nonce and the mined salt)
   const d = await D.deploy(pm, quote, multisig, mustBeContract, saltInfo.salt, { nonce, gasLimit });
+  console.log("deployment tx:", d.deploymentTransaction() && d.deploymentTransaction().hash, "(keep it: readback needs DEPLOY_TX)");
   await d.waitForDeployment();
   if ((await d.getAddress()).toLowerCase() !== dep.toLowerCase()) throw new Error("deployer landed on an unexpected address");
   if ((await d.hook()).toLowerCase() !== hookAddr.toLowerCase()) throw new Error("hook address differs from prediction");
