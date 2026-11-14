@@ -108,7 +108,7 @@ contract PadFactory {
         if (sq <= TickMath.MIN_SQRT_PRICE || sq >= TickMath.MAX_SQRT_PRICE) revert BadFdv();
         int24 tick = TickMath.getTickAtSqrtPrice(uint160(sq));
         start = _floor(tick);
-        if (!quoteIs0 && start != tick) start += SPACING;   // token is currency0: price is quote-per-token, so round UP and never start below the requested value
+        if (!quoteIs0 && TickMath.getSqrtPriceAtTick(start) < sq) start += SPACING;   // token is currency0: price is quote-per-token, so round UP and never start below the requested value
         if (quoteIs0) {
             hi = start;
             lo = start - RANGE_TICKS;

@@ -157,4 +157,18 @@ describe("pad v3 regressions from the audit rounds", function () {
     }
     throw new Error("ordering not found");
   });
+
+  it("EXACT: with the token as currency0 the real start is never below the request, even when the tick is already on the grid", async () => {
+    // the auditors' case: a request whose floor tick lands exactly on a 60-tick grid point but whose price sits above that tick's price
+    const req = BigInt(Math.floor(1e9 * Math.pow(1.0001, -46020) * 1.00009)) * 10n ** 18n;
+    for (let n = 0; n < 40; n++) {
+      const p = await P.launch(alice, true, req); all.push(p);
+      if (p.quoteIs0) continue;
+      const sq = (await P.stateView.getSlot0(p.id))[0];
+      const SUPPLY = 10n ** 27n;
+      expect(sq * sq * SUPPLY >= req * 2n ** 192n, "real start FDV below request").to.equal(true);
+      return;
+    }
+    throw new Error("ordering not found");
+  });
 });

@@ -55,6 +55,7 @@ contract PadHook is BaseHook {
     uint256 public constant STRANGER_DELAY = 15 minutes;  // strangers wait this much longer than the creator after the gap
     uint256 public constant BURN_GAP = 1 hours;          // minimum time between burns on one pool, creator included
     uint256 public constant FORCED_MIN_STEP = 50_000e18; // quote tokens
+    uint128 public constant FORCED_DUST = 1e12;          // a forced remainder below this (a millionth of a STAG) is forgiven: it could never buy a whole token-wei and would lock the pool out of battles
 
     struct Info {
         address creator;
@@ -396,7 +397,8 @@ contract PadHook is BaseHook {
         if (paid > 0) lastBurn[id] = uint64(block.timestamp);
         uint128 f = forced[id];
         f = f > paid ? f - uint128(paid) : 0;
-        forced[id] = f > i.chest ? i.chest : f;
+        if (f > i.chest) f = i.chest;
+        forced[id] = f < FORCED_DUST ? 0 : f;                          // forgive dust so nobody can leave an unburnable crumb
         emit ChestBurned(id, paid, burned);
     }
 
@@ -415,7 +417,11 @@ contract PadHook is BaseHook {
         info[l].chest -= lootL;
         info[w].chest += lootL;
         forced[l] = 0;
-        forced[w] = earnW + lootL;
+        uint128 fw = earnW + lootL;
+        forced[w] = fw < FORCED_DUST ? 0 : fw;
+        // the creator gets the first shot at the new forced chest: make them eligible right now and strangers only 15 minutes later
+        uint64 t = block.timestamp > BURN_GAP ? uint64(block.timestamp - BURN_GAP) : 0;
+        if (lastBurn[w] < t) lastBurn[w] = t;
     }
 
     function unlockCallback(bytes calldata data) external returns (bytes memory) {

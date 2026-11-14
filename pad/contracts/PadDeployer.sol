@@ -15,30 +15,25 @@ import {PadBattle} from "./PadBattle.sol";
 ///           3. hook.wire(factory, battle),
 ///           4. hook.setOwner(multisig): the first half of the two-step hand-over. The multisig must call
 ///              hook.acceptOwner() itself; until it does, this contract is the hook owner and owns nothing else.
-///         The deployer keeps one power, `retarget`, and only while the hand-over is pending: it can point the pending
-///         ownership at another address (typo recovery). It can never claim fees, wire, or accept ownership for anyone.
-///         Once the multisig accepts, this contract is inert.
+///         This contract has NO functions after construction: no admin, no retarget, nothing. If the hand-over target
+///         was wrong, nothing has been launched yet, so redeploy with a new salt (the readback and the acceptOwner
+///         simulation catch this before any launch).
 /// @dev    This must be a constructor-only deployer: the three creation codes together are ~36 KB, which fits the 48 KB
 ///         initcode limit but would not fit as RUNTIME code of a deployed deployer (24 KB limit).
 contract PadDeployer {
     PadHook public immutable hook;
     PadFactory public immutable factory;
     PadBattle public immutable battle;
-    address public immutable admin;       // the deploying account: may only call retarget() while the hand-over is pending
     address public immutable multisig;    // first target of the hand-over
 
     event Deployed(address hook, address factory, address battle, address multisig);
-    event Retargeted(address pending);
 
     error BadArg();
-    error NotAdmin();
-    error HandoverDone();
 
     constructor(IPoolManager pm, address quote, address _multisig, bool multisigMustBeContract, bytes32 salt) {
         if (address(pm).code.length == 0 || quote.code.length == 0) revert BadArg();
         if (_multisig == address(0) || _multisig == msg.sender || _multisig == address(this)) revert BadArg();
         if (multisigMustBeContract && _multisig.code.length == 0) revert BadArg();
-        admin = msg.sender;
         multisig = _multisig;
 
         PadHook h = new PadHook{salt: salt}(pm, address(this), quote);   // reverts unless the address carries 0x28CC
@@ -50,15 +45,5 @@ contract PadDeployer {
         factory = f;
         battle = b;
         emit Deployed(address(h), address(f), address(b), _multisig);
-    }
-
-    /// @notice typo recovery: re-point the PENDING hand-over. Only the deploying account, only while this contract is
-    ///         still the hook owner. Does not change who owns the hook.
-    function retarget(address pending) external {
-        if (msg.sender != admin) revert NotAdmin();
-        if (hook.owner() != address(this)) revert HandoverDone();
-        if (pending == address(0) || pending == address(this)) revert BadArg();
-        hook.setOwner(pending);
-        emit Retargeted(pending);
     }
 }

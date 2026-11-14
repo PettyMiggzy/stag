@@ -68,14 +68,12 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     await expect(R.hook.connect(eoa).acceptOwner()).to.be.reverted;
     await expect(R.hook.connect(eoa).claimPlatform(eoa.address)).to.be.reverted;          // EOA is not the owner
     await expect(R.hook.connect(eoa).wire(eoa.address, other.address)).to.be.reverted;
-    await expect(R.deployer.connect(other).retarget(other.address)).to.be.revertedWithCustomError(R.deployer, "NotAdmin");
   });
 
-  it("typo recovery: admin can retarget the pending hand-over, nothing else", async () => {
-    await R.deployer.connect(eoa).retarget(other.address);
-    expect(await R.hook.pendingOwner()).to.equal(other.address);
-    await R.deployer.connect(eoa).retarget(await msContract.getAddress());
-    expect(await R.hook.pendingOwner()).to.equal(await msContract.getAddress());
+  it("the deployer contract has no functions at all after construction (no admin, no retarget): nobody holds a root key", async () => {
+    expect(R.deployer.interface.fragments.filter((f) => f.type === "function").map((f) => f.name).sort()).to.deep.equal(["battle", "factory", "hook", "multisig"]);
+    await expect(eoa.sendTransaction({ to: await R.deployer.getAddress(), data: "0x" })).to.be.reverted;           // no receive/fallback either
+    await expect(eoa.sendTransaction({ to: await R.deployer.getAddress(), data: "0xcd2d7d7d" + "00".repeat(32) })).to.be.reverted;  // retarget(address) selector is gone
   });
 
   it("the multisig (a contract) accepts through exec; then everything is the multisig's and the deployer is inert", async () => {
@@ -84,7 +82,6 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     await msContract.connect(ms).exec(await R.hook.getAddress(), data);
     expect(await R.hook.owner()).to.equal(await msContract.getAddress());
     expect(await R.hook.pendingOwner()).to.equal(ethers.ZeroAddress);
-    await expect(R.deployer.connect(eoa).retarget(eoa.address)).to.be.revertedWithCustomError(R.deployer, "HandoverDone");
     await expect(R.hook.connect(eoa).setOwner(eoa.address)).to.be.reverted;
     const rows = await readback(ethers.provider, { deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: true });
     expect(rows.filter((r) => !r.ok)).to.deep.equal([]);

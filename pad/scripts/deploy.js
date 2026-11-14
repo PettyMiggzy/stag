@@ -1,4 +1,4 @@
-// Deploy script (hardhat):   MULTISIG=0x.. [MUST_BE_CONTRACT=0] [SALT_FILE=salt.json] npx hardhat run scripts/deploy.js --network <net>
+// Deploy script (hardhat):   MULTISIG=0x.. DEPLOYER_KEY=0x.. [SALT_FILE=salt.json] npx hardhat run scripts/deploy.js --network robinhood   (DRYRUN=1 to rehearse on a fork)
 // 1. node scripts/mine-salt.js --eoa <deployer EOA> --nonce <its CURRENT nonce> --out salt.json   (off-chain, offline)
 // 2. run this: it refuses to send unless the signer, nonce and compiled bytecode match what the salt was mined for.
 // 3. multisig calls hook.acceptOwner();  4. node scripts/readback.js (and again with EXPECT_OWNER_ACCEPTED=1)
@@ -7,15 +7,17 @@ const { ethers } = require("hardhat");
 const { PM_DEFAULT, STAG_DEFAULT, hookInitCode, predictDeployer, FLAG_MASK, FLAGS } = require("./lib");
 
 async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm = PM_DEFAULT, quote = STAG_DEFAULT }) {
-  const nonce = await signer.getNonce();
+  const nonce = await signer.getNonce("latest");
+  if (nonce !== (await signer.getNonce("pending"))) throw new Error("this account has a pending transaction: the mined salt would be for the wrong nonce. Wait for it or re-mine.");
   const dep = predictDeployer(signer.address, nonce);
   if (saltInfo.deployer.toLowerCase() !== dep.toLowerCase()) throw new Error(`salt was mined for deployer ${saltInfo.deployer}, but ${signer.address} nonce ${nonce} gives ${dep}`);
   const H = await ethers.getContractFactory("PadHook");
   const init = hookInitCode(H.bytecode, pm, dep, quote);
   const hookAddr = ethers.getCreate2Address(dep, saltInfo.salt, ethers.keccak256(init));
+  if (saltInfo.initcodeHash && saltInfo.initcodeHash.toLowerCase() !== ethers.keccak256(init).toLowerCase()) throw new Error("the compiled bytecode is not the one the salt was mined for (recompiled?)");
   if ((BigInt(hookAddr) & FLAG_MASK) !== FLAGS) throw new Error("salt does not give a 0x28CC address for this bytecode (recompiled?)");
   const D = await ethers.getContractFactory("PadDeployer", signer);
-  const d = await D.deploy(pm, quote, multisig, mustBeContract, saltInfo.salt);
+  const d = await D.deploy(pm, quote, multisig, mustBeContract, saltInfo.salt, { nonce });
   await d.waitForDeployment();
   if ((await d.getAddress()).toLowerCase() !== dep.toLowerCase()) throw new Error("deployer landed on an unexpected address");
   if ((await d.hook()).toLowerCase() !== hookAddr.toLowerCase()) throw new Error("hook address differs from prediction");
@@ -25,6 +27,10 @@ module.exports = { deployAll };
 
 if (require.main === module) {
   (async () => {
+    const { network } = require("hardhat");
+    const net = await ethers.provider.getNetwork();
+    if (!process.env.DRYRUN && (net.chainId !== 4663n || network.name === "hardhat")) throw new Error("refusing to run: use --network robinhood (chain 4663) with DEPLOYER_KEY set, or DRYRUN=1 for a rehearsal");
+    if (process.env.MUST_BE_CONTRACT === "0") console.warn("WARNING: MUST_BE_CONTRACT=0 allows an EOA as owner. Use a multisig contract on mainnet.");
     const [signer] = await ethers.getSigners();
     const saltInfo = JSON.parse(fs.readFileSync(process.env.SALT_FILE || "salt.json", "utf8"));
     const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0", saltInfo });

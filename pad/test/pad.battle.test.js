@@ -60,17 +60,47 @@ describe("pad v2 battles on a mainnet fork", function () {
     await expect(P.battle.connect(dave).settle(0)).to.be.reverted;                         // only once
   });
 
-  it("the burn happens even if the creator never acts: anyone, in steps, an hour apart", async () => {
+  it("REGRESSION the creator gets the first shot after settle; if they never act, anyone burns it in steps", async () => {
     const f0 = await P.hook.forced(A.id), s0 = await A.tok.totalSupply();
-    await P.hook.connect(dave).burnForced(A.key, 0);
+    await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // right after settle a stranger must wait: the creator goes first
+    await time.increase(15 * 60 + 5);
+    await P.hook.connect(dave).burnForced(A.key, 0);                                       // the creator did nothing for 15 minutes: now anyone may
     expect(await P.hook.forced(A.id)).to.be.lt(f0);
     expect(await A.tok.totalSupply()).to.be.lt(s0);
-    await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // too soon
+    await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // too soon (one burn an hour)
     await time.increase(HOUR + 1);
-    await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // the creator gets the first 15 minutes after the hour
+    await expect(P.hook.connect(dave).burnForced(A.key, 0)).to.be.reverted;                // the creator gets the first 15 minutes after each hour
     await time.increase(15 * 60);
     await P.hook.connect(dave).burnForced(A.key, 0);
     expect(await P.solvent([A, B, C])).to.equal(true);
+  });
+
+  it("REGRESSION the creator can burn the forced chest right after settle, ahead of any stranger", async () => {
+    const y = await P.launch(alice, true), z = await P.launch(bob, true);
+    const n = Number(await P.battle.count());
+    await P.battle.connect(alice).challenge(y.key, z.key, HOUR);
+    await P.battle.connect(bob).accept(n);
+    await P.buy(y, carol, E(5_000_000)); await P.buy(z, carol, E(100_000));
+    await time.increase(HOUR + 5);
+    await P.battle.connect(dave).settle(n);
+    expect(await P.hook.forced(y.id)).to.be.gt(0n);
+    await expect(P.hook.connect(dave).burnForced(y.key, 0)).to.be.reverted;                // stranger, same moment
+    const s0 = await y.tok.totalSupply();
+    await P.hook.connect(alice).burnForced(y.key, 0);                                      // creator: immediately
+    expect(await y.tok.totalSupply()).to.be.lt(s0);
+  });
+
+  it("REGRESSION a dust-sized forced chest is forgiven, so nobody can leave an unburnable crumb that locks a pool out of battles", async () => {
+    const y = await P.launch(alice, true), z = await P.launch(bob, true);
+    const n = Number(await P.battle.count());
+    await P.battle.connect(alice).challenge(y.key, z.key, HOUR);
+    await P.battle.connect(bob).accept(n);
+    await P.buy(y, carol, 20_000n); await P.buy(z, carol, 10_000n);                          // fight earnings of a few hundred wei
+    await time.increase(HOUR + 5);
+    await P.battle.connect(dave).settle(n);
+    expect(await P.hook.forced(y.id)).to.equal(0n);                                          // forgiven
+    await P.battle.connect(alice).challenge(y.key, z.key, DAY);                              // and y can fight again at once
+    await P.battle.connect(alice).cancel(Number(await P.battle.count()) - 1);
   });
 
   it("REGRESSION a winner cannot dodge the forced burn by re-locking: no new fight until it is burned", async () => {
