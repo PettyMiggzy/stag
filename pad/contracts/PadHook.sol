@@ -47,6 +47,11 @@ contract PadHook is BaseHook {
     address public battle;           // the battle contract (locks modes, can trigger the burn)
     uint256 public platformOwed;     // sell-side tax collected
     mapping(PoolId => Info) public info;
+    /// @notice part of a chest that a battle win has marked for burning; anyone can burn it in small steps
+    mapping(PoolId => uint128) public forced;
+    mapping(PoolId => uint64) public lastForced;
+    uint256 public constant FORCED_GAP = 1 hours;
+    uint256 public constant FORCED_MIN_STEP = 0.05 ether;
 
     event PoolRegistered(PoolId indexed id, address indexed creator, address token, bool war);
     event ModeSet(PoolId indexed id, bool war);
@@ -217,27 +222,53 @@ contract PadHook is BaseHook {
     // ----------------------------------------------------------- buy and burn
 
     /// @notice Spend the war chest buying the project's own token and burn what comes back.
-    ///         The creator may do this any time; the battle contract does it for the winner.
-    ///         The buy skips the tax (it would only feed the chest again).
+    ///         The creator may do this any time EXCEPT while a battle holds the pool (otherwise a loser could empty
+    ///         the chest before the result). The buy skips the tax (it would only feed the chest again).
     function burnChest(PoolKey calldata key, uint256 minOut) external returns (uint256 burned) {
         PoolId id = key.toId();
         Info storage i = info[id];
-        if (msg.sender != i.creator && msg.sender != battle) revert NotAllowed();
+        if (msg.sender != i.creator) revert NotAllowed();
+        if (i.locked) revert Locked();
         uint256 amt = i.chest;
         if (amt == 0) revert NothingToDo();
-        i.chest = 0;
+        burned = _spend(id, key, amt, minOut);
+    }
+
+    /// @notice After a battle win, the winning chest is marked "forced". Anyone can burn it in steps (at least an hour
+    ///         apart, a tenth of it or 0.05 ETH at a time) so the burn happens even if the creator never does it.
+    function burnForced(PoolKey calldata key, uint256 minOut) external returns (uint256 burned) {
+        PoolId id = key.toId();
+        uint256 f = forced[id];
+        if (f == 0) revert NothingToDo();
+        if (msg.sender != info[id].creator) {
+            if (block.timestamp < uint256(lastForced[id]) + FORCED_GAP) revert NotAllowed();
+            lastForced[id] = uint64(block.timestamp);
+        }
+        uint256 step = f <= FORCED_MIN_STEP ? f : (f / 10 > FORCED_MIN_STEP ? f / 10 : FORCED_MIN_STEP);
+        if (msg.sender == info[id].creator) step = f;
+        if (step > info[id].chest) step = info[id].chest;
+        if (step == 0) revert NothingToDo();
+        burned = _spend(id, key, step, minOut);
+    }
+
+    function _spend(PoolId id, PoolKey calldata key, uint256 amt, uint256 minOut) internal returns (uint256 burned) {
+        Info storage i = info[id];
+        i.chest -= uint128(amt);
+        if (forced[id] > i.chest) forced[id] = i.chest;
         burned = abi.decode(poolManager.unlock(abi.encode(key, amt, minOut)), (uint256));
         emit ChestBurned(id, amt, burned);
     }
 
-    /// @dev Used by the battle contract to move a loser's chest into the winner's chest before the burn.
-    function moveChest(PoolKey calldata from, PoolKey calldata to) external {
+    /// @dev Battle contract only: move the loser's chest into the winner's and mark the combined chest for burning.
+    function settleChests(PoolKey calldata loser, PoolKey calldata winner) external {
         if (msg.sender != battle) revert NotAllowed();
-        PoolId f = from.toId();
-        PoolId t = to.toId();
-        uint128 a = info[f].chest;
-        info[f].chest = 0;
-        info[t].chest += a;
+        PoolId l = loser.toId();
+        PoolId w = winner.toId();
+        uint128 a = info[l].chest;
+        info[l].chest = 0;
+        forced[l] = 0;
+        info[w].chest += a;
+        forced[w] = info[w].chest;
     }
 
     function unlockCallback(bytes calldata data) external returns (bytes memory) {
