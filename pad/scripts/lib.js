@@ -41,9 +41,12 @@ async function safeChecks(provider, addr, o = {}) {
   else ck("EXPECT_OWNERS supplied (the full owner list is checked, not just the count)", !!o.dry);
   if (o.expectThreshold !== undefined && o.expectThreshold !== null) ck(`multisig threshold == EXPECT_THRESHOLD (${o.expectThreshold})`, sp.threshold === BigInt(o.expectThreshold), String(sp.threshold)); else ck("EXPECT_THRESHOLD supplied", !!o.dry);
   ck("multisig threshold >= 2", sp.threshold >= 2n || !!o.dry, String(sp.threshold));
+  if (o.expectProxyCodehash) ck("multisig runtime code hash == EXPECT_PROXY_CODEHASH (canonical Safe proxy: not a lookalike contract)", lc(ethers.keccak256(await provider.getCode(addr))) === lc(o.expectProxyCodehash), ethers.keccak256(await provider.getCode(addr)));
+  else ck("EXPECT_PROXY_CODEHASH supplied (the canonical SafeProxy runtime hash)", !!o.dry);
   if (o.dry && !o.expectSingleton) return { rows, sp };
   if (o.expectSingleton) ck("Safe singleton (storage slot 0) == EXPECT_SINGLETON", lc(await word(ethers.ZeroHash)) === lc(o.expectSingleton), await word(ethers.ZeroHash));
   else ck("EXPECT_SINGLETON supplied (the verified Safe implementation address)", false);
+  if (o.expectSingleton) ck("singleton has code", (await provider.getCode(o.expectSingleton)).length > 2);
   let mods = null; try { mods = await new ethers.Contract(addr, ["function getModulesPaginated(address,uint256) view returns (address[],address)"], provider).getModulesPaginated("0x0000000000000000000000000000000000000001", 10); } catch (e) {}
   ck("Safe has NO enabled modules (modules move funds/ownership without signatures)", mods !== null && mods[0].length === 0, mods ? String(mods[0].length) : "getModulesPaginated failed");
   ck("Safe guard slot is empty", (await word(SLOT_GUARD)) === ethers.ZeroAddress);

@@ -122,7 +122,7 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     expect((await P.stag.balanceOf(ms.address)) - b0).to.equal(owed);
     const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: true });
     expect(rows.filter((r) => !r.ok)).to.deep.equal([]);
-    expect(rows.some((r) => /solvency.*2 launches/.test(r.name))).to.equal(true);
+    expect(rows.some((r) => /every launch is registered/.test(r.name) && /2 launches/.test(r.detail))).to.equal(true);
   });
 
   it("readback detects a mis-deployment (a spoofed hook address in the deployer slot)", async () => {
@@ -157,10 +157,38 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     expect(wrongSalt.some((r) => !r.ok && /constructor args/.test(r.name))).to.equal(true);
   });
 
-  it("hardening: a Safe-lookalike without the expected singleton fails; deployAll ignores ALLOW_UNPINNED when requireManifest", async () => {
-    const rows = await readback(ethers.provider, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false, expectSingleton: other.address });
-    expect(rows.some((r) => !r.ok && /singleton/.test(r.name))).to.equal(true);
-    process.env.ALLOW_UNPINNED = "1";
-    try { await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo, requireManifest: true, safeOpts: { dry: true } })).to.be.rejected; } finally { delete process.env.ALLOW_UNPINNED; }
+  it("patched creation calldata fails the pinned-prefix check (same runtime, different constructor)", async () => {
+    const hash = R.deployer.deploymentTransaction().hash;
+    const tx = await ethers.provider.getTransaction(hash);
+    const flipped = ethers.getBytes(tx.data).slice(); flipped[flipped.length - 200] ^= 1;    // inside the embedded creation code region
+    const fake = { getTransaction: async () => ({ from: tx.from, nonce: tx.nonce, to: null, data: ethers.hexlify(flipped) }), getTransactionReceipt: async () => ethers.provider.getTransactionReceipt(hash) };
+    const prov = new Proxy(ethers.provider, { get: (t0, k) => (k in fake ? fake[k] : typeof t0[k] === "function" ? t0[k].bind(t0) : t0[k]) });
+    const rows = await readback(prov, { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false, deployTx: hash, salt: { salt: saltInfo.salt, eoa: eoa.address, nonce: tx.nonce } });
+    expect(rows.some((r) => !r.ok && /PINNED PadDeployer creation code|constructor args/.test(r.name))).to.equal(true);
+  });
+
+  it("hardening: wrong singleton / wrong proxy code hash fail; ALLOW_UNPINNED is ignored when requireManifest", async () => {
+    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: await msContract.getAddress(), ownerAccepted: false };
+    const r1 = await readback(ethers.provider, { ...base, expectSingleton: other.address });
+    expect(r1.some((r) => !r.ok && /singleton/.test(r.name))).to.equal(true);
+    const r2 = await readback(ethers.provider, { ...base, expectProxyCodehash: ethers.ZeroHash });
+    expect(r2.some((r) => !r.ok && /EXPECT_PROXY_CODEHASH/.test(r.name))).to.equal(true);
+    const code = await ethers.provider.getCode(await msContract.getAddress());
+    const r3 = await readback(ethers.provider, { ...base, expectProxyCodehash: ethers.keccak256(code) });
+    expect(r3.some((r) => !r.ok && /EXPECT_PROXY_CODEHASH/.test(r.name))).to.equal(false);
+  });
+
+  it("deployAll with requireManifest ignores ALLOW_UNPINNED (fresh salt so the pin check is what rejects)", async () => {
+    const H = await ethers.getContractFactory("PadHook");
+    const nonce = await eoa.getNonce(), dep = predictDeployer(eoa.address, nonce);
+    const m = mineSalt(dep, hookInitCode(H.bytecode, PM, dep, STAG));
+    const si = { deployer: dep, salt: m.salt, hook: m.hook };
+    const MAN = require("../scripts/manifest"); const fs = require("fs"); const orig = fs.readFileSync(MAN.FILE);
+    try {
+      const bad = JSON.parse(orig); bad.deployerCreationCode = ethers.ZeroHash; fs.writeFileSync(MAN.FILE, JSON.stringify(bad));
+      process.env.ALLOW_UNPINNED = "1";
+      await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo: si, requireManifest: true })).to.be.rejectedWith(/differs from audited-manifest/);
+      await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo: si, requireManifest: false })).to.not.be.rejectedWith(/differs from audited-manifest/);   // rehearsal escape hatch still works off mainnet
+    } finally { delete process.env.ALLOW_UNPINNED; fs.writeFileSync(MAN.FILE, orig); }
   });
 });

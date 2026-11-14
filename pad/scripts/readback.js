@@ -48,7 +48,7 @@ async function readback(provider, cfg) {
   const ck = (name, ok, detail = "") => rows.push({ name, ok: !!ok, detail });
   const eq = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
   const pmAddr = cfg.allowOverrides ? (cfg.pm || PM_DEFAULT) : PM_DEFAULT, quote = cfg.allowOverrides ? (cfg.quote || STAG_DEFAULT) : STAG_DEFAULT;   // hard-coded: a fake PM/STAG must not be able to pass
-  const warn = (name, ok, detail = "") => rows.push({ name: (ok ? "" : "WARN ") + name, ok: true, warn: !ok, detail });
+  const warn = (name, ok, detail = "") => rows.push({ name, ok: true, warn: !ok, detail });
   const D = new ethers.Contract(cfg.deployer, ABI.deployer, provider);
   const hookA = await D.hook(), facA = await D.factory(), batA = await D.battle();
   const H = new ethers.Contract(hookA, ABI.hook, provider), F = new ethers.Contract(facA, ABI.factory, provider), B = new ethers.Contract(batA, ABI.battle, provider);
@@ -126,7 +126,7 @@ async function readback(provider, cfg) {
     rows.push({ name: "ACTION: multisig must now call hook.acceptOwner() promptly (until then the PadDeployer contract, which has no functions, is the owner)", ok: true, detail: "then re-run with EXPECT_OWNER_ACCEPTED=1" });
   }
   ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
-  const sc = await safeChecks(provider, cfg.multisig, { expectOwners: cfg.expectOwners, expectThreshold: cfg.expectThreshold, expectSingleton: cfg.expectSingleton, expectFallback: cfg.expectFallback, dry: cfg.dry, allowNonSafe: cfg.allowNonSafeOwner });   // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
+  const sc = await safeChecks(provider, cfg.multisig, { expectOwners: cfg.expectOwners, expectThreshold: cfg.expectThreshold, expectSingleton: cfg.expectSingleton, expectProxyCodehash: cfg.expectProxyCodehash, expectFallback: cfg.expectFallback, dry: cfg.dry, allowNonSafe: cfg.allowNonSafeOwner });   // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
   rows.push(...sc.rows);
 
   // 5b. the deployment transaction itself: its calldata must START WITH the pinned PadDeployer creation code (which embeds the hook/factory/battle
@@ -147,21 +147,22 @@ async function readback(provider, cfg) {
     }
   } else ck("DEPLOY_TX supplied (the creation transaction is verified, not just the runtime code)", !!cfg.dry);
   // nothing may have been approved away from the system's contracts before launch
-  ck("factory.launchCount and battle.count visible", true, `${await F.launchCount()} launches, ${await B.count()} battles`);
+  rows.push({ name: "info: launches and battles so far", ok: true, info: true, detail: `${await F.launchCount()} launches, ${await B.count()} battles` });
 
   // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed))
   const n = Number(await F.launchCount());
-  let owed = await H.platformOwed();
+  let owed = await H.platformOwed(), allReg = true;
   const PMc = new ethers.Contract(pmAddr, ABI.pm, provider);
   for (let i = 0; i < n; i++) {
     const k = await F.keyAt(i);
     const id = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "uint24", "int24", "address"], [k.currency0, k.currency1, k.fee, k.tickSpacing, k.hooks]));
     const inf = await H.info(id);
-    ck(`launch #${i} registered, hook is the key's hook`, inf.registered && eq(k.hooks, hookA));
+    allReg = allReg && inf.registered && eq(k.hooks, hookA);
     owed += inf.chest + inf.creatorOwed + inf.holderOwed;
   }
+  ck("every launch is registered and uses this hook", allReg, `${n} launches`);
   const claims = await PMc.balanceOf(hookA, BigInt(quote));
-  ck(`solvency: hook 6909 STAG ${claims} >= owed ${owed} (${n} launches)`, claims >= owed);
+  ck("solvency: hook 6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed)", claims >= owed, `claims ${claims} owed ${owed}`);
   warn("hook holds no real STAG (a 1-wei donation can make this warn; harmless)", (await Q.balanceOf(hookA)) === 0n, String(await Q.balanceOf(hookA)));
   warn("factory holds no STAG (a donation can make this warn; harmless)", (await Q.balanceOf(facA)) === 0n);
   return rows;
@@ -177,20 +178,22 @@ if (require.main === module) {
     const real = chainId === 4663n || chain2 === 4663n;                 // either endpoint on the real chain => real: DRYRUN and all rehearsal shortcuts are ignored
     const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
-    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
+    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
     if (real && new URL(process.env.RPC).host === new URL(process.env.RPC2).host) { console.error("RPC2 must be on a different host than RPC"); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
     const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
       salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
       expectOwners: process.env.EXPECT_OWNERS ? process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())) : null,
-      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectFallback: process.env.EXPECT_FALLBACK, deployTx: process.env.DEPLOY_TX };
+      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, expectFallback: process.env.EXPECT_FALLBACK, deployTx: process.env.DEPLOY_TX };
     const rows = await readback(provider, cfg);
     if (p2) {                                                            // the WHOLE readback again on the second endpoint; any difference is a failure
       const rows2 = await readback(p2, cfg);
       const key = (r) => JSON.stringify([r.name, r.ok]);   // live balances differ between two reads; every ok/fail verdict must match
       const same = rows.length === rows2.length && rows.every((r, i) => key(r) === key(rows2[i]));
-      rows.push({ name: "RPC2 produced the identical readback (every row, every value)", ok: same, detail: same ? "" : "RPC1 and RPC2 disagree: do not trust either until resolved" });
-      if (!same) for (let i = 0; i < Math.max(rows.length - 1, rows2.length); i++) if (!rows[i] || !rows2[i] || key(rows[i]) !== key(rows2[i])) rows.push({ name: "DISAGREEMENT at: " + ((rows[i] || rows2[i]).name), ok: false, detail: "RPC1=" + (rows[i] ? rows[i].ok + " " + rows[i].detail : "-") + " | RPC2=" + (rows2[i] ? rows2[i].ok + " " + rows2[i].detail : "-") });
+      rows.push({ name: "RPC2 produced the identical readback (every pass/fail verdict)", ok: same, detail: same ? "" : "RPC1 and RPC2 disagree: do not trust either until resolved" });
+      const extra = [];
+      if (!same) { const n = Math.max(rows.length - 1, rows2.length); for (let i = 0; i < n; i++) if (!rows[i] || !rows2[i] || key(rows[i]) !== key(rows2[i])) extra.push({ name: "DISAGREEMENT at: " + ((rows[i] || rows2[i]).name), ok: false, detail: "RPC1=" + (rows[i] ? rows[i].ok : "-") + " | RPC2=" + (rows2[i] ? rows2[i].ok : "-") }); }
+      rows.push(...extra);
     } else rows.push({ name: "WARN no RPC2 set: a single endpoint is trusted (rehearsal only)", ok: true, warn: true, detail: "" });
     { const dg = MAN.load() ? ethers.keccak256(fs.readFileSync(MAN.FILE)) : null;
       if (process.env.EXPECT_MANIFEST_DIGEST || real) rows.push({ name: "manifest digest == EXPECT_MANIFEST_DIGEST (published with the audit report)", ok: !!dg && dg.toLowerCase() === String(process.env.EXPECT_MANIFEST_DIGEST || "").toLowerCase(), detail: String(dg) }); }

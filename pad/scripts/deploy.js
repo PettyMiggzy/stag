@@ -47,10 +47,10 @@ if (require.main === module) {
     if (digest) console.log("manifest digest:", digest);
     let safeOpts = null;
     if (realMainnet) {
-      for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
+      for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
       if (!digest || digest.toLowerCase() !== process.env.EXPECT_MANIFEST_DIGEST.toLowerCase()) throw new Error("manifest digest != EXPECT_MANIFEST_DIGEST (the digest published with the audit report)");
       if (process.env.ALLOW_UNPINNED) console.warn("ALLOW_UNPINNED is ignored on mainnet");
-      safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectFallback: process.env.EXPECT_FALLBACK };
+      safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, expectFallback: process.env.EXPECT_FALLBACK };
     }
     const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0" || realMainnet, saltInfo, requireManifest: realMainnet, safeOpts });
     console.log({ deployer: await r.deployer.getAddress(), hook: await r.hook.getAddress(), factory: await r.factory.getAddress(), battle: await r.battle.getAddress() });
