@@ -1,0 +1,10 @@
+{
+  "note": "keccak256 of runtime code with immutable bytes zeroed, plus the PadDeployer creation code hash, for the AUDITED build. Regenerate with `node scripts/make-manifest.js` only after a reviewed source change.",
+  "runtime": {
+    "PadHook": "0xe47ee3f0ee5caf43ccf30cca935d1b8eb200524f45dab5e92382088055785339",
+    "PadFactory": "0x6c1559b37a3d141af00238b529a53d73660cc4482d17cae9ffd3d70aa51d8304",
+    "PadBattle": "0x2a2bb57747bcdd1c7c4ddfad4c1b20a4fb49c5a535fe4e2ea927678778cdd73e",
+    "PadDeployer": "0x4731be3282344374c1d8ce1ae6c63d9d6b128851cbbf0aca0eb06c5dc530cda5"
+  },
+  "deployerCreationCode": "0x47186268a5a3013a121f035489f1ab94ed385d6bba78d6f0f77cada3a62c227a"
+}

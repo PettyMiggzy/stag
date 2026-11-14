@@ -4,6 +4,9 @@ pragma solidity 0.8.26;
 contract TestMultisig {
     address public immutable signer;
     constructor(address s) { signer = s; }
+    function VERSION() external pure returns (string memory) { return "test"; }
+    function getThreshold() external pure returns (uint256) { return 1; }
+    function getOwners() external view returns (address[] memory o) { o = new address[](1); o[0] = signer; }
     function exec(address to, bytes calldata data) external returns (bytes memory r) {
         require(msg.sender == signer, "not signer");
         bool ok;

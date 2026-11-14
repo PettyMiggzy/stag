@@ -24,15 +24,21 @@ Status: audited internally in repeated hostile rounds; NOT yet deployed; needs l
 - Parked dividends (eligible supply under 1 token) go to whoever first holds a token across the next block boundary.
 - Exact-in and exact-out trades differ by ~3% in effective tax; volume is the pool's actual $STAG leg.
 - Third parties can create their own hook-less pool for the same token; it is outside this system.
-- Starting price snaps to the pool's 60-tick grid in the creator's favour: the real start is at or slightly above the request (up to ~0.6%), never below.
+- Starting price snaps to the pool's 60-tick grid in the creator's favour: the real start is at or slightly above the request (up to ~0.6%). In the token-is-currency0 ordering an adversarially chosen request can land up to 1 wei of STAG below it (integer square-root rounding); this cannot undercut the 1,000,000 STAG minimum.
+- The PoolManager's owner can set a protocol fee (at most 0.1%) on any pool, pad pools included; it would slightly reduce creators' LP fees and has no effect on solvency.
+- Aggregators that price from a pool's raw price alone will miss the 3% tax; quoters that simulate the hook price it correctly.
 - Routers: standard v4 routers work; a router that syncs $STAG before the swap works (the holder flush steps aside).
 
 ## Mainnet deployment (see scripts/)
-1. Read `scripts/readback.js` pre-flight list; use `hardhat.nolimit.config.js` (real size limits).
-2. Mine the salt LAST for the exact compiled bytecode and the deployer EOA + nonce: `node scripts/mine-salt.js --eoa <addr> --nonce <n> --out salt.json`. Send nothing else from that EOA and do not recompile in between.
-3. `scripts/deploy.js` deploys `PadDeployer` (constructor-only): CREATE2s the hook with `owner = deployer`, deploys factory and battle, wires, starts the hand-over to the multisig.
-4. The multisig calls `hook.acceptOwner()`. Run the readback with `EXPECT_OWNER_ACCEPTED=1`; discard the deployer key.
-5. Canary launches (war and peace, both currency orderings), small buys/sells in all four variants, a burn, `collectFees`, a battle, solvency check after each step; then publish addresses and verify source on the Blockscout explorer.
+Rules of the road: never launch, announce an address or send anyone to the pad until the FINAL readback (after the multisig accepts, with `EXPECT_OWNER_ACCEPTED=1`) passes. The deployer key is a throwaway: fund it only for gas and discard it afterwards. Work from a clean git tree at a tagged commit, with `package-lock.json` as committed, and run `node scripts/make-manifest.js` only after a reviewed source change (it rewrites `audited-manifest.json`; `deploy.js` and `readback.js` refuse a build that differs from it).
+
+1. **Pre-flight (read-only).** Chain id 4663; PoolManager `0x8366a39cc670b4001a1121b8f6a443a643e40951` and STAG `0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305` have code (they are hard-coded in the scripts); the multisig is a Safe whose threshold is at least 2 and whose signers you have rehearsed with a no-op transaction (the hook side is simulated by the readback, but only you can prove the signers can sign).
+2. **Compile with the audited settings** (`npx hardhat compile`; solc 0.8.26, cancun, viaIR, 200 runs). Use `hardhat.nolimit.config.js` for rehearsals so the real size limits (24,576 runtime / 49,152 init) apply.
+3. **Mine the salt last**, for exactly this build and this deployer account and nonce: `node scripts/mine-salt.js --eoa <deployer EOA> --nonce <its current nonce> --out salt.json`. Send nothing else from that account and do not recompile before step 4.
+4. **Deploy**: `MULTISIG=<safe> DEPLOYER_KEY=<throwaway key> SALT_FILE=salt.json npx hardhat run scripts/deploy.js --network robinhood`. It refuses to run off mainnet (unless `DRYRUN=1` on the in-process fork), refuses a multisig that does not answer like a Safe, refuses a build that differs from the manifest, requires `latest == pending` nonce, and sends with an explicit nonce and a 30% gas margin. `PadDeployer` then deploys everything in its constructor and starts the hand-over; it has no functions afterwards.
+5. **Readback before accept**: `RPC=<rpc1> RPC2=<a second independent rpc> DEPLOYER=<PadDeployer> MULTISIG=<safe> SALT_FILE=salt.json node scripts/readback.js` (all PASS; WARNs read and understood).
+6. **The multisig calls `hook.acceptOwner()`** promptly (until it does, the functionless PadDeployer is the owner and the platform share just accumulates). If the target was wrong, nothing has launched: redeploy with a new salt.
+7. **Readback after accept**: same command with `EXPECT_OWNER_ACCEPTED=1`. Then canary launches (war and peace, both currency orderings), small buys and sells in all four variants, a burn, `collectFees`, a battle, solvency check after each step; publish addresses; verify source on the Blockscout explorer (`https://robinhoodchain.blockscout.com`).
 Solvency monitor: `PoolManager.balanceOf(hook, uint160(STAG)) >= platformOwed + sum(chest + creatorOwed + holderOwed)`.
 
 ## Tests

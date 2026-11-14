@@ -31,6 +31,23 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     // always mine AFTER the last failed attempt, deploy.js re-checks signer+nonce against the salt file before sending.
   });
 
+  it("REGRESSION a hand-over target that could never accept is refused by the deployer itself", async () => {
+    const D = await ethers.getContractFactory("PadDeployer", eoa);
+    const plain = await (await ethers.getContractFactory("HookDeployer")).deploy();         // a contract that does not answer like a Safe
+    for (const bad of [STAG, PM, await plain.getAddress(), other.address, ethers.ZeroAddress, eoa.address])
+      await expect(D.deploy(PM, STAG, bad, true, ethers.ZeroHash), String(bad)).to.be.revertedWithCustomError(D, "BadArg");
+  });
+
+  it("REGRESSION deploy.js refuses a non-Safe target before sending anything", async () => {
+    const plain = await (await ethers.getContractFactory("HookDeployer")).deploy();
+    const H = await ethers.getContractFactory("PadHook");
+    const nonce = await eoa.getNonce();
+    const dep = predictDeployer(eoa.address, nonce);
+    const m = mineSalt(dep, hookInitCode(H.bytecode, PM, dep, STAG));
+    await expect(deployAll({ signer: eoa, multisig: await plain.getAddress(), saltInfo: { deployer: dep, salt: m.salt } })).to.be.rejectedWith(/Safe/);
+    expect(await eoa.getNonce()).to.equal(nonce);                                              // nothing was sent: the mined salt is still good
+  });
+
   it("mines a salt off-chain for the predicted deployer address and deploys", async () => {
     const H = await ethers.getContractFactory("PadHook");
     const nonce = await eoa.getNonce();

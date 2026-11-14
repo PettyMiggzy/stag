@@ -4,7 +4,8 @@
 // (DEPLOYER is the PadDeployer address; everything else is read from it.) Optional: PM, QUOTE, EXPECT_OWNER_ACCEPTED=1.
 const fs = require("fs"), path = require("path");
 const { ethers } = require("ethers");
-const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS } = require("./lib");
+const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe } = require("./lib");
+const MAN = require("./manifest");
 
 const ABI = {
   deployer: ["function hook() view returns (address)", "function factory() view returns (address)", "function battle() view returns (address)", "function multisig() view returns (address)"],
@@ -67,6 +68,12 @@ async function readback(provider, cfg) {
   ck("hook runtime == compiled PadHook (immutables masked)", sameRuntime(await code(hookA), "PadHook"));
   ck("factory runtime == compiled PadFactory", sameRuntime(await code(facA), "PadFactory"));
   ck("battle runtime == compiled PadBattle", sameRuntime(await code(batA), "PadBattle"));
+  const man = MAN.load();
+  if (!man) warn("audited-manifest.json present (pins the audited build)", false);
+  else for (const [n, a] of [["PadHook", hookA], ["PadFactory", facA], ["PadBattle", batA], ["PadDeployer", cfg.deployer]]) {
+    const art = MAN.artifact(n);
+    ck(`PINNED: ${n} runtime hash == audited manifest`, MAN.maskedHash(await code(a), art.refs) === man.runtime[n], a);
+  }
   ck("hook runtime fits 24576 bytes", ((await code(hookA)).length - 2) / 2 <= 24576);
   ck("factory runtime fits 24576 bytes", ((await code(facA)).length - 2) / 2 <= 24576);
 
@@ -114,10 +121,9 @@ async function readback(provider, cfg) {
     rows.push({ name: "ACTION: multisig must now call hook.acceptOwner() promptly (until then the PadDeployer contract, which has no functions, is the owner)", ok: true, detail: "then re-run with EXPECT_OWNER_ACCEPTED=1" });
   }
   ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
-  try { // Safe-style checks (informational): version and threshold
-    const S = new ethers.Contract(cfg.multisig, ["function VERSION() view returns (string)", "function getThreshold() view returns (uint256)", "function getOwners() view returns (address[])"], provider);
-    const th = await S.getThreshold(); warn(`multisig threshold ${th} (want >= 2)`, th >= 2n, "Safe " + (await S.VERSION()) + ", owners " + (await S.getOwners()).length);
-  } catch (e) { warn("multisig answers Safe getThreshold()/VERSION() (not a Safe, or not readable)", false); }
+  const sp = await probeSafe(provider, cfg.multisig);       // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
+  ck("multisig answers like a Safe (VERSION, getThreshold >= 1, getOwners)", sp.ok || !!cfg.allowNonSafeOwner, sp.ok ? `Safe ${sp.version}, threshold ${sp.threshold}, owners ${sp.owners.length}` : "no Safe answers");
+  if (sp.ok) warn(`multisig threshold ${sp.threshold} (want >= 2)`, sp.threshold >= 2n);
 
   // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed))
   const n = Number(await F.launchCount());
@@ -142,9 +148,20 @@ if (require.main === module) {
   (async () => {
     const need = (k) => { if (!process.env[k]) { console.error("missing env " + k); process.exit(2); } return process.env[k]; };
     const provider = new ethers.JsonRpcProvider(need("RPC"));
-    if ((process.env.PM || process.env.QUOTE) && !process.env.DRYRUN) { console.error("PM/QUOTE overrides are refused (only with DRYRUN=1): they are hard-coded on purpose"); process.exit(2); }
+    const chainId = (await provider.getNetwork()).chainId;
+    const dry = !!process.env.DRYRUN && chainId !== 4663n;           // DRYRUN is ignored on the real chain, even if left set in the shell
+    if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
+    if (chainId === 4663n && !process.env.SALT_FILE) { console.error("SALT_FILE (the mined salt.json) is required on mainnet: it proves the hook address"); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
-    const rows = await readback(provider, { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, allowOverrides: !!process.env.DRYRUN, allowAnyChain: !!process.env.DRYRUN, hookCreate2: salt && salt.initcodeHash ? { salt: salt.salt, initcodeHash: salt.initcodeHash } : null, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1" });
+    const rows = await readback(provider, { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1", hookCreate2: salt && salt.initcodeHash ? { salt: salt.salt, initcodeHash: salt.initcodeHash } : null, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1" });
+    if (process.env.RPC2) {                                          // cross-check a second, independent RPC (never trust a single endpoint)
+      const p2 = new ethers.JsonRpcProvider(process.env.RPC2);
+      const D = new ethers.Contract(ethers.getAddress(need("DEPLOYER")), ["function hook() view returns (address)", "function factory() view returns (address)", "function battle() view returns (address)"], provider);
+      const addrs = [ethers.getAddress(need("DEPLOYER")), await D.hook(), await D.factory(), await D.battle()];
+      const same = (await Promise.all(addrs.map(async (a) => (await provider.getCode(a)) === (await p2.getCode(a))))).every(Boolean);
+      rows.push({ name: "second RPC returns identical code for deployer, hook, factory, battle", ok: same, detail: "" });
+      rows.push({ name: "second RPC chainId == 4663", ok: (await p2.getNetwork()).chainId === 4663n || dry, detail: "" });
+    } else rows.push({ name: "WARN no RPC2 set: single RPC trusted (set RPC2 to a second independent endpoint)", ok: true, warn: true, detail: "" });
     let bad = 0;
     for (const r of rows) { console.log(`${r.warn ? "WARN" : r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  [" + r.detail + "]" : ""}`); if (!r.ok) bad++; }
     console.log(bad ? `\n${bad} CHECK(S) FAILED` : "\nALL CHECKS PASSED");

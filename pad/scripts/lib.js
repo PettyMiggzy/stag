@@ -21,4 +21,10 @@ function mineSalt(deployerAddr, initcode, { start = 0n, max = 50_000_000n, onPro
   }
   throw new Error("no salt found");
 }
-module.exports = { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt };
+/// does this address answer like a Safe? (version, threshold, owners). Cannot prove the signers can sign: rehearse a no-op transaction first.
+async function probeSafe(provider, addr) {
+  const S = new ethers.Contract(addr, ["function VERSION() view returns (string)", "function getThreshold() view returns (uint256)", "function getOwners() view returns (address[])"], provider);
+  try { const [version, threshold, owners] = await Promise.all([S.VERSION(), S.getThreshold(), S.getOwners()]); return { ok: threshold >= 1n && owners.length >= 1, version, threshold, owners }; }
+  catch (e) { return { ok: false }; }
+}
+module.exports = { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt, probeSafe };

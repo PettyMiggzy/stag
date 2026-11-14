@@ -33,12 +33,19 @@ contract PadDeployer {
     constructor(IPoolManager pm, address quote, address _multisig, bool multisigMustBeContract, bytes32 salt) {
         if (address(pm).code.length == 0 || quote.code.length == 0) revert BadArg();
         if (_multisig == address(0) || _multisig == msg.sender || _multisig == address(this)) revert BadArg();
-        if (multisigMustBeContract && _multisig.code.length == 0) revert BadArg();
+        if (_multisig == address(pm) || _multisig == quote) revert BadArg();               // the PoolManager and STAG can never call acceptOwner
+        if (multisigMustBeContract) {
+            if (_multisig.code.length == 0) revert BadArg();
+            // it must answer like a Safe (threshold >= 1): a random contract that cannot sign would lock the owner role forever
+            (bool ok, bytes memory r) = _multisig.staticcall(abi.encodeWithSignature("getThreshold()"));
+            if (!ok || r.length != 32 || abi.decode(r, (uint256)) == 0) revert BadArg();
+        }
         multisig = _multisig;
 
         PadHook h = new PadHook{salt: salt}(pm, address(this), quote);   // reverts unless the address carries 0x28CC
         PadFactory f = new PadFactory(pm, h, quote);
         PadBattle b = new PadBattle(h);
+        if (_multisig == address(h) || _multisig == address(f) || _multisig == address(b)) revert BadArg();
         h.wire(address(f), address(b));
         h.setOwner(_multisig);
         hook = h;
