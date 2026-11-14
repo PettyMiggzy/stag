@@ -192,18 +192,25 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     } finally { delete process.env.ALLOW_UNPINNED; fs.writeFileSync(MAN.FILE, orig); }
   });
 
-  it("Safe creation tx: a setup() with an initializer delegatecall (or no SafeSetup log) FAILS; a clean one passes", async () => {
-    const addr = await msContract.getAddress();
-    const topic = ethers.id("SafeSetup(address,address[],uint256,address,address)");
-    const enc = (init) => ethers.AbiCoder.defaultAbiCoder().encode(["address[]", "uint256", "address"], [[ms.address], 1, init]);
-    const mk = (logs) => new Proxy(ethers.provider, { get: (t0, k) => (k === "getTransactionReceipt" ? async () => ({ status: 1, logs }) : typeof t0[k] === "function" ? t0[k].bind(t0) : t0[k]) });
-    const log = (init) => ({ address: addr, topics: [topic, ethers.zeroPadValue(other.address, 32), ethers.zeroPadValue(ethers.ZeroAddress, 32)], data: enc(init) });
-    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: addr, ownerAccepted: false, safeCreationTx: ethers.ZeroHash };
-    const bad = await readback(mk([log(other.address)]), base);
-    expect(bad.some((r) => !r.ok && /initializer/.test(r.name))).to.equal(true);
-    const none = await readback(mk([]), base);
-    expect(none.some((r) => !r.ok && /exactly one SafeSetup/.test(r.name))).to.equal(true);
-    const good = await readback(mk([log(ethers.ZeroAddress)]), base);
-    expect(good.filter((r) => !r.ok && /Safe/.test(r.name))).to.deep.equal([]);
+  it("Safe creation tx: needs the official factory, ProxyCreation for this proxy+singleton, setup log before it, initializer 0 (forged/constructor-made/no-factory all FAIL)", async () => {
+    const addr = await msContract.getAddress(), fac = ethers.Wallet.createRandom().address, single = ethers.Wallet.createRandom().address;
+    const setupT = ethers.id("SafeSetup(address,address[],uint256,address,address)"), pcT = ethers.id("ProxyCreation(address,address)");
+    const abi = ethers.AbiCoder.defaultAbiCoder();
+    const setup = (init, idx) => ({ address: addr, index: idx, topics: [setupT, ethers.zeroPadValue(other.address, 32), ethers.zeroPadValue(ethers.ZeroAddress, 32)], data: abi.encode(["address[]", "uint256", "address"], [[ms.address], 1, init]) });
+    const pc13 = (idx, p, s) => ({ address: fac, index: idx, topics: [pcT], data: abi.encode(["address", "address"], [p, s]) });
+    const pc14 = (idx, p, s) => ({ address: fac, index: idx, topics: [pcT, ethers.zeroPadValue(p, 32)], data: ethers.zeroPadValue(s, 32) });
+    const mk = (logs, to) => new Proxy(ethers.provider, { get: (t0, k) => (k === "getTransactionReceipt" ? async () => ({ status: 1, logs }) : k === "getTransaction" ? async () => ({ to }) : typeof t0[k] === "function" ? t0[k].bind(t0) : t0[k]) });
+    const base = { dry: true, deployer: await R.deployer.getAddress(), multisig: addr, ownerAccepted: false, safeCreationTx: ethers.ZeroHash, expectFactory: fac, expectSingleton: single };
+    const failed = (rows, re) => rows.some((r) => !r.ok && re.test(r.name));
+    expect(failed(await readback(mk([setup(other.address, 0), pc13(1, addr, single)], fac), base), /initializer/)).to.equal(true);
+    expect(failed(await readback(mk([], fac), base), /exactly one SafeSetup/)).to.equal(true);
+    expect(failed(await readback(mk([setup(ethers.ZeroAddress, 0)], fac), base), /ProxyCreation/)).to.equal(true);                       // forged log by a constructor: no factory event
+    expect(failed(await readback(mk([setup(ethers.ZeroAddress, 0), pc13(1, addr, single)], other.address), base), /sent to EXPECT_SAFE_FACTORY/)).to.equal(true);
+    expect(failed(await readback(mk([setup(ethers.ZeroAddress, 0), pc13(1, addr, other.address)], fac), base), /ProxyCreation/)).to.equal(true);   // wrong singleton
+    expect(failed(await readback(mk([pc13(0, addr, single), setup(ethers.ZeroAddress, 1)], fac), base), /before the factory/)).to.equal(true);
+    for (const pcf of [pc13, pc14]) {
+      const good = await readback(mk([setup(ethers.ZeroAddress, 0), pcf(1, addr, single)], fac), base);
+      expect(good.filter((r) => !r.ok && /SafeSetup|factory|ProxyCreation|setup\(\)|initializer/i.test(r.name))).to.deep.equal([]);
+    }
   });
 });

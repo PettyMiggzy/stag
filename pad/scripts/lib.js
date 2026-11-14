@@ -35,7 +35,7 @@ async function safeChecks(provider, addr, o = {}) {
   const word = async (slot) => ethers.getAddress(ethers.dataSlice(await provider.getStorage(addr, slot), 12));
   const lc = (x) => String(x).toLowerCase();
   const sp = await probeSafe(provider, addr);
-  ck("multisig answers like a Safe (VERSION, getThreshold >= 1, getOwners)", sp.ok || !!o.allowNonSafe, sp.ok ? `Safe ${sp.version}, threshold ${sp.threshold}, owners ${sp.owners.length}` : "no Safe answers");
+  ck("multisig answers like a Safe (VERSION, getThreshold >= 1, getOwners)", sp.ok || !!o.allowNonSafe, sp.ok ? `Safe ${String(sp.version).replace(/[^\x20-\x7e]/g, "?").slice(0, 20)}, threshold ${sp.threshold}, owners ${sp.owners.length}` : "no Safe answers");
   if (!sp.ok) return { rows, sp };
   if (o.expectOwners) { const a = sp.owners.map(lc).sort(), b = o.expectOwners.map(lc).sort(); ck("multisig owners == EXPECT_OWNERS (exact list)", a.length === b.length && a.every((x, i) => x === b[i]), sp.owners.join(",")); }
   else ck("EXPECT_OWNERS supplied (the full owner list is checked, not just the count)", !!o.dry);
@@ -46,13 +46,27 @@ async function safeChecks(provider, addr, o = {}) {
   // The Safe's creation tx: exactly one SafeSetup log from this proxy with initializer == 0 (so setup() made NO delegatecall that could plant
   // unlisted owners/modules or pre-approved hashes), owners/threshold equal to the current ones, and the tx must be a plain creation of THIS address's setup.
   if (o.safeCreationTx) {
-    const rc = await provider.getTransactionReceipt(o.safeCreationTx);
+    const rc = await provider.getTransactionReceipt(o.safeCreationTx), stx = rc ? await provider.getTransaction(o.safeCreationTx) : null;
     const topic = ethers.id("SafeSetup(address,address[],uint256,address,address)");
     const logs = rc && rc.status === 1 ? rc.logs.filter((l) => lc(l.address) === lc(addr) && l.topics[0] === topic) : [];
     ck("Safe creation tx has exactly one SafeSetup log from the multisig", logs.length === 1, rc ? `${logs.length} logs` : "tx not found");
     if (logs.length === 1) {
       const d = ethers.AbiCoder.defaultAbiCoder().decode(["address[]", "uint256", "address"], logs[0].data);
       ck("Safe setup() used NO initializer delegatecall (initializer == 0)", d[2] === ethers.ZeroAddress, d[2]);
+      // the proxy must have been made by the OFFICIAL SafeProxyFactory (whose CREATE2 deploys the canonical proxy code, so no hostile constructor ran
+      // and nobody could forge the setup log), in that same tx, with setup() logged before the factory's ProxyCreation, and the factory pinned out of band
+      const pcTopic = ethers.id("ProxyCreation(address,address)");
+      const pc = o.expectFactory ? rc.logs.filter((l) => lc(l.address) === lc(o.expectFactory) && l.topics[0] === pcTopic) : [];
+      ck("Safe creation tx was sent to EXPECT_SAFE_FACTORY (the official SafeProxyFactory)", !!o.expectFactory && !!stx && stx.to && lc(stx.to) === lc(o.expectFactory), String(stx && stx.to));
+      ck("factory logged exactly one ProxyCreation for the multisig with singleton == EXPECT_SINGLETON", (() => {
+        if (pc.length !== 1 || !o.expectSingleton) return false;
+        const l = pc[0]; let proxy, single;
+        if (l.topics.length === 2) { proxy = ethers.getAddress(ethers.dataSlice(l.topics[1], 12)); single = ethers.getAddress(ethers.dataSlice(l.data, 12, 32)); }      // 1.4.x: proxy indexed
+        else { const x = ethers.AbiCoder.defaultAbiCoder().decode(["address", "address"], l.data); proxy = x[0]; single = x[1]; }                                           // 1.3.0: both in data
+        return lc(proxy) === lc(addr) && lc(single) === lc(o.expectSingleton);
+      })());
+      const li = (l) => (l.index !== undefined ? l.index : l.logIndex);
+      ck("setup() ran before the factory's ProxyCreation, in the same tx", pc.length === 1 && li(logs[0]) < li(pc[0]));
       ck("Safe setup owners/threshold == current owners/threshold (no later change)", d[0].map(lc).join() === sp.owners.map(lc).join() && d[1] === sp.threshold);
     }
   } else ck("EXPECT_SAFE_CREATION_TX supplied (the Safe's setup() must be provably clean)", !!o.dry);

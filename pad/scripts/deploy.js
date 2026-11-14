@@ -48,10 +48,10 @@ if (require.main === module) {
     if (digest) console.log("manifest digest:", digest);
     let safeOpts = null;
     if (realMainnet) {
-      for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
+      for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_SAFE_FACTORY", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
       if (!digest || digest.toLowerCase() !== process.env.EXPECT_MANIFEST_DIGEST.toLowerCase()) throw new Error("manifest digest != EXPECT_MANIFEST_DIGEST (the digest published with the audit report)");
       if (process.env.ALLOW_UNPINNED) console.warn("ALLOW_UNPINNED is ignored on mainnet");
-      safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFallback: process.env.EXPECT_FALLBACK };
+      safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFactory: process.env.EXPECT_SAFE_FACTORY, expectFallback: process.env.EXPECT_FALLBACK };
     }
     const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0" || realMainnet, saltInfo, requireManifest: realMainnet, safeOpts });
     console.log("deployment tx:", r.deployer.deploymentTransaction() && r.deployer.deploymentTransaction().hash);
