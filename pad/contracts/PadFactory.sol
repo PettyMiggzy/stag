@@ -32,7 +32,7 @@ contract PadFactory {
     uint24 public constant LP_FEE = 3000;           // 0.30% to the creator
     int24 public constant SPACING = 60;
     int24 public constant RANGE_TICKS = 69_060;     // price can climb ~1000x from the start (multiple of SPACING)
-    uint256 public constant MIN_FDV = 1e18;         // starting fully-diluted value, in quote tokens
+    uint256 public constant MIN_FDV = 1_000_000e18; // starting fully-diluted value, in quote tokens (thin pools are easy to push around)
     uint256 public constant MAX_FDV = 1e30;
 
     struct Launch {

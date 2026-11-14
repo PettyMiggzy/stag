@@ -41,18 +41,20 @@ describe("pad v2 battles on a mainnet fork", function () {
   it("REGRESSION volume stops counting at the end time: a last-second buy can't flip the result", async () => {
     await P.buy(A, carol, E(2_000_000)); await P.buy(B, dave, E(500_000));                 // A leads during the fight
     await time.increase(DAY + 5);
+    const aAtEnd = (await P.inf(A)).chest, bAtEnd = (await P.inf(B)).chest;           // as they stood when the fight ended
     const vB = (await P.inf(B)).volume;
     await P.buy(B, dave, E(40_000_000));                                                   // B's creator-side whale buys AFTER the end
     expect((await P.inf(B)).volume).to.equal(vB);                                          // not counted
     const bt = await P.battle.get(0);
-    const aEnd = (await P.inf(A)).chest, bEnd = (await P.inf(B)).chest;
+    const aNow = (await P.inf(A)).chest, bNow = (await P.inf(B)).chest;                 // includes taxes paid AFTER the end
+    expect(bNow).to.be.gt(bAtEnd);
     await P.battle.connect(dave).settle(0);
     const a = await P.inf(A), b = await P.inf(B);
     expect(a.locked).to.equal(false); expect(b.locked).to.equal(false);
-    const loot = bEnd - bt.chestB0, earnA = aEnd - bt.chestA0;
-    expect(b.chest).to.equal(bt.chestB0);                                                  // loser keeps its OLD chest
-    expect(a.chest).to.equal(aEnd + loot);                                                 // winner gets the loser's fight earnings
-    expect(await P.hook.forced(A.id)).to.equal(earnA + loot);                              // fight earnings + loot burn; old chest stays the creator's
+    const loot = bAtEnd - bt.chestB0, earnA = aAtEnd - bt.chestA0;                      // fight earnings only: frozen at the end
+    expect(b.chest).to.equal(bNow - loot);                                              // loser keeps its old chest AND what was taxed after the end
+    expect(a.chest).to.equal(aNow + loot);
+    expect(await P.hook.forced(A.id)).to.equal(earnA + loot);
     console.log("   A won; loot", ethers.formatEther(loot), "STAG; B kept its old chest", ethers.formatEther(bt.chestB0));
     expect(await P.solvent([A, B, C])).to.equal(true);
     await expect(P.battle.connect(dave).settle(0)).to.be.reverted;                         // only once
@@ -70,16 +72,22 @@ describe("pad v2 battles on a mainnet fork", function () {
   });
 
   it("REGRESSION a winner cannot dodge the forced burn by re-locking: no new fight until it is burned", async () => {
-    const x = await P.launch(dave, true);
+    const y = await P.launch(alice, true), z = await P.launch(bob, true), x = await P.launch(dave, true);
+    const n = Number(await P.battle.count());
+    await P.battle.connect(alice).challenge(y.key, z.key, HOUR);
+    await P.battle.connect(bob).accept(n);
+    await P.buy(y, carol, E(20_000_000)); await P.buy(z, carol, E(1_000_000));              // y wins with real fight earnings
+    await time.increase(HOUR + 5);
+    await P.battle.settle(n);
+    expect(await P.hook.forced(y.id)).to.be.gt(0n);
     await P.buy(x, carol, E(1_000_000));
-    expect(await P.hook.forced(A.id)).to.be.gt(0n);
-    await expect(P.battle.connect(alice).challenge(A.key, x.key, DAY)).to.be.reverted;      // challenger with an unburned win
-    await P.battle.connect(dave).challenge(x.key, A.key, DAY);                               // someone offers A a fight...
-    await expect(P.battle.connect(alice).accept(Number(await P.battle.count()) - 1)).to.be.reverted;   // ...A cannot accept either
+    await expect(P.battle.connect(alice).challenge(y.key, x.key, DAY)).to.be.reverted;      // challenger with an unburned win
+    await P.battle.connect(dave).challenge(x.key, y.key, DAY);                               // someone offers y a fight...
+    await expect(P.battle.connect(alice).accept(Number(await P.battle.count()) - 1)).to.be.reverted;   // ...y cannot accept either
     await P.battle.connect(dave).cancel(Number(await P.battle.count()) - 1);
-    for (let i = 0; i < 60 && (await P.hook.forced(A.id)) > 0n; i++) await P.hook.connect(alice).burnForced(A.key, 0);   // creator burns it all (150-tick steps)
-    expect(await P.hook.forced(A.id)).to.equal(0n);
-    await P.battle.connect(alice).challenge(A.key, x.key, DAY);                              // free to fight again
+    for (let i = 0; i < 120 && (await P.hook.forced(y.id)) > 0n; i++) { await time.increase(HOUR + 1); await P.hook.connect(alice).burnForced(y.key, 0); }   // one burn an hour, 150-tick steps
+    expect(await P.hook.forced(y.id)).to.equal(0n);
+    await P.battle.connect(alice).challenge(y.key, x.key, DAY);                              // free to fight again
     await P.battle.connect(alice).cancel(Number(await P.battle.count()) - 1);
   });
 

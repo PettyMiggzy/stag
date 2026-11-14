@@ -51,3 +51,27 @@ contract TestMulti is IUnlockCallback {
         return "";
     }
 }
+
+/// TEST ONLY: a router in the sync-first style (syncs the quote token BEFORE the swap), to prove the hook does not break it.
+contract TestSyncRouter is IUnlockCallback {
+    using TransientStateLibrary for IPoolManager;
+    IPoolManager public immutable pm;
+    constructor(IPoolManager _pm) { pm = _pm; }
+
+    function buy(PoolKey calldata key, uint256 amtIn, address quoteTok, address tokenTok, bool zeroForOne, uint160 limit) external {
+        pm.unlock(abi.encode(msg.sender, key, amtIn, quoteTok, tokenTok, zeroForOne, limit));
+    }
+
+    function unlockCallback(bytes calldata d) external returns (bytes memory) {
+        require(msg.sender == address(pm));
+        (address user, PoolKey memory key, uint256 amt, address q, address t, bool zfo, uint160 limit) =
+            abi.decode(d, (address, PoolKey, uint256, address, address, bool, uint160));
+        pm.sync(Currency.wrap(q));                                                   // sync FIRST
+        pm.swap(key, SwapParams({zeroForOne: zfo, amountSpecified: -int256(amt), sqrtPriceLimitX96: limit}), "");
+        IERC20(q).transferFrom(user, address(pm), amt);
+        pm.settle();
+        int256 dt = pm.currencyDelta(address(this), Currency.wrap(t));
+        if (dt > 0) pm.take(Currency.wrap(t), user, uint256(dt));
+        return "";
+    }
+}

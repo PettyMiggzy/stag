@@ -92,4 +92,52 @@ describe("pad v3 regressions from the audit rounds", function () {
     await P.hook.connect(alice).burnChest(p.key, 0);
     expect(Math.abs((await P.tick(p)) - t0)).to.be.lte(151);
   });
+
+  it("burns are one per pool per hour for everyone, creator included, so a pump cannot be bought into and sold out in one go", async () => {
+    const p = await launchOrd(alice, true, true);
+    await P.buy(p, carol, E(30_000_000));
+    await P.hook.connect(alice).burnChest(p.key, 0);
+    await expect(P.hook.connect(alice).burnChest(p.key, 0)).to.be.reverted;           // creator, straight away
+    await time.increase(1800);
+    await expect(P.hook.connect(alice).burnChest(p.key, 0)).to.be.reverted;           // still inside the hour
+    await time.increase(1900);
+    await P.hook.connect(alice).burnChest(p.key, 0);                                   // fine after the hour
+  });
+
+  it("swaps that fill nothing are rejected: nobody can shove a pool's price for free", async () => {
+    const p = await launchOrd(alice, true, true);
+    await expect(P.sell(p, dave, 1000n)).to.be.reverted;                               // dave holds none of the token and the pool has no depth that way
+  });
+
+  it("ownership moves in two steps", async () => {
+    const S3 = await deployStack(owner);
+    await S3.hook.setOwner(bob.address);
+    expect(await S3.hook.owner()).to.equal(owner.address);                             // not yet
+    await expect(S3.hook.connect(carol).acceptOwner()).to.be.reverted;
+    await S3.hook.connect(bob).acceptOwner();
+    expect(await S3.hook.owner()).to.equal(bob.address);
+    await expect(S3.hook.setOwner(carol.address)).to.be.reverted;                      // old owner is out
+  });
+
+  it("wiring refuses swapped addresses and a factory built for another quote token", async () => {
+    const S2 = await deployStack(owner, false);
+    const badQuote = await (await ethers.getContractFactory("PadFactory")).deploy(PM, await S2.hook.getAddress(), owner.address);
+    await expect(S2.hook.wire(await badQuote.getAddress(), await S2.battle.getAddress())).to.be.reverted;
+    await expect(S2.hook.wire(await S2.battle.getAddress(), await S2.factory.getAddress())).to.be.reverted;   // swapped
+    await expect(S2.hook.wire(await S2.factory.getAddress(), await S2.factory.getAddress())).to.be.reverted;  // same twice
+    await S2.hook.wire(await S2.factory.getAddress(), await S2.battle.getAddress());
+  });
+
+  for (const q0 of [true, false]) it(`a router that syncs $STAG before the swap still works on a peace pool with a holder share waiting (${q0 ? "q0" : "q1"})`, async () => {
+    const p = await launchOrd(alice, false, q0);
+    await P.buy(p, bob, E(1_000_000));                                                  // leaves holderOwed waiting
+    const R = await (await ethers.getContractFactory("TestSyncRouter")).deploy(PM);
+    await S.stag.connect(carol).approve(await R.getAddress(), ethers.MaxUint256);
+    const owed0 = (await P.inf(p)).holderOwed;
+    expect(owed0).to.be.gt(0n);
+    await R.connect(carol).buy(p.key, E(500_000), STAG, await p.tok.getAddress(), p.quoteIs0, p.quoteIs0 ? MIN + 1n : MAXP - 1n);
+    expect((await P.inf(p)).holderOwed).to.be.gt(owed0);                                // flush was skipped, nothing broke
+    await P.buy(p, dave, E(1_000));                                                      // the next normal swap flushes it
+    expect(await P.solvent(all)).to.equal(true);
+  });
 });

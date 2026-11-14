@@ -13,10 +13,18 @@ import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/Pool
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {TransientStateLibrary} from "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
-interface IHookRef {
+interface IFactoryRef {
     function hook() external view returns (address);
+    function quote() external view returns (address);
+    function pm() external view returns (address);
+}
+
+interface IBattleRef {
+    function hook() external view returns (address);
+    function OFFER_WINDOW() external view returns (uint64);   // only the battle contract has this
 }
 
 interface IPadToken {
@@ -39,11 +47,12 @@ contract PadHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using SafeCast for uint256;
     using StateLibrary for IPoolManager;
+    using TransientStateLibrary for IPoolManager;
 
     uint256 public constant TAX_BPS = 300;   // 3% each way
     uint256 public constant BPS = 10_000;
     int24 public constant MAX_BURN_IMPACT_TICKS = 150;   // a burn may move the price at most ~1.5% per call
-    uint256 public constant FORCED_GAP = 1 hours;
+    uint256 public constant BURN_GAP = 1 hours;          // minimum time between burns on one pool, creator included
     uint256 public constant FORCED_MIN_STEP = 50_000e18; // quote tokens
 
     struct Info {
@@ -53,7 +62,9 @@ contract PadHook is BaseHook {
         bool quoteIs0;        // is the quote token currency0 in this pool?
         bool war;             // true = buy tax fills the war chest; false = peace split
         bool locked;          // true while a battle holds the pool
-        uint64 freezeAt;      // while locked, volume stops counting after this time
+        uint64 freezeAt;      // while locked, volume and fight earnings stop counting after this time
+        bool endSnapped;      // chestAtEnd is valid
+        uint128 chestAtEnd;   // chest as it stood when the fight ended (first booking after the end takes the snapshot)
         uint128 chest;        // quote tokens waiting to buy and burn
         uint128 creatorOwed;  // peace mode: creator's 1%
         uint128 holderOwed;   // peace mode: holders' 2%, flushed to the token at the next swap (or by pushHolders)
@@ -62,13 +73,14 @@ contract PadHook is BaseHook {
 
     address public immutable QUOTE;  // $STAG
     address public owner;            // platform
+    address public pendingOwner;
     address public factory;
     address public battle;
     uint256 public platformOwed;     // sell-side tax collected, in quote tokens
     mapping(PoolId => Info) public info;
     /// @notice part of a chest that a battle win has marked for burning; anyone can burn it in steps
     mapping(PoolId => uint128) public forced;
-    mapping(PoolId => uint64) public lastForced;
+    mapping(PoolId => uint64) public lastBurn;
 
     event PoolRegistered(PoolId indexed id, address indexed creator, address token, bool war, bool quoteIs0);
     event ModeSet(PoolId indexed id, bool war);
@@ -89,6 +101,8 @@ contract PadHook is BaseHook {
     error Slippage();
     error PartialFill();
     error ZeroAddress();
+    error NoFill();
+    error BurnTooSoon();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -103,17 +117,26 @@ contract PadHook is BaseHook {
 
     // ---------------------------------------------------------------- admin
 
+    /// @notice Start a hand-over. The new owner must call acceptOwner, so a typo cannot strand the platform's share.
     function setOwner(address o) external onlyOwner {
         if (o == address(0)) revert ZeroAddress();
-        owner = o;
-        emit OwnerSet(o);
+        pendingOwner = o;
+    }
+
+    function acceptOwner() external {
+        if (msg.sender != pendingOwner) revert NotOwner();
+        owner = msg.sender;
+        pendingOwner = address(0);
+        emit OwnerSet(msg.sender);
     }
 
     /// @dev one-time wiring of the factory and the battle contract
     function wire(address f, address b) external onlyOwner {
         if (factory != address(0) || battle != address(0)) revert NotAllowed();
         if (f == address(0) || b == address(0)) revert ZeroAddress();
-        if (IHookRef(f).hook() != address(this) || IHookRef(b).hook() != address(this)) revert BadPool();
+        if (f == b) revert BadPool();
+        if (IFactoryRef(f).hook() != address(this) || IFactoryRef(f).quote() != QUOTE || IFactoryRef(f).pm() != address(poolManager)) revert BadPool();
+        if (IBattleRef(b).hook() != address(this) || IBattleRef(b).OFFER_WINDOW() == 0) revert BadPool();
         factory = f;
         battle = b;
     }
@@ -156,6 +179,8 @@ contract PadHook is BaseHook {
         Info storage i = info[key.toId()];
         i.locked = l;
         i.freezeAt = l ? until : 0;
+        i.endSnapped = false;
+        i.chestAtEnd = 0;
     }
 
     /// @dev read helper for the battle contract
@@ -224,6 +249,7 @@ contract PadHook is BaseHook {
         returns (bytes4, int128)
     {
         if (sender == address(this)) return (this.afterSwap.selector, 0);
+        if (d.amount0() == 0 && d.amount1() == 0) revert NoFill();      // nothing traded: no free price pushes
         PoolId id = key.toId();
         Info storage i = info[id];
         bool buy = i.quoteIs0 ? p.zeroForOne : !p.zeroForOne;
@@ -252,6 +278,10 @@ contract PadHook is BaseHook {
         if (!buy) {
             platformOwed += fee;
         } else if (i.war) {
+            if (i.locked && !i.endSnapped && block.timestamp >= i.freezeAt) {
+                i.chestAtEnd = i.chest;                 // fight earnings stop at the end time; later taxes are not loot
+                i.endSnapped = true;
+            }
             i.chest += fee.toUint128();
         } else {
             uint256 c = fee / 3;                  // creator's 1%
@@ -300,6 +330,7 @@ contract PadHook is BaseHook {
         uint256 booked;
         assembly { booked := tload(slot) }
         if (booked != 0) return;                     // an earlier swap in this transaction booked claims the pool manager does not hold yet
+        if (Currency.unwrap(poolManager.getSyncedCurrency()) == QUOTE) return;   // a router synced $STAG first: taking tokens now would break its settlement
         i.holderOwed = 0;
         poolManager.burn(address(this), _qid(), a);
         poolManager.take(Currency.wrap(QUOTE), i.token, a);
@@ -314,9 +345,10 @@ contract PadHook is BaseHook {
 
     // ----------------------------------------------------------- buy and burn
 
-    /// @notice Spend the war chest buying the project's own token and burn what comes back. Creator only, and never
-    ///         while a battle holds the pool. Each call moves the price at most ~1.5%; what the pool can't fill within
-    ///         that stays in the chest, so a big chest takes a few calls. The buy skips the tax.
+    /// @notice Spend the war chest buying the project's own token and burn what comes back. Creator only, never while a
+    ///         battle holds the pool. Each call moves the price at most ~1.5% and at most one burn per pool per hour
+    ///         (creator or stranger), so a price pump can never be bought into and sold out of in one transaction. What the
+    ///         pool can't fill within the cap stays in the chest. The buy skips the tax.
     function burnChest(PoolKey calldata key, uint256 minOut) external returns (uint256 burned) {
         PoolId id = key.toId();
         Info storage i = info[id];
@@ -324,11 +356,13 @@ contract PadHook is BaseHook {
         if (i.locked) revert Locked();
         uint256 amt = i.chest;
         if (amt == 0) revert NothingToDo();
+        _gap(id);
         burned = _spend(id, key, amt, minOut);
     }
 
-    /// @notice After a battle win the winning chest is marked "forced". Anyone can burn it in steps (at least an hour
-    ///         apart for strangers; the creator may go faster) so the burn happens even if the creator never acts.
+    /// @notice After a battle win the winning chest is marked "forced". Anyone can burn it in steps so the burn happens
+    ///         even if the creator never acts. Same one-per-hour limit as every burn; the creator's step is the whole
+    ///         forced amount (still capped by the 1.5% price limit), a stranger's is max(1/10, 50,000 $STAG).
     function burnForced(PoolKey calldata key, uint256 minOut) external returns (uint256 burned) {
         PoolId id = key.toId();
         Info storage i = info[id];
@@ -337,14 +371,18 @@ contract PadHook is BaseHook {
         if (f == 0) revert NothingToDo();
         uint256 step = f;
         if (msg.sender != i.creator) {
-            if (block.timestamp < uint256(lastForced[id]) + FORCED_GAP) revert NotAllowed();
-            lastForced[id] = uint64(block.timestamp);
             uint256 tenth = f / 10;
             step = f <= FORCED_MIN_STEP ? f : (tenth > FORCED_MIN_STEP ? tenth : FORCED_MIN_STEP);
         }
         if (step > i.chest) step = i.chest;
         if (step == 0) revert NothingToDo();
+        _gap(id);
         burned = _spend(id, key, step, minOut);
+    }
+
+    /// @dev one burn per pool per hour; the timer only restarts if the burn really bought something (see _spend)
+    function _gap(PoolId id) internal view {
+        if (block.timestamp < uint256(lastBurn[id]) + BURN_GAP) revert BurnTooSoon();
     }
 
     function _spend(PoolId id, PoolKey calldata key, uint256 amt, uint256 minOut) internal returns (uint256 burned) {
@@ -353,25 +391,27 @@ contract PadHook is BaseHook {
         uint256 paid;
         (paid, burned) = abi.decode(poolManager.unlock(abi.encode(uint8(1), address(0), amt, minOut, key)), (uint256, uint256));
         if (paid < amt) i.chest += (amt - paid).toUint128();           // unfilled part stays in the chest
+        if (paid > 0) lastBurn[id] = uint64(block.timestamp);
         uint128 f = forced[id];
         f = f > paid ? f - uint128(paid) : 0;
         forced[id] = f > i.chest ? i.chest : f;
         emit ChestBurned(id, paid, burned);
     }
 
-    /// @dev Battle contract only. Only what each pool EARNED during the fight is at stake: the part of a chest above the
-    ///      level it had when the battle started. The loser's fight earnings join the winner's chest, and the winner's
-    ///      fight earnings plus that loot are marked for burning. Older chest money stays with its pool.
+    /// @dev Battle contract only. Only what each pool EARNED during the fight is at stake: the part of its chest, as it
+    ///      stood when the fight ended, above the level it had when the battle started. The loser's fight earnings join the
+    ///      winner's chest, and the winner's fight earnings plus that loot are marked for burning. Older chest money and
+    ///      anything taxed after the end stays with its pool.
     function settleChests(PoolKey calldata loser, PoolKey calldata winner, uint128 loserStart, uint128 winnerStart) external {
         if (msg.sender != battle) revert NotAllowed();
         PoolId l = loser.toId();
         PoolId w = winner.toId();
-        uint128 lc = info[l].chest;
-        uint128 wc = info[w].chest;
-        uint128 lootL = lc > loserStart ? lc - loserStart : 0;
-        uint128 earnW = wc > winnerStart ? wc - winnerStart : 0;
-        info[l].chest = lc - lootL;
-        info[w].chest = wc + lootL;
+        uint128 lAtEnd = info[l].endSnapped ? info[l].chestAtEnd : info[l].chest;
+        uint128 wAtEnd = info[w].endSnapped ? info[w].chestAtEnd : info[w].chest;
+        uint128 lootL = lAtEnd > loserStart ? lAtEnd - loserStart : 0;
+        uint128 earnW = wAtEnd > winnerStart ? wAtEnd - winnerStart : 0;
+        info[l].chest -= lootL;
+        info[w].chest += lootL;
         forced[l] = 0;
         forced[w] = earnW + lootL;
     }
@@ -396,7 +436,10 @@ contract PadHook is BaseHook {
         uint160 limit = TickMath.getSqrtPriceAtTick(limitTick);
         {
             (uint160 sqrtP,,,) = poolManager.getSlot0(id);
-            if (q0 ? limit >= sqrtP : limit <= sqrtP) return abi.encode(uint256(0), uint256(0));   // pool at its edge: nothing to buy now
+            if (q0 ? limit >= sqrtP : limit <= sqrtP) {                  // pool at its edge: nothing to buy now
+                if (minOut > 0) revert Slippage();
+                return abi.encode(uint256(0), uint256(0));
+            }
         }
         BalanceDelta d = poolManager.swap(
             key,

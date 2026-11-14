@@ -122,9 +122,9 @@ contract PadBattle {
         va -= x.volA0;
         vb -= x.volB0;
         x.state = State.Settled;
-        hook.setLocked(x.a, false, 0);
-        hook.setLocked(x.b, false, 0);
         if (va == vb) {
+            hook.setLocked(x.a, false, 0);
+            hook.setLocked(x.b, false, 0);
             emit Tied(id, va, vb);
             return;
         }
@@ -134,7 +134,9 @@ contract PadBattle {
         (,,,, uint128 lostNow,) = hook.poolState(l.toId());
         uint128 loserStart = aWins ? x.chestB0 : x.chestA0;
         uint128 winnerStart = aWins ? x.chestA0 : x.chestB0;
-        hook.settleChests(l, w, loserStart, winnerStart);
+        hook.settleChests(l, w, loserStart, winnerStart);                 // while both pools are still locked: the hook uses its end-of-fight snapshots
+        hook.setLocked(x.a, false, 0);
+        hook.setLocked(x.b, false, 0);
         emit Settled(id, w.toId(), l.toId(), aWins ? va : vb, aWins ? vb : va, lostNow > loserStart ? lostNow - loserStart : 0);
     }
 }
