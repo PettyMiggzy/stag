@@ -89,7 +89,7 @@ What a leaked or phished owner key CAN do: take the share collected so far, and 
 Operating rules for a single-key owner:
 - Use a hardware wallet. Never sign an EIP-7702 delegation or a smart-account upgrade with this key (readback then fails permanently, and it adds attack surface).
 - `claimPlatform(to)` shows only hex on most devices: check `to` on the device screen, and claim to a separate cold address so the owner key only ever needs gas. Keep a little gas ETH on the wallet.
-- Rotate with `setOwner(<fresh hardware wallet>)` and accept from it, if you ever doubt the key.
+- Rotate with `setOwner(<fresh hardware wallet>)` and accept from it, if you ever doubt the key. After a rotation the readback script is expected to FAIL (the deployer and creation transaction still name the original wallet): verify the new owner by reading the hook's `owner()` on the explorer and checking it equals your new wallet. The same failure is what you would see after a hostile rotation, so do not ignore it.
 - The owner wallet must have sent a transaction already (a brand-new wallet at nonce 0 is refused): send a 0-value transaction to yourself first.
 - Take the HOOK address for the accept transaction from the readback output ("hook has code" row), only after readback has passed with SALT_FILE (it checks the hook against the CREATE2 address derived from salt.json). After accept, run readback again with `EXPECT_OWNER_ACCEPTED=1` and confirm the accept transaction's `from` is your wallet.
 - `deploy.js` checks the owner on one RPC only; the dual-RPC readback is the real gate, so a lying single RPC could waste the salt and the deployment before readback fails. Use an RPC you trust for the deploy.
