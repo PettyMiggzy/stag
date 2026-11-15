@@ -84,6 +84,18 @@ describe("WALLET-OWNER MODE: deploy + readback with a single wallet as owner", f
     expect(rows.some((r) => /OWNER WALLET = /.test(r.name) && r.name.includes(good) && r.warn)).to.equal(true);
   });
 
+  it("readback FAILS when the accepted owner is wrong or accept cannot succeed", async () => {
+    // before accept, claiming it was accepted must fail; after accept, claiming it was not must fail; a different owner wallet must fail either way
+    const pre = { ...CFG, ownerAccepted: false };
+    const post = await readback(ethers.provider, { ...CFG, ownerAccepted: true });
+    expect(fails(post)).to.deep.equal([]);
+    expect(fails(await readback(ethers.provider, pre)).length).to.be.gt(0);                  // hook is already accepted, so "not yet accepted" is wrong
+    const other2 = ethers.Wallet.createRandom();
+    await ethers.provider.send("hardhat_setNonce", [other2.address, "0x1"]);
+    const wrong = await readback(ethers.provider, { ...CFG, ownerAccepted: true, multisig: other2.address, expectOwnerEoa: other2.address });
+    expect(fails(wrong).some((n) => /owner|multisig/i.test(n))).to.equal(true);
+  });
+
   it("refuses an owner with short code (7702-style designator) and accepts nonce 1", async () => {
     const d = ethers.Wallet.createRandom().address;
     await ethers.provider.send("hardhat_setCode", [d, "0xef0100" + "11".repeat(20)]);
@@ -108,6 +120,7 @@ describe("WALLET-OWNER MODE: deploy + readback with a single wallet as owner", f
     try {
       const miss = await run({ OWNER_IS_EOA: "1", EXPECT_OWNER_EOA: "" });
       expect(miss.code, miss.err).to.equal(2); expect(miss.err).to.match(/EXPECT_OWNER_EOA is required on mainnet/);
+      for (const k of ["SALT_FILE", "RPC2", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) { const r = await run({ OWNER_IS_EOA: "1", EXPECT_OWNER_EOA: owner.address, [k]: "" }); expect(r.code, k + r.err).to.equal(2); expect(r.err, k).to.include(k + " is required on mainnet"); }
       for (const v of ["true", "1 ", "01"]) { const r = await run({ OWNER_IS_EOA: v, EXPECT_OWNER_EOA: owner.address }); expect(r.code, v + r.err).to.equal(2); expect(r.err, v).to.match(/EXPECT_OWNERS is required on mainnet/); }
     } finally { srv.close(); }
   });
