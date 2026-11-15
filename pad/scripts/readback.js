@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // READBACK CHECKLIST: verifies a deployed system against the expectations. Read-only. Exit code 1 if anything fails.
 //   RPC=https://rpc.mainnet.chain.robinhood.com DEPLOYER=0x.. MULTISIG=0x.. node scripts/readback.js
-// (DEPLOYER is the PadDeployer address.) Mainnet REQUIRES: RPC2 SALT_FILE DEPLOY_TX EXPECT_OWNERS EXPECT_THRESHOLD EXPECT_SINGLETON EXPECT_PROXY_CODEHASH EXPECT_SAFE_CREATION_TX EXPECT_MANIFEST_DIGEST. Also EXPECT_SAFE_FACTORY EXPECT_SINGLETON_CODEHASH EXPECT_FACTORY_CODEHASH. Optional: EXPECT_FALLBACK (+ EXPECT_FALLBACK_CODEHASH, required if a handler is set), EXPECT_OWNER_ACCEPTED=1. PM/QUOTE only on rehearsal chains. See README.
+// (DEPLOYER is the PadDeployer address. SCAN_MAX positive integer, default 300; exit 3 if the solvency scan was skipped unless ALLOW_SKIP_SCAN=1.) Mainnet REQUIRES: RPC2 SALT_FILE DEPLOY_TX EXPECT_OWNERS EXPECT_THRESHOLD EXPECT_SINGLETON EXPECT_PROXY_CODEHASH EXPECT_SAFE_CREATION_TX EXPECT_MANIFEST_DIGEST. Also EXPECT_SAFE_FACTORY EXPECT_SINGLETON_CODEHASH EXPECT_FACTORY_CODEHASH. Optional: EXPECT_FALLBACK (+ EXPECT_FALLBACK_CODEHASH, required if a handler is set), EXPECT_OWNER_ACCEPTED=1. PM/QUOTE only on rehearsal chains. See README.
 const fs = require("fs"), path = require("path");
 const { ethers } = require("ethers");
 const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe, safeChecks } = require("./lib");
@@ -152,14 +152,17 @@ async function readback(provider, cfg) {
   // 6. state: solvency over all launches (hook's ERC-6909 STAG >= platformOwed + sum(chest+creatorOwed+holderOwed)).
   //    Launches are permissionless, so the scan is batched, pinned to ONE block (a payout between reads cannot cause a false FAIL) and bounded by SCAN_MAX
   //    (default 300): above it the scan is skipped with a loud WARN and must be done by a monitor. Everything above (code, wiring, ownership, Safe) is O(1).
-  const n = Number(await F.launchCount());
-  const SCAN_MAX = Number(cfg.scanMax || 300);
+  let bn = await provider.getBlockNumber(), ov = { blockTag: bn }, n;
+  for (let tries = 0; ; tries++) {           // a load-balanced replica may not have the block yet: retry a few times, then fail (never silently fall back to unpinned reads)
+    try { n = Number(await F.launchCount(ov)); break; } catch (e) { if (tries >= 4) throw e; await new Promise((r) => setTimeout(r, 1500)); bn = await provider.getBlockNumber(); ov = { blockTag: bn }; }
+  }
+  const sm = cfg.scanMax === undefined || cfg.scanMax === "" ? 300 : Number(cfg.scanMax);
+  if (!Number.isInteger(sm) || sm < 1) throw new Error("SCAN_MAX must be a positive integer");
+  const SCAN_MAX = sm;
   const PMc = new ethers.Contract(pmAddr, ABI.pm, provider);
   if (n > SCAN_MAX) {
     warn(`solvency scan SKIPPED: more launches than SCAN_MAX (raise SCAN_MAX or run a monitor)`, false, `${n} launches`);
   } else {
-    const bn = await provider.getBlockNumber();
-    const ov = { blockTag: bn };
     let owed = await H.platformOwed(ov), allReg = true;
     for (let i0 = 0; i0 < n; i0 += 20) {
       const idx = Array.from({ length: Math.min(20, n - i0) }, (_, j) => i0 + j);
@@ -184,6 +187,12 @@ if (require.main === module) {
   (async () => {
     for (const k of Object.keys(process.env)) if (/^(EXPECT_|DEPLOY_TX|RPC2?$|SALT_FILE|DEPLOYER$|MULTISIG$)/.test(k)) process.env[k] = process.env[k].trim();
     const need = (k) => { if (!process.env[k]) { console.error("missing env " + k); process.exit(2); } return process.env[k]; };
+    const hn = (u) => new URL(u).hostname.toLowerCase().replace(/\.$/, "");
+    const lb = (u) => ["127.0.0.1", "localhost", "[::1]"].includes(new URL(u).hostname);
+    if (!lb(process.env.RPC) && new URL(process.env.RPC).protocol !== "https:") { console.error("RPC must be https (http only for a loopback rehearsal node)"); process.exit(2); }
+    if (process.env.RPC2 && !lb(process.env.RPC2) && new URL(process.env.RPC2).protocol !== "https:") { console.error("RPC2 must be https"); process.exit(2); }
+    if (process.env.DRYRUN && !(lb(process.env.RPC) && (!process.env.RPC2 || lb(process.env.RPC2)))) { console.error("DRYRUN is only honoured with loopback RPC URLs; unset it"); process.exit(2); }
+    if (process.env.RPC2 && hn(process.env.RPC) === hn(process.env.RPC2) && !(lb(process.env.RPC) && process.env.DRYRUN)) { console.error("RPC2 must be on a different hostname than RPC (for a loopback rehearsal use localhost vs 127.0.0.1)"); process.exit(2); }
     const provider = new ethers.JsonRpcProvider(need("RPC"));
     const p2 = process.env.RPC2 ? new ethers.JsonRpcProvider(process.env.RPC2) : null;
     const chainId = (await provider.getNetwork()).chainId, chain2 = p2 ? (await p2.getNetwork()).chainId : null;
@@ -191,11 +200,6 @@ if (require.main === module) {
     const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
     if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_SAFE_FACTORY", "EXPECT_SINGLETON_CODEHASH", "EXPECT_FACTORY_CODEHASH", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
-    const lb = (u) => ["127.0.0.1", "localhost", "[::1]"].includes(new URL(u).hostname);
-    if (!lb(process.env.RPC) && new URL(process.env.RPC).protocol !== "https:") { console.error("RPC must be https (http only for a loopback rehearsal node)"); process.exit(2); }
-    if (process.env.RPC2 && !lb(process.env.RPC2) && new URL(process.env.RPC2).protocol !== "https:") { console.error("RPC2 must be https"); process.exit(2); }
-    if (process.env.DRYRUN && !(lb(process.env.RPC) && (!process.env.RPC2 || lb(process.env.RPC2)))) { console.error("DRYRUN is only honoured with loopback RPC URLs; unset it"); process.exit(2); }
-    if (real && new URL(process.env.RPC).hostname.toLowerCase() === new URL(process.env.RPC2).hostname.toLowerCase()) { console.error("RPC2 must be on a different hostname than RPC"); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
     const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, scanMax: process.env.SCAN_MAX, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
       salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
@@ -204,7 +208,7 @@ if (require.main === module) {
     const rows = await readback(provider, cfg);
     if (p2) {                                                            // the WHOLE readback again on the second endpoint; any difference is a failure
       const rows2 = await readback(p2, cfg);
-      const key = (r) => JSON.stringify([r.name, r.ok]);   // live balances differ between two reads; every ok/fail verdict must match
+      const key = (r) => JSON.stringify([r.name, r.ok, !!r.warn]);   // live balances differ between two reads; every ok/fail verdict must match
       const same = rows.length === rows2.length && rows.every((r, i) => key(r) === key(rows2[i]));
       rows.push({ name: "RPC2 produced the identical readback (every pass/fail verdict)", ok: same, detail: same ? "" : "RPC1 and RPC2 disagree: do not trust either until resolved" });
       const extra = [];
@@ -215,6 +219,8 @@ if (require.main === module) {
       if (process.env.EXPECT_MANIFEST_DIGEST || real) rows.push({ name: "manifest digest == EXPECT_MANIFEST_DIGEST (published with the audit report)", ok: !!dg && dg.toLowerCase() === String(process.env.EXPECT_MANIFEST_DIGEST || "").toLowerCase(), detail: String(dg) }); }
     let bad = 0;
     for (const r of rows) { console.log(`${r.warn ? "WARN" : r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  [" + String(r.detail).replace(/[^\x20-\x7e]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0")).slice(0, 300) + "]" : ""}`); if (!r.ok) bad++; }
+    const skipped = rows.some((r) => /solvency scan SKIPPED/.test(r.name));
+    if (!bad && skipped && process.env.ALLOW_SKIP_SCAN !== "1") { console.log("\nPASSED WITH THE SOLVENCY SCAN SKIPPED (too many launches): raise SCAN_MAX, or verify solvency with your own monitor and re-run with ALLOW_SKIP_SCAN=1"); process.exit(3); }
     console.log(bad ? `\n${bad} CHECK(S) FAILED` : "\nALL CHECKS PASSED");
     process.exit(bad ? 1 : 0);
   })().catch((e) => { console.error(e); process.exit(1); });

@@ -230,4 +230,11 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
     const r3 = await readback(withHandler(stranger), { ...base, expectFallback: other.address });
     expect(failed(r3, /exactly EXPECT_FALLBACK/)).to.equal(true);
   });
+
+  it("README states the real acceptOwner() selector (signers compare it on their device)", async () => {
+    const sel = R.hook.interface.getFunction("acceptOwner").selector;
+    const readme = require("fs").readFileSync(require("path").join(__dirname, "..", "README.md"), "utf8");
+    expect(readme).to.include(sel);
+    expect(readme).to.not.include("0x238ac933");
+  });
 });
