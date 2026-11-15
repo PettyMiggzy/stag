@@ -261,5 +261,53 @@ describe("PadRouter (fork)", function () {
       await expect(mockRouter.connect(bob).zapSell(p.key, E(100_000), E(1_000_000), ethers.Wallet.createRandom().address, DL())).to.be.revertedWithCustomError(mockRouter, "Slippage");
       await mock.setLoose(false);
     });
+    it("zapBuy measures the STAG it really received: a lying curve and STAG already in the router change nothing", async () => {
+      const slot = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [await mockRouter.getAddress(), 0]));
+      await network.provider.send("hardhat_setStorageAt", [STAG, slot, ethers.toBeHex(E(777), 32)]);      // 777 STAG already sitting in the router
+      await mock.set(0, true, false);                                                                       // the curve returns a doubled number
+      const erc = new ethers.Contract(STAG, ["function balanceOf(address) view returns (uint256)"], ethers.provider);
+      const to = ethers.Wallet.createRandom().address;
+      const [stagIn, out] = await mockRouter.connect(bob).zapBuy.staticCall(p.key, 1, 1, to, DL(), { value: E(1) });
+      expect(stagIn).to.equal(E(1) * 1000n);                                                                // the real STAG from 1 ETH at the mock's rate, not 2x and not 777 more
+      await mockRouter.connect(bob).zapBuy(p.key, 1, 1, to, DL(), { value: E(1) });
+      expect(await bal(p.tok, to)).to.equal(out);                                                           // the returned `out` is what really arrived
+      expect(await erc.balanceOf(await mockRouter.getAddress())).to.equal(E(777));                          // the donation was never touched
+      await mock.set(0, false, false);
+      await network.provider.send("hardhat_setStorageAt", [STAG, slot, ethers.toBeHex(0, 32)]);
+    });
+    it("zapBuy enforces minOut on the pool leg, separately from the curve's minStag", async () => {
+      await expect(mockRouter.connect(bob).zapBuy(p.key, 1, E(1_000_000_000_000), bob.address, DL(), { value: E(1) })).to.be.revertedWithCustomError(mockRouter, "Slippage");
+    });
+    it("the values the router returns are what really moved (swapExactIn, zapBuy, zapSell)", async () => {
+      const a = E(50), t0 = await bal(p.tok, bob.address);
+      const out = await router.connect(bob).swapExactIn.staticCall(p.key, p.quoteIs0, a, 1, bob.address, DL());
+      await router.connect(bob).swapExactIn(p.key, p.quoteIs0, a, 1, bob.address, DL());
+      expect((await bal(p.tok, bob.address)) - t0).to.equal(out);
+      const to = ethers.Wallet.createRandom().address, e0 = await ethers.provider.getBalance(to);
+      const [stagMid, ethOut] = await mockRouter.connect(bob).zapSell.staticCall(p.key, E(100_000), 1, to, DL());
+      await mockRouter.connect(bob).zapSell(p.key, E(100_000), 1, to, DL());
+      expect((await ethers.provider.getBalance(to)) - e0).to.equal(ethOut);
+      expect(stagMid / 1000n).to.equal(ethOut);                                                             // mock: wei out = STAG / rate
+    });
+    it("zapBuy refunds unspent ETH to the caller (not to `to`) while the tokens go to `to`", async () => {
+      await mock.set(5000, false, false);
+      const to = ethers.Wallet.createRandom().address, e0 = await ethers.provider.getBalance(bob.address);
+      const tx = await mockRouter.connect(bob).zapBuy(p.key, 1, 1, to, DL(), { value: E(2) });
+      const rc = await tx.wait();
+      expect(e0 - (await ethers.provider.getBalance(bob.address)) - rc.gasUsed * rc.gasPrice).to.equal(E(1));   // caller keeps the refund
+      expect(await ethers.provider.getBalance(to)).to.equal(0n);                                             // `to` got no ETH
+      expect(await bal(p.tok, to)).to.be.gt(0n);
+      await mock.set(0, false, false);
+    });
+    it("a sell larger than the pool can absorb reverts cleanly and moves nothing", async () => {
+      const q = await api.launch(alice, true, E(10_000_000), "Big Sell", "BGS");                            // fresh pool, kept out of the shared solvency list
+      await q.tok.connect(bob).approve(await router.getAddress(), ethers.MaxUint256);
+      const slot = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [bob.address, 0]));
+      await network.provider.send("hardhat_setStorageAt", [await q.tok.getAddress(), slot, ethers.toBeHex(10n ** 30n, 32)]);
+      const t0 = await bal(q.tok, bob.address), r0 = await bal(q.tok, await router.getAddress());
+      await expect(router.connect(bob).swapExactIn(q.key, !q.quoteIs0, 10n ** 29n, 1, bob.address, DL())).to.be.reverted;   // the hook backstops it first; the router's own PartialFill check is defence in depth
+      expect(await bal(q.tok, bob.address)).to.equal(t0);
+      expect(await bal(q.tok, await router.getAddress())).to.equal(r0);
+    });
   });
 });
