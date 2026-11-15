@@ -83,8 +83,10 @@ contract MockCurve {
     uint256 public refundBps;     // fraction of the ETH sent back unspent on buy
     bool public lie;              // return a falsely large number
     bool public stingy;           // send less STAG than minTokensOut implies is fine (tests the router's own measurement)
+    bool public half;             // sell() pulls only half of the STAG offered (leaves an allowance behind unless the router resets it)
     constructor(address s, uint256 r) { stag = s; rate = r; }
     function set(uint256 _refundBps, bool _lie, bool _stingy) external { refundBps = _refundBps; lie = _lie; stingy = _stingy; }
+    function setHalf(bool h) external { half = h; }
     function buy(uint256 q, uint256 minOut, address r) external payable returns (uint256) {
         require(msg.value == q, "val");
         uint256 spend = q - (q * refundBps) / 10000;
@@ -96,6 +98,7 @@ contract MockCurve {
         return lie ? out * 2 : out;
     }
     function sell(uint256 tin, uint256 minQ, address r) external returns (uint256) {
+        if (half) tin = tin / 2;
         IERC20(stag).transferFrom(msg.sender, address(this), tin);
         uint256 q = tin / rate;
         require(q >= minQ, "slip");
@@ -104,4 +107,43 @@ contract MockCurve {
         return lie ? q * 2 : q;
     }
     receive() external payable {}
+}
+
+
+interface IPadRouterLike {
+    function zapBuy(PoolKey calldata key, uint256 minStag, uint256 minOut, address to, uint256 deadline) external payable returns (uint256, uint256);
+    function zapSell(PoolKey calldata key, uint256 tokensIn, uint256 minEth, address to, uint256 deadline) external returns (uint256, uint256);
+    function swapExactIn(PoolKey calldata key, bool zeroForOne, uint256 amountIn, uint256 minOut, address to, uint256 deadline) external returns (uint256);
+}
+
+/// TEST ONLY: receives ETH and tries to re-enter the router from inside the payment
+contract ReenterOnReceive {
+    IPadRouterLike public immutable router;
+    PoolKey public key;
+    bool public tried; bool public blocked; bool public reentered;
+    constructor(IPadRouterLike r) { router = r; }
+    function setKey(PoolKey calldata k) external { key = k; }
+    function approveToken(address tok) external { IERC20(tok).approve(address(router), type(uint256).max); }
+    function sell(uint256 amt) external { router.zapSell(key, amt, 1, address(this), block.timestamp + 1000); }
+    function buy() external payable { router.zapBuy{value: msg.value}(key, 1, 1, address(this), block.timestamp + 1000); }
+    receive() external payable {
+        if (tried) return;
+        tried = true;
+        try router.zapBuy{value: msg.value}(key, 1, 1, address(this), block.timestamp + 1000) { reentered = true; } catch { blocked = true; }
+    }
+}
+
+/// TEST ONLY: refuses to receive ETH
+contract RejectETH {
+    IPadRouterLike public immutable router;
+    PoolKey public key;
+    constructor(IPadRouterLike r) { router = r; }
+    function setKey(PoolKey calldata k) external { key = k; }
+    function buy() external payable { router.zapBuy{value: msg.value}(key, 1, 1, address(this), block.timestamp + 1000); }
+    receive() external payable { revert("no eth"); }
+}
+
+/// TEST ONLY: pushes ETH into any address (selfdestruct in the constructor works within the same transaction)
+contract ForceETH {
+    constructor(address payable t) payable { selfdestruct(t); }
 }

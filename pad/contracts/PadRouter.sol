@@ -39,7 +39,7 @@ contract PadRouter is IUnlockCallback {
     error Reentrancy();
     error BadValue();
     error NotCurve();
-    error RefundFailed();
+    error SendFailed();
 
     struct Ctx {
         PoolKey key;
@@ -85,6 +85,7 @@ contract PadRouter is IUnlockCallback {
         returns (uint256 out)
     {
         if (block.timestamp > deadline) revert Expired();
+        _checkTo(to);
         out = _swap(key, zeroForOne, amountIn, minOut, msg.sender, to);
     }
 
@@ -100,6 +101,7 @@ contract PadRouter is IUnlockCallback {
         returns (uint256 stagIn, uint256 out)
     {
         if (block.timestamp > deadline) revert Expired();
+        _checkTo(to);
         if (msg.value == 0) revert ZeroAmount();
         bool zfo = _direction(key, true);                          // input must be $STAG
         uint256 ethBefore = address(this).balance - msg.value;
@@ -111,7 +113,7 @@ contract PadRouter is IUnlockCallback {
         uint256 bal = address(this).balance;
         if (bal > ethBefore) {                                      // unspent ETH goes back to the caller
             (bool ok,) = msg.sender.call{value: bal - ethBefore}("");
-            if (!ok) revert RefundFailed();
+            if (!ok) revert SendFailed();
         }
     }
 
@@ -123,18 +125,27 @@ contract PadRouter is IUnlockCallback {
         returns (uint256 stagMid, uint256 ethOut)
     {
         if (block.timestamp > deadline) revert Expired();
+        _checkTo(to);
         bool zfo = _direction(key, false);                         // input must be the pad token
         uint256 stagBefore = IERC20(stag).balanceOf(address(this));
         _swap(key, zfo, tokensIn, 0, msg.sender, address(this));    // the final minimum is on the ETH, below
         stagMid = IERC20(stag).balanceOf(address(this)) - stagBefore;
-        if (stagMid == 0) revert Slippage();
         IERC20(stag).forceApprove(address(curve), stagMid);
-        ethOut = curve.sell(stagMid, minEth, to);
+        uint256 ethBefore = address(this).balance;
+        curve.sell(stagMid, minEth, address(this));                 // ETH comes back here so what arrives can be measured, not trusted
         IERC20(stag).forceApprove(address(curve), 0);
-        if (ethOut < minEth) revert Slippage();
+        ethOut = address(this).balance - ethBefore;
+        if (ethOut == 0 || ethOut < minEth) revert Slippage();
+        (bool ok,) = to.call{value: ethOut}("");
+        if (!ok) revert SendFailed();
     }
 
     // -------------------------------------------------------------- internals
+
+    /// the recipient must be a real address and never this contract itself (that would strand the output here)
+    function _checkTo(address to) internal view {
+        if (to == address(0) || to == address(this)) revert BadValue();
+    }
 
     /// validates the pool and returns the swap direction. `stagIn`: the input currency must be $STAG, else it must be the other one.
     function _direction(PoolKey calldata key, bool stagIn) internal view returns (bool zeroForOne) {
@@ -151,12 +162,11 @@ contract PadRouter is IUnlockCallback {
         returns (uint256 out)
     {
         if (amountIn == 0) revert ZeroAmount();
-        if (amountIn > type(uint128).max || minOut > type(uint128).max) revert BadValue();
+        if (amountIn > uint256(uint128(type(int128).max)) || minOut > type(uint128).max) revert BadValue();   // amountIn must fit an int128 (the swap amount is negated)
         if (address(key.hooks) != hook) revert BadPool();
         address c0 = Currency.unwrap(key.currency0);
         address c1 = Currency.unwrap(key.currency1);
         if (c0 != stag && c1 != stag) revert BadPool();
-        if (to == address(0)) revert BadValue();
         out = abi.decode(
             pm.unlock(abi.encode(Ctx(key, zeroForOne, uint128(amountIn), uint128(minOut), payer, to))), (uint256)
         );

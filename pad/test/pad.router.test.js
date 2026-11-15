@@ -47,7 +47,10 @@ describe("PadRouter (fork)", function () {
   });
 
   it("minOut, deadline, zero amount, wrong pool all revert", async () => {
-    await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(10), ethers.MaxUint256 >> 129n, bob.address, DL())).to.be.reverted;   // minOut unreachable
+    await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(10), E(1_000_000_000_000), bob.address, DL())).to.be.revertedWithCustomError(router, "Slippage");   // minOut unreachable
+    await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(10), ethers.MaxUint256, bob.address, DL())).to.be.revertedWithCustomError(router, "BadValue");   // out of range
+    await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, 2n ** 127n, 1, bob.address, DL())).to.be.revertedWithCustomError(router, "BadValue");      // does not fit an int128
+    await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(10), 1, await router.getAddress(), DL())).to.be.revertedWithCustomError(router, "BadValue");   // output may not be sent to the router itself
     await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(10), 1, bob.address, 1)).to.be.revertedWithCustomError(router, "Expired");
     await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, 0, 0, bob.address, DL())).to.be.revertedWithCustomError(router, "ZeroAmount");
     await expect(router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(10), 1, ethers.ZeroAddress, DL())).to.be.revertedWithCustomError(router, "BadValue");
@@ -90,7 +93,7 @@ describe("PadRouter (fork)", function () {
     });
     it("zapBuy: a lying curve return value does not matter; the router measures the real STAG, and minStag is enforced on it", async () => {
       await mock.set(0, true, false);
-      await expect(mockRouter.connect(bob).zapBuy(p.key, E(1000) * 1000n * 2n, 1, bob.address, DL(), { value: E(1) })).to.be.reverted;   // asks for 2x what the curve really gave
+      await expect(mockRouter.connect(bob).zapBuy(p.key, E(1000) * 1000n * 2n, 1, bob.address, DL(), { value: E(1) })).to.be.revertedWith("slip");   // the curve itself refuses: asks for 2x what 1 ETH buys
       await mock.set(0, false, true);                                       // stingy curve: gives half of what minStag would need
       await expect(mockRouter.connect(bob).zapBuy(p.key, 1000n * E(1), 1, bob.address, DL(), { value: E(1) })).to.be.revertedWithCustomError(mockRouter, "Slippage");
       await mock.set(0, false, false);
@@ -110,7 +113,7 @@ describe("PadRouter (fork)", function () {
     });
     it("zapSell: minEth enforced on the final ETH", async () => {
       const amt = (await bal(p.tok, bob.address)) / 10n;
-      await expect(mockRouter.connect(bob).zapSell(p.key, amt, E(1_000_000), ethers.Wallet.createRandom().address, DL())).to.be.reverted;
+      await expect(mockRouter.connect(bob).zapSell(p.key, amt, E(1_000_000), ethers.Wallet.createRandom().address, DL())).to.be.revertedWith("slip");
     });
   });
 
@@ -126,14 +129,14 @@ describe("PadRouter (fork)", function () {
       expect(await ethers.provider.getBalance(await router.getAddress())).to.equal(e0);
       expect(await api.solvent(all)).to.equal(true);
     });
-    it("zapSell round trip on the real curve returns ETH (or reverts cleanly if the curve refuses)", async function () {
+    it("zapSell round trip on the real curve returns ETH to the recipient", async function () {
       const c = new ethers.Contract(CURVE, ABI_CURVE, ethers.provider);
       if (await c.graduated()) this.skip();
       const amt = (await bal(p.tok, bob.address)) / 2n;
       await p.tok.connect(bob).approve(await router.getAddress(), ethers.MaxUint256);
       const dest = ethers.Wallet.createRandom().address, e0 = await ethers.provider.getBalance(dest);
-      let ok = true; try { await router.connect(bob).zapSell(p.key, amt, 1, dest, DL()); } catch (e) { ok = false; console.log("      real-curve sell reverted:", String(e.message).slice(0, 120)); }
-      if (ok) expect((await ethers.provider.getBalance(dest)) - e0).to.be.gt(0n);
+      await router.connect(bob).zapSell(p.key, amt, 1, dest, DL());
+      expect((await ethers.provider.getBalance(dest)) - e0).to.be.gt(0n);
       expect(await bal(stag, await router.getAddress())).to.equal(0n);
     });
   });
@@ -159,5 +162,85 @@ describe("PadRouter (fork)", function () {
     expect(await api.solvent(all)).to.equal(true);
     for (const t of [stag]) { expect(await bal(t, await router.getAddress())).to.equal(0n); expect(await bal(t, await mockRouter.getAddress())).to.equal(0n); }
     expect(await ethers.provider.getBalance(await mockRouter.getAddress())).to.equal(0n);
+  });
+
+  describe("router hardening (mock curve)", () => {
+    it("zapSell: expired deadline, wrong pool, zero or router recipient all revert with the right error", async () => {
+      const amt = (await bal(p.tok, bob.address)) / 20n, to = ethers.Wallet.createRandom().address;
+      await expect(mockRouter.connect(bob).zapSell(p.key, amt, 1, to, 1)).to.be.revertedWithCustomError(mockRouter, "Expired");
+      await expect(mockRouter.connect(bob).zapSell({ ...p.key, hooks: ethers.Wallet.createRandom().address }, amt, 1, to, DL())).to.be.revertedWithCustomError(mockRouter, "BadPool");
+      await expect(mockRouter.connect(bob).zapSell(p.key, amt, 1, ethers.ZeroAddress, DL())).to.be.revertedWithCustomError(mockRouter, "BadValue");
+      await expect(mockRouter.connect(bob).zapSell(p.key, amt, 1, await mockRouter.getAddress(), DL())).to.be.revertedWithCustomError(mockRouter, "BadValue");
+      await expect(mockRouter.connect(bob).zapBuy(p.key, 1, 1, await mockRouter.getAddress(), DL(), { value: 1n })).to.be.revertedWithCustomError(mockRouter, "BadValue");
+      await expect(mockRouter.connect(bob).zapBuy(p.key, 1, 1, ethers.ZeroAddress, DL(), { value: 1n })).to.be.revertedWithCustomError(mockRouter, "BadValue");
+    });
+    it("zapSell and zapBuy reject a pool whose currencies do not include $STAG", async () => {
+      const noStag = { ...p.key, currency0: ethers.Wallet.createRandom().address, currency1: ethers.Wallet.createRandom().address };
+      await expect(mockRouter.connect(bob).zapBuy(noStag, 1, 1, bob.address, DL(), { value: 1n })).to.be.revertedWithCustomError(mockRouter, "BadPool");
+      await expect(mockRouter.connect(bob).zapSell(noStag, 1, 1, bob.address, DL())).to.be.revertedWithCustomError(mockRouter, "BadPool");
+    });
+    it("re-entering the router from inside the ETH payment of zapSell is blocked, and the outer call still completes", async () => {
+      const A = await (await ethers.getContractFactory("ReenterOnReceive")).deploy(await mockRouter.getAddress());
+      await A.setKey(p.key); await A.approveToken(await p.tok.getAddress());
+      const amt = E(200_000);                                                                           // small: the mock curve holds limited ETH
+      await p.tok.connect(bob).transfer(await A.getAddress(), amt);
+      await A.sell(amt / 2n);
+      expect(await A.tried()).to.equal(true);
+      expect(await A.blocked(), "the nested call must be blocked").to.equal(true);
+      expect(await A.reentered()).to.equal(false);
+      expect(await ethers.provider.getBalance(await A.getAddress())).to.be.gt(0n);                  // the outer sale paid out
+      // and a fresh call afterwards works (the lock was released)
+      await mockRouter.connect(bob).zapBuy(p.key, 1, 1, bob.address, DL(), { value: E(0.1) });
+    });
+    it("re-entering from inside the ETH refund of zapBuy is blocked", async () => {
+      await mock.set(5000, false, false);
+      const A = await (await ethers.getContractFactory("ReenterOnReceive")).deploy(await mockRouter.getAddress());
+      await A.setKey(p.key);
+      await A.buy({ value: E(2) });
+      expect(await A.blocked()).to.equal(true); expect(await A.reentered()).to.equal(false);
+      await mock.set(0, false, false);
+    });
+    it("a caller that cannot receive ETH makes the refund fail with SendFailed (the whole zap reverts, nothing is lost)", async () => {
+      await mock.set(5000, false, false);
+      const R = await (await ethers.getContractFactory("RejectETH")).deploy(await mockRouter.getAddress());
+      await R.setKey(p.key);
+      await expect(R.buy({ value: E(1) })).to.be.revertedWithCustomError(mockRouter, "SendFailed");
+      expect(await ethers.provider.getBalance(await mockRouter.getAddress())).to.equal(0n);
+      await mock.set(0, false, false);
+      // and zapSell to a recipient that rejects ETH fails cleanly
+      await expect(mockRouter.connect(bob).zapSell(p.key, E(100_000), 1, await R.getAddress(), DL())).to.be.revertedWithCustomError(mockRouter, "SendFailed");
+    });
+    it("ETH already sitting in the router is never refunded to a caller and never counted as proceeds", async () => {
+      await (await ethers.getContractFactory("ForceETH")).deploy(await mockRouter.getAddress(), { value: E(3) });
+      expect(await ethers.provider.getBalance(await mockRouter.getAddress())).to.equal(E(3));
+      await mock.set(5000, false, false);                                                              // curve refunds half
+      const e0 = await ethers.provider.getBalance(bob.address);
+      const tx = await mockRouter.connect(bob).zapBuy(p.key, 1, 1, bob.address, DL(), { value: E(2) });
+      const rc = await tx.wait(); const spent = e0 - (await ethers.provider.getBalance(bob.address)) - rc.gasUsed * rc.gasPrice;
+      expect(spent).to.equal(E(1));                                                                    // only the half the curve really used
+      expect(await ethers.provider.getBalance(await mockRouter.getAddress())).to.equal(E(3));          // the donation stays untouched
+      await mock.set(0, false, false);
+      // a sell pays out only what the curve really delivered, not the forced balance
+      const to = ethers.Wallet.createRandom().address;
+      await mockRouter.connect(bob).zapSell(p.key, E(100_000), 1, to, DL());
+      const got = await ethers.provider.getBalance(to);
+      expect(got).to.be.gt(0n); expect(got).to.be.lt(E(3));
+      expect(await ethers.provider.getBalance(await mockRouter.getAddress())).to.equal(E(3));
+    });
+    it("the curve allowance is reset to zero even when the curve pulls only part of what was offered", async () => {
+      await mock.setHalf(true);
+      await mockRouter.connect(bob).zapSell(p.key, E(100_000), 1, ethers.Wallet.createRandom().address, DL());
+      expect(await new ethers.Contract(STAG, ["function allowance(address,address) view returns (uint256)", "function balanceOf(address) view returns (uint256)"], ethers.provider).allowance(await mockRouter.getAddress(), await mock.getAddress())).to.equal(0n);
+      await mock.setHalf(false);
+    });
+    it("zapSell trusts only what actually arrives: a lying curve return value does not change the payout or the minEth check", async () => {
+      await mock.set(0, true, false);                                                                  // sell() returns double the real ETH
+      const amt = E(100_000), to = ethers.Wallet.createRandom().address;
+      await expect(mockRouter.connect(bob).zapSell(p.key, amt, E(1_000_000), to, DL())).to.be.revertedWith("slip");
+      await mockRouter.connect(bob).zapSell(p.key, amt, 1, to, DL());
+      const real = await ethers.provider.getBalance(to);
+      expect(real).to.be.gt(0n);
+      await mock.set(0, false, false);
+    });
   });
 });
