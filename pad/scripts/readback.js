@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // READBACK CHECKLIST: verifies a deployed system against the expectations. Read-only. Exit code 1 if anything fails.
 //   RPC=https://rpc.mainnet.chain.robinhood.com DEPLOYER=0x.. MULTISIG=0x.. node scripts/readback.js
+// Wallet-owner mode: OWNER_IS_EOA=1 (exactly "1") replaces the EXPECT_OWNERS..EXPECT_FACTORY Safe pins with EXPECT_OWNER_EOA; mainnet then REQUIRES SALT_FILE RPC2 DEPLOY_TX EXPECT_MANIFEST_DIGEST EXPECT_OWNER_EOA.
 // (DEPLOYER is the PadDeployer address. SCAN_MAX positive integer, default 300; exit 3 if the solvency scan was skipped unless ALLOW_SKIP_SCAN=1.) Mainnet REQUIRES: RPC2 SALT_FILE DEPLOY_TX EXPECT_OWNERS EXPECT_THRESHOLD EXPECT_SINGLETON EXPECT_PROXY_CODEHASH EXPECT_SAFE_CREATION_TX EXPECT_MANIFEST_DIGEST. Also EXPECT_SAFE_FACTORY EXPECT_SINGLETON_CODEHASH EXPECT_FACTORY_CODEHASH. Optional: EXPECT_FALLBACK (+ EXPECT_FALLBACK_CODEHASH, required if a handler is set), EXPECT_OWNER_ACCEPTED=1. PM/QUOTE only on rehearsal chains. See README.
 const fs = require("fs"), path = require("path");
 const { ethers } = require("ethers");

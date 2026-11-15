@@ -99,13 +99,20 @@ async function safeChecks(provider, addr, o = {}) {
 async function eoaOwnerChecks(provider, addr, o = {}) {
   const rows = [], ck = (name, ok, detail = "") => rows.push({ name, ok: !!ok, detail });
   const lc = (x) => String(x).toLowerCase();
+  let canon = null, canonExpect = null;
+  try { canon = ethers.getAddress(addr); } catch (e) { /* reported below */ }
+  try { if (o.expectOwner) canonExpect = ethers.getAddress(o.expectOwner); } catch (e) { /* reported below */ }
+  ck("owner address and EXPECT_OWNER_EOA are valid addresses (a mixed-case value must have the right checksum)", !!canon && (!o.expectOwner || !!canonExpect), String(addr) + " / " + String(o.expectOwner));
+  if (!canon) return rows;
+  addr = canon;
   const code = await provider.getCode(addr);
   ck("owner is a plain wallet (no contract code at the address)", code.length <= 2, code.length > 2 ? "has code" : "");
-  if (o.expectOwner) ck("owner == EXPECT_OWNER_EOA (typed from your wallet app, separately from MULTISIG)", lc(addr) === lc(o.expectOwner), addr);
+  if (o.expectOwner) ck("owner == EXPECT_OWNER_EOA (typed from your wallet app, separately from MULTISIG)", !!canonExpect && lc(addr) === lc(canonExpect), addr);
   else ck("EXPECT_OWNER_EOA supplied (the owner wallet, typed from your wallet app)", !!o.dry);
   ck("owner is not the throwaway deployer key nor any of this system's addresses, PM or STAG", !(o.forbid || []).map(lc).includes(lc(addr)), addr);
   const n = await provider.getTransactionCount(addr);
   ck("owner wallet has sent at least one transaction (a real, used wallet, not a typo to an empty address)", n > 0 || !!o.dry, String(n));
+  rows.push({ name: "info: OWNER WALLET = " + addr + "  <- compare every character with the address shown ON YOUR HARDWARE WALLET SCREEN. These checks cannot prove you control this key: an address-poisoned or attacker-owned wallet passes all of them", ok: true, warn: true, detail: "" });
   rows.push({ name: "info: ONE wallet key owns the platform share: it can claim it and hand ownership over; it cannot touch liquidity, war chests, creator fees or holders' funds", ok: true, warn: false, detail: "" });
   return rows;
 }

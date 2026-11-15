@@ -47,7 +47,7 @@ if (require.main === module) {
     const net = await ethers.provider.getNetwork();
     const realMainnet = net.chainId === 4663n && network.name !== "hardhat";     // the in-process hardhat network is a fork: never the real thing
     if (!realMainnet && !process.env.DRYRUN) throw new Error("refusing to run: use --network robinhood (chain 4663) with DEPLOYER_KEY set, or DRYRUN=1 on the in-process fork for a rehearsal");   // DRYRUN is ignored on the real chain
-    if (process.env.MUST_BE_CONTRACT === "0") console.warn("WARNING: MUST_BE_CONTRACT=0 allows an EOA as owner. Use a multisig contract on mainnet.");
+    if (process.env.MUST_BE_CONTRACT === "0") console.warn("WARNING: MUST_BE_CONTRACT=0 allows an EOA as owner. Use a multisig contract on mainnet (or OWNER_IS_EOA=1 wallet-owner mode).");
     for (const k of Object.keys(process.env)) if (/^(EXPECT_|SALT_FILE|MULTISIG$)/.test(k)) process.env[k] = process.env[k].trim();
     const [signer] = await ethers.getSigners();
     const saltInfo = JSON.parse(fs.readFileSync(process.env.SALT_FILE || "salt.json", "utf8"));
