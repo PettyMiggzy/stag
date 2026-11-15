@@ -188,7 +188,8 @@ describe("DRY RUN: PadDeployer on a fork (mine salt -> deploy -> readback -> two
       const bad = JSON.parse(orig); bad.deployerCreationCode = ethers.ZeroHash; fs.writeFileSync(MAN.FILE, JSON.stringify(bad));
       process.env.ALLOW_UNPINNED = "1";
       await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo: si, requireManifest: true })).to.be.rejectedWith(/differs from audited-manifest/);
-      await expect(deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo: si, requireManifest: false })).to.not.be.rejectedWith(/differs from audited-manifest/);   // rehearsal escape hatch still works off mainnet
+      let err = null; try { await deployAll({ signer: eoa, multisig: await msContract.getAddress(), saltInfo: si, requireManifest: false }); } catch (e) { err = e; }
+      expect(err, String(err)).to.equal(null);   // rehearsal escape hatch still works off mainnet
     } finally { delete process.env.ALLOW_UNPINNED; fs.writeFileSync(MAN.FILE, orig); }
   });
 
