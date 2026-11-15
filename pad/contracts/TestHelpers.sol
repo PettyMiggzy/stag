@@ -149,3 +149,15 @@ contract RejectETH {
 contract ForceETH {
     constructor(address payable t) payable { selfdestruct(t); }
 }
+
+
+/// TEST ONLY: calls the router twice in one transaction (the lock must release between calls)
+contract CallTwice {
+    IPadRouterLike public immutable router;
+    constructor(IPadRouterLike r) { router = r; }
+    function twice(PoolKey calldata key, bool zfo, address stagTok, uint256 amt) external {
+        IERC20(stagTok).approve(address(router), type(uint256).max);
+        router.swapExactIn(key, zfo, amt, 1, address(this), block.timestamp + 100);
+        router.swapExactIn(key, zfo, amt, 1, address(this), block.timestamp + 100);
+    }
+}

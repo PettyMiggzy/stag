@@ -47,6 +47,7 @@
     ],
     padToken: ["function claimable(address) view returns (uint256)", "function claim()"],
     stateView: ["function getSlot0(bytes32) view returns (uint160,int24,uint24,uint24)"],
+    curve: ["function graduated() view returns (bool)"],
   };
 
   // ------------------------------------------------------------------ helpers
@@ -218,7 +219,7 @@
           <label class="lbl" id="paylbl">Pay with</label><select id="payas" class="inp"></select>
           <label class="lbl" for="amt">Amount</label><input id="amt" class="inp" inputmode="decimal" placeholder="0.0" autocomplete="off">
           <label class="lbl" for="slip">Slippage limit (%)</label><input id="slip" class="inp" inputmode="decimal" value="2">
-          <div class="quote" id="quote">Enter an amount.</div>
+          <div class="quote" id="quote">Enter an amount.</div><p class="fine" id="slipwarn" hidden>High slippage: a bot can profit by moving the price against you up to this limit. Use the lowest setting that works.</p>
           <div class="cta"><button class="btn" id="approveBtn" hidden>Approve</button><button class="btn solid" id="tradeBtn">Connect wallet</button></div>
           <p class="fine">Every trade pays a 3% tax on its $STAG side (see <a href="/pad/how/">how it works</a>). Prices move with trades and this token can lose most or all of its value. Amounts shown are estimates until your wallet confirms.</p>
         </section>
@@ -228,7 +229,9 @@
       <section class="padbox"><h3>Anyone can</h3><div id="anyone"></div></section>`;
 
     let mode = "buy"; const payas = $("#payas"), amt = $("#amt"), quoteEl = $("#quote"), tradeBtn = $("#tradeBtn"), approveBtn = $("#approveBtn"), slipEl = $("#slip");
-    const opts = () => { payas.innerHTML = mode === "buy" ? `<option value="stag">$STAG</option><option value="eth">ETH (zaps through the $STAG curve)</option>` : `<option value="stag">Receive $STAG</option><option value="eth">Receive ETH (through the $STAG curve)</option>`; $("#paylbl").textContent = mode === "buy" ? "Pay with" : "Receive as"; };
+    // once the $STAG curve has graduated its ETH zaps revert, so the ETH options are hidden (trading with $STAG always works)
+    let curveLive = true; try { curveLive = !(await c("curve", C.curve).graduated()); } catch { curveLive = true; }
+    const opts = () => { if (!curveLive) { payas.innerHTML = mode === "buy" ? `<option value="stag">$STAG</option>` : `<option value="stag">Receive $STAG</option>`; $("#paylbl").textContent = mode === "buy" ? "Pay with" : "Receive as"; return; } payas.innerHTML = mode === "buy" ? `<option value="stag">$STAG</option><option value="eth">ETH (zaps through the $STAG curve)</option>` : `<option value="stag">Receive $STAG</option><option value="eth">Receive ETH (through the $STAG curve)</option>`; $("#paylbl").textContent = mode === "buy" ? "Pay with" : "Receive as"; };
     opts();
     $$(".tab").forEach((t) => t.addEventListener("click", () => { mode = t.dataset.m; $$(".tab").forEach((x) => x.classList.toggle("on", x === t)); opts(); refresh(); }));
     // Any change to the inputs immediately disables the trade button and drops the old quote, so a click can never run a stale amount;
@@ -238,13 +241,14 @@
     $$(".tab").forEach((t) => t.addEventListener("click", invalidate));
     [payas, amt, slipEl].forEach((el) => el.addEventListener("input", () => { invalidate(); clearTimeout(refresh.t); refresh.t = setTimeout(refresh, 350); }));
     async function refresh() {
+      $("#slipwarn").hidden = !(Number(slipEl.value) > 5);
       const my = ++seq, stale = () => my !== seq;
       ctx = null; approveBtn.hidden = true; tradeBtn.disabled = true;
       tradeBtn.textContent = W.account ? (mode === "buy" ? "Buy" : "Sell") : "Connect wallet";
       if (!W.account) { tradeBtn.disabled = false; quoteEl.textContent = "Connect your wallet to get a quote."; return; }
       let a; try { a = E.parseUnits(amt.value || "0", 18); } catch { quoteEl.textContent = "Amount must be a number."; return; }
       if (a <= 0n) { quoteEl.textContent = "Enter an amount."; return; }
-      const slip = Number(slipEl.value); if (!(slip >= 0.01 && slip <= 50)) { quoteEl.textContent = "Slippage must be between 0.01 and 50."; return; }
+      const slip = Number(slipEl.value); if (!(slip >= 0.01 && slip <= 20)) { quoteEl.textContent = "Slippage must be between 0.01 and 20."; return; }
       const bps = BigInt(Math.round(slip * 100)), asEth = payas.value === "eth", me = W.account, dl = deadline();
       const rc = c("router", C.router, W.provider);
       try {

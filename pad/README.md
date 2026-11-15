@@ -62,3 +62,21 @@ In steps 4 and 5, the bracketed `[EXPECT_FALLBACK=.. EXPECT_FALLBACK_CODEHASH=..
 **Local rehearsal recipe**: start a fork node `npx hardhat node --config hardhat.nolimit.config.js` with `RH_BLOCK=<head-20>` (then send `evm_mine` once, or the first calls at the fork block fail with 'No known hardfork'), point `RH_RPC=http://127.0.0.1:8545` for `deploy.js --network robinhood`, and use `RPC=http://127.0.0.1:8545 RPC2=http://localhost:8545` for `readback.js`. Make sure no other node already listens on that port.
 
 Test coverage note: `test/deploy.realsafe.test.js` and `test/deploy.dryrun.test.js` catch deletion of the Safe hardening, creation-tx and fallback checks, but some ownership-state, wiring and `*_supplied` rows are enforced by the scripts without a dedicated negative test; the CLI enforces the mainnet requirements. `approveHash` rehearsal proves a signer can send a transaction, not that their device can produce an EIP-712 signature: if the final flow is offline signatures, rehearse that flow too.
+
+## PadRouter (swaps and ETH zaps)
+`contracts/PadRouter.sol` is the one swap entry point for the pad's $STAG/token pools, plus two zaps through the $STAG curve: `zapBuy` (ETH -> $STAG -> token) and `zapSell` (token -> $STAG -> ETH). It has no owner, no admin, no fee and no upgrade, and it holds nothing between calls. Every call is exact-in with a minimum output and a deadline, and the output goes to the `to` you name (never the router itself). It is separate from the audited core: the manifest and the deployment scripts do not include it, and the core contracts are unchanged.
+
+**Status:** two independent hostile review rounds (two reviewers each, on identical code, commit `717ae83`) found no Critical, High or Medium issues, after a first round whose Low findings were fixed. There is a 33-test fork suite, including the real curve, a mock curve for edge cases, re-entrancy, forced ETH, donated STAG and both currency orderings and modes. This is not a professional audit.
+
+**Deploy:** `new PadRouter(PoolManager, PadHook, STAG, curve)` with `PoolManager = 0x8366a39cc670b4001a1121b8f6a443a643e40951`, `STAG = 0x67Ef4460A1280fBD9d31D6312FEd2Ce1EFd66305`, `curve = 0x8e68043f7553ff7adf30eb8b0baac8d8fc2ed958`, and `PadHook` = the deployed pad hook. The arguments are immutables and are not validated by the constructor, so a wrong one makes a useless (or, for a fake pool manager, hostile-looking) router that still matches the verified source. **Always verify before publishing the address:**
+
+    RPC=<https rpc> ROUTER=<router> HOOK=<hook> node tools/verify-router.js
+
+It checks the four immutables, that the hook pairs the same $STAG and pool manager, and that the runtime equals the local build. Then run a tiny `swapExactIn` and a tiny `zapBuy` from a funded, approved account, and only then put the address in `stagsite/pad/config.js`.
+
+**Known limits (by design):**
+- ETH or tokens sent to the router outside a normal call are stuck for good (no sweep: a sweep would be extra attack surface). Nothing a user sends in a call is kept.
+- The zaps need the $STAG curve to be live and to pay ETH from the curve address. After the curve graduates, `zapBuy` and `zapSell` revert (funds stay safe) and `swapExactIn` keeps working; the site hides the ETH options then.
+- Users approve the router for the exact amount of each trade. Never approve an address the site did not give you: any contract that looks like this router, including one built from the same source with a fake pool manager, could take what you approve to it.
+- `zapBuy` sends unspent ETH back to the caller, so a contract caller must be able to receive ETH. A contract recipient of `zapSell` ETH must too, or the call reverts with `SendFailed`.
+- A creator burning the war chest can move a pool's price about 1.5% once an hour; keep slippage at 2% or more.

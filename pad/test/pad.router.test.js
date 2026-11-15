@@ -309,5 +309,21 @@ describe("PadRouter (fork)", function () {
       expect(await bal(q.tok, bob.address)).to.equal(t0);
       expect(await bal(q.tok, await router.getAddress())).to.equal(r0);
     });
+    it("swapExactIn sends the output to `to`, not to the caller", async () => {
+      const to = ethers.Wallet.createRandom().address, t0 = await bal(p.tok, bob.address);
+      await router.connect(bob).swapExactIn(p.key, p.quoteIs0, E(20), 1, to, DL());
+      expect(await bal(p.tok, to)).to.be.gt(0n);
+      expect(await bal(p.tok, bob.address)).to.equal(t0);
+    });
+    it("the lock releases between two router calls inside ONE transaction", async () => {
+      const C = await (await ethers.getContractFactory("CallTwice")).deploy(await router.getAddress());
+      const slot = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [await C.getAddress(), 0]));
+      await network.provider.send("hardhat_setStorageAt", [STAG, slot, ethers.toBeHex(E(1000), 32)]);
+      await C.twice(p.key, p.quoteIs0, STAG, E(100));
+      expect(await bal(p.tok, await C.getAddress())).to.be.gt(0n);
+    });
+    it("a dust sell that would pay out nothing reverts even with minOut = 0 (no free zero-output trades)", async () => {
+      await expect(router.connect(bob).swapExactIn(p.key, !p.quoteIs0, 5n, 0, bob.address, DL())).to.be.revertedWithCustomError(router, "Slippage");
+    });
   });
 });
