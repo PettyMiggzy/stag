@@ -50,6 +50,32 @@
     curve: ["function graduated() view returns (bool)"],
   };
 
+  // ------------------------------------------------------------------ demo mode
+  // /pad/?demo=1 fills every page with FAKE sample data so the layout can be reviewed before launch. Nothing is read from or sent to
+  // the chain in demo mode: every button that would send a transaction only shows a "demo only" message. `&as=creator` previews the creator view.
+  const DEMO = /[?&]demo=1(&|$)/.test(location.search);
+  const ROLE = new URLSearchParams(location.search).get("as") === "creator" ? "creator" : "trader";
+  const W18 = (n) => E.parseUnits(String(n), 18);
+  const MOCK_CREATOR = "0xc0ffee254729296a45a3885639ac7e10f9d54979", MOCK_ME = "0xde30000000000000000000000000000000000001";
+  const nowS = () => Math.floor(Date.now() / 1000);
+  const mk = (i, name, symbol, war, o) => ({ i, key: null, id: "0x" + String(i).padStart(64, "0"), name, symbol, token: "0x" + String(0xa0 + i).padStart(2, "0").repeat(20), creator: o.creator || ("0x" + String(0xb0 + i).padStart(2, "0").repeat(20)), quoteIs0: true, war, locked: !!o.locked, chest: W18(o.chest || 0), creatorOwed: W18(o.cowed || 0), holderOwed: W18(o.howed || 0), volume: W18(o.vol), forced: W18(o.forced || 0), lastBurn: o.burn || 0, stagPerToken: o.price });
+  const MOCK = DEMO ? [
+    mk(0, "Stag Hood Coin", "SHC", true, { creator: MOCK_CREATOR, chest: 182400, cowed: 0, howed: 0, vol: 4210000, price: 0.01842, forced: 41200, burn: nowS() - 5400 }),
+    mk(1, "Junk Junkies", "JNK", false, { vol: 1120000, price: 0.01131, cowed: 3840, howed: 7680 }),
+    mk(2, "Winslow Bankz", "WBZ", true, { chest: 96300, vol: 2860000, price: 0.02407, locked: true }),
+    mk(3, "Hood Rich", "HDR", true, { chest: 74100, vol: 2310000, price: 0.01526, locked: true }),
+    mk(4, "Moon Mullet", "MUL", false, { vol: 640000, price: 0.00871, cowed: 920, howed: 1840 }),
+    mk(5, "Robin Bank", "RBK", true, { creator: MOCK_CREATOR, chest: 12800, vol: 380000, price: 0.01018 }),
+    mk(6, "Hood Cat", "HCT", true, { chest: 8100, vol: 215000, price: 0.01006 }),
+  ] : [];
+  const MOCK_BATTLES = DEMO ? [
+    { id: 0, a: 0, b: 5, st: 3, dur: 86400 },
+    { id: 1, a: 2, b: 3, st: 2, dur: 86400, endIn: 5 * 3600 + 1500, va: 1420000, vb: 1180000 },
+    { id: 2, a: 6, b: 5, st: 1, dur: 43200, expIn: 2.1 * 86400 },
+  ] : [];
+  const demoHref = (h) => { if (!DEMO || !h || !h.startsWith("/pad/") || /[?&]demo=1/.test(h)) return h; const [path, hash] = h.split("#"); return path + (path.includes("?") ? "&" : "?") + "demo=1" + (ROLE === "creator" ? "&as=creator" : "") + (hash ? "#" + hash : ""); };
+  const demoBanner = () => `<div class="padnote"><b>DEMO MODE: fake data.</b> These tokens, prices and battles are made up to show the layout. Nothing here is real, nothing is read from the chain and nothing can be sent. &nbsp; View as: <a href="${demoHref(location.pathname + location.search.replace(/&?as=creator/, "").replace(/\?&/, "?"))}">trader</a> · <a href="${location.pathname}${location.search.replace(/&?as=creator/, "").replace(/\?&/, "?")}${location.search.includes("?") ? "&" : "?"}as=creator">creator</a> · <a href="/pad/">leave demo</a></div>`;
+
   // ------------------------------------------------------------------ helpers
   // Time comes from the chain, not from the visitor's clock: a wrong clock on a phone must not expire a trade or hide a battle's end.
   let skewMs = 0;
@@ -100,6 +126,7 @@
   // ------------------------------------------------------------------ wallet
   const W = { provider: null, signer: null, account: null };
   async function connect() {
+    if (DEMO) { W.account = ROLE === "creator" ? MOCK_CREATOR : MOCK_ME; W.provider = ro; renderWallet(); document.dispatchEvent(new CustomEvent("pad:wallet", { detail: W.account })); return W.account; }
     if (!window.ethereum) { toast("No wallet found. Install a wallet (MetaMask, Rabby, Coinbase Wallet) and reload.", "err"); return null; }
     try {
       const eth = window.ethereum;
@@ -128,6 +155,7 @@
     return m.length > 220 ? m.slice(0, 220) + "…" : m;
   }
   async function send(label, fn) {
+    if (DEMO) { toast(label + ": demo only. Nothing was sent.", ""); return null; }
     if (!W.signer && !(await connect())) return null;
     try {
       var t = toast(label + ": confirm in your wallet…", "", true);
@@ -141,8 +169,9 @@
   const deadline = () => nowSec() + 20 * 60;
 
   // ------------------------------------------------------------------ data
-  async function launchCount() { return Number(await R.factory().launchCount()); }
+  async function launchCount() { return DEMO ? MOCK.length : Number(await R.factory().launchCount()); }
   async function pool(i) {
+    if (DEMO) { if (!MOCK[i]) throw new Error("No such token."); return MOCK[i]; }
     const f = R.factory(), h = R.hook();
     const k = keyAt0(await f.keyAt(i)); const id = poolId(k);
     const inf = await h.info(id);
@@ -158,6 +187,7 @@
   const modeChip = (p) => `<span class="chip ${p.war ? "" : "soon"}">${p.war ? "War" : "Peace"}${p.locked ? " · locked in battle" : ""}</span>`;
 
   function notLiveBanner() {
+    if (DEMO) return demoBanner();
     if (LIVE) return "";
     return `<div class="padnote"><b>Not live yet.</b> The contracts are being finished and checked. Nothing on this page can spend your funds until the addresses are announced in <a href="https://t.me/StagWifHood" rel="noopener">Telegram</a>.</div>`;
   }
@@ -167,30 +197,30 @@
 
   pages.home = async () => {
     const box = $("#padlist"), stats = $("#padstats");
-    if (!LIVE) { box.innerHTML = `<p class="muted">No launches yet. This page lists every token launched through the pad once it is live.</p>`; return; }
+    if (!LIVE && !DEMO) { box.innerHTML = `<p class="muted">No launches yet. This page lists every token launched through the pad once it is live.</p>`; return; }
     try {
-      const n = await launchCount(), nb = Number(await R.battle().count());
+      const n = await launchCount(), nb = DEMO ? MOCK_BATTLES.length : Number(await R.battle().count());
       stats.innerHTML = `<span><b>${n}</b> launches</span><span><b>${nb}</b> battles</span><span><b>Robinhood</b> Chain</span>`;
       if (!n) { box.innerHTML = `<p class="muted">No launches yet. <a href="/pad/launch/">Be the first.</a></p>`; return; }
       const idx = []; for (let i = Math.max(0, n - 24); i < n; i++) idx.push(i);
       const ps = (await Promise.all(idx.map((i) => pool(i).catch(() => null)))).filter(Boolean).reverse();
-      box.innerHTML = ps.map((p) => `<a class="card padcard" href="/pad/token/?i=${p.i}"><div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
+      box.innerHTML = ps.map((p) => `<a class="card padcard" href="${demoHref("/pad/token/?i=" + p.i)}"><div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
     } catch (e) { box.innerHTML = `<p class="muted">Could not load launches: ${esc(errMsg(e))}</p>`; }
   };
 
   pages.launch = async () => {
     const form = $("#launchform"); if (!form) return;
-    const btn = $("#launchgo"); btn.disabled = !LIVE;
+    const btn = $("#launchgo"); btn.disabled = !LIVE && !DEMO;
     const modeInfo = $("#modeinfo");
     const showMode = () => { const war = form.mode.value === "war"; $$(".tabs .tab", form).forEach((l) => l.classList.toggle("on", l.querySelector("input").checked)); modeInfo.innerHTML = war ? "<b>War:</b> the 3% tax on buys builds a war chest. You can burn it, or put it up in a battle. Nothing from buy tax goes to you or to holders." : "<b>Peace:</b> the 3% tax on buys pays 1% to you and 2% to everyone holding the token, in proportion to what they hold. No war chest builds, and you cannot enter battles while in peace (switch to war first)."; };
     form.addEventListener("change", showMode); showMode();
     form.addEventListener("submit", async (ev) => {
-      ev.preventDefault(); if (!LIVE) return;
+      ev.preventDefault(); if (!LIVE && !DEMO) return;
       const name = form.tname.value.trim(), sym = form.tsym.value.trim(), fdvStr = form.fdv.value.trim(), war = form.mode.value === "war";
       if (!/^[A-Za-z0-9 ._+!?:#-]{1,32}$/.test(name)) return toast("Name: 1 to 32 letters, numbers, spaces or . _ - + ! ? : #", "err");
       if (!/^[A-Za-z0-9 ._+!?:#-]{1,12}$/.test(sym)) return toast("Symbol: 1 to 12 letters, numbers or . _ - + ! ? : #", "err");
       let fdv; try { fdv = E.parseUnits(fdvStr, 18); } catch { return toast("Starting value must be a number.", "err"); }
-      const min = await R.factory().MIN_FDV(); if (fdv < min) return toast("Starting value must be at least " + num(min) + " STAG.", "err");
+      const min = DEMO ? W18(1000000) : await R.factory().MIN_FDV(); if (fdv < min) return toast("Starting value must be at least " + num(min) + " STAG.", "err");
       const ok = await confirmModal("Launch " + name + "?", `<ul class="plain"><li>The whole supply (1,000,000,000 tokens) goes into a pool with $STAG. You receive no tokens and no free allocation.</li><li>The liquidity is locked by the contract: nobody, including you and us, can pull it out.</li><li>You earn the pool's 0.30% LP fee on every trade, and you can collect it any time.</li><li>Mode: <b>${war ? "War" : "Peace"}</b>. You can change it later unless a battle holds the pool.</li><li>Launching is final. You cannot rename or delete the token.</li></ul>`, "Launch token");
       if (!ok) return;
       btn.disabled = true;
@@ -203,7 +233,7 @@
 
   pages.token = async () => {
     const root = $("#tokroot"); const i = Number(new URLSearchParams(location.search).get("i"));
-    if (!LIVE) { root.innerHTML = `<p class="muted">Token pages appear here once the pad is live.</p>`; return; }
+    if (!LIVE && !DEMO) { root.innerHTML = `<p class="muted">Token pages appear here once the pad is live.</p>`; return; }
     if (!Number.isInteger(i) || i < 0) { root.innerHTML = `<p class="muted">Pick a token from the <a href="/pad/">pad</a>.</p>`; return; }
     let p; try { if (i >= (await launchCount())) throw new Error("No such token."); p = await pool(i); } catch (e) { root.innerHTML = `<p class="muted">Could not load this token: ${esc(errMsg(e))}</p>`; return; }
     document.title = `${p.symbol} | $STAG Pad`;
@@ -230,7 +260,7 @@
 
     let mode = "buy"; const payas = $("#payas"), amt = $("#amt"), quoteEl = $("#quote"), tradeBtn = $("#tradeBtn"), approveBtn = $("#approveBtn"), slipEl = $("#slip");
     // once the $STAG curve has graduated its ETH zaps revert, so the ETH options are hidden (trading with $STAG always works)
-    let curveLive = true; try { curveLive = !(await c("curve", C.curve).graduated()); } catch { curveLive = true; }
+    let curveLive = true; if (!DEMO) { try { curveLive = !(await c("curve", C.curve).graduated()); } catch { curveLive = true; } }
     const opts = () => { if (!curveLive) { payas.innerHTML = mode === "buy" ? `<option value="stag">$STAG</option>` : `<option value="stag">Receive $STAG</option>`; $("#paylbl").textContent = mode === "buy" ? "Pay with" : "Receive as"; return; } payas.innerHTML = mode === "buy" ? `<option value="stag">$STAG</option><option value="eth">ETH (zaps through the $STAG curve)</option>` : `<option value="stag">Receive $STAG</option><option value="eth">Receive ETH (through the $STAG curve)</option>`; $("#paylbl").textContent = mode === "buy" ? "Pay with" : "Receive as"; };
     opts();
     $$(".tab").forEach((t) => t.addEventListener("click", () => { mode = t.dataset.m; $$(".tab").forEach((x) => x.classList.toggle("on", x === t)); opts(); refresh(); }));
@@ -249,6 +279,12 @@
       let a; try { a = E.parseUnits(amt.value || "0", 18); } catch { quoteEl.textContent = "Amount must be a number."; return; }
       if (a <= 0n) { quoteEl.textContent = "Enter an amount."; return; }
       const slip = Number(slipEl.value); if (!(slip >= 0.01 && slip <= 20)) { quoteEl.textContent = "Slippage must be between 0.01 and 20."; return; }
+      if (DEMO) {   // sample quote from the sample price: no chain calls
+        const px = p.stagPerToken, asE = payas.value === "eth", af = Number(amt.value);
+        if (mode === "buy") { const stag = asE ? af * 3000 : af; const out = (stag * 0.97) / px; quoteEl.innerHTML = `(demo numbers) You get about <b>${out.toLocaleString(undefined, { maximumFractionDigits: 0 })} $${esc(p.symbol)}</b> after the 3% tax${asE ? " (sample rate: 1 ETH = 3,000 STAG)" : ""}.`; }
+        else { const stag = af * px * 0.97; quoteEl.innerHTML = payas.value === "eth" ? `(demo numbers) You get about <b>${(stag / 3000).toLocaleString(undefined, { maximumSignificantDigits: 4 })} ETH</b> after the 3% tax and the curve's fees (sample rate: 1 ETH = 3,000 STAG).` : `(demo numbers) You get about <b>${stag.toLocaleString(undefined, { maximumFractionDigits: 2 })} $STAG</b> after the 3% tax.`; }
+        ctx = { run: null, label: mode === "buy" ? "Buy" : "Sell" }; tradeBtn.disabled = false; return;
+      }
       const bps = BigInt(Math.round(slip * 100)), asEth = payas.value === "eth", me = W.account, dl = deadline();
       const rc = c("router", C.router, W.provider);
       try {
@@ -297,6 +333,7 @@
 
     async function mine() {
       const m = $("#mine"); if (!W.account) { m.textContent = "Connect a wallet to see your balances."; return; }
+      if (DEMO) { m.innerHTML = `<div class="kv"><span>$STAG</span><b>12,500</b></div><div class="kv"><span>$${esc(p.symbol)}</span><b>840,000</b></div><div class="kv"><span>ETH</span><b>0.84</b></div><div class="kv"><span>Holder payout waiting</span><b>38.2 STAG</b></div><div class="cta"><button class="btn solid" id="claimBtn">Claim payout</button></div>`; const cb0 = $("#claimBtn"); if (cb0) cb0.onclick = () => send("Claim", null); return; }
       const me = W.account, pt = c("padToken", p.token);
       const [sb, tb, eb, cl] = await Promise.all([stagC.balanceOf(me), tok.balanceOf(me), (W.provider || ro).getBalance(me), pt.claimable(me).catch(() => 0n)]);
       m.innerHTML = `<div class="kv"><span>$STAG</span><b>${num(sb)}</b></div><div class="kv"><span>$${esc(p.symbol)}</span><b>${num(tb)}</b></div><div class="kv"><span>ETH</span><b>${num(eb, 5)}</b></div>${cl > 0n ? `<div class="kv"><span>Holder payout waiting</span><b>${num(cl)} STAG</b></div><div class="cta"><button class="btn solid" id="claimBtn">Claim payout</button></div>` : ""}`;
@@ -308,7 +345,7 @@
     function tools() {
       const box = $("#creatorbox"), ct = $("#creatortools"); box.hidden = !isCreator(); if (!isCreator()) return;
       ct.innerHTML = `<div class="kv"><span>LP fees</span><b>collect any time</b></div><div class="kv"><span>Your tax share waiting</span><b>${num(p.creatorOwed)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div>
-        <div class="cta"><button class="btn" id="cFees">Collect LP fees</button><button class="btn" id="cClaim" ${p.creatorOwed === 0n ? "disabled" : ""}>Claim tax share</button><button class="btn" id="cBurn" ${p.chest === 0n || p.locked ? "disabled" : ""}>Burn the war chest</button><button class="btn" id="cMode" ${p.locked ? "disabled" : ""}>Switch to ${p.war ? "peace" : "war"}</button><a class="btn" href="/pad/battles/">Battles</a></div>
+        <div class="cta"><button class="btn" id="cFees">Collect LP fees</button><button class="btn" id="cClaim" ${p.creatorOwed === 0n ? "disabled" : ""}>Claim tax share</button><button class="btn" id="cBurn" ${p.chest === 0n || p.locked ? "disabled" : ""}>Burn the war chest</button><button class="btn" id="cMode" ${p.locked ? "disabled" : ""}>Switch to ${p.war ? "peace" : "war"}</button><a class="btn" href="${demoHref("/pad/battles/")}">Battles</a></div>
         ${p.locked ? `<p class="fine">A battle holds this pool, so mode and burning are locked until it ends.</p>` : ""}`;
       $("#cFees").onclick = async () => { await send("Collect LP fees", (s) => c("factory", C.factory, s).collectFees(p.key, W.account)); };
       $("#cClaim").onclick = async () => { if (await send("Claim", (s) => c("hook", C.hook, s).claimCreator(p.key, W.account))) location.reload(); };
@@ -335,11 +372,35 @@
     tools(); anyone();
     document.addEventListener("pad:wallet", () => { tools(); mine(); refresh(); });
     $$("[data-wallet]").forEach((b) => b.addEventListener("click", () => !W.account && connect()));
-    if (window.ethereum && window.ethereum.selectedAddress) connect();
+    if (DEMO) connect(); else if (window.ethereum && window.ethereum.selectedAddress) connect();
   };
 
   pages.battles = async () => {
     const list = $("#battlelist"), mine = $("#battlemine");
+    if (DEMO) {
+      const ST = ["none", "Offered", "Live", "Settled", "Cancelled"];
+      const rows = [...MOCK_BATTLES].reverse().map((b) => {
+        const A = MOCK[b.a], B = MOCK[b.b]; let line = "", acts = [];
+        if (b.st === 1) { line = `Offer open for ${Math.round(b.expIn / 86400 * 10) / 10} d. Runs ${b.dur / 3600} h once accepted.`; }
+        if (b.st === 2) line = `Ends in ${Math.floor(b.endIn / 3600)} h ${Math.round((b.endIn % 3600) / 60)} min. Volume since start: ${num(W18(b.va))} vs ${num(W18(b.vb))} STAG.`;
+        if (b.st === 3) line = "Settled. The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing.";
+        if (b.st === 1 && ROLE === "creator" && B.creator === MOCK_CREATOR) acts.push(`<button class="btn solid" data-act="accept">Accept</button>`);
+        return `<div class="padbox bt"><div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "" : "soon"}">${ST[b.st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta">${acts.join("")}</div></div>`;
+      });
+      list.innerHTML = rows.join("");
+      $$("[data-act]", list).forEach((bt) => bt.addEventListener("click", () => send("Accept", null)));
+      const renderDemoMine = () => {
+        if (ROLE !== "creator") { mine.innerHTML = `<p class="muted">You have not launched a token with this wallet. (Preview the creator view with the "creator" link at the top.)</p>`; return; }
+        const mineP = MOCK.filter((p) => p.creator === MOCK_CREATOR);
+        mine.innerHTML = `<form id="chform" class="padform"><label class="lbl">Your token (must be in war mode and free)</label><select name="a" class="inp">${mineP.map((p) => `<option value="${p.i}">${esc(p.name)} ($${esc(p.symbol)})</option>`).join("")}</select>
+          <label class="lbl">Opponent</label><select name="b" class="inp">${MOCK.map((p) => `<option value="${p.i}" ${p.i === MOCK.find((q) => q.i !== mineP[0].i).i ? "selected" : ""}>${esc(p.name)} ($${esc(p.symbol)})${p.war ? "" : " (peace: cannot accept)"}</option>`).join("")}</select>
+          <label class="lbl">Length (hours, 1 to 336)</label><input name="h" class="inp" value="24" inputmode="numeric">
+          <div class="cta"><button class="btn solid" type="submit">Offer battle</button></div></form>`;
+        $("#chform").addEventListener("submit", async (ev) => { ev.preventDefault(); const f = ev.target, a = MOCK[Number(f.a.value)], b = MOCK[Number(f.b.value)]; if (a.i === b.i) return toast("Pick two different tokens.", "err");
+          const ok = await confirmModal("Offer this battle?", `<ul class="plain"><li><b>${esc(a.name)}</b> vs <b>${esc(b.name)}</b>, ${Number(f.h.value)} hours once accepted.</li><li>Your pool is locked from now (no mode change, no burning) until the offer is accepted, withdrawn or lapses after 3 days.</li><li>Only trading volume decides the winner. Volume counts even when it is wash trading, so a rich opponent can outspend you.</li><li>Only what each pool <b>earned during the fight</b> is at stake: the loser's fight earnings join the winner's chest, and the winner burns it.</li></ul>`, "Offer battle"); if (ok) await send("Offer battle", null); });
+      };
+      renderDemoMine(); return;
+    }
     if (!LIVE) { list.innerHTML = `<p class="muted">Battles appear here once the pad is live.</p>`; return; }
     const names = {}; const nm = async (i0) => names[i0.id] || (names[i0.id] = await (async () => { const inf = await R.hook().info(i0.id); return { name: await c("erc20", inf.token).name().catch(() => "?"), symbol: await c("erc20", inf.token).symbol().catch(() => "?"), creator: inf.creator, volume: inf.volume }; })());
     const ST = ["none", "Offered", "Live", "Settled", "Cancelled"];
@@ -380,7 +441,7 @@
         for (let i = 0; i < n; i++) { const p = await pool(i).catch(() => null); if (p) { all.push(p); if (p.creator.toLowerCase() === W.account.toLowerCase()) mineP.push(p); } }
         if (!mineP.length) { mine.innerHTML = `<p class="muted">You have not launched a token with this wallet.</p>`; return; }
         mine.innerHTML = `<form id="chform" class="padform"><label class="lbl">Your token (must be in war mode and free)</label><select name="a" class="inp">${mineP.map((p) => `<option value="${p.i}" ${!p.war || p.locked ? "disabled" : ""}>${esc(p.name)} ($${esc(p.symbol)})${!p.war ? " (peace mode)" : p.locked ? " (locked)" : ""}</option>`).join("")}</select>
-          <label class="lbl">Opponent</label><select name="b" class="inp">${all.map((p) => `<option value="${p.i}">${esc(p.name)} ($${esc(p.symbol)})${p.war ? "" : " (peace: cannot accept)"}</option>`).join("")}</select>
+          <label class="lbl">Opponent</label><select name="b" class="inp">${all.map((p) => `<option value="${p.i}" ${all.length > 1 && p.i === all.find((q) => q.i !== mineP[0].i).i ? "selected" : ""}>${esc(p.name)} ($${esc(p.symbol)})${p.war ? "" : " (peace: cannot accept)"}</option>`).join("")}</select>
           <label class="lbl">Length (hours, 1 to 336)</label><input name="h" class="inp" value="24" inputmode="numeric">
           <div class="cta"><button class="btn solid" type="submit">Offer battle</button></div></form>`;
         $("#chform").addEventListener("submit", async (ev) => {
@@ -403,8 +464,10 @@
     if (LIVE) await syncClock();
     const nl = $("#notlive"); if (nl) nl.innerHTML = notLiveBanner();
     $$("[data-wallet]").forEach((b) => { b.addEventListener("click", () => !W.account && connect()); });
-    const pg = document.body.dataset.page; if (pg && pages[pg]) pages[pg]();
-    if (pg !== "token" && pg !== "battles" && window.ethereum && window.ethereum.selectedAddress) connect();
+    if (DEMO) { $$('a[href^="/pad/"]').forEach((a) => { a.setAttribute("href", demoHref(a.getAttribute("href"))); }); }
+    const pg = document.body.dataset.page; if (pg && pages[pg]) await pages[pg]();
+    if (DEMO) $$('a[href^="/pad/"]').forEach((a) => { a.setAttribute("href", demoHref(a.getAttribute("href"))); });
+    if (!DEMO && pg !== "token" && pg !== "battles" && window.ethereum && window.ethereum.selectedAddress) connect();
   });
   window.Pad = { connect, poolId, LIVE };
 })();
