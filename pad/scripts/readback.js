@@ -4,7 +4,7 @@
 // (DEPLOYER is the PadDeployer address. SCAN_MAX positive integer, default 300; exit 3 if the solvency scan was skipped unless ALLOW_SKIP_SCAN=1.) Mainnet REQUIRES: RPC2 SALT_FILE DEPLOY_TX EXPECT_OWNERS EXPECT_THRESHOLD EXPECT_SINGLETON EXPECT_PROXY_CODEHASH EXPECT_SAFE_CREATION_TX EXPECT_MANIFEST_DIGEST. Also EXPECT_SAFE_FACTORY EXPECT_SINGLETON_CODEHASH EXPECT_FACTORY_CODEHASH. Optional: EXPECT_FALLBACK (+ EXPECT_FALLBACK_CODEHASH, required if a handler is set), EXPECT_OWNER_ACCEPTED=1. PM/QUOTE only on rehearsal chains. See README.
 const fs = require("fs"), path = require("path");
 const { ethers } = require("ethers");
-const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe, safeChecks } = require("./lib");
+const { PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, probeSafe, safeChecks, eoaOwnerChecks } = require("./lib");
 const MAN = require("./manifest");
 
 const ABI = {
@@ -125,9 +125,13 @@ async function readback(provider, cfg) {
     ck("simulated acceptOwner() from the multisig address succeeds", sim);
     rows.push({ name: "ACTION: multisig must now call hook.acceptOwner() promptly (until then the PadDeployer contract, which has no functions, is the owner)", ok: true, detail: "then re-run with EXPECT_OWNER_ACCEPTED=1" });
   }
-  ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
+  if (!cfg.ownerIsEoa) ck("multisig has code (is a contract/Safe)", (await code(cfg.multisig)).length > 2, cfg.multisig);
+  if (cfg.ownerIsEoa) {   // wallet-owner mode: the owner is one plain wallet, checked instead of the Safe rows
+    rows.push(...(await eoaOwnerChecks(provider, cfg.multisig, { expectOwner: cfg.expectOwnerEoa, dry: cfg.dry, forbid: [hookA, facA, batA, cfg.deployer, pmAddr, quote].concat(cfg.salt && cfg.salt.eoa ? [cfg.salt.eoa] : []) })));
+  } else {
   const sc = await safeChecks(provider, cfg.multisig, { expectOwners: cfg.expectOwners, expectThreshold: cfg.expectThreshold, expectSingleton: cfg.expectSingleton, expectProxyCodehash: cfg.expectProxyCodehash, safeCreationTx: cfg.safeCreationTx, expectFactory: cfg.expectFactory, expectFallback: cfg.expectFallback, expectFallbackCodehash: cfg.expectFallbackCodehash, expectSingletonCodehash: cfg.expectSingletonCodehash, expectFactoryCodehash: cfg.expectFactoryCodehash, forbid: [hookA, facA, batA, cfg.deployer, pmAddr, quote].concat(cfg.salt && cfg.salt.eoa ? [cfg.salt.eoa] : []), dry: cfg.dry, allowNonSafe: cfg.allowNonSafeOwner });   // HARD requirement: a hand-over target that cannot sign would lock the owner role for good
   rows.push(...sc.rows);
+  }
 
   // 5b. the deployment transaction itself: its calldata must START WITH the pinned PadDeployer creation code (which embeds the hook/factory/battle
   //     creation code, constructors included) and END WITH the exact expected constructor args. Closes "same runtime, patched constructor".
@@ -142,8 +146,8 @@ async function readback(provider, cfg) {
       const want = ethers.getBytes(MAN.artifact("PadDeployer").creation);
       const head = ethers.keccak256(input.slice(0, want.length));
       ck("deploy tx calldata starts with the PINNED PadDeployer creation code (constructors of hook/factory/battle included)", !!man && head === man.deployerCreationCode, head);
-      const args = ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "address", "bool", "bytes32"], [pmAddr, quote, cfg.multisig, true, cfg.salt ? cfg.salt.salt : ethers.ZeroHash]);
-      ck("deploy tx constructor args == (PM, STAG, MULTISIG, mustBeContract=true, salt)", ethers.hexlify(input.slice(want.length)).toLowerCase() === args.toLowerCase());
+      const args = ethers.AbiCoder.defaultAbiCoder().encode(["address", "address", "address", "bool", "bytes32"], [pmAddr, quote, cfg.multisig, !cfg.ownerIsEoa, cfg.salt ? cfg.salt.salt : ethers.ZeroHash]);
+      ck(`deploy tx constructor args == (PM, STAG, OWNER, mustBeContract=${!cfg.ownerIsEoa}, salt)`, ethers.hexlify(input.slice(want.length)).toLowerCase() === args.toLowerCase());
     }
   } else ck("DEPLOY_TX supplied (the creation transaction is verified, not just the runtime code)", !!cfg.dry);
   // nothing may have been approved away from the system's contracts before launch
@@ -199,12 +203,14 @@ if (require.main === module) {
     const real = chainId === 4663n || chain2 === 4663n;                 // either endpoint on the real chain => real: DRYRUN and all rehearsal shortcuts are ignored
     const dry = !!process.env.DRYRUN && !real;
     if ((process.env.PM || process.env.QUOTE) && !dry) { console.error("PM/QUOTE overrides are refused (rehearsal chains only): they are hard-coded on purpose"); process.exit(2); }
-    if (real) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_SAFE_FACTORY", "EXPECT_SINGLETON_CODEHASH", "EXPECT_FACTORY_CODEHASH", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
+    const eoaMode = process.env.OWNER_IS_EOA === "1";
+    if (real && eoaMode) for (const k of ["SALT_FILE", "RPC2", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST", "EXPECT_OWNER_EOA"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
+    if (real && !eoaMode) for (const k of ["SALT_FILE", "RPC2", "EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_SAFE_FACTORY", "EXPECT_SINGLETON_CODEHASH", "EXPECT_FACTORY_CODEHASH", "DEPLOY_TX", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) { console.error(`${k} is required on mainnet`); process.exit(2); }
     const salt = process.env.SALT_FILE ? JSON.parse(fs.readFileSync(process.env.SALT_FILE, "utf8")) : null;
     const cfg = { deployer: ethers.getAddress(need("DEPLOYER")), multisig: ethers.getAddress(need("MULTISIG")), pm: process.env.PM, quote: process.env.QUOTE, scanMax: process.env.SCAN_MAX, dry, allowOverrides: dry, allowAnyChain: dry, allowNonSafeOwner: dry && process.env.ALLOW_NON_SAFE === "1",
       salt: salt ? { salt: salt.salt, initcodeHash: salt.initcodeHash, eoa: salt.eoa, nonce: salt.nonce } : null,
       expectOwners: process.env.EXPECT_OWNERS ? process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())) : null,
-      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFactory: process.env.EXPECT_SAFE_FACTORY, expectFallback: process.env.EXPECT_FALLBACK, expectFallbackCodehash: process.env.EXPECT_FALLBACK_CODEHASH, expectSingletonCodehash: process.env.EXPECT_SINGLETON_CODEHASH, expectFactoryCodehash: process.env.EXPECT_FACTORY_CODEHASH, deployTx: process.env.DEPLOY_TX };
+      expectThreshold: process.env.EXPECT_THRESHOLD, ownerAccepted: process.env.EXPECT_OWNER_ACCEPTED === "1", expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFactory: process.env.EXPECT_SAFE_FACTORY, expectFallback: process.env.EXPECT_FALLBACK, expectFallbackCodehash: process.env.EXPECT_FALLBACK_CODEHASH, expectSingletonCodehash: process.env.EXPECT_SINGLETON_CODEHASH, expectFactoryCodehash: process.env.EXPECT_FACTORY_CODEHASH, deployTx: process.env.DEPLOY_TX, ownerIsEoa: eoaMode, expectOwnerEoa: process.env.EXPECT_OWNER_EOA };
     const rows = await readback(provider, cfg);
     if (p2) {                                                            // the WHOLE readback again on the second endpoint; any difference is a failure
       const rows2 = await readback(p2, cfg);

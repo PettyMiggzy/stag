@@ -4,10 +4,13 @@
 // 3. multisig calls hook.acceptOwner();  4. node scripts/readback.js (and again with EXPECT_OWNER_ACCEPTED=1)
 const fs = require("fs");
 const { ethers } = require("hardhat");
-const { PM_DEFAULT, STAG_DEFAULT, hookInitCode, predictDeployer, FLAG_MASK, FLAGS, probeSafe, safeChecks } = require("./lib");
+const { PM_DEFAULT, STAG_DEFAULT, hookInitCode, predictDeployer, FLAG_MASK, FLAGS, probeSafe, safeChecks, eoaOwnerChecks } = require("./lib");
 const MAN = require("./manifest");
 
-async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm = PM_DEFAULT, quote = STAG_DEFAULT, requireManifest = false, safeOpts = null }) {
+async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm = PM_DEFAULT, quote = STAG_DEFAULT, requireManifest = false, safeOpts = null, eoaOwner = null }) {
+  if (eoaOwner && mustBeContract) throw new Error("wallet-owner mode needs mustBeContract=false");
+  if (!mustBeContract && !eoaOwner && requireManifest) throw new Error("on mainnet a non-contract owner is only allowed in wallet-owner mode (OWNER_IS_EOA=1) with its checks");
+  if (eoaOwner && safeOpts) throw new Error("wallet-owner mode and Safe checks are mutually exclusive");
   const nonce = await signer.getNonce("latest");
   if (nonce !== (await signer.getNonce("pending"))) throw new Error("this account has a pending transaction: the mined salt would be for the wrong nonce. Wait for it or re-mine.");
   const dep = predictDeployer(signer.address, nonce);
@@ -20,6 +23,9 @@ async function deployAll({ signer, multisig, mustBeContract = true, saltInfo, pm
   const D = await ethers.getContractFactory("PadDeployer", signer);
   if (safeOpts) { const so = { ...safeOpts, forbid: [hookAddr, dep, signer.address, pm, quote, ethers.getCreateAddress({ from: dep, nonce: 2 }), ethers.getCreateAddress({ from: dep, nonce: 3 })] };
     const { rows } = await safeChecks(signer.provider, multisig, so); const bad = rows.filter((r) => !r.ok); if (bad.length) throw new Error("hand-over target failed hardening checks, refusing to send: " + bad.map((r) => r.name + (r.detail ? " [" + r.detail + "]" : "")).join("; ")); }
+  if (eoaOwner) { const fb = [hookAddr, dep, signer.address, pm, quote, ethers.getCreateAddress({ from: dep, nonce: 2 }), ethers.getCreateAddress({ from: dep, nonce: 3 })];
+    const rows = await eoaOwnerChecks(signer.provider, multisig, { ...eoaOwner, forbid: fb }); const bad = rows.filter((r) => !r.ok);
+    if (bad.length) throw new Error("wallet-owner checks failed, refusing to send: " + bad.map((r) => r.name + (r.detail ? " [" + r.detail + "]" : "")).join("; ")); }
   if (mustBeContract) { const sp = await probeSafe(signer.provider, multisig); if (!sp.ok) throw new Error("the hand-over target does not answer like a Safe (VERSION/getThreshold/getOwners): it could never accept ownership. Refusing."); }
   const man = MAN.load();
   if (!man && requireManifest) throw new Error("audited-manifest.json is missing: refusing to deploy an unpinned build on mainnet");
@@ -48,16 +54,25 @@ if (require.main === module) {
     if (!realMainnet) console.warn("*** DRY RUN on the in-process fork: nothing real is being deployed ***");
     const digest = MAN.load() ? ethers.keccak256(fs.readFileSync(MAN.FILE)) : null;
     if (digest) console.log("manifest digest:", digest);
-    let safeOpts = null;
-    if (realMainnet) {
+    const eoaMode = process.env.OWNER_IS_EOA === "1";
+    let safeOpts = null, eoaOwner = null;
+    if (eoaMode) {
+      console.warn("WALLET-OWNER MODE: one wallet will own the platform share (claim + hand-over only; no access to liquidity, chests, creator fees or holders' funds).");
+      if (realMainnet) {
+        for (const k of ["EXPECT_OWNER_EOA", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
+        if (!digest || digest.toLowerCase() !== process.env.EXPECT_MANIFEST_DIGEST.toLowerCase()) throw new Error("manifest digest != EXPECT_MANIFEST_DIGEST (the digest published with the audit report)");
+        if (process.env.ALLOW_UNPINNED) console.warn("ALLOW_UNPINNED is ignored on mainnet");
+      }
+      eoaOwner = { expectOwner: process.env.EXPECT_OWNER_EOA, dry: !realMainnet };
+    } else if (realMainnet) {
       for (const k of ["EXPECT_OWNERS", "EXPECT_THRESHOLD", "EXPECT_SINGLETON", "EXPECT_PROXY_CODEHASH", "EXPECT_SAFE_CREATION_TX", "EXPECT_SAFE_FACTORY", "EXPECT_SINGLETON_CODEHASH", "EXPECT_FACTORY_CODEHASH", "EXPECT_MANIFEST_DIGEST"]) if (!process.env[k]) throw new Error(`${k} is required on mainnet`);
       if (!digest || digest.toLowerCase() !== process.env.EXPECT_MANIFEST_DIGEST.toLowerCase()) throw new Error("manifest digest != EXPECT_MANIFEST_DIGEST (the digest published with the audit report)");
       if (process.env.ALLOW_UNPINNED) console.warn("ALLOW_UNPINNED is ignored on mainnet");
       safeOpts = { expectOwners: process.env.EXPECT_OWNERS.split(",").map((x) => ethers.getAddress(x.trim())), expectThreshold: process.env.EXPECT_THRESHOLD, expectSingleton: process.env.EXPECT_SINGLETON, expectProxyCodehash: process.env.EXPECT_PROXY_CODEHASH, safeCreationTx: process.env.EXPECT_SAFE_CREATION_TX, expectFactory: process.env.EXPECT_SAFE_FACTORY, expectFallback: process.env.EXPECT_FALLBACK, expectFallbackCodehash: process.env.EXPECT_FALLBACK_CODEHASH, expectSingletonCodehash: process.env.EXPECT_SINGLETON_CODEHASH, expectFactoryCodehash: process.env.EXPECT_FACTORY_CODEHASH };
     }
-    const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: process.env.MUST_BE_CONTRACT !== "0" || realMainnet, saltInfo, requireManifest: realMainnet, safeOpts });
+    const r = await deployAll({ signer, multisig: ethers.getAddress(process.env.MULTISIG), mustBeContract: eoaMode ? false : (process.env.MUST_BE_CONTRACT !== "0" || realMainnet), saltInfo, requireManifest: realMainnet, safeOpts, eoaOwner });
     console.log("deployment tx:", r.deployer.deploymentTransaction() && r.deployer.deploymentTransaction().hash);
     console.log({ deployer: await r.deployer.getAddress(), hook: await r.hook.getAddress(), factory: await r.factory.getAddress(), battle: await r.battle.getAddress() });
-    console.log("NEXT: the multisig must call hook.acceptOwner(); then run scripts/readback.js");
+    console.log(eoaMode ? "NEXT: the owner wallet must call hook.acceptOwner(); then run scripts/readback.js (OWNER_IS_EOA=1)" : "NEXT: the multisig must call hook.acceptOwner(); then run scripts/readback.js");
   })().catch((e) => { console.error(e); process.exit(1); });
 }

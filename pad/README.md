@@ -80,3 +80,19 @@ It checks the four immutables, that the hook pairs the same $STAG and pool manag
 - Users approve the router for the exact amount of each trade. Never approve an address the site did not give you: any contract that looks like this router, including one built from the same source with a fake pool manager, could take what you approve to it.
 - `zapBuy` sends unspent ETH back to the caller, so a contract caller must be able to receive ETH. A contract recipient of `zapSell` ETH must too, or the call reverts with `SendFailed`.
 - A creator burning the war chest can move a pool's price about 1.5% once an hour; keep slippage at 2% or more.
+
+## Wallet-owner mode (one wallet instead of a Safe)
+The platform owner can be a single wallet instead of a multisig. This is a deliberate trade: the owner role can only (1) hand ownership over, (2) do the one-time wiring of the factory and battle contracts (already done by the deployer), and (3) claim the platform's own 3% sell-side share. It cannot touch liquidity, war chests, creators' fees or holders' money, so a leaked owner key puts only the collected platform share at risk (claim it often, and use a hardware wallet). It also means one key is a single point of failure for that share: there is no second approver and no recovery.
+
+Use it with `OWNER_IS_EOA=1`. It replaces every Safe requirement with these checks (deploy and readback both run them): the owner address has no contract code (a plain wallet; EIP-7702 delegated wallets show code and are refused), it equals `EXPECT_OWNER_EOA` (type it from your wallet app, separately from `MULTISIG`), it is not the throwaway deployer key or any of this system's addresses, PM or STAG, and it has sent at least one transaction (a typo to an unused address is refused). Everything else is unchanged: the pinned build, the manifest digest, the creation-transaction check (the constructor arguments must say `mustBeContract=false`), two RPCs, the salt checks and the ownership/wiring rows.
+
+    # deploy (throwaway key pays gas; MULTISIG is the OWNER WALLET address in this mode)
+    OWNER_IS_EOA=1 MULTISIG=<owner wallet> EXPECT_OWNER_EOA=<owner wallet, typed again> EXPECT_MANIFEST_DIGEST=<digest> \
+      DEPLOYER_KEY=<throwaway key> SALT_FILE=salt.json npx hardhat run scripts/deploy.js --network robinhood
+    # readback before accept
+    OWNER_IS_EOA=1 RPC=<rpc1> RPC2=<rpc2> DEPLOYER=<PadDeployer> MULTISIG=<owner wallet> EXPECT_OWNER_EOA=<owner wallet> \
+      SALT_FILE=salt.json DEPLOY_TX=<creation tx> EXPECT_MANIFEST_DIGEST=<digest> node scripts/readback.js
+    # the owner wallet sends a transaction to the HOOK with data 0xebbc4965 (acceptOwner()), value 0, from the wallet itself
+    # readback after accept: the same command plus EXPECT_OWNER_ACCEPTED=1
+
+Steps 0 to 3 of the mainnet section (clean shell and tree, compile, salt) are unchanged. Do not commit the owner wallet address to the repo; pass it as an environment variable.

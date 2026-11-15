@@ -3,7 +3,7 @@ const { ethers, network } = require("hardhat");
 const { PM, STAG, E, fundStag, deployStack, mk } = require("./helpers");
 const CURVE = "0x8e68043f7553ff7adf30eb8b0baac8d8fc2ed958";
 const ABI_CURVE = ["function graduated() view returns (bool)", "function buy(uint256,uint256,address) payable returns (uint256)", "function sell(uint256,uint256,address) returns (uint256)", "function isNativeQuote() view returns (bool)"];
-const DL = () => Math.floor(Date.now() / 1000) + 3600;
+const DL = () => Number.MAX_SAFE_INTEGER;   // far future: other suites advance the simulated chain clock by days, so wall-clock deadlines would look expired
 
 describe("PadRouter (fork)", function () {
   this.timeout(900000);

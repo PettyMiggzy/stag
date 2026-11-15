@@ -93,4 +93,20 @@ async function safeChecks(provider, addr, o = {}) {
   rows.push({ name: "info: owners that are contracts (EIP-1271/upgradeable/another Safe sign without a key: confirm each is intended)", ok: true, warn: (await Promise.all(sp.owners.map(async (w) => (await provider.getCode(w)).length > 2))).some(Boolean), detail: "" });
   return { rows, sp };
 }
-module.exports = { safeChecks, PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt, probeSafe };
+/// Wallet-owner mode (OWNER_IS_EOA=1): the platform owner is one plain wallet instead of a Safe. The owner can only claim the platform's own
+/// sell-side share and hand ownership over; it cannot touch liquidity, war chests, creators' fees or holders' money.
+/// These rows make sure the address is really a plain, used wallet that the operator typed twice from independent sources.
+async function eoaOwnerChecks(provider, addr, o = {}) {
+  const rows = [], ck = (name, ok, detail = "") => rows.push({ name, ok: !!ok, detail });
+  const lc = (x) => String(x).toLowerCase();
+  const code = await provider.getCode(addr);
+  ck("owner is a plain wallet (no contract code at the address)", code.length <= 2, code.length > 2 ? "has code" : "");
+  if (o.expectOwner) ck("owner == EXPECT_OWNER_EOA (typed from your wallet app, separately from MULTISIG)", lc(addr) === lc(o.expectOwner), addr);
+  else ck("EXPECT_OWNER_EOA supplied (the owner wallet, typed from your wallet app)", !!o.dry);
+  ck("owner is not the throwaway deployer key nor any of this system's addresses, PM or STAG", !(o.forbid || []).map(lc).includes(lc(addr)), addr);
+  const n = await provider.getTransactionCount(addr);
+  ck("owner wallet has sent at least one transaction (a real, used wallet, not a typo to an empty address)", n > 0 || !!o.dry, String(n));
+  rows.push({ name: "info: ONE wallet key owns the platform share: it can claim it and hand ownership over; it cannot touch liquidity, war chests, creator fees or holders' funds", ok: true, warn: false, detail: "" });
+  return rows;
+}
+module.exports = { eoaOwnerChecks, safeChecks, PM_DEFAULT, STAG_DEFAULT, FLAG_MASK, FLAGS, hookInitCode, predictDeployer, mineSalt, probeSafe };
