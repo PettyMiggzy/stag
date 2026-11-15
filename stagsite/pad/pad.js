@@ -388,7 +388,7 @@
         if (b.st === 2) line = `Ends in ${Math.floor(b.endIn / 3600)} h ${Math.round((b.endIn % 3600) / 60)} min. Volume since start: ${num(W18(b.va))} vs ${num(W18(b.vb))} STAG.`;
         if (b.st === 3) line = "Settled. The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing.";
         if (b.st === 1 && ROLE === "creator" && B.creator === MOCK_CREATOR) acts.push(`<button class="btn solid" data-act="accept">Accept</button>`);
-        return `<div class="padbox bt"><div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "" : "soon"}">${ST[b.st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta">${acts.join("")}</div></div>`;
+        return `<div class="padbox bt"><div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "" : "soon"}">${ST[b.st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta"><a class="btn" href="${demoHref("/pad/battle/?id=" + b.id)}">View battle</a>${acts.join("")}</div></div>`;
       });
       list.innerHTML = rows.join("");
       $$("[data-act]", list).forEach((bt) => bt.addEventListener("click", () => send("Accept", null)));
@@ -425,7 +425,7 @@
             if (st === 1 && W.account && W.account.toLowerCase() === B.creator.toLowerCase() && now <= Number(b.offerExpiry)) acts.push(`<button class="btn solid" data-act="accept" data-id="${id}">Accept</button>`);
             if (st === 1 && W.account && (W.account.toLowerCase() === A.creator.toLowerCase() || now > Number(b.offerExpiry))) acts.push(`<button class="btn" data-act="cancel" data-id="${id}">${now > Number(b.offerExpiry) ? "Clear lapsed offer" : "Withdraw offer"}</button>`);
             if (ended) acts.push(`<button class="btn solid" data-act="settle" data-id="${id}">Settle</button>`);
-            return `<div class="padbox bt"><div class="row"><b>#${id}</b><span class="chip ${st === 2 ? "" : "soon"}">${ST[st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta">${acts.join("")}</div></div>`;
+            return `<div class="padbox bt"><div class="row"><b>#${id}</b><span class="chip ${st === 2 ? "" : "soon"}">${ST[st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta"><a class="btn" href="/pad/battle/?id=${id}">View battle</a>${acts.join("")}</div></div>`;
           }));
           list.innerHTML = rows.join("");
           $$("[data-act]", list).forEach((bt) => bt.addEventListener("click", async () => {
@@ -462,6 +462,108 @@
     if (window.ethereum && window.ethereum.selectedAddress) connect();
   };
 
+
+  // ------------------------------------------------------------------ battle detail page
+  // Everything here is read-only and rebuilt from public chain data (the battle record, the hook's Taxed events and the tokens' Transfer logs).
+  // Addresses are wallets, not people, and volume counts even when it is wash trading.
+  const IFACE = new E.Interface(["event Taxed(bytes32 indexed id,bool buy,uint256 volume,uint256 fee)", "event PoolRegistered(bytes32 indexed id,address indexed creator,address token,bool war,bool quoteIs0)", "event Transfer(address indexed from,address indexed to,uint256 value)"]);
+  const DEAD = "0x000000000000000000000000000000000000dEaD".toLowerCase(), ZERO = E.ZeroAddress.toLowerCase();
+  async function blockAt(ts) {
+    const head = await ro.getBlockNumber(); const hb = await ro.getBlock(head); if (ts >= hb.timestamp) return head;
+    let lo = 0, hi = head; while (lo < hi) { const mid = (lo + hi) >> 1; const b = await ro.getBlock(mid); if (b.timestamp < ts) lo = mid + 1; else hi = mid; } return lo;
+  }
+  async function getLogsSafe(f, from, to, depth = 0) {
+    try { return await ro.getLogs({ ...f, fromBlock: from, toBlock: to }); }
+    catch (e) { if (depth >= 6 || to - from < 20000) throw e; const mid = Math.floor((from + to) / 2); return (await getLogsSafe(f, from, mid, depth + 1)).concat(await getLogsSafe(f, mid + 1, to, depth + 1)); }
+  }
+  const topN = (m, n) => [...m.entries()].sort((a, b) => (b[1] > a[1] ? 1 : b[1] < a[1] ? -1 : 0)).slice(0, n);
+  async function sideStats(p, from, to) {
+    const out = { buyVol: 0n, sellVol: 0n, buys: 0, sells: 0, buyers: new Map(), sellers: new Map(), holders: [], holdersSeen: 0, note: "" };
+    const head = await ro.getBlockNumber(); const toB = to == null ? head : Math.min(head, to);
+    const taxedT = IFACE.getEvent("Taxed").topicHash;
+    if (from != null) for (const l of await getLogsSafe({ address: C.hook, topics: [taxedT, p.id] }, from, toB)) { const d = IFACE.parseLog(l); if (d.args.buy) { out.buyVol += d.args.volume; out.buys++; } else { out.sellVol += d.args.volume; out.sells++; } }
+    const trT = IFACE.getEvent("Transfer").topicHash; const skip = new Set([C.pm, C.hook, C.router, C.battle, C.factory].filter(Boolean).map((x) => x.toLowerCase()).concat([ZERO, DEAD]));
+    // wallets that ever held the token: every Transfer since the pool was registered
+    let regFrom = from;
+    try { const rl = await getLogsSafe({ address: C.hook, topics: [IFACE.getEvent("PoolRegistered").topicHash, p.id] }, 0, head); if (rl.length) regFrom = rl[0].blockNumber; } catch { out.note = "Holder list covers only the battle window (full history not available from the RPC)."; }
+    if (regFrom == null) regFrom = Math.max(0, head - 200000);
+    const seen = new Map();
+    for (const l of await getLogsSafe({ address: p.token, topics: [trT] }, regFrom, head)) {
+      const d = IFACE.parseLog(l); const f = d.args.from.toLowerCase(), t = d.args.to.toLowerCase(), v = d.args.value;
+      for (const a of [f, t]) if (!skip.has(a)) seen.set(a, (seen.get(a) || 0n) + v);
+      const inWin = from != null && l.blockNumber >= from && l.blockNumber <= toB;
+      if (inWin && f === C.pm.toLowerCase() && !skip.has(t)) out.buyers.set(t, (out.buyers.get(t) || 0n) + v);
+      if (inWin && t === C.pm.toLowerCase() && !skip.has(f)) out.sellers.set(f, (out.sellers.get(f) || 0n) + v);
+    }
+    const cand = topN(seen, 150).map((x) => x[0]); const tok = c("erc20", p.token);
+    const bal = await Promise.all(cand.map(async (a) => [a, await tok.balanceOf(a).catch(() => 0n)]));
+    const held = bal.filter((x) => x[1] > 0n); out.holdersSeen = held.length; out.holders = held.sort((a, b) => (b[1] > a[1] ? 1 : -1)).slice(0, 8);
+    return out;
+  }
+  const mockWallet = (n) => E.keccak256(E.toUtf8Bytes("demo-wallet-" + n)).slice(0, 42);
+  function mockSide(seed, vol) {
+    const mk2 = (n, k) => Array.from({ length: n }, (_, j) => [mockWallet(seed * 40 + k * 10 + j), W18(Math.round(vol / (j + 2.2) / 90))]);
+    const buyers = mk2(6, 1), sellers = mk2(4, 2), holders = mk2(8, 3).map((x) => [x[0], W18(Math.round(Number(E.formatUnits(x[1], 18)) * 900))]);
+    return { buyVol: W18(Math.round(vol * 0.62)), sellVol: W18(Math.round(vol * 0.38)), buys: Math.round(vol / 31000), sells: Math.round(vol / 52000), buyers, sellers, holders, holdersSeen: 40 + seed * 7, note: "" };
+  }
+  pages.battle = async () => {
+    const root = $("#battleroot"); const id = Number(new URLSearchParams(location.search).get("id"));
+    if (!Number.isInteger(id) || id < 0) { root.innerHTML = `<p class="muted">No battle selected. <a href="${demoHref("/pad/battles/")}">See all battles</a>.</p>`; return; }
+    const ST = ["none", "Offered", "Live", "Settled", "Cancelled"];
+    let A, B, st, dur, start = 0, end = 0, expiry = 0, chestA0 = 0n, chestB0 = 0n, volA0 = 0n, volB0 = 0n, SA, SB, vA = 0n, vB = 0n, endIn = 0;
+    try {
+      if (DEMO) {
+        const b = MOCK_BATTLES.find((x) => x.id === id); if (!b) throw new Error("No such battle.");
+        A = MOCK[b.a]; B = MOCK[b.b]; st = b.st; dur = b.dur; endIn = b.endIn || 0; chestA0 = A.chest / 2n; chestB0 = B.chest / 2n; expiry = b.expIn || 0;
+        if (st >= 2) { vA = W18(b.va || 1280000); vB = W18(b.vb || 990000); SA = mockSide(b.a + 1, Number(E.formatUnits(vA, 18))); SB = mockSide(b.b + 1, Number(E.formatUnits(vB, 18))); }
+        else { SA = mockSide(b.a + 1, 0); SB = mockSide(b.b + 1, 0); SA.buyers = SA.sellers = SB.buyers = SB.sellers = []; SA.buyVol = SA.sellVol = SB.buyVol = SB.sellVol = 0n; SA.buys = SA.sells = SB.buys = SB.sells = 0; }
+      } else {
+        if (!LIVE) { root.innerHTML = `<p class="muted">Battles appear here once the pad is live.</p>`; return; }
+        const n = Number(await R.battle().count()); if (id >= n) throw new Error("No such battle.");
+        const b = await R.battle().get(id); st = Number(b.state); dur = Number(b.duration); start = Number(b.start); end = Number(b.end); expiry = Number(b.offerExpiry);
+        chestA0 = b.chestA0; chestB0 = b.chestB0; volA0 = b.volA0; volB0 = b.volB0;
+        const ld = async (k) => { const pid = poolId(k); const inf = await R.hook().info(pid); const tok = c("erc20", inf.token); const [name, symbol] = await Promise.all([tok.name().catch(() => "?"), tok.symbol().catch(() => "?")]); return { id: pid, i: 0, name, symbol, token: inf.token, creator: inf.creator, war: inf.war, locked: inf.locked, chest: inf.chest, volume: inf.volume }; };
+        [A, B] = await Promise.all([ld(b.a), ld(b.b)]);
+        const info = st >= 2 ? { from: await blockAt(start), to: st === 3 || nowSec() > end ? await blockAt(end) : null } : { from: null, to: null };
+        [SA, SB] = await Promise.all([sideStats(A, info.from, info.to), sideStats(B, info.from, info.to)]);
+        if (st >= 2) { vA = A.volume - volA0; vB = B.volume - volB0; endIn = end - nowSec(); }
+      }
+    } catch (e) { root.innerHTML = `<p class="muted">Could not load this battle: ${esc(errMsg(e))} <a href="${demoHref("/pad/battles/")}">All battles</a></p>`; return; }
+
+    const total = vA + vB, pa = total > 0n ? Number((vA * 1000n) / total) / 10 : 50, pb = Math.round((100 - pa) * 10) / 10;
+    const live = st === 2, ended = live && endIn <= 0;
+    let status = "";
+    if (st === 1) status = `Offer open for ${DEMO ? Math.round(expiry / 86400 * 10) / 10 + " d" : left(expiry)}. Runs ${Math.round(dur / 3600 * 10) / 10} h once the other creator accepts.`;
+    if (live) status = ended ? "The time is up. Anyone can settle this battle." : `Ends in ${endIn < 5400 ? Math.ceil(endIn / 60) + " min" : Math.floor(endIn / 3600) + " h " + Math.round((endIn % 3600) / 60) + " min"}.`;
+    if (st === 3) status = "Settled. The token with more volume won; its war chest is marked for burning (see its token page). A tie moves nothing.";
+    if (st === 4) status = "This offer was withdrawn or lapsed. No battle took place.";
+    const lead = st >= 2 && total > 0n ? (vA === vB ? "Level on volume." : `${esc((vA > vB ? A : B).name)} leads by ${num(vA > vB ? vA - vB : vB - vA)} STAG of volume.`) : "";
+    const who = (a, p) => { const x = a.toLowerCase(); return `<a href="${explorer("address", a)}" rel="noopener">${short(a)}</a>${p.creator && x === p.creator.toLowerCase() ? ` <span class="tag">creator</span>` : ""}`; };
+    const rows = (list, p, total2) => list.length ? `<table class="tbl"><tbody>${list.map(([a, v]) => `<tr><td>${who(a, p)}</td><td>${num(v)} $${esc(p.symbol)}${total2 ? ` <span class="muted">${(Number((v * 10000n) / total2) / 100).toFixed(1)}%</span>` : ""}</td></tr>`).join("")}</tbody></table>` : `<p class="muted small">None yet.</p>`;
+    const tokTotal = async (p) => DEMO ? W18(1000000000) : c("erc20", p.token).totalSupply().catch(() => 0n);
+    const [tsA, tsB] = await Promise.all([tokTotal(A), tokTotal(B)]);
+    const side = (p, S, v, chest0, cls, ts, idx) => `<div class="padbox bside ${cls}">
+      <div class="row"><a href="${DEMO ? demoHref("/pad/token/?i=" + p.i) : explorer("token", p.token)}" class="bname" ${DEMO ? "" : 'rel="noopener"'}><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3></a>${modeChip(p)}</div>
+      <div class="padstats2 two">
+        <div><span>Volume in battle</span><b>${st >= 2 ? num(v) : "0"} STAG</b></div>
+        <div><span>War chest now</span><b>${num(p.chest)} STAG</b></div>
+        <div><span>Chest at start</span><b>${st >= 2 ? num(chest0) : "n/a"} STAG</b></div>
+        <div><span>Chest change</span><b>${st >= 2 ? (p.chest >= chest0 ? "+" : "-") + num(p.chest >= chest0 ? p.chest - chest0 : chest0 - p.chest) : "n/a"} STAG</b></div>
+        <div><span>Buys</span><b>${S.buys} · ${num(S.buyVol)} STAG</b></div>
+        <div><span>Sells</span><b>${S.sells} · ${num(S.sellVol)} STAG</b></div>
+      </div>
+      <h4>Top buyers in this battle</h4>${rows(topN(new Map(S.buyers), 6), p)}
+      <h4>Top sellers in this battle</h4>${rows(topN(new Map(S.sellers), 6), p)}
+      <h4>Top holders now <small>(${S.holdersSeen} wallets seen)</small></h4>${rows(S.holders, p, ts)}
+    </div>`;
+    root.innerHTML = `<p><a href="${demoHref("/pad/battles/")}">← All battles</a></p>
+      <div class="row"><h1 class="sec-h">${esc(A.name)} <span class="vs">vs</span> ${esc(B.name)}</h1><span class="chip ${live ? "" : "soon"}">#${id} · ${ST[st]}</span></div>
+      <p class="sec-p">${status}${lead ? " " + lead : ""}</p>
+      ${st >= 2 ? `<div class="vsbar" role="img" aria-label="Volume share ${pa}% against ${pb}%"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></div><div class="row vslab"><span>${esc(A.name)} ${pa}%</span><span>${pb}% ${esc(B.name)}</span></div>` : ""}
+      <div class="bgrid">${side(A, SA, vA, chestA0, "ga", tsA)}${side(B, SB, vB, chestB0, "gb", tsB)}</div>
+      <div class="warnbox">Built from public on-chain data. Volumes are what reaches the pool, after the 3% tax (a 500 STAG buy shows as 485). Volume counts even when it is wash trading, so a bigger number does not mean more real interest. Addresses are wallets, not people, and one person can use many. ${SA.note || SB.note || ""}</div>`;
+  };
+
   // ------------------------------------------------------------------ boot
   document.addEventListener("DOMContentLoaded", async () => {
     if (LIVE) await syncClock();
@@ -470,7 +572,7 @@
     if (DEMO) { $$('a[href^="/pad/"]').forEach((a) => { a.setAttribute("href", demoHref(a.getAttribute("href"))); }); }
     const pg = document.body.dataset.page; if (pg && pages[pg]) await pages[pg]();
     if (DEMO) $$('a[href^="/pad/"]').forEach((a) => { a.setAttribute("href", demoHref(a.getAttribute("href"))); });
-    if (!DEMO && pg !== "token" && pg !== "battles" && window.ethereum && window.ethereum.selectedAddress) connect();
+    if (!DEMO && pg !== "token" && pg !== "battles" && pg !== "battle" && window.ethereum && window.ethereum.selectedAddress) connect();
   });
   window.Pad = { connect, poolId, LIVE };
 })();

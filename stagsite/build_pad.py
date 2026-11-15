@@ -94,6 +94,21 @@ EXTRA = """
 .battle-hero{height:clamp(150px,26vw,260px);border-radius:20px;border:1px solid rgba(57,255,20,.4);box-shadow:var(--glow);background:linear-gradient(180deg,transparent 40%,#050806),url(/pad/assets/battle.webp) center/cover;margin:0 0 22px}
 @media(max-width:720px){.hero{background:linear-gradient(180deg,rgba(5,8,6,.55),#050806 85%),url(/pad/assets/hero.webp) 70% top/cover no-repeat}.hero .in{min-height:0;padding:56px 0 24px}#launchform .tab{min-height:110px}}
 @media(prefers-reduced-motion:reduce){.padcard{transition:none}}
+
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:18px 0}
+@media(max-width:900px){.bgrid{grid-template-columns:1fr}}
+.bside.ga{border-color:rgba(57,255,20,.5)}.bside.gb{border-color:rgba(255,200,60,.55);box-shadow:0 0 0 1px rgba(255,200,60,.3),0 0 26px rgba(255,200,60,.12)}
+.bside h4{font:700 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.bside .bname{color:inherit;text-decoration:none}
+.padstats2.two{grid-template-columns:1fr 1fr;margin:12px 0 4px}
+.padstats2.two b{font-size:20px}
+.tbl{width:100%;border-collapse:collapse}.tbl td{padding:7px 4px;border-bottom:1px solid var(--line);font-size:15px}.tbl td:last-child{text-align:right;white-space:nowrap}
+.tag{font:700 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);border-radius:6px;padding:2px 5px;color:var(--muted)}
+.small{font-size:14px}
+.vs{color:var(--neon);font-size:.6em;padding:0 .2em}
+.vsbar{display:flex;height:16px;border-radius:10px;overflow:hidden;background:var(--panel);border:1px solid var(--line)}
+.vsbar i{background:var(--neon)}.vsbar b{background:var(--gold)}
+.vslab{font:700 13px/1 var(--mono);color:var(--muted);margin:8px 0 6px}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
 """
 
@@ -152,6 +167,10 @@ battles = f"""<main>{SUBNAV}
 <h2 class="sec-h" style="margin-top:40px">Offer a battle</h2><div id="battlemine" class="padbox"></div></div></section>
 </main>"""
 
+battle = f"""<main>{SUBNAV}
+<section class="band"><div class="in"><div id="notlive"></div><div id="battleroot"><p class="muted">Loading…</p></div></div></section>
+</main>"""
+
 how = f"""<main>{SUBNAV}
 <section class="band how"><div class="in"><span class="eyebrow">How it works</span><h1 class="sec-h">The rules, in plain words</h1>
 <div id="notlive"></div>
@@ -178,6 +197,7 @@ write("pad/index.html", page("$STAG Pad | Launch a token, win the chest", "Launc
 write("pad/launch/index.html", page("Launch a token | $STAG Pad", "Create a token paired with $STAG in one transaction.", launch, "/pad/launch/", "launch"))
 write("pad/token/index.html", page("Token | $STAG Pad", "Trade and manage a token launched on the $STAG Pad.", token, "/pad/token/", "token"))
 write("pad/battles/index.html", page("Battles | $STAG Pad", "Token vs token battles on the $STAG Pad.", battles, "/pad/battles/", "battles"))
+write("pad/battle/index.html", page("Battle | $STAG Pad", "Token vs token battle on the $STAG Pad: volume, war chests, buyers, sellers and holders.", battle, "/pad/battle/", "battle"))
 write("pad/how/index.html", page("How the pad works | $STAG Pad", "The rules of the $STAG Pad in plain words: fees, war and peace, battles and risks.", how, "/pad/how/", "how"))
 
 # make sure the existing pages do not link to the pad yet (idempotent)
