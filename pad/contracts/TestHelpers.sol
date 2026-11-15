@@ -83,10 +83,12 @@ contract MockCurve {
     uint256 public refundBps;     // fraction of the ETH sent back unspent on buy
     bool public lie;              // return a falsely large number
     bool public stingy;           // send less STAG than minTokensOut implies is fine (tests the router's own measurement)
+    bool public loose;            // sell() ignores minQuoteOut (a curve that does not protect the caller)
     bool public half;             // sell() pulls only half of the STAG offered (leaves an allowance behind unless the router resets it)
     constructor(address s, uint256 r) { stag = s; rate = r; }
     function set(uint256 _refundBps, bool _lie, bool _stingy) external { refundBps = _refundBps; lie = _lie; stingy = _stingy; }
     function setHalf(bool h) external { half = h; }
+    function setLoose(bool l) external { loose = l; }
     function buy(uint256 q, uint256 minOut, address r) external payable returns (uint256) {
         require(msg.value == q, "val");
         uint256 spend = q - (q * refundBps) / 10000;
@@ -101,7 +103,7 @@ contract MockCurve {
         if (half) tin = tin / 2;
         IERC20(stag).transferFrom(msg.sender, address(this), tin);
         uint256 q = tin / rate;
-        require(q >= minQ, "slip");
+        if (!loose) require(q >= minQ, "slip");
         (bool ok,) = r.call{value: q}("");
         require(ok, "send");
         return lie ? q * 2 : q;

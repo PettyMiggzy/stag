@@ -242,5 +242,24 @@ describe("PadRouter (fork)", function () {
       expect(real).to.be.gt(0n);
       await mock.set(0, false, false);
     });
+    it("zapBuy sends the output to `to`, not to the caller", async () => {
+      const to = ethers.Wallet.createRandom().address, t0 = await bal(p.tok, bob.address);
+      await mockRouter.connect(bob).zapBuy(p.key, 1, 1, to, DL(), { value: E(0.2) });
+      expect(await bal(p.tok, to)).to.be.gt(0n);
+      expect(await bal(p.tok, bob.address)).to.equal(t0);
+    });
+    it("STAG sitting in the router is never swept into a caller's zapSell proceeds", async () => {
+      const slot = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [await mockRouter.getAddress(), 0]));
+      await network.provider.send("hardhat_setStorageAt", [STAG, slot, ethers.toBeHex(E(5000), 32)]);   // donate 5,000 STAG to the router
+      const erc = new ethers.Contract(STAG, ["function balanceOf(address) view returns (uint256)"], ethers.provider);
+      await mockRouter.connect(bob).zapSell(p.key, E(100_000), 1, ethers.Wallet.createRandom().address, DL());
+      expect(await erc.balanceOf(await mockRouter.getAddress())).to.equal(E(5000));                       // untouched
+      await network.provider.send("hardhat_setStorageAt", [STAG, slot, ethers.toBeHex(0, 32)]);
+    });
+    it("the router enforces minEth itself even when the curve does not (a curve that ignores minQuoteOut)", async () => {
+      await mock.setLoose(true);
+      await expect(mockRouter.connect(bob).zapSell(p.key, E(100_000), E(1_000_000), ethers.Wallet.createRandom().address, DL())).to.be.revertedWithCustomError(mockRouter, "Slippage");
+      await mock.setLoose(false);
+    });
   });
 });
