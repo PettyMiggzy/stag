@@ -75,3 +75,33 @@ contract TestSyncRouter is IUnlockCallback {
         return "";
     }
 }
+
+/// TEST ONLY: a stand-in for the $STAG curve with knobs to prove the router never trusts it
+contract MockCurve {
+    address public immutable stag;
+    uint256 public rate;          // STAG out per wei in on buy; wei out = stag / rate on sell
+    uint256 public refundBps;     // fraction of the ETH sent back unspent on buy
+    bool public lie;              // return a falsely large number
+    bool public stingy;           // send less STAG than minTokensOut implies is fine (tests the router's own measurement)
+    constructor(address s, uint256 r) { stag = s; rate = r; }
+    function set(uint256 _refundBps, bool _lie, bool _stingy) external { refundBps = _refundBps; lie = _lie; stingy = _stingy; }
+    function buy(uint256 q, uint256 minOut, address r) external payable returns (uint256) {
+        require(msg.value == q, "val");
+        uint256 spend = q - (q * refundBps) / 10000;
+        uint256 out = spend * rate;
+        if (stingy) out = out / 2;
+        if (!stingy) require(out >= minOut, "slip");
+        IERC20(stag).transfer(r, out);
+        if (spend < q) { (bool ok,) = msg.sender.call{value: q - spend}(""); require(ok, "refund"); }
+        return lie ? out * 2 : out;
+    }
+    function sell(uint256 tin, uint256 minQ, address r) external returns (uint256) {
+        IERC20(stag).transferFrom(msg.sender, address(this), tin);
+        uint256 q = tin / rate;
+        require(q >= minQ, "slip");
+        (bool ok,) = r.call{value: q}("");
+        require(ok, "send");
+        return lie ? q * 2 : q;
+    }
+    receive() external payable {}
+}
