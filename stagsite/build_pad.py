@@ -99,7 +99,7 @@ table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table
 
 def page(title, desc, body, path, pg):
     return f"""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>{html.escape(title)}</title><meta name="description" content="{html.escape(desc)}"><meta property="og:title" content="{html.escape(title)}"><meta property="og:description" content="{html.escape(desc)}"><meta property="og:image" content="https://stagwifhood.fun/assets/poster.webp"><meta name="theme-color" content="#050806"><meta name="robots" content="noindex,nofollow"><link rel="icon" href="/assets/badge.webp">
+<title>{html.escape(title)}</title><meta name="description" content="{html.escape(desc)}"><meta property="og:title" content="{html.escape(title)}"><meta property="og:description" content="{html.escape(desc)}"><meta property="og:image" content="https://stagwifhood.fun/pad/assets/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://stagwifhood.fun/pad/assets/og.jpg"><meta name="theme-color" content="#050806"><meta name="robots" content="noindex,nofollow"><link rel="icon" href="/assets/badge.webp">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
 <style>{STYLE}{EXTRA}</style>
 <body data-page="{pg}">
