@@ -9,7 +9,7 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8', extra = {}) =
 http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', 'text/plain', { allow: 'GET, HEAD' });
   let rel; try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { return send(res, 400, 'Bad request'); }
-  if (!rel.endsWith('/') && !path.extname(rel)) return send(res, 301, '', 'text/plain', { location: rel + '/' });
+  if (!rel.endsWith('/') && !path.extname(rel)) return send(res, 301, '', 'text/plain', { location: rel + '/' + (new URL(req.url, 'http://x').search || '') });
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.normalize(path.join(ROOT, rel));
   if (!file.startsWith(ROOT + path.sep) || HIDE.has(path.basename(file)) || file.split(path.sep).some(p => p.startsWith('.'))) return send(res, 404, 'Not found');
@@ -17,7 +17,7 @@ http.createServer((req, res) => {
     if (e || !st.isFile()) return send(res, 404, '<!doctype html><meta charset=utf-8><title>Not found</title><body style="background:#050806;color:#e9f2e5;font:20px system-ui;display:grid;place-items:center;height:100vh;margin:0">Not found. <a style="color:#39ff14;margin-left:10px" href="/">Back to Stag House Records</a>', 'text/html; charset=utf-8');
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
     const isHtml = type.startsWith('text/html');
-    const base = { 'content-type': type, 'accept-ranges': 'bytes', 'last-modified': st.mtime.toUTCString(), 'cache-control': isHtml ? 'no-cache' : 'public, max-age=86400', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin', 'x-frame-options': 'SAMEORIGIN' };
+    const base = { 'content-type': type, 'accept-ranges': 'bytes', 'last-modified': st.mtime.toUTCString(), 'cache-control': (isHtml || (rel.startsWith('/pad/') && /\.(js|css)$/.test(rel) && !rel.includes('ethers'))) ? 'no-cache' : 'public, max-age=86400', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin', 'x-frame-options': 'SAMEORIGIN' };
     const ims = req.headers['if-modified-since']; if (ims && new Date(ims) >= new Date(Math.floor(st.mtimeMs / 1000) * 1000)) { res.writeHead(304, base); return res.end(); }
     const ae = String(req.headers['accept-encoding'] || ''); // text files go out brotli/gzip compressed (the three.js bundle drops from ~1.2 MB to ~0.3 MB); models and video are already compressed
     if ((type.startsWith('text/') || type.includes('javascript') || type.includes('json') || type.includes('svg')) && !req.headers.range && st.size > 1024 && /\b(br|gzip)\b/.test(ae)) {
