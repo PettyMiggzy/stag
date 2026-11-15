@@ -9,10 +9,9 @@ STYLE = re.search(r"<style>(.*?)</style>", src, re.S).group(1)
 HEAD_START = src.index("<header>")
 HEAD = src[HEAD_START: src.index("</header>") + 9]
 FOOT = src[src.index("<footer>"): src.index("</footer>") + 9]
-if 'href="/pad/"' not in HEAD:
-    HEAD = HEAD.replace('<a href="/play/">Play</a>', '<a href="/play/">Play</a><a href="/pad/">Pad</a>')
-if 'href="/pad/"' not in FOOT:
-    FOOT = FOOT.replace('<a href="/stagr/">StagR CRM</a>', '<a href="/stagr/">StagR CRM</a><a href="/pad/">Pad</a>')
+# The Pad is NOT linked from the site nav or footer until the owner says it is ready (it is reachable by URL only).
+HEAD = HEAD.replace('<a href="/pad/">Pad</a>', '')
+FOOT = FOOT.replace('<a href="/pad/">Pad</a>', '')
 HEAD = HEAD.replace('<a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a>',
                     '<a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a>')
 
@@ -55,7 +54,7 @@ table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table
 
 def page(title, desc, body, path, pg):
     return f"""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>{html.escape(title)}</title><meta name="description" content="{html.escape(desc)}"><meta property="og:title" content="{html.escape(title)}"><meta property="og:description" content="{html.escape(desc)}"><meta property="og:image" content="https://stagwifhood.fun/assets/poster.webp"><meta name="theme-color" content="#050806"><link rel="icon" href="/assets/badge.webp">
+<title>{html.escape(title)}</title><meta name="description" content="{html.escape(desc)}"><meta property="og:title" content="{html.escape(title)}"><meta property="og:description" content="{html.escape(desc)}"><meta property="og:image" content="https://stagwifhood.fun/assets/poster.webp"><meta name="theme-color" content="#050806"><meta name="robots" content="noindex,nofollow"><link rel="icon" href="/assets/badge.webp">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Space+Mono:wght@700&display=swap">
 <style>{STYLE}{EXTRA}</style>
 <body data-page="{pg}">
@@ -134,12 +133,10 @@ write("pad/token/index.html", page("Token | $STAG Pad", "Trade and manage a toke
 write("pad/battles/index.html", page("Battles | $STAG Pad", "Token vs token battles on the $STAG Pad.", battles, "/pad/battles/", "battles"))
 write("pad/how/index.html", page("How the pad works | $STAG Pad", "The rules of the $STAG Pad in plain words: fees, war and peace, battles and risks.", how, "/pad/how/", "how"))
 
-# add the Pad link to the existing generated pages' nav (idempotent)
+# make sure the existing pages do not link to the pad yet (idempotent)
 for rel in ("index.html", "stagr/index.html"):
     f = D / rel
-    t = f.read_text()
-    if 'href="/pad/"' not in t:
-        t = t.replace('<a href="/play/">Play</a>', '<a href="/play/">Play</a><a href="/pad/">Pad</a>', 1)
-        t = t.replace('<a href="/stagr/">StagR CRM</a>', '<a href="/stagr/">StagR CRM</a><a href="/pad/">Pad</a>', 1) if 'footer' in t and '<a href="/stagr/">StagR CRM</a><a href="/pad/">' not in t else t
-        f.write_text(t)
-        print("nav patched", rel)
+    s = f.read_text()
+    if 'href="/pad/"' in s:
+        f.write_text(s.replace('<a href="/pad/">Pad</a>', ''))
+        print("pad link removed from", rel)
