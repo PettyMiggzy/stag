@@ -184,6 +184,9 @@
   const keyAt0 = (k) => ({ 0: k[0], 1: k[1], 2: k[2], 3: k[3], 4: k[4], currency0: k[0], currency1: k[1], fee: k[2], tickSpacing: k[3], hooks: k[4] });
   const fdvOf = (p) => (p.stagPerToken == null ? null : p.stagPerToken * 1e9);
   const price = (p) => (p.stagPerToken == null ? "n/a" : p.stagPerToken < 1e-4 ? p.stagPerToken.toExponential(2) : p.stagPerToken.toLocaleString(undefined, { maximumSignificantDigits: 4 }));
+  // Card art: decorative only. Demo uses the local sample pictures; real tokens have no picture yet, so show their initials on a tint taken from the token id.
+  const ART = ["a-green", "a-chest", "a-lantern", "a-gold", "a-ridge"];
+  const artHtml = (p) => DEMO ? `<div class="art" style="background-image:url(/pad/assets/${ART[p.i % ART.length]}.webp)" aria-hidden="true"></div>` : `<div class="art ini" style="--h:${(parseInt(String(p.id).slice(2, 8), 16) || 0) % 360}" aria-hidden="true"><span>${esc(String(p.symbol || "?").slice(0, 3).toUpperCase())}</span></div>`;
   const modeChip = (p) => `<span class="chip ${p.war ? "" : "soon"}">${p.war ? "War" : "Peace"}${p.locked ? " · locked in battle" : ""}</span>`;
 
   function notLiveBanner() {
@@ -204,7 +207,7 @@
       if (!n) { box.innerHTML = `<p class="muted">No launches yet. <a href="/pad/launch/">Be the first.</a></p>`; return; }
       const idx = []; for (let i = Math.max(0, n - 24); i < n; i++) idx.push(i);
       const ps = (await Promise.all(idx.map((i) => pool(i).catch(() => null)))).filter(Boolean).reverse();
-      box.innerHTML = ps.map((p) => `<a class="card padcard" href="${demoHref("/pad/token/?i=" + p.i)}"><div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
+      box.innerHTML = ps.map((p) => `<a class="card padcard ${p.war ? "war" : "peace"}" href="${demoHref("/pad/token/?i=" + p.i)}">${artHtml(p)}<div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
     } catch (e) { box.innerHTML = `<p class="muted">Could not load launches: ${esc(errMsg(e))}</p>`; }
   };
 
