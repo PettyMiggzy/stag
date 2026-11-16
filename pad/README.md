@@ -109,3 +109,6 @@ Use it with `OWNER_IS_EOA=1`. It replaces every Safe requirement with these chec
     # readback after accept: the same command plus EXPECT_OWNER_ACCEPTED=1
 
 Steps 0 to 3 of the mainnet section (clean shell and tree, compile, salt) are unchanged. Do not commit the owner wallet address to the repo; pass it as an environment variable.
+
+## Open hook v2: bring your token (NEW, UNAUDITED, not deployed)
+`contracts/OpenHook.sol`, `contracts/OpenPad.sol` and `contracts/PadRegistry.sol` let an existing ERC-20 open a $STAG pool with the same tax, war chest and battles. They are new code, outside the audited build and outside `audited-manifest.json`; nothing above this section was changed for them. Design, threat model, what is not protected and the auditor's checklist are in `OPEN_HOOK.md`.
