@@ -12,8 +12,8 @@ FOOT = src[src.index("<footer>"): src.index("</footer>") + 9]
 # The Pad is NOT linked from the site nav or footer until the owner says it is ready (it is reachable by URL only).
 HEAD = HEAD.replace('<a href="/pad/">Pad</a>', '')
 FOOT = FOOT.replace('<a href="/pad/">Pad</a>', '')
-HEAD = HEAD.replace('<a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a>',
-                    '<a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a>')
+HEAD = HEAD.replace('<a class="btn solid" href="https://t.me/StagWifHoodRH" rel="noopener">Join Telegram</a>',
+                    '<a class="btn solid" href="https://t.me/StagWifHoodRH" rel="noopener">Join Telegram</a>')
 
 EXTRA = """
 [hidden]{display:none !important}
@@ -457,7 +457,7 @@ verified = f"""<main>{SUBNAV}
 <p class="sec-p">Anyone can launch any name on the pad, including one that copies another project. This list shows the official pad token of projects we have checked. Always compare the contract address.</p>
 <div id="verlist" class="grid two"><p class="muted">Loading…</p></div>
 <div class="padbox" style="margin-top:28px"><h3>How a project gets verified</h3>
-<ul class="plain"><li>Launch your token on the pad and post its contract address from your project's official account.</li><li>Send us the post's link and the contract address in <a href="https://t.me/StagWifHood" rel="noopener">Telegram</a>.</li><li>We check that the account is the project's official one and that the token is the one that was posted, then add it here. If the project already has a token elsewhere, the original token address is shown next to it.</li></ul>
+<ul class="plain"><li>Launch your token on the pad and post its contract address from your project's official account.</li><li>Send us the post's link and the contract address in <a href="https://t.me/StagWifHoodRH" rel="noopener">Telegram</a>.</li><li>We check that the account is the project's official one and that the token is the one that was posted, then add it here. If the project already has a token elsewhere, the original token address is shown next to it.</li></ul>
 <p class="fine">Verified means we confirmed the official account posted that address. It is not an audit, not an endorsement and not a promise about price. A verified token can still lose most or all of its value. We can remove an entry if we find it was wrong.</p></div>
 </div></section>
 </main>"""

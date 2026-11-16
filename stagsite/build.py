@@ -29,7 +29,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 .fine{max-width:80ch;margin-top:18px;font-size:13px;line-height:1.5}
 @media(prefers-reduced-motion:reduce){.ticker div{animation:none}}
 '''
-TG='https://t.me/StagWifHood'
+TG='https://t.me/StagWifHoodRH'
 def page(title,desc,body,path):
     return f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{title}</title><meta name="description" content="{desc}"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}"><meta property="og:image" content="https://stagwifhood.fun/assets/poster.webp"><meta name="theme-color" content="#050806"><link rel="icon" href="/assets/badge.webp">

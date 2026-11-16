@@ -212,7 +212,7 @@
   function notLiveBanner() {
     if (DEMO) return demoBanner();
     if (LIVE) return "";
-    return `<div class="padnote"><b>Not live yet.</b> The contracts are being finished and checked. Nothing on this page can spend your funds until the addresses are announced in <a href="https://t.me/StagWifHood" rel="noopener">Telegram</a>.</div>`;
+    return `<div class="padnote"><b>Not live yet.</b> The contracts are being finished and checked. Nothing on this page can spend your funds until the addresses are announced in <a href="https://t.me/StagWifHoodRH" rel="noopener">Telegram</a>.</div>`;
   }
 
 
@@ -231,7 +231,7 @@
   } catch { return null; } };
   async function loadVerified() {
     if (DEMO) { VER = [
-      { name: "Stag Hood Coin", symbol: "SHC", padToken: MOCK[0].token, original: { address: "0x1111111111111111111111111111111111111111", chain: "Robinhood Chain", symbol: "STAGHOOD" }, links: { x: "https://x.com/", telegram: "https://t.me/StagWifHood", website: "" }, verifiedOn: "2026-11-16", by: "Demo entry: made up" },
+      { name: "Stag Hood Coin", symbol: "SHC", padToken: MOCK[0].token, original: { address: "0x1111111111111111111111111111111111111111", chain: "Robinhood Chain", symbol: "STAGHOOD" }, links: { x: "https://x.com/", telegram: "https://t.me/StagWifHoodRH", website: "" }, verifiedOn: "2026-11-16", by: "Demo entry: made up" },
       { name: "Hood Rich", symbol: "HDR", padToken: MOCK[3].token, original: { address: "0x2222222222222222222222222222222222222222", chain: "Robinhood Chain", symbol: "HOODRICH" }, links: { x: "https://x.com/", telegram: "", website: "https://example.com/" }, verifiedOn: "2026-11-16", by: "Demo entry: made up" },
     ]; return; }
     try { const r = await fetch("/pad/verified.json", { cache: "no-store" }); const j = await r.json(); VER = (Array.isArray(j.projects) ? j.projects : []).map(clean).filter(Boolean).slice(0, 500); } catch { VER = []; }
