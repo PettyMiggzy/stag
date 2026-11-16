@@ -200,4 +200,6 @@ New files (42 tests):
 - `test/open.drift.test.js` (2): the copy has not drifted from `PadHook.sol`.
 - `test/open.helpers.js`: helpers. The existing test files and `test/helpers.js` are untouched.
 
-**Running on the public RPC.** The public RPC drops state older than roughly ten minutes and slows down sharply under load (measured: from under 0.1 s to about 2 s per request). The whole suite in one process does not always finish inside that window; when it does not, the fork provider aborts with `historical state ... is not available`. That is the RPC, not a test failure. Run file by file with a fresh block each (`RH_BLOCK=<head-20> npx hardhat test test/<file>`), or use an archive RPC through `RH_RPC`.
+Last full run (one process, fork at head-20): **162 passing, 0 failing, about 9 minutes**: the 120 existing tests plus the 42 new ones.
+
+**Running on the public RPC.** The public RPC drops state older than roughly ten minutes and slows down sharply under load (measured: from under 0.1 s to about 2 s per request). The whole suite needs about nine minutes when the RPC is fast, so there is little margin: two earlier attempts on a throttled RPC were cut off by the fork provider with `historical state ... is not available` before any test had failed. That is the RPC, not a test failure. If it happens, wait a few minutes and run again, run file by file with a fresh block each (`RH_BLOCK=<head-20> npx hardhat test test/<file>`), or use an archive RPC through `RH_RPC`.
