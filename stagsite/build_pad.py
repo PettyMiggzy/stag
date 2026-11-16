@@ -289,6 +289,28 @@ EXTRA = """
 .vpanel.bad{border:2px solid #ff6b6b;background:rgba(255,80,80,.1);color:#ffe0e0}
 .vpanel a{color:inherit}
 .vcard h3{margin:0}
+
+.vsb .bolt{display:none}
+/* ===== v4 look: Staggy Paddy, the late-night forest diner (our realistic hooded stag as head chef) ===== */
+.brand{font:400 34px/1 Anton,Impact,sans-serif;letter-spacing:.04em;color:var(--neon);text-shadow:0 0 6px rgba(57,255,20,.9),0 0 22px rgba(57,255,20,.55);text-decoration:none;margin-right:12px;white-space:nowrap}
+.brand span{font:inherit;color:#ffd75e;text-shadow:0 0 6px rgba(255,200,60,.9),0 0 22px rgba(255,200,60,.5)}
+.openSign{position:absolute;top:22px;right:clamp(14px,4vw,64px);font:400 28px/1 Anton,Impact,sans-serif;letter-spacing:.14em;color:#ff6b6b;border:3px solid #ff5a5a;border-radius:10px;padding:6px 16px;text-shadow:0 0 8px #ff5a5a,0 0 24px #ff2a2a;box-shadow:0 0 12px #ff2a2a,inset 0 0 10px rgba(255,42,42,.5);animation:openflick 4.2s infinite;z-index:3;background:rgba(40,0,0,.45)}
+@keyframes openflick{0%,90%,100%{opacity:1}92%{opacity:.35}94%{opacity:1}96%{opacity:.5}97%{opacity:1}}
+.hero{position:relative;min-height:clamp(520px,60vw,760px);background:linear-gradient(90deg,rgba(5,8,6,.72) 0%,rgba(5,8,6,.35) 40%,rgba(5,8,6,0) 70%),linear-gradient(180deg,rgba(5,8,6,.2),#050806 98%),url(/pad/assets/hero.webp) right center/cover no-repeat}
+.hero .in:first-of-type{text-align:left;padding-top:clamp(70px,9vw,120px);padding-bottom:clamp(110px,14vw,200px)}
+.hero .in:first-of-type>div{max-width:min(540px,92%)}
+.hero .lead{margin-inline:0}.hero .cta,.hero .stats{justify-content:flex-start}
+.hero h1{font-size:clamp(44px,6.2vw,88px)}
+.hero .stats span{background:#e9dfc5;color:#2a2418;border:0;border-bottom:3px dashed #2a2418;border-radius:3px 3px 0 0;box-shadow:0 10px 26px rgba(0,0,0,.55);padding:14px 20px 16px;font:600 12px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;backdrop-filter:none}
+.hero .stats b{color:#17120a;font-size:30px}
+@media(max-width:720px){.hero{background:linear-gradient(180deg,rgba(5,8,6,.55) 0%,rgba(5,8,6,.4) 45%,#050806 95%),url(/pad/assets/hero.webp) 78% center/cover no-repeat}.openSign{font-size:20px;top:12px;padding:4px 10px}.hero .in:first-of-type{padding-top:80px}}
+/* order-ticket cards */
+.padcard{--c:var(--neon)}.padcard.peace{--c:var(--gold)}
+.padcard .b{position:relative;border-top:2px dashed color-mix(in srgb,var(--c) 55%,transparent)}
+.padcard .b::before,.padcard .b::after{content:"";position:absolute;top:-12px;width:22px;height:22px;border-radius:50%;background:#050806;border:2px solid var(--c)}
+.padcard .b::before{left:-13px}.padcard .b::after{right:-13px}
+.padcard .row .muted{font:700 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.padbox.bcard .row b{font:700 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
 """
 
@@ -307,18 +329,18 @@ def page(title, desc, body, path, pg):
 </body>
 </html>"""
 
-SUBNAV = '<div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-top:22px"><a class="btn" href="/pad/">Pad</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Battles</a><a class="btn" href="/pad/verified/">Verified</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>'
+SUBNAV = '<div class="in" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding-top:22px"><a class="brand" href="/pad/">STAGGY <span>PADDY</span></a><a class="btn" href="/pad/">Menu</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Paddy wars</a><a class="btn" href="/pad/verified/">Verified</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>'
 
 home = f"""<main><div id="feed" class="homefeed" aria-hidden="true"></div>{SUBNAV}
 <div class="in" style="padding-top:18px"><div id="notlive"></div></div>
 <section class="hero"><div class="in"><div>
-<span class="eyebrow">Staggy Paddy · Robinhood Chain</span>
-<h1>Launch a token. Win the <em>chest</em>.</h1>
+<span class="openSign" aria-hidden="true">OPEN</span><span class="eyebrow">Staggy Paddy · Robinhood Chain</span>
+<h1>Order up. <em>Launch</em> a token.</h1>
 <p class="lead">Every token launches paired with $STAG, with its liquidity locked from the first second. Creators earn from trading. Tokens can fight: more trading volume wins the other side's war chest, and the winner burns it.</p>
 <div class="cta"><a class="btn solid" href="/pad/launch/">Launch a token</a><a class="btn" href="/pad/how/">How it works</a></div>
 <div class="stats" id="padstats"><span><b>3%</b> tax on the $STAG side</span><span><b>Locked</b> liquidity</span><span><b>Robinhood</b> Chain</span></div>
 </div></div><div class="in"><div id="topbattle" class="topbattle"></div></div></section>
-<section class="band tight"><div class="in"><span class="eyebrow">Fights</span><h2 class="sec-h">Live battles</h2><div class="grid two" id="homebattles"><p class="muted">Loading…</p></div></div></section>
+<section class="band tight"><div class="in"><span class="eyebrow">Paddy wars</span><h2 class="sec-h">Live battles</h2><div class="grid two" id="homebattles"><p class="muted">Loading…</p></div></div></section>
 <section class="band"><div class="in"><span class="eyebrow">Launches</span><h2 class="sec-h">Latest tokens</h2><div class="pills" id="vfilter" role="group" aria-label="Filter tokens"><button class="on" data-v="0">All</button><button data-v="1">✔ Verified</button></div><p class="muted" id="vnone" hidden>No verified tokens yet.</p><div class="grid" id="padlist"><p class="muted">Loading…</p></div></div></section>
 <section class="band alt"><div class="in"><span class="eyebrow">Read this first</span><h2 class="sec-h">Plain risks</h2>
 <ul class="plain"><li>Tokens launched here are created by anyone and can lose most or all of their value. Many will.</li><li>The pad takes a 3% tax on the $STAG side of every trade. Creators also earn the pool's 0.30% fee.</li><li>Battles are decided by trading volume, and volume counts even if it is wash trading. A well-funded token can outspend a small one.</li><li>The contracts have been tested on a copy of the real chain and reviewed repeatedly, but they have not had a professional third-party audit. Bugs can exist.</li><li>Nothing here is financial advice or a promise of returns. Only use money you can afford to lose.</li></ul></div></section>
@@ -342,7 +364,7 @@ token = f"""<main>{SUBNAV}
 </main>"""
 
 battles = f"""<main>{SUBNAV}
-<section class="band"><div class="in"><div id="notlive"></div><span class="eyebrow">Battles</span><h1 class="sec-h">Token vs token</h1>
+<section class="band"><div class="in"><div id="notlive"></div><span class="eyebrow">Paddy wars</span><h1 class="sec-h">Token vs token</h1>
 <p class="sec-p">A creator in war mode offers a battle and sets the length. The other creator accepts or the offer lapses after 3 days. Both pools are locked while it runs. More trading volume wins. Only what each token earned during the fight is at stake, and the winner's chest is marked to be burned.</p>
 <div id="featured"></div>
 <div class="pills" id="bfilter" role="group" aria-label="Filter battles"><button class="on" data-f="all">All</button><button data-f="2">Live</button><button data-f="1">Offered</button><button data-f="3">Settled</button></div>

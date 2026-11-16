@@ -271,7 +271,7 @@
     return `<div class="padbox bt bcard s${b.st}" data-st="${b.st}">
       <a class="bav" href="${demoHref("/pad/battle/?id=" + b.id)}" aria-label="Open battle ${b.id}">${pfpHtml(b.A, "ga")}<span class="vsbolt">VS</span>${pfpHtml(b.B, "gb")}</a>
       <div class="bmain">
-        <div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "live" : "soon"}">${b.st === 2 ? "● " : ""}${BST[b.st]}</span></div>
+        <div class="row"><b>War #${b.id}</b><span class="chip ${b.st === 2 ? "live" : "soon"}">${b.st === 2 ? "● " : ""}${BST[b.st]}</span></div>
         <h3>${esc(b.A.name)}${vMark(b.A)} <small>vs</small> ${esc(b.B.name)}${vMark(b.B)}${b.st === 3 && lead ? ` <span class="crown" title="winner">♛ ${esc((lead === 1 ? b.A : b.B).name)}</span>` : ""}</h3>
         ${started ? `<div class="mtug"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></div><div class="mtugn"><span>${num(b.vA)} STAG</span><span>${pa}% · ${pb}%</span><span>${num(b.vB)} STAG</span></div>` : ""}
         <p class="muted">${timeLine(b)}${b.st === 1 ? `. Runs ${Math.round(b.dur / 3600 * 10) / 10} h once accepted.` : ""}${b.st === 3 ? ". The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing." : ""}${b.st === 4 ? ". Offer withdrawn or lapsed." : ""}</p>
@@ -294,7 +294,7 @@
       if (!n) { box.innerHTML = `<p class="muted">No launches yet. <a href="/pad/launch/">Be the first.</a></p>`; return; }
       const idx = []; for (let i = Math.max(0, n - 24); i < n; i++) idx.push(i);
       const ps = (await Promise.all(idx.map((i) => pool(i).catch(() => null)))).filter(Boolean).reverse();
-      box.innerHTML = ps.map((p) => `<a class="card padcard ${p.war ? "war" : "peace"}" data-ver="${verOf(p) ? 1 : 0}" href="${demoHref("/pad/token/?i=" + p.i)}">${artHtml(p)}<div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
+      box.innerHTML = ps.map((p) => `<a class="card padcard ${p.war ? "war" : "peace"}" data-ver="${verOf(p) ? 1 : 0}" href="${demoHref("/pad/token/?i=" + p.i)}">${artHtml(p)}<div class="b"><div class="row">${modeChip(p)}<span class="muted">Order #${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
       loadBattles(8).then((bs) => {
         const top = bs.find((b) => b.st === 2) || bs[0]; const tbEl = $("#topbattle");
         if (tbEl) { if (!top) tbEl.innerHTML = ""; else { const [pa, pb] = shareOf(top); tbEl.innerHTML = `<a class="tbs" href="${demoHref("/pad/battle/?id=" + top.id)}"><span class="chip ${top.st === 2 ? "live" : "soon"}">${top.st === 2 ? "● Top battle live now" : "Latest battle · " + BST[top.st]}</span>${pfpHtml(top.A, "ga")}<span class="tbs-mid"><span class="tbs-n"><b>${esc(top.A.name)}</b><b>${esc(top.B.name)}</b></span><span class="mtug"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></span><span class="mtugn"><span>${pa}%</span><span>${pb}%</span></span></span>${pfpHtml(top.B, "gb")}<span class="tbs-time">${esc(timeLine(top))}</span></a>`; } }
