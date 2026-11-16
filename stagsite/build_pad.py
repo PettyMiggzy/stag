@@ -280,6 +280,15 @@ EXTRA = """
 .step h2{margin:0 0 8px !important;font-size:clamp(28px,3.4vw,44px)}
 .step.risk{grid-template-columns:1fr;border-color:#ff9f43;box-shadow:0 0 0 1px rgba(255,159,67,.3),0 0 26px rgba(255,159,67,.12)}
 @media(max-width:640px){.step{grid-template-columns:1fr;text-align:left}.step img{width:96px;height:96px}}
+
+.vbadge{display:inline-block;margin-left:8px;border-radius:8px;padding:5px 9px;font:700 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(57,255,20,.14);color:var(--neon);border:1px solid rgba(57,255,20,.6);vertical-align:middle;white-space:nowrap}
+.vbadge.warn{background:rgba(255,80,80,.14);color:#ff8a8a;border-color:rgba(255,80,80,.7)}
+.vmark{color:var(--neon);font-size:.7em;margin-left:4px;vertical-align:middle}.vmark.warn{color:#ff8a8a}
+.vpanel{border-radius:14px;padding:14px 18px;margin:0 0 18px;font-size:16px;line-height:1.5}
+.vpanel.ok{border:1px solid rgba(57,255,20,.55);background:rgba(57,255,20,.07)}
+.vpanel.bad{border:2px solid #ff6b6b;background:rgba(255,80,80,.1);color:#ffe0e0}
+.vpanel a{color:inherit}
+.vcard h3{margin:0}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
 """
 
@@ -298,7 +307,7 @@ def page(title, desc, body, path, pg):
 </body>
 </html>"""
 
-SUBNAV = '<div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-top:22px"><a class="btn" href="/pad/">Pad</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Battles</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>'
+SUBNAV = '<div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-top:22px"><a class="btn" href="/pad/">Pad</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Battles</a><a class="btn" href="/pad/verified/">Verified</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>'
 
 home = f"""<main><div id="feed" class="homefeed" aria-hidden="true"></div>{SUBNAV}
 <div class="in" style="padding-top:18px"><div id="notlive"></div></div>
@@ -310,7 +319,7 @@ home = f"""<main><div id="feed" class="homefeed" aria-hidden="true"></div>{SUBNA
 <div class="stats" id="padstats"><span><b>3%</b> tax on the $STAG side</span><span><b>Locked</b> liquidity</span><span><b>Robinhood</b> Chain</span></div>
 </div></div><div class="in"><div id="topbattle" class="topbattle"></div></div></section>
 <section class="band tight"><div class="in"><span class="eyebrow">Fights</span><h2 class="sec-h">Live battles</h2><div class="grid two" id="homebattles"><p class="muted">Loading…</p></div></div></section>
-<section class="band"><div class="in"><span class="eyebrow">Launches</span><h2 class="sec-h">Latest tokens</h2><div class="grid" id="padlist"><p class="muted">Loading…</p></div></div></section>
+<section class="band"><div class="in"><span class="eyebrow">Launches</span><h2 class="sec-h">Latest tokens</h2><div class="pills" id="vfilter" role="group" aria-label="Filter tokens"><button class="on" data-v="0">All</button><button data-v="1">✔ Verified</button></div><p class="muted" id="vnone" hidden>No verified tokens yet.</p><div class="grid" id="padlist"><p class="muted">Loading…</p></div></div></section>
 <section class="band alt"><div class="in"><span class="eyebrow">Read this first</span><h2 class="sec-h">Plain risks</h2>
 <ul class="plain"><li>Tokens launched here are created by anyone and can lose most or all of their value. Many will.</li><li>The pad takes a 3% tax on the $STAG side of every trade. Creators also earn the pool's 0.30% fee.</li><li>Battles are decided by trading volume, and volume counts even if it is wash trading. A well-funded token can outspend a small one.</li><li>The contracts have been tested on a copy of the real chain and reviewed repeatedly, but they have not had a professional third-party audit. Bugs can exist.</li><li>Nothing here is financial advice or a promise of returns. Only use money you can afford to lose.</li></ul></div></section>
 </main>"""
@@ -345,6 +354,16 @@ battle = f"""<main>{SUBNAV}
 <section class="band"><div class="in"><div id="notlive"></div><div id="battleroot"><p class="muted">Loading…</p></div></div></section>
 </main>"""
 
+verified = f"""<main>{SUBNAV}
+<section class="band"><div class="in"><div id="notlive"></div><span class="eyebrow">Official tokens</span><h1 class="sec-h">Verified projects</h1>
+<p class="sec-p">Anyone can launch any name on the pad, including one that copies another project. This list shows the official pad token of projects we have checked. Always compare the contract address.</p>
+<div id="verlist" class="grid two"><p class="muted">Loading…</p></div>
+<div class="padbox" style="margin-top:28px"><h3>How a project gets verified</h3>
+<ul class="plain"><li>Launch your token on the pad and post its contract address from your project's official account.</li><li>Send us the post's link and the contract address in <a href="https://t.me/StagWifHood" rel="noopener">Telegram</a>.</li><li>We check that the account is the project's official one and that the token is the one that was posted, then add it here. If the project already has a token elsewhere, the original token address is shown next to it.</li></ul>
+<p class="fine">Verified means we confirmed the official account posted that address. It is not an audit, not an endorsement and not a promise about price. A verified token can still lose most or all of its value. We can remove an entry if we find it was wrong.</p></div>
+</div></section>
+</main>"""
+
 how = f"""<main>{SUBNAV}
 <section class="band how"><div class="in"><div class="howban" role="img" aria-label="Two armored stags about to clash"></div><span class="eyebrow">How it works</span><h1 class="sec-h">The rules, in plain words</h1>
 <div id="notlive"></div>
@@ -372,6 +391,7 @@ write("pad/launch/index.html", page("Launch a token | $STAG Pad", "Create a toke
 write("pad/token/index.html", page("Token | $STAG Pad", "Trade and manage a token launched on the $STAG Pad.", token, "/pad/token/", "token"))
 write("pad/battles/index.html", page("Battles | $STAG Pad", "Token vs token battles on the $STAG Pad.", battles, "/pad/battles/", "battles"))
 write("pad/battle/index.html", page("Battle | $STAG Pad", "Token vs token battle on the $STAG Pad: volume, war chests, buyers, sellers and holders.", battle, "/pad/battle/", "battle"))
+write("pad/verified/index.html", page("Verified projects | $STAG Pad", "Official pad tokens of verified projects on the $STAG Pad.", verified, "/pad/verified/", "verified"))
 write("pad/how/index.html", page("How the pad works | $STAG Pad", "The rules of the $STAG Pad in plain words: fees, war and peace, battles and risks.", how, "/pad/how/", "how"))
 
 # make sure the existing pages do not link to the pad yet (idempotent)

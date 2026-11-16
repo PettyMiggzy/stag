@@ -67,6 +67,7 @@
     mk(4, "Moon Mullet", "MUL", false, { vol: 640000, price: 0.00871, cowed: 920, howed: 1840 }),
     mk(5, "Robin Bank", "RBK", true, { creator: MOCK_CREATOR, chest: 12800, vol: 380000, price: 0.01018 }),
     mk(6, "Hood Cat", "HCT", true, { chest: 8100, vol: 215000, price: 0.01006 }),
+    mk(7, "wHood Rich", "wHDR", true, { vol: 96000, price: 0.00412, chest: 2900 }),
   ] : [];
   const MOCK_BATTLES = DEMO ? [
     { id: 0, a: 0, b: 5, st: 3, dur: 86400 },
@@ -206,7 +207,7 @@
   // Card art: decorative only. Demo uses the local sample pictures; real tokens have no picture yet, so show their initials on a tint taken from the token id.
   const ART = ["m1", "m2", "m3", "m4", "m5", "m6"];
   const artHtml = (p) => DEMO ? `<div class="art" style="background-image:url(/pad/assets/${ART[p.i % ART.length]}.webp)" aria-hidden="true"></div>` : `<div class="art ini" style="--h:${(parseInt(String(p.id).slice(2, 8), 16) || 0) % 360}" aria-hidden="true"><span>${esc(String(p.symbol || "?").slice(0, 3).toUpperCase())}</span></div>`;
-  const modeChip = (p) => `<span class="chip ${p.war ? "" : "soon"}">${p.war ? "War" : "Peace"}${p.locked ? " · locked in battle" : ""}</span>`;
+  const modeChip = (p) => `<span class="chip ${p.war ? "" : "soon"}">${p.war ? "War" : "Peace"}${p.locked ? " · locked in battle" : ""}</span>${vBadge(p)}`;
 
   function notLiveBanner() {
     if (DEMO) return demoBanner();
@@ -214,6 +215,37 @@
     return `<div class="padnote"><b>Not live yet.</b> The contracts are being finished and checked. Nothing on this page can spend your funds until the addresses are announced in <a href="https://t.me/StagWifHood" rel="noopener">Telegram</a>.</div>`;
   }
 
+
+
+  // ------------------------------------------------------------------ verified projects
+  // /pad/verified.json is a hand-kept list: the official pad token of a project, linked to its original token. Everything in it is
+  // untrusted text for display only (checked and escaped); only https links are kept. Demo mode uses made-up entries.
+  let VER = [];
+  const httpsOnly = (u) => { try { const x = new URL(String(u)); return x.protocol === "https:" ? x.href : ""; } catch { return ""; } };
+  const clean = (e) => { try {
+    if (!e || !E.isAddress(e.padToken)) return null;
+    const t = (v, n) => String(v == null ? "" : v).slice(0, n);
+    const L = e.links || {};
+    return { name: t(e.name, 60), symbol: t(e.symbol, 16), padToken: E.getAddress(e.padToken), original: e.original && E.isAddress(e.original.address) ? { address: E.getAddress(e.original.address), chain: t(e.original.chain || "Robinhood Chain", 30), symbol: t(e.original.symbol, 16) } : null,
+      links: { x: httpsOnly(L.x), telegram: httpsOnly(L.telegram), website: httpsOnly(L.website) }, verifiedOn: t(e.verifiedOn, 12), by: t(e.by, 140) };
+  } catch { return null; } };
+  async function loadVerified() {
+    if (DEMO) { VER = [
+      { name: "Stag Hood Coin", symbol: "SHC", padToken: MOCK[0].token, original: { address: "0x1111111111111111111111111111111111111111", chain: "Robinhood Chain", symbol: "STAGHOOD" }, links: { x: "https://x.com/", telegram: "https://t.me/StagWifHood", website: "" }, verifiedOn: "2026-11-16", by: "Demo entry: made up" },
+      { name: "Hood Rich", symbol: "HDR", padToken: MOCK[3].token, original: { address: "0x2222222222222222222222222222222222222222", chain: "Robinhood Chain", symbol: "HOODRICH" }, links: { x: "https://x.com/", telegram: "", website: "https://example.com/" }, verifiedOn: "2026-11-16", by: "Demo entry: made up" },
+    ]; return; }
+    try { const r = await fetch("/pad/verified.json", { cache: "no-store" }); const j = await r.json(); VER = (Array.isArray(j.projects) ? j.projects : []).map(clean).filter(Boolean).slice(0, 500); } catch { VER = []; }
+  }
+  const norm = (x) => { let t = String(x || "").toLowerCase().replace(/[^a-z0-9]/g, ""); if (t.length > 2 && t[0] === "w") t = t.slice(1); return t; };
+  const verOf = (p) => VER.find((v) => p && p.token && v.padToken.toLowerCase() === String(p.token).toLowerCase()) || null;
+  const lookOf = (p) => { if (!p || verOf(p)) return null; const n = norm(p.name), y = norm(p.symbol); return VER.find((v) => v.padToken.toLowerCase() !== String(p.token).toLowerCase() && ((n && norm(v.name) === n) || (y && norm(v.symbol) === y))) || null; };
+  const vBadge = (p) => verOf(p) ? ` <span class="vbadge" title="Verified: this is the official pad token of that project">✔ Verified</span>` : lookOf(p) ? ` <span class="vbadge warn" title="Copies the name or symbol of a verified project but is not it">⚠ Lookalike</span>` : "";
+  const vMark = (p) => verOf(p) ? `<span class="vmark" title="Verified project">✔</span>` : lookOf(p) ? `<span class="vmark warn" title="Lookalike of a verified project">⚠</span>` : "";
+  const verPanel = (p) => { const v = verOf(p), l = lookOf(p);
+    if (v) { const lk = [v.links.x && `<a href="${esc(v.links.x)}" rel="noopener nofollow">X</a>`, v.links.telegram && `<a href="${esc(v.links.telegram)}" rel="noopener nofollow">Telegram</a>`, v.links.website && `<a href="${esc(v.links.website)}" rel="noopener nofollow">Website</a>`].filter(Boolean).join(" · ");
+      return `<div class="vpanel ok"><b>✔ Verified project.</b> This is the official war version of ${esc(v.name)}${v.original ? `, whose original token is <a href="${explorer("token", v.original.address)}" rel="noopener">${short(v.original.address)}</a> on ${esc(v.original.chain)}` : ""}.${lk ? " " + lk : ""} <span class="fine">Verified means we checked the project's official account posted this address. It is not an audit, an endorsement or a promise about price.</span></div>`; }
+    if (l) return `<div class="vpanel bad"><b>⚠ Lookalike warning.</b> This token copies the name or symbol of ${esc(l.name)}, a verified project, but it is <b>not</b> the official one. The official pad token is <a href="${explorer("token", l.padToken)}" rel="noopener">${short(l.padToken)}</a>. Check the contract address before you buy.</div>`;
+    return ""; };
 
   // ------------------------------------------------------------------ shared pieces
   const pfpHtml = (p, cls = "") => { const art = DEMO ? `/pad/assets/${ART[p.i % ART.length]}.webp` : ""; return `<span class="pfp ${art ? "" : "ini"} ${cls}" style="--h:${(parseInt(String(p.id).slice(2, 8), 16) || 0) % 360};${art ? `background-image:url(${art})` : ""}">${art ? "" : esc(String(p.symbol || "?").slice(0, 2).toUpperCase())}</span>`; };
@@ -240,7 +272,7 @@
       <a class="bav" href="${demoHref("/pad/battle/?id=" + b.id)}" aria-label="Open battle ${b.id}">${pfpHtml(b.A, "ga")}<span class="vsbolt">VS</span>${pfpHtml(b.B, "gb")}</a>
       <div class="bmain">
         <div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "live" : "soon"}">${b.st === 2 ? "● " : ""}${BST[b.st]}</span></div>
-        <h3>${esc(b.A.name)} <small>vs</small> ${esc(b.B.name)}${b.st === 3 && lead ? ` <span class="crown" title="winner">♛ ${esc((lead === 1 ? b.A : b.B).name)}</span>` : ""}</h3>
+        <h3>${esc(b.A.name)}${vMark(b.A)} <small>vs</small> ${esc(b.B.name)}${vMark(b.B)}${b.st === 3 && lead ? ` <span class="crown" title="winner">♛ ${esc((lead === 1 ? b.A : b.B).name)}</span>` : ""}</h3>
         ${started ? `<div class="mtug"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></div><div class="mtugn"><span>${num(b.vA)} STAG</span><span>${pa}% · ${pb}%</span><span>${num(b.vB)} STAG</span></div>` : ""}
         <p class="muted">${timeLine(b)}${b.st === 1 ? `. Runs ${Math.round(b.dur / 3600 * 10) / 10} h once accepted.` : ""}${b.st === 3 ? ". The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing." : ""}${b.st === 4 ? ". Offer withdrawn or lapsed." : ""}</p>
       </div>
@@ -254,6 +286,7 @@
   pages.home = async () => {
     embers($(".hero"), { n: 45 });
     const box = $("#padlist"), stats = $("#padstats");
+    const vf = $("#vfilter"); if (vf) vf.addEventListener("click", (ev) => { const bt = ev.target.closest("[data-v]"); if (!bt) return; $$("[data-v]", vf).forEach((x) => x.classList.toggle("on", x === bt)); const only = bt.dataset.v === "1"; $$(".padcard", box).forEach((el) => { el.hidden = only && el.dataset.ver !== "1"; }); const none = $("#vnone"); if (none) none.hidden = !only || $$(".padcard:not([hidden])", box).length > 0; });
     if (!LIVE && !DEMO) { box.innerHTML = `<p class="muted">No launches yet. This page lists every token launched through the pad once it is live.</p>`; return; }
     try {
       const n = await launchCount(), nb = DEMO ? MOCK_BATTLES.length : Number(await R.battle().count());
@@ -261,7 +294,7 @@
       if (!n) { box.innerHTML = `<p class="muted">No launches yet. <a href="/pad/launch/">Be the first.</a></p>`; return; }
       const idx = []; for (let i = Math.max(0, n - 24); i < n; i++) idx.push(i);
       const ps = (await Promise.all(idx.map((i) => pool(i).catch(() => null)))).filter(Boolean).reverse();
-      box.innerHTML = ps.map((p) => `<a class="card padcard ${p.war ? "war" : "peace"}" href="${demoHref("/pad/token/?i=" + p.i)}">${artHtml(p)}<div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
+      box.innerHTML = ps.map((p) => `<a class="card padcard ${p.war ? "war" : "peace"}" data-ver="${verOf(p) ? 1 : 0}" href="${demoHref("/pad/token/?i=" + p.i)}">${artHtml(p)}<div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
       loadBattles(8).then((bs) => {
         const top = bs.find((b) => b.st === 2) || bs[0]; const tbEl = $("#topbattle");
         if (tbEl) { if (!top) tbEl.innerHTML = ""; else { const [pa, pb] = shareOf(top); tbEl.innerHTML = `<a class="tbs" href="${demoHref("/pad/battle/?id=" + top.id)}"><span class="chip ${top.st === 2 ? "live" : "soon"}">${top.st === 2 ? "● Top battle live now" : "Latest battle · " + BST[top.st]}</span>${pfpHtml(top.A, "ga")}<span class="tbs-mid"><span class="tbs-n"><b>${esc(top.A.name)}</b><b>${esc(top.B.name)}</b></span><span class="mtug"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></span><span class="mtugn"><span>${pa}%</span><span>${pb}%</span></span></span>${pfpHtml(top.B, "gb")}<span class="tbs-time">${esc(timeLine(top))}</span></a>`; } }
@@ -317,6 +350,7 @@
     root.innerHTML = `
       <div class="tbanner"><div class="tb-in">${mascotHtml(p)}<div class="tb-name"><div class="row2"><h1>${esc(p.name)} <small>$${esc(p.symbol)}</small></h1>${modeChip(p)}</div>
         <p class="muted">Token <a href="${explorer("address", p.token)}" rel="noopener">${short(p.token)}</a> · creator <a href="${explorer("address", p.creator)}" rel="noopener">${short(p.creator)}</a> · pool #${p.i}. The creator can switch between war and peace at any time while no battle holds the pool.</p></div></div></div>
+      ${verPanel(p)}
       <div class="padstats2"><div><span>Price</span><b>${price(p)} STAG</b></div><div><span>Market value</span><b>${fdvOf(p) == null ? "n/a" : num(E.parseUnits(String(Math.round(fdvOf(p))), 18)) + " STAG"}</b></div><div><span>Volume</span><b>${num(p.volume)} STAG</b></div><div><span>War chest</span><b>${num(p.chest)} STAG</b></div></div>
       <div class="grid two padgrid">
         <section class="padbox"><h3>Trade</h3>
@@ -656,12 +690,24 @@
     if (live && endIn > 0) { const tEnd = DEMO ? Date.now() / 1000 + endIn : end; const iv = setInterval(() => { const el = $("#cd"); if (!el) return clearInterval(iv); const left2 = DEMO ? tEnd - Date.now() / 1000 : tEnd - nowSec(); el.textContent = left2 <= 0 ? "TIME UP" : clock(left2); if (left2 <= 0) clearInterval(iv); }, 1000); }
   };
 
+
+  pages.verified = async () => {
+    const box = $("#verlist"); if (!box) return;
+    if (!VER.length) { box.innerHTML = `<p class="muted">No projects are verified yet.</p>`; return; }
+    box.innerHTML = VER.map((v) => { const lk = [v.links.x && `<a href="${esc(v.links.x)}" rel="noopener nofollow">X</a>`, v.links.telegram && `<a href="${esc(v.links.telegram)}" rel="noopener nofollow">Telegram</a>`, v.links.website && `<a href="${esc(v.links.website)}" rel="noopener nofollow">Website</a>`].filter(Boolean).join(" · ");
+      return `<div class="padbox vcard"><div class="row"><h3>${esc(v.name)} <small>$${esc(v.symbol)}</small></h3><span class="vbadge">✔ Verified</span></div>
+        <div class="kv"><span>Pad token (war version)</span><b><a href="${explorer("token", v.padToken)}" rel="noopener">${short(v.padToken)}</a></b></div>
+        ${v.original ? `<div class="kv"><span>Original token</span><b><a href="${explorer("token", v.original.address)}" rel="noopener">${short(v.original.address)}</a> <small>${esc(v.original.chain)}</small></b></div>` : ""}
+        ${lk ? `<div class="kv"><span>Official links</span><b>${lk}</b></div>` : ""}${v.verifiedOn ? `<p class="fine">Verified ${esc(v.verifiedOn)}${v.by ? " · " + esc(v.by) : ""}</p>` : ""}</div>`; }).join("");
+  };
+
   // ------------------------------------------------------------------ boot
   document.addEventListener("DOMContentLoaded", async () => {
     if (LIVE) await syncClock();
     const nl = $("#notlive"); if (nl) nl.innerHTML = notLiveBanner();
     $$("[data-wallet]").forEach((b) => { b.addEventListener("click", () => !W.account && connect()); });
     if (DEMO) { $$('a[href^="/pad/"]').forEach((a) => { a.setAttribute("href", demoHref(a.getAttribute("href"))); }); }
+    await loadVerified();
     const pg = document.body.dataset.page; if (pg && pages[pg]) await pages[pg]();
     if (DEMO) $$('a[href^="/pad/"]').forEach((a) => { a.setAttribute("href", demoHref(a.getAttribute("href"))); });
     if (!DEMO && pg !== "token" && pg !== "battles" && pg !== "battle" && window.ethereum && window.ethereum.selectedAddress) connect();

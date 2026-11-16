@@ -400,11 +400,20 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 .step h2{margin:0 0 8px !important;font-size:clamp(28px,3.4vw,44px)}
 .step.risk{grid-template-columns:1fr;border-color:#ff9f43;box-shadow:0 0 0 1px rgba(255,159,67,.3),0 0 26px rgba(255,159,67,.12)}
 @media(max-width:640px){.step{grid-template-columns:1fr;text-align:left}.step img{width:96px;height:96px}}
+
+.vbadge{display:inline-block;margin-left:8px;border-radius:8px;padding:5px 9px;font:700 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(57,255,20,.14);color:var(--neon);border:1px solid rgba(57,255,20,.6);vertical-align:middle;white-space:nowrap}
+.vbadge.warn{background:rgba(255,80,80,.14);color:#ff8a8a;border-color:rgba(255,80,80,.7)}
+.vmark{color:var(--neon);font-size:.7em;margin-left:4px;vertical-align:middle}.vmark.warn{color:#ff8a8a}
+.vpanel{border-radius:14px;padding:14px 18px;margin:0 0 18px;font-size:16px;line-height:1.5}
+.vpanel.ok{border:1px solid rgba(57,255,20,.55);background:rgba(57,255,20,.07)}
+.vpanel.bad{border:2px solid #ff6b6b;background:rgba(255,80,80,.1);color:#ffe0e0}
+.vpanel a{color:inherit}
+.vcard h3{margin:0}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
 </style>
 <body data-page="battles">
 <header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>$STAG</span></a><nav><a href="/#ecosystem">Ecosystem</a><a href="/stagr/">StagR</a><a href="/play/">Play</a><a href="/lounge/">Lounge</a><a href="https://records.stagwifhood.fun">Records</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
-<main><div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-top:22px"><a class="btn" href="/pad/">Pad</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Battles</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>
+<main><div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-top:22px"><a class="btn" href="/pad/">Pad</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Battles</a><a class="btn" href="/pad/verified/">Verified</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>
 <section class="band"><div class="in"><div id="notlive"></div><span class="eyebrow">Battles</span><h1 class="sec-h">Token vs token</h1>
 <p class="sec-p">A creator in war mode offers a battle and sets the length. The other creator accepts or the offer lapses after 3 days. Both pools are locked while it runs. More trading volume wins. Only what each token earned during the fight is at stake, and the winner's chest is marked to be burned.</p>
 <div id="featured"></div>
