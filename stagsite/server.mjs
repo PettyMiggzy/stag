@@ -9,8 +9,6 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8', extra = {}) =
 http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', 'text/plain', { allow: 'GET, HEAD' });
   let rel; try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { return send(res, 400, 'Bad request'); }
-  if (/^\/pad\/preview\/?$/.test(rel)) return send(res, 302, '', 'text/plain', { location: '/pad/?demo=1', 'cache-control': 'no-store' });
-  if (/^\/pad\/preview\/creator\/?$/.test(rel)) return send(res, 302, '', 'text/plain', { location: '/pad/?demo=1&as=creator', 'cache-control': 'no-store' });
   if (!rel.endsWith('/') && !path.extname(rel)) return send(res, 301, '', 'text/plain', { location: rel + '/' + (new URL(req.url, 'http://x').search || '') });
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.normalize(path.join(ROOT, rel));

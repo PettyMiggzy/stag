@@ -53,7 +53,7 @@
   // ------------------------------------------------------------------ demo mode
   // /pad/?demo=1 fills every page with FAKE sample data so the layout can be reviewed before launch. Nothing is read from or sent to
   // the chain in demo mode: every button that would send a transaction only shows a "demo only" message. `&as=creator` previews the creator view.
-  const DEMO = /[?&]demo=1(&|$)/.test(location.search);
+  const DEMO = /[?&]demo=1(&|$)/.test(location.search) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);   // sample data only on a developer machine, never on the public site
   const ROLE = new URLSearchParams(location.search).get("as") === "creator" ? "creator" : "trader";
   const W18 = (n) => E.parseUnits(String(n), 18);
   const MOCK_CREATOR = "0xc0ffee254729296a45a3885639ac7e10f9d54979", MOCK_ME = "0xde30000000000000000000000000000000000001";

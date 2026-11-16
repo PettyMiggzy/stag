@@ -311,6 +311,15 @@ EXTRA = """
 .padcard .b::before{left:-13px}.padcard .b::after{right:-13px}
 .padcard .row .muted{font:700 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .padbox.bcard .row b{font:700 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* neon sign: PAD stays lit, the DY tubes flicker like a failing tube */
+.brand .fk{font:inherit;font-style:normal;animation:dyflick 5.6s infinite;display:inline-block}
+@keyframes dyflick{0%,18%,22%,26%,52%,60%,100%{opacity:1;color:#ffd75e;text-shadow:0 0 6px rgba(255,200,60,.9),0 0 22px rgba(255,200,60,.5)}
+ 19%,23%,53%,56%{opacity:1;color:#5b4a1d;text-shadow:none}
+ 20%,24%,54%{opacity:.85;color:#ffd75e;text-shadow:0 0 4px rgba(255,200,60,.7)}
+ 27%,50%{opacity:1;color:#5b4a1d;text-shadow:none}
+ 57%,59%{opacity:1;color:#5b4a1d;text-shadow:none}}
+@media(prefers-reduced-motion:reduce){.brand .fk{animation:none}}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
 /* ===== v5 polish: compact pad nav, phone hero, banner crops, tap targets ===== */
 .padnav{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding-top:16px;padding-bottom:6px}
@@ -396,7 +405,7 @@ def page(title, desc, body, path, pg):
 </body>
 </html>"""
 
-SUBNAV = '<div class="in padnav"><a class="brand" href="/pad/">STAGGY <span>PADDY</span></a><nav class="padlinks" aria-label="Staggy Paddy"><a class="btn" data-n="home" href="/pad/">Menu</a><a class="btn" data-n="launch" href="/pad/launch/">Launch</a><a class="btn" data-n="battles" href="/pad/battles/">Paddy wars</a><a class="btn" data-n="verified" href="/pad/verified/">Verified</a><a class="btn" data-n="how" href="/pad/how/">How it works</a></nav><button class="btn solid" data-wallet>Connect wallet</button></div>'
+SUBNAV = '<div class="in padnav"><a class="brand" href="/pad/">STAGGY <span>PAD<i class="fk">DY</i></span></a><nav class="padlinks" aria-label="Staggy Paddy"><a class="btn" data-n="home" href="/pad/">Menu</a><a class="btn" data-n="launch" href="/pad/launch/">Launch</a><a class="btn" data-n="battles" href="/pad/battles/">Paddy wars</a><a class="btn" data-n="verified" href="/pad/verified/">Verified</a><a class="btn" data-n="how" href="/pad/how/">How it works</a></nav><button class="btn solid" data-wallet>Connect wallet</button></div>'
 
 home = f"""<main><div id="feed" class="homefeed" aria-hidden="true"></div>{SUBNAV}
 <div class="in" style="padding-top:18px"><div id="notlive"></div></div>
