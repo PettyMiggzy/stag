@@ -312,7 +312,7 @@ SUBNAV = '<div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-to
 home = f"""<main><div id="feed" class="homefeed" aria-hidden="true"></div>{SUBNAV}
 <div class="in" style="padding-top:18px"><div id="notlive"></div></div>
 <section class="hero"><div class="in"><div>
-<span class="eyebrow">Staggy Patty · Robinhood Chain</span>
+<span class="eyebrow">Staggy Paddy · Robinhood Chain</span>
 <h1>Launch a token. Win the <em>chest</em>.</h1>
 <p class="lead">Every token launches paired with $STAG, with its liquidity locked from the first second. Creators earn from trading. Tokens can fight: more trading volume wins the other side's war chest, and the winner burns it.</p>
 <div class="cta"><a class="btn solid" href="/pad/launch/">Launch a token</a><a class="btn" href="/pad/how/">How it works</a></div>
@@ -386,13 +386,13 @@ def write(rel, content):
     p.write_text(content)
     print("wrote", rel)
 
-write("pad/index.html", page("Staggy Patty | Launch a token, win the chest", "Launch tokens paired with $STAG on Robinhood Chain. Locked liquidity, war chests and token battles.", home, "/pad/", "home"))
-write("pad/launch/index.html", page("Launch a token | Staggy Patty", "Create a token paired with $STAG in one transaction.", launch, "/pad/launch/", "launch"))
-write("pad/token/index.html", page("Token | Staggy Patty", "Trade and manage a token launched on Staggy Patty.", token, "/pad/token/", "token"))
-write("pad/battles/index.html", page("Battles | Staggy Patty", "Token vs token battles on Staggy Patty.", battles, "/pad/battles/", "battles"))
-write("pad/battle/index.html", page("Battle | Staggy Patty", "Token vs token battle on Staggy Patty: volume, war chests, buyers, sellers and holders.", battle, "/pad/battle/", "battle"))
-write("pad/verified/index.html", page("Verified projects | Staggy Patty", "Official pad tokens of verified projects on Staggy Patty.", verified, "/pad/verified/", "verified"))
-write("pad/how/index.html", page("How the pad works | Staggy Patty", "The rules of Staggy Patty in plain words: fees, war and peace, battles and risks.", how, "/pad/how/", "how"))
+write("pad/index.html", page("Staggy Paddy | Launch a token, win the chest", "Launch tokens paired with $STAG on Robinhood Chain. Locked liquidity, war chests and token battles.", home, "/pad/", "home"))
+write("pad/launch/index.html", page("Launch a token | Staggy Paddy", "Create a token paired with $STAG in one transaction.", launch, "/pad/launch/", "launch"))
+write("pad/token/index.html", page("Token | Staggy Paddy", "Trade and manage a token launched on Staggy Paddy.", token, "/pad/token/", "token"))
+write("pad/battles/index.html", page("Battles | Staggy Paddy", "Token vs token battles on Staggy Paddy.", battles, "/pad/battles/", "battles"))
+write("pad/battle/index.html", page("Battle | Staggy Paddy", "Token vs token battle on Staggy Paddy: volume, war chests, buyers, sellers and holders.", battle, "/pad/battle/", "battle"))
+write("pad/verified/index.html", page("Verified projects | Staggy Paddy", "Official pad tokens of verified projects on Staggy Paddy.", verified, "/pad/verified/", "verified"))
+write("pad/how/index.html", page("How the pad works | Staggy Paddy", "The rules of Staggy Paddy in plain words: fees, war and peace, battles and risks.", how, "/pad/how/", "how"))
 
 # make sure the existing pages do not link to the pad yet (idempotent)
 for rel in ("index.html", "stagr/index.html"):

@@ -1,4 +1,4 @@
-/* Staggy Patty front end. Plain browser JS + ethers v6 (global `ethers`). Reads the chain through a public RPC,
+/* Staggy Paddy front end. Plain browser JS + ethers v6 (global `ethers`). Reads the chain through a public RPC,
    writes through the visitor's own wallet. Nothing here holds keys or talks to a server of ours. */
 (() => {
   const C = window.PAD || {};
@@ -344,7 +344,7 @@
     if (!LIVE && !DEMO) { root.innerHTML = `<p class="muted">Token pages appear here once the pad is live.</p>`; return; }
     if (!Number.isInteger(i) || i < 0) { root.innerHTML = `<p class="muted">Pick a token from the <a href="/pad/">pad</a>.</p>`; return; }
     let p; try { if (i >= (await launchCount())) throw new Error("No such token."); p = await pool(i); } catch (e) { root.innerHTML = `<p class="muted">Could not load this token: ${esc(errMsg(e))}</p>`; return; }
-    document.title = `${p.symbol} | Staggy Patty`;
+    document.title = `${p.symbol} | Staggy Paddy`;
     const stag = C.stag, tok = c("erc20", p.token), stagC = R.stag();
     const zeroForOneBuy = p.quoteIs0;
     root.innerHTML = `

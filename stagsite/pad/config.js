@@ -1,4 +1,4 @@
-/* Staggy Patty addresses. While `live` is false every page shows "not live yet" and no transaction can be sent.
+/* Staggy Paddy addresses. While `live` is false every page shows "not live yet" and no transaction can be sent.
    Fill these in (and set live:true) only after the contracts are deployed and the final readback passes. */
 window.PAD = {
   live: false,
