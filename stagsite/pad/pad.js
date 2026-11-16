@@ -204,7 +204,7 @@
   const fdvOf = (p) => (p.stagPerToken == null ? null : p.stagPerToken * 1e9);
   const price = (p) => (p.stagPerToken == null ? "n/a" : p.stagPerToken < 1e-4 ? p.stagPerToken.toExponential(2) : p.stagPerToken.toLocaleString(undefined, { maximumSignificantDigits: 4 }));
   // Card art: decorative only. Demo uses the local sample pictures; real tokens have no picture yet, so show their initials on a tint taken from the token id.
-  const ART = ["a-green", "a-chest", "a-lantern", "a-gold", "a-ridge"];
+  const ART = ["m1", "m2", "m3", "m4", "m5", "m6"];
   const artHtml = (p) => DEMO ? `<div class="art" style="background-image:url(/pad/assets/${ART[p.i % ART.length]}.webp)" aria-hidden="true"></div>` : `<div class="art ini" style="--h:${(parseInt(String(p.id).slice(2, 8), 16) || 0) % 360}" aria-hidden="true"><span>${esc(String(p.symbol || "?").slice(0, 3).toUpperCase())}</span></div>`;
   const modeChip = (p) => `<span class="chip ${p.war ? "" : "soon"}">${p.war ? "War" : "Peace"}${p.locked ? " · locked in battle" : ""}</span>`;
 
@@ -213,6 +213,40 @@
     if (LIVE) return "";
     return `<div class="padnote"><b>Not live yet.</b> The contracts are being finished and checked. Nothing on this page can spend your funds until the addresses are announced in <a href="https://t.me/StagWifHood" rel="noopener">Telegram</a>.</div>`;
   }
+
+
+  // ------------------------------------------------------------------ shared pieces
+  const pfpHtml = (p, cls = "") => { const art = DEMO ? `/pad/assets/${ART[p.i % ART.length]}.webp` : ""; return `<span class="pfp ${art ? "" : "ini"} ${cls}" style="--h:${(parseInt(String(p.id).slice(2, 8), 16) || 0) % 360};${art ? `background-image:url(${art})` : ""}">${art ? "" : esc(String(p.symbol || "?").slice(0, 2).toUpperCase())}</span>`; };
+  const mascotHtml = (p) => `<div class="mascot">${artHtml(p)}</div>`;
+  // every battle, newest first, with the names and running volumes (demo or live)
+  async function loadBattles(limit = 30) {
+    if (DEMO) return [...MOCK_BATTLES].reverse().map((b) => ({ id: b.id, st: b.st, A: MOCK[b.a], B: MOCK[b.b], vA: b.va ? W18(b.va) : 0n, vB: b.vb ? W18(b.vb) : 0n, endIn: b.endIn || 0, dur: b.dur, expIn: b.expIn || 0 }));
+    if (!LIVE) return [];
+    const n = Number(await R.battle().count()), ids = []; for (let i = n - 1; i >= Math.max(0, n - limit); i--) ids.push(i);
+    const cache = {};
+    const ld = async (k) => { const pid = poolId(k); if (cache[pid]) return cache[pid]; const inf = await R.hook().info(pid); const tok = c("erc20", inf.token); const [name, symbol] = await Promise.all([tok.name().catch(() => "?"), tok.symbol().catch(() => "?")]); return (cache[pid] = { id: pid, i: 0, name, symbol, token: inf.token, creator: inf.creator, war: inf.war, locked: inf.locked, chest: inf.chest, volume: inf.volume }); };
+    return Promise.all(ids.map(async (id) => { const b = await R.battle().get(id); const [A, B] = await Promise.all([ld(b.a), ld(b.b)]); const st = Number(b.state);
+      return { id, st, A, B, vA: st >= 2 ? A.volume - b.volA0 : 0n, vB: st >= 2 ? B.volume - b.volB0 : 0n, endIn: st === 2 ? Number(b.end) - nowSec() : 0, dur: Number(b.duration), expIn: st === 1 ? Number(b.offerExpiry) - nowSec() : 0, raw: b }; }));
+  }
+  const BST = ["none", "Offered", "Live", "Settled", "Cancelled"];
+  const shareOf = (b) => { const t = b.vA + b.vB; const pa = t > 0n ? Math.round(Number((b.vA * 1000n) / t)) / 10 : 50; return [pa, Math.round((100 - pa) * 10) / 10]; };
+  const timeLine = (b) => { const d = (x) => (x < 5400 ? Math.max(1, Math.ceil(x / 60)) + " min" : x < 129600 ? Math.round(x / 3600) + " h" : Math.round(x / 86400) + " d");
+    if (b.st === 2) return b.endIn <= 0 ? "Time is up" : "Ends in " + d(b.endIn);
+    if (b.st === 1) return b.expIn > 0 ? "Offer open " + d(b.expIn) : "Offer lapsed";
+    if (b.st === 3) return "Settled"; return "Withdrawn"; };
+  function battleCard(b, acts = "") {
+    const [pa, pb] = shareOf(b); const started = b.st >= 2, lead = b.vA === b.vB ? 0 : b.vA > b.vB ? 1 : 2;
+    return `<div class="padbox bt bcard s${b.st}" data-st="${b.st}">
+      <a class="bav" href="${demoHref("/pad/battle/?id=" + b.id)}" aria-label="Open battle ${b.id}">${pfpHtml(b.A, "ga")}<span class="vsbolt">VS</span>${pfpHtml(b.B, "gb")}</a>
+      <div class="bmain">
+        <div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "live" : "soon"}">${b.st === 2 ? "● " : ""}${BST[b.st]}</span></div>
+        <h3>${esc(b.A.name)} <small>vs</small> ${esc(b.B.name)}${b.st === 3 && lead ? ` <span class="crown" title="winner">♛ ${esc((lead === 1 ? b.A : b.B).name)}</span>` : ""}</h3>
+        ${started ? `<div class="mtug"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></div><div class="mtugn"><span>${num(b.vA)} STAG</span><span>${pa}% · ${pb}%</span><span>${num(b.vB)} STAG</span></div>` : ""}
+        <p class="muted">${timeLine(b)}${b.st === 1 ? `. Runs ${Math.round(b.dur / 3600 * 10) / 10} h once accepted.` : ""}${b.st === 3 ? ". The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing." : ""}${b.st === 4 ? ". Offer withdrawn or lapsed." : ""}</p>
+      </div>
+      <div class="cta"><a class="btn" href="${demoHref("/pad/battle/?id=" + b.id)}">View battle</a>${acts}</div></div>`;
+  }
+  const featuredHtml = (b) => { if (!b) return ""; const live = b.st === 2; return `<a class="vsb feat" href="${demoHref("/pad/battle/?id=" + b.id)}"><div class="halves"><div class="half ga"><div class="hn">${pfpHtml(b.A, "ga")}<h2>${esc(b.A.name)}</h2></div></div><div class="half gb"><div class="hn">${pfpHtml(b.B, "gb")}<h2>${esc(b.B.name)}</h2></div></div></div><div class="flash"></div><div class="bolt"></div><div class="mid"><div class="cd small">${live ? "● LIVE NOW" : BST[b.st].toUpperCase()}</div><div class="cdl">${esc(timeLine(b))} · open the battle</div></div></a>`; };
 
   // ------------------------------------------------------------------ pages
   const pages = {};
@@ -228,6 +262,20 @@
       const idx = []; for (let i = Math.max(0, n - 24); i < n; i++) idx.push(i);
       const ps = (await Promise.all(idx.map((i) => pool(i).catch(() => null)))).filter(Boolean).reverse();
       box.innerHTML = ps.map((p) => `<a class="card padcard ${p.war ? "war" : "peace"}" href="${demoHref("/pad/token/?i=" + p.i)}">${artHtml(p)}<div class="b"><div class="row">${modeChip(p)}<span class="muted">#${p.i}</span></div><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3><div class="kv"><span>Price</span><b>${price(p)} STAG</b></div><div class="kv"><span>Volume</span><b>${num(p.volume)} STAG</b></div><div class="kv"><span>War chest</span><b>${num(p.chest)} STAG</b></div></div></a>`).join("");
+      loadBattles(8).then((bs) => {
+        const top = bs.find((b) => b.st === 2) || bs[0]; const tbEl = $("#topbattle");
+        if (tbEl) { if (!top) tbEl.innerHTML = ""; else { const [pa, pb] = shareOf(top); tbEl.innerHTML = `<a class="tbs" href="${demoHref("/pad/battle/?id=" + top.id)}"><span class="chip ${top.st === 2 ? "live" : "soon"}">${top.st === 2 ? "● Top battle live now" : "Latest battle · " + BST[top.st]}</span>${pfpHtml(top.A, "ga")}<span class="tbs-mid"><span class="tbs-n"><b>${esc(top.A.name)}</b><b>${esc(top.B.name)}</b></span><span class="mtug"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></span><span class="mtugn"><span>${pa}%</span><span>${pb}%</span></span></span>${pfpHtml(top.B, "gb")}<span class="tbs-time">${esc(timeLine(top))}</span></a>`; } }
+        const hb = $("#homebattles"); if (hb) hb.innerHTML = bs.filter((b) => b.st === 2 || b.st === 1).slice(0, 2).map((b) => battleCard(b)).join("") || `<p class="muted">No battles are running right now. <a href="${demoHref("/pad/battles/")}">See all battles</a>.</p>`;
+      }).catch(() => { const hb = $("#homebattles"); if (hb) hb.innerHTML = ""; });
+      const feedEl = $("#feed");
+      if (feedEl) (async () => { try {
+        let items;
+        if (DEMO) items = MOCK.slice(0, 6).map((q, j) => ({ sym: q.symbol, buy: j % 3 !== 2, amt: W18(5000 + j * 1300), age: (j + 1) * 7 }));
+        else { const head = await ro.getBlockNumber(); const lg = await getLogsSafe({ address: C.hook, topics: [IFACE.getEvent("Taxed").topicHash] }, Math.max(0, head - 20000), head); const by = Object.fromEntries(ps.map((q) => [String(q.id).toLowerCase(), q]));
+          items = (await Promise.all(lg.slice(-8).reverse().map(async (l) => { const d = IFACE.parseLog(l); const q = by[String(l.topics[1]).toLowerCase()]; if (!q) return null; const ts = (await ro.getBlock(l.blockNumber)).timestamp; return { sym: q.symbol, buy: d.args.buy, amt: d.args.volume, age: Math.max(0, nowSec() - ts) }; }))).filter(Boolean); }
+        const one = items.map((it) => `<span class="${it.buy ? "b" : "s"}"><i></i>${it.age < 90 ? it.age + "s" : Math.round(it.age / 60) + "m"} ago · ${it.buy ? "buy" : "sell"} ${num(it.amt)} STAG · $${esc(it.sym)}</span>`).join("");
+        feedEl.innerHTML = items.length ? `<div class="ftrack">${one}${one}</div>` : "";
+      } catch { feedEl.innerHTML = ""; } })();
     } catch (e) { box.innerHTML = `<p class="muted">Could not load launches: ${esc(errMsg(e))}</p>`; }
   };
 
@@ -237,6 +285,10 @@
     const modeInfo = $("#modeinfo");
     const showMode = () => { const war = form.mode.value === "war"; $$(".tabs .tab", form).forEach((l) => l.classList.toggle("on", l.querySelector("input").checked)); modeInfo.innerHTML = war ? "<b>War:</b> the 3% tax on buys builds a war chest. You can burn it, or put it up in a battle. Nothing from buy tax goes to you or to holders." : "<b>Peace:</b> the 3% tax on buys pays 1% to you and 2% to everyone holding the token, in proportion to what they hold. No war chest builds, and you cannot enter battles while in peace (switch to war first)."; };
     form.addEventListener("change", showMode); showMode();
+    const prev = $("#launchprev");
+    const drawPrev = () => { if (!prev) return; const war = form.mode.value === "war"; const nm = form.tname.value.trim() || "Your token", sy = (form.tsym.value.trim() || "TKN").toUpperCase(); const hue = [...nm].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 360;
+      prev.innerHTML = `<h3>Preview</h3><div class="card padcard ${war ? "war" : "peace"} nopad"><div class="art ini" style="--h:${hue}"><span>${esc(sy.slice(0, 3))}</span></div><div class="b"><div class="row"><span class="chip ${war ? "" : "soon"}">${war ? "War" : "Peace"}</span><span class="muted">preview</span></div><h3>${esc(nm)} <small>$${esc(sy)}</small></h3><div class="kv"><span>Supply</span><b>1,000,000,000</b></div><div class="kv"><span>Starts at</span><b>${esc(form.fdv.value || "?")} STAG</b></div><div class="kv"><span>Liquidity</span><b>Locked</b></div></div></div><p class="fine">A picture can be added later. Until then the card shows your symbol.</p>`; };
+    form.addEventListener("input", drawPrev); form.addEventListener("change", drawPrev); drawPrev();
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault(); if (!LIVE && !DEMO) return;
       const name = form.tname.value.trim(), sym = form.tsym.value.trim(), fdvStr = form.fdv.value.trim(), war = form.mode.value === "war";
@@ -263,8 +315,8 @@
     const stag = C.stag, tok = c("erc20", p.token), stagC = R.stag();
     const zeroForOneBuy = p.quoteIs0;
     root.innerHTML = `
-      <div class="row"><h1 class="sec-h" style="margin:0">${esc(p.name)} <small>$${esc(p.symbol)}</small></h1>${modeChip(p)}</div>
-      <p class="muted">Token <a href="${explorer("address", p.token)}" rel="noopener">${short(p.token)}</a> · creator <a href="${explorer("address", p.creator)}" rel="noopener">${short(p.creator)}</a> · pool #${p.i}. The creator can switch between war and peace at any time while no battle holds the pool.</p>
+      <div class="tbanner"><div class="tb-in">${mascotHtml(p)}<div class="tb-name"><div class="row2"><h1>${esc(p.name)} <small>$${esc(p.symbol)}</small></h1>${modeChip(p)}</div>
+        <p class="muted">Token <a href="${explorer("address", p.token)}" rel="noopener">${short(p.token)}</a> · creator <a href="${explorer("address", p.creator)}" rel="noopener">${short(p.creator)}</a> · pool #${p.i}. The creator can switch between war and peace at any time while no battle holds the pool.</p></div></div></div>
       <div class="padstats2"><div><span>Price</span><b>${price(p)} STAG</b></div><div><span>Market value</span><b>${fdvOf(p) == null ? "n/a" : num(E.parseUnits(String(Math.round(fdvOf(p))), 18)) + " STAG"}</b></div><div><span>Volume</span><b>${num(p.volume)} STAG</b></div><div><span>War chest</span><b>${num(p.chest)} STAG</b></div></div>
       <div class="grid two padgrid">
         <section class="padbox"><h3>Trade</h3>
@@ -276,11 +328,28 @@
           <div class="cta"><button class="btn" id="approveBtn" hidden>Approve</button><button class="btn solid" id="tradeBtn">Connect wallet</button></div>
           <p class="fine">Every trade pays a 3% tax on its $STAG side (see <a href="/pad/how/">how it works</a>). Prices move with trades and this token can lose most or all of its value. Amounts shown are estimates until your wallet confirms.</p>
         </section>
-        <section class="padbox"><h3>You</h3><div id="mine" class="muted">Connect a wallet to see your balances.</div></section>
+        <div class="rcol">
+          <section class="padbox"><h3>You</h3><div id="mine" class="muted">Connect a wallet to see your balances.</div></section>
+          <section class="padbox chestbox"><h3>War chest</h3><div class="chestrow"><img src="/pad/assets/chest.webp" alt="" width="150" height="113"><div><b class="big">${num(p.chest)} STAG</b><p class="fine">${p.war ? "Built from the 3% tax on buys. The creator can burn it or put it up in a battle." : "Peace mode: the buy tax goes to the creator and the holders, so no chest builds up."}</p>${p.locked ? `<span class="chip soon">In a battle: pool locked</span>` : ""}</div></div></section>
+        </div>
       </div>
+      <div class="grid two feeds"><section class="padbox"><h3>Top buyers <small>(last 24 h)</small></h3><div id="topbuyers" class="muted">Loading…</div></section><section class="padbox"><h3>Recent trades</h3><div id="recent" class="muted">Loading…</div></section></div>
       <section class="padbox" id="creatorbox" hidden><h3>Creator tools</h3><div id="creatortools"></div></section>
       <section class="padbox"><h3>Anyone can</h3><div id="anyone"></div></section>`;
 
+
+    (async () => { // top buyers + recent trades: extras that never block or break the trade box
+      const tb = $("#topbuyers"), rc = $("#recent"); const none = (el) => { if (el) el.innerHTML = `<p class="muted small">Not available right now.</p>`; };
+      try {
+        let S;
+        if (DEMO) S = mockSide(p.i + 1, Number(E.formatUnits(p.volume, 18)) / 8); else { const from = await blockAt(nowSec() - 86400); S = await sideStats(p, from, null, true); }
+        const rk = (list) => list.length ? list.map(([a, v], i) => `<div class="rk r${i < 3 ? i + 1 : 0}"><span class="rn">${i + 1}</span><i class="av" style="--h:${(parseInt(a.slice(2, 8), 16) || 0) % 360}"></i><span class="ra"><a href="${explorer("address", a)}" rel="noopener">${short(a)}</a></span><span class="rb"><u style="width:${Math.max(3, Number((v * 100n) / (list[0][1] || 1n)))}%"></u></span><b class="rv">${num(v)} <small>$${esc(p.symbol)}</small></b></div>`).join("") : `<p class="muted small">No buys in the last 24 hours.</p>`;
+        tb.innerHTML = rk(topN(new Map(S.buyers), 5));
+        const evs = [...S.ev].sort((x, y) => y.blk - x.blk).slice(0, 8);
+        if (!DEMO) await Promise.all(evs.map(async (e) => { try { e.ts = (await ro.getBlock(e.blk)).timestamp; } catch { e.ts = null; } }));
+        rc.innerHTML = evs.length ? `<div class="trades">${evs.map((e) => `<div class="tr ${e.buy ? "b" : "s"}"><span>${DEMO ? e.age + "s" : e.ts ? ago(e.ts) : ""} ago</span><b>${e.buy ? "BUY" : "SELL"}</b><span>${num(e.amt)} $${esc(p.symbol)}</span><a href="${explorer("address", e.addr)}" rel="noopener">${short(e.addr)}</a></div>`).join("")}</div>` : `<p class="muted small">No trades in the last 24 hours.</p>`;
+      } catch { none(tb); none(rc); }
+    })();
     let mode = "buy"; const payas = $("#payas"), amt = $("#amt"), quoteEl = $("#quote"), tradeBtn = $("#tradeBtn"), approveBtn = $("#approveBtn"), slipEl = $("#slip");
     // once the $STAG curve has graduated its ETH zaps revert, so the ETH options are hidden (trading with $STAG always works)
     let curveLive = true; if (!DEMO) { try { curveLive = !(await c("curve", C.curve).graduated()); } catch { curveLive = true; } }
@@ -400,17 +469,14 @@
 
   pages.battles = async () => {
     const list = $("#battlelist"), mine = $("#battlemine");
+    const filt = $("#bfilter"), feat = $("#featured");
+    const applyFilter = () => { const on = $("#bfilter .on"), f = on ? on.dataset.f : "all"; $$(".bcard", list).forEach((el) => { el.hidden = !(f === "all" ? el.dataset.st !== "4" || true : el.dataset.st === f); }); };
+    if (filt) filt.addEventListener("click", (ev) => { const bt = ev.target.closest("[data-f]"); if (!bt) return; $$("[data-f]", filt).forEach((x) => x.classList.toggle("on", x === bt)); applyFilter(); });
+    const showFeatured = (bs) => { if (feat) { const top = bs.find((b) => b.st === 2) || bs[0]; feat.innerHTML = featuredHtml(top); } };
     if (DEMO) {
-      const ST = ["none", "Offered", "Live", "Settled", "Cancelled"];
-      const rows = [...MOCK_BATTLES].reverse().map((b) => {
-        const A = MOCK[b.a], B = MOCK[b.b]; let line = "", acts = [];
-        if (b.st === 1) { line = `Offer open for ${Math.round(b.expIn / 86400 * 10) / 10} d. Runs ${b.dur / 3600} h once accepted.`; }
-        if (b.st === 2) line = `Ends in ${Math.floor(b.endIn / 3600)} h ${Math.round((b.endIn % 3600) / 60)} min. Volume since start: ${num(W18(b.va))} vs ${num(W18(b.vb))} STAG.`;
-        if (b.st === 3) line = "Settled. The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing.";
-        if (b.st === 1 && ROLE === "creator" && B.creator === MOCK_CREATOR) acts.push(`<button class="btn solid" data-act="accept">Accept</button>`);
-        return `<div class="padbox bt"><div class="row"><b>#${b.id}</b><span class="chip ${b.st === 2 ? "" : "soon"}">${ST[b.st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta"><a class="btn" href="${demoHref("/pad/battle/?id=" + b.id)}">View battle</a>${acts.join("")}</div></div>`;
-      });
-      list.innerHTML = rows.join("");
+      const bsd = await loadBattles(); showFeatured(bsd);
+      const rows = bsd.map((b) => { const acts = []; if (b.st === 1 && ROLE === "creator" && b.B.creator === MOCK_CREATOR) acts.push(`<button class="btn solid" data-act="accept">Accept</button>`); return battleCard(b, acts.join("")); });
+      list.innerHTML = rows.join(""); applyFilter();
       $$("[data-act]", list).forEach((bt) => bt.addEventListener("click", () => send("Accept", null)));
       const renderDemoMine = () => {
         if (ROLE !== "creator") { mine.innerHTML = `<p class="muted">You have not launched a token with this wallet. (Preview the creator view with the "creator" link at the top.)</p>`; return; }
@@ -431,23 +497,14 @@
       try {
         const n = Number(await R.battle().count());
         if (!n) { list.innerHTML = `<p class="muted">No battles yet.</p>`; } else {
-          const ids = []; for (let i = n - 1; i >= Math.max(0, n - 30); i--) ids.push(i);
-          const rows = await Promise.all(ids.map(async (id) => {
-            const b = await R.battle().get(id); const A = await nm({ id: poolId(b.a) }), B = await nm({ id: poolId(b.b) });
-            const st = Number(b.state), now = nowSec();
-            const live = st === 2, ended = live && now >= Number(b.end);
-            let line = "";
-            if (st === 1) line = `Offer open for ${left(Number(b.offerExpiry))}. Runs ${Math.round(Number(b.duration) / 3600 * 10) / 10} h once accepted.`;
-            if (st === 3) line = "Settled. The winner is the token with more volume during the fight; its chest is marked for burning (see that token page). A tie moves nothing.";
-            if (st === 4) line = "Offer withdrawn or lapsed.";
-            if (live) { const va = A.volume - b.volA0, vb = B.volume - b.volB0; line = `${ended ? "Ended" : "Ends in " + left(Number(b.end))}. Volume since start: ${num(va)} vs ${num(vb)} STAG.`; }
-            const acts = [];
-            if (st === 1 && W.account && W.account.toLowerCase() === B.creator.toLowerCase() && now <= Number(b.offerExpiry)) acts.push(`<button class="btn solid" data-act="accept" data-id="${id}">Accept</button>`);
-            if (st === 1 && W.account && (W.account.toLowerCase() === A.creator.toLowerCase() || now > Number(b.offerExpiry))) acts.push(`<button class="btn" data-act="cancel" data-id="${id}">${now > Number(b.offerExpiry) ? "Clear lapsed offer" : "Withdraw offer"}</button>`);
-            if (ended) acts.push(`<button class="btn solid" data-act="settle" data-id="${id}">Settle</button>`);
-            return `<div class="padbox bt"><div class="row"><b>#${id}</b><span class="chip ${st === 2 ? "" : "soon"}">${ST[st]}</span></div><h3>${esc(A.name)} <small>vs</small> ${esc(B.name)}</h3><p class="muted">${line}</p><div class="cta"><a class="btn" href="/pad/battle/?id=${id}">View battle</a>${acts.join("")}</div></div>`;
-          }));
-          list.innerHTML = rows.join("");
+          const bsl = await loadBattles(30); showFeatured(bsl);
+          const now = nowSec();
+          const rows = bsl.map((b) => { const raw = b.raw, acts = []; const ended = b.st === 2 && now >= Number(raw.end);
+            if (b.st === 1 && W.account && W.account.toLowerCase() === b.B.creator.toLowerCase() && now <= Number(raw.offerExpiry)) acts.push(`<button class="btn solid" data-act="accept" data-id="${b.id}">Accept</button>`);
+            if (b.st === 1 && W.account && (W.account.toLowerCase() === b.A.creator.toLowerCase() || now > Number(raw.offerExpiry))) acts.push(`<button class="btn" data-act="cancel" data-id="${b.id}">${now > Number(raw.offerExpiry) ? "Clear lapsed offer" : "Withdraw offer"}</button>`);
+            if (ended) acts.push(`<button class="btn solid" data-act="settle" data-id="${b.id}">Settle</button>`);
+            return battleCard(b, acts.join("")); });
+          list.innerHTML = rows.join(""); applyFilter();
           $$("[data-act]", list).forEach((bt) => bt.addEventListener("click", async () => {
             const id = BigInt(bt.dataset.id), act = bt.dataset.act;
             const fnName = { accept: "accept", cancel: "cancel", settle: "settle" }[act];
@@ -497,7 +554,7 @@
     catch (e) { if (depth >= 6 || to - from < 20000) throw e; const mid = Math.floor((from + to) / 2); return (await getLogsSafe(f, from, mid, depth + 1)).concat(await getLogsSafe(f, mid + 1, to, depth + 1)); }
   }
   const topN = (m, n) => [...m.entries()].sort((a, b) => (b[1] > a[1] ? 1 : b[1] < a[1] ? -1 : 0)).slice(0, n);
-  async function sideStats(p, from, to) {
+  async function sideStats(p, from, to, lite = false) {
     const out = { buyVol: 0n, sellVol: 0n, buys: 0, sells: 0, buyers: new Map(), sellers: new Map(), holders: [], holdersSeen: 0, note: "", ev: [] };
     const head = await ro.getBlockNumber(); const toB = to == null ? head : Math.min(head, to);
     const taxedT = IFACE.getEvent("Taxed").topicHash;
@@ -505,7 +562,7 @@
     const trT = IFACE.getEvent("Transfer").topicHash; const skip = new Set([C.pm, C.hook, C.router, C.battle, C.factory].filter(Boolean).map((x) => x.toLowerCase()).concat([ZERO, DEAD]));
     // wallets that ever held the token: every Transfer since the pool was registered
     let regFrom = from;
-    try { const rl = await getLogsSafe({ address: C.hook, topics: [IFACE.getEvent("PoolRegistered").topicHash, p.id] }, 0, head); if (rl.length) regFrom = rl[0].blockNumber; } catch { out.note = "Holder list covers only the battle window (full history not available from the RPC)."; }
+    if (!lite) try { const rl = await getLogsSafe({ address: C.hook, topics: [IFACE.getEvent("PoolRegistered").topicHash, p.id] }, 0, head); if (rl.length) regFrom = rl[0].blockNumber; } catch { out.note = "Holder list covers only the battle window (full history not available from the RPC)."; }
     if (regFrom == null) regFrom = Math.max(0, head - 200000);
     const seen = new Map();
     for (const l of await getLogsSafe({ address: p.token, topics: [trT] }, regFrom, head)) {
@@ -515,6 +572,7 @@
       if (inWin && f === C.pm.toLowerCase() && !skip.has(t)) { out.buyers.set(t, (out.buyers.get(t) || 0n) + v); out.ev.push({ blk: l.blockNumber, buy: true, addr: t, amt: v }); }
       if (inWin && t === C.pm.toLowerCase() && !skip.has(f)) { out.sellers.set(f, (out.sellers.get(f) || 0n) + v); out.ev.push({ blk: l.blockNumber, buy: false, addr: f, amt: v }); }
     }
+    if (lite) return out;
     const cand = topN(seen, 150).map((x) => x[0]); const tok = c("erc20", p.token);
     const bal = await Promise.all(cand.map(async (a) => [a, await tok.balanceOf(a).catch(() => 0n)]));
     const held = bal.filter((x) => x[1] > 0n); out.holdersSeen = held.length; out.holders = held.sort((a, b) => (b[1] > a[1] ? 1 : -1)).slice(0, 8);

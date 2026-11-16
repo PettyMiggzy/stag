@@ -198,6 +198,88 @@ EXTRA = """
 .vsb{animation:frame 5s ease-in-out infinite alternate}
 @keyframes frame{from{box-shadow:0 0 22px rgba(57,255,20,.12)}to{box-shadow:0 0 46px rgba(57,255,20,.34),0 0 30px rgba(255,200,60,.18)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+
+/* ===== v3 look: key-art hero, glowing tiles, art cards ===== */
+.homefeed{overflow:hidden;white-space:nowrap;background:#070d08;border-bottom:1px solid var(--line);font:500 13px/1 var(--mono);color:var(--muted)}
+.homefeed:empty{display:none}
+.ftrack{display:inline-flex;gap:34px;padding:11px 0;animation:marq 38s linear infinite;width:max-content}
+.ftrack span{display:inline-flex;align-items:center;gap:8px}.ftrack i{width:8px;height:8px;border-radius:50%}
+.ftrack .b i{background:var(--neon)}.ftrack .s i{background:#ff6b6b}.ftrack .b{color:#cfe9c8}
+@keyframes marq{to{transform:translateX(-50%)}}
+.hero{background:linear-gradient(180deg,rgba(5,8,6,.5) 0%,rgba(5,8,6,.2) 45%,#050806 100%),url(/pad/assets/hero.webp) center bottom/cover no-repeat;padding-bottom:36px}
+.hero .in{min-height:0;display:block;text-align:center}
+.hero .in:first-of-type{padding-top:clamp(36px,5vw,70px);padding-bottom:clamp(70px,11vw,150px)}
+.hero .btn:not(.solid){background:rgba(5,8,6,.78);color:var(--neon)}
+.hero h1{text-shadow:0 4px 30px #000}.hero .lead{margin-inline:auto;text-shadow:0 2px 14px #000;max-width:720px}
+.hero .cta,.hero .stats{justify-content:center}
+.topbattle:empty{display:none}
+.tbs{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:14px;background:rgba(7,13,9,.86);border:2px solid rgba(57,255,20,.5);box-shadow:var(--glow);border-radius:18px;padding:14px 18px;margin:-70px auto 0;max-width:820px;color:inherit;text-decoration:none;position:relative;z-index:2;backdrop-filter:blur(6px)}
+.tbs .chip{grid-column:1 / -1;justify-self:center;margin:-26px 0 0}
+.tbs-mid{display:grid;gap:6px;min-width:0}.tbs-n{display:flex;justify-content:space-between;gap:10px;font:400 20px/1 Anton,Impact,sans-serif}.tbs-n b{font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbs-time{font:700 12px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;max-width:110px}
+@media(max-width:640px){.tbs{grid-template-columns:auto 1fr auto;gap:10px}.tbs-time{grid-column:1 / -1;text-align:center;max-width:none}.tbs-mid{grid-column:2}.tbs .pfp.gb{grid-column:3}}
+.band.tight{padding-bottom:10px}
+.mtug{display:flex;height:12px;border-radius:8px;overflow:hidden;background:var(--panel);gap:2px}
+.mtug i{background:var(--neon)}.mtug b{background:var(--gold)}
+.mtugn{display:flex;justify-content:space-between;font:700 12px/1 var(--mono);color:var(--muted);margin-top:6px}
+.chip.live{background:#ff3b3b;color:#fff}
+/* battle cards: wide, two avatars and a tug bar */
+.padbox.bcard{display:grid;grid-template-columns:auto 1fr;gap:14px 18px;align-items:center;padding:16px 20px}
+.padbox.bcard .cta{grid-column:1 / -1;flex-direction:row;justify-content:flex-end}
+#battlelist .padbox.bcard{grid-template-columns:auto 1fr auto}
+#battlelist .padbox.bcard .cta{grid-column:auto;flex-direction:column;justify-content:flex-start}
+.mtugn span{white-space:nowrap}
+.bcard h3{font-size:26px;margin:6px 0;text-align:left}
+.padbox.bt.bcard p{text-align:left}.padbox.bt.bcard .row{justify-content:flex-start;gap:12px}.padbox.bt.bcard h3{text-align:left}
+.bcard .crown{font:700 12px/1 var(--mono);letter-spacing:.08em;color:var(--gold);border:1px solid var(--gold);border-radius:8px;padding:3px 7px;margin-left:8px;vertical-align:middle;text-transform:uppercase}
+.bav{display:flex;align-items:center;gap:8px;text-decoration:none}
+.bav .pfp{width:64px}.vsbolt{font:400 22px/1 Anton,Impact,sans-serif;color:#fff;text-shadow:0 0 14px var(--neon)}
+.bcard .cta{margin:0;align-items:stretch}
+.bcard.s3{opacity:.92;border-color:rgba(255,200,60,.4)}
+.bcard.s2{border-color:rgba(255,59,59,.55);box-shadow:0 0 0 1px rgba(255,59,59,.3),0 0 26px rgba(255,59,59,.12)}
+@media(max-width:760px){.padbox.bcard,#battlelist .padbox.bcard{grid-template-columns:1fr}.padbox.bcard .cta,#battlelist .padbox.bcard .cta{flex-direction:row;justify-content:stretch}.bav{justify-content:center}}
+.pills{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 18px}
+.pills button{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:10px 20px;font:400 18px/1 Anton,Impact,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;min-height:44px}
+.pills button.on{background:var(--neon);color:#031005;border-color:var(--neon);box-shadow:0 0 18px rgba(57,255,20,.4)}
+.vsb.feat{display:block;text-decoration:none;color:inherit;min-height:clamp(200px,28vw,330px);margin-bottom:6px}
+.vsb.feat h2{font-size:clamp(20px,3vw,40px)}
+.vsb.feat .mid{top:auto;bottom:14px}
+/* token page */
+.tbanner{border-radius:22px;border:2px solid rgba(57,255,20,.5);box-shadow:var(--glow);background:linear-gradient(90deg,rgba(5,8,6,.9),rgba(5,8,6,.55)),url(/pad/assets/hero.webp) center/cover;margin:0 0 18px}
+.tb-in{display:flex;gap:22px;align-items:center;padding:22px}
+.mascot{width:clamp(84px,14vw,170px);flex:none}.mascot .art{background-size:cover;background-position:center;background-repeat:no-repeat;aspect-ratio:1;border-radius:18px;border:3px solid var(--neon);box-shadow:0 0 26px rgba(57,255,20,.45);overflow:hidden}
+.tb-name h1{font:400 clamp(34px,6vw,76px)/1 Anton,Impact,sans-serif;margin:0}
+.tb-name h1 small{font-size:.4em;color:var(--muted)}
+.row2{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center}
+.rcol{display:grid;gap:22px;align-content:start}.rcol .padbox{margin:0}
+.chestrow{display:flex;gap:16px;align-items:center}.chestrow img{border-radius:12px;filter:drop-shadow(0 0 16px rgba(57,255,20,.4))}
+.chestrow .big{font:400 30px/1.1 Anton,Impact,sans-serif;color:var(--gold-hi)}
+.feeds{margin-top:22px}
+.trades{display:grid;gap:4px}
+.tr{display:grid;grid-template-columns:70px 52px 1fr auto;gap:10px;padding:8px 10px;border-radius:8px;font:500 14px/1.2 var(--mono)}
+.tr.b{background:rgba(57,255,20,.1)}.tr.b b{color:var(--neon)}.tr.s{background:rgba(255,80,80,.12)}.tr.s b{color:#ff8a8a}
+.tr a{color:var(--muted)}
+@media(max-width:560px){.tb-in{flex-direction:column;text-align:center}.tr{grid-template-columns:56px 44px 1fr}.tr a{display:none}.chestrow{flex-direction:column;text-align:center}}
+/* launch page */
+.steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:0 0 22px}
+.steps3>div{display:flex;align-items:center;gap:14px;border:2px solid rgba(57,255,20,.4);border-radius:14px;padding:14px 18px;background:rgba(7,14,9,.85)}
+.steps3 b{font:400 34px/1 Anton,Impact,sans-serif;color:var(--neon)}.steps3 span{font:400 22px/1 Anton,Impact,sans-serif;letter-spacing:.03em;text-transform:uppercase}
+@media(max-width:640px){.steps3{grid-template-columns:1fr}}
+.lgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:22px;align-items:start}
+@media(max-width:900px){.lgrid{grid-template-columns:1fr}}
+#launchprev{position:sticky;top:90px}.padcard.nopad{animation:none;pointer-events:none}
+#launchform .tab{min-height:230px;font:400 34px/1 Anton,Impact,sans-serif;letter-spacing:.04em}
+#launchform .tab:nth-child(1){background-image:url(/pad/assets/war.webp)}
+#launchform .tab:nth-child(2){background-image:url(/pad/assets/peace.webp)}
+#launchform .tab input{accent-color:var(--neon)}
+/* how page */
+.howban{height:clamp(150px,24vw,280px);border-radius:22px;border:2px solid rgba(57,255,20,.45);box-shadow:var(--glow);background:linear-gradient(180deg,transparent 40%,#050806),url(/pad/assets/hero.webp) center/cover;margin:0 0 22px}
+.step{display:grid;grid-template-columns:140px 1fr;gap:22px;align-items:center;margin:0 0 20px;padding:20px 24px;border:2px solid rgba(57,255,20,.4);border-radius:18px;background:rgba(7,14,9,.88);box-shadow:var(--glow)}
+.step:nth-of-type(even){border-color:rgba(255,200,60,.5);box-shadow:0 0 0 1px rgba(255,200,60,.3),0 0 26px rgba(255,200,60,.1)}
+.step img{width:140px;height:140px;object-fit:cover;border-radius:18px}
+.step h2{margin:0 0 8px !important;font-size:clamp(28px,3.4vw,44px)}
+.step.risk{grid-template-columns:1fr;border-color:#ff9f43;box-shadow:0 0 0 1px rgba(255,159,67,.3),0 0 26px rgba(255,159,67,.12)}
+@media(max-width:640px){.step{grid-template-columns:1fr;text-align:left}.step img{width:96px;height:96px}}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
 """
 
@@ -218,7 +300,7 @@ def page(title, desc, body, path, pg):
 
 SUBNAV = '<div class="in" style="display:flex;flex-wrap:wrap;gap:10px;padding-top:22px"><a class="btn" href="/pad/">Pad</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Battles</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>'
 
-home = f"""<main>{SUBNAV}
+home = f"""<main><div id="feed" class="homefeed" aria-hidden="true"></div>{SUBNAV}
 <div class="in" style="padding-top:18px"><div id="notlive"></div></div>
 <section class="hero"><div class="in"><div>
 <span class="eyebrow">$STAG Pad · Robinhood Chain</span>
@@ -226,7 +308,8 @@ home = f"""<main>{SUBNAV}
 <p class="lead">Every token launches paired with $STAG, with its liquidity locked from the first second. Creators earn from trading. Tokens can fight: more trading volume wins the other side's war chest, and the winner burns it.</p>
 <div class="cta"><a class="btn solid" href="/pad/launch/">Launch a token</a><a class="btn" href="/pad/how/">How it works</a></div>
 <div class="stats" id="padstats"><span><b>3%</b> tax on the $STAG side</span><span><b>Locked</b> liquidity</span><span><b>Robinhood</b> Chain</span></div>
-</div></div></section>
+</div></div><div class="in"><div id="topbattle" class="topbattle"></div></div></section>
+<section class="band tight"><div class="in"><span class="eyebrow">Fights</span><h2 class="sec-h">Live battles</h2><div class="grid two" id="homebattles"><p class="muted">Loading…</p></div></div></section>
 <section class="band"><div class="in"><span class="eyebrow">Launches</span><h2 class="sec-h">Latest tokens</h2><div class="grid" id="padlist"><p class="muted">Loading…</p></div></div></section>
 <section class="band alt"><div class="in"><span class="eyebrow">Read this first</span><h2 class="sec-h">Plain risks</h2>
 <ul class="plain"><li>Tokens launched here are created by anyone and can lose most or all of their value. Many will.</li><li>The pad takes a 3% tax on the $STAG side of every trade. Creators also earn the pool's 0.30% fee.</li><li>Battles are decided by trading volume, and volume counts even if it is wash trading. A well-funded token can outspend a small one.</li><li>The contracts have been tested on a copy of the real chain and reviewed repeatedly, but they have not had a professional third-party audit. Bugs can exist.</li><li>Nothing here is financial advice or a promise of returns. Only use money you can afford to lose.</li></ul></div></section>
@@ -235,13 +318,14 @@ home = f"""<main>{SUBNAV}
 launch = f"""<main>{SUBNAV}
 <section class="band"><div class="in"><div id="notlive"></div><span class="eyebrow">Create</span><h1 class="sec-h">Launch a token</h1>
 <p class="sec-p">One transaction makes the token and opens its pool with $STAG. The full supply goes into the pool as locked liquidity. There is no launch fee and no minimum buy.</p>
-<form id="launchform" class="padbox"><label class="lbl" for="tname">Token name</label><input id="tname" name="tname" class="inp" maxlength="32" required placeholder="Stag Coin">
+<div class="steps3"><div><b>1</b><span>Name it</span></div><div><b>2</b><span>Pick your side</span></div><div><b>3</b><span>Launch</span></div></div>
+<div class="lgrid"><form id="launchform" class="padbox"><label class="lbl" for="tname">Token name</label><input id="tname" name="tname" class="inp" maxlength="32" required placeholder="Stag Coin">
 <label class="lbl" for="tsym">Symbol</label><input id="tsym" name="tsym" class="inp" maxlength="12" required placeholder="STAGC">
 <label class="lbl" for="fdv">Starting value in $STAG (minimum 1,000,000)</label><input id="fdv" name="fdv" class="inp" inputmode="decimal" required value="1000000">
-<label class="lbl">Mode</label><div class="tabs"><label class="tab on"><input type="radio" name="mode" value="war" checked style="margin-right:8px">War</label><label class="tab"><input type="radio" name="mode" value="peace" style="margin-right:8px">Peace</label></div>
+<label class="lbl">Mode</label><div class="tabs"><label class="tab on"><input type="radio" name="mode" value="war" checked style="margin-right:8px"><span>War</span></label><label class="tab"><input type="radio" name="mode" value="peace" style="margin-right:8px"><span>Peace</span></label></div>
 <div class="quote" id="modeinfo"></div>
 <div class="warnbox"><b>Before you launch:</b> launching is final, you receive no free tokens, and you cannot pull the liquidity. Launching a token to deceive people is not allowed by us and may be illegal where you live.</div>
-<div class="cta"><button class="btn solid" id="launchgo" type="submit" disabled>Launch token</button></div></form></div></section>
+<div class="cta"><button class="btn solid" id="launchgo" type="submit" disabled>Launch token</button></div></form><aside id="launchprev" class="padbox"></aside></div></div></section>
 </main>"""
 
 token = f"""<main>{SUBNAV}
@@ -251,7 +335,8 @@ token = f"""<main>{SUBNAV}
 battles = f"""<main>{SUBNAV}
 <section class="band"><div class="in"><div id="notlive"></div><span class="eyebrow">Battles</span><h1 class="sec-h">Token vs token</h1>
 <p class="sec-p">A creator in war mode offers a battle and sets the length. The other creator accepts or the offer lapses after 3 days. Both pools are locked while it runs. More trading volume wins. Only what each token earned during the fight is at stake, and the winner's chest is marked to be burned.</p>
-<div class="battle-hero" role="img" aria-label="Two stags facing each other across a glowing crack"></div>
+<div id="featured"></div>
+<div class="pills" id="bfilter" role="group" aria-label="Filter battles"><button class="on" data-f="all">All</button><button data-f="2">Live</button><button data-f="1">Offered</button><button data-f="3">Settled</button></div>
 <div id="battlelist"><p class="muted">Loading…</p></div>
 <h2 class="sec-h" style="margin-top:40px">Offer a battle</h2><div id="battlemine" class="padbox"></div></div></section>
 </main>"""
@@ -261,19 +346,19 @@ battle = f"""<main>{SUBNAV}
 </main>"""
 
 how = f"""<main>{SUBNAV}
-<section class="band how"><div class="in"><span class="eyebrow">How it works</span><h1 class="sec-h">The rules, in plain words</h1>
+<section class="band how"><div class="in"><div class="howban" role="img" aria-label="Two armored stags about to clash"></div><span class="eyebrow">How it works</span><h1 class="sec-h">The rules, in plain words</h1>
 <div id="notlive"></div>
-<h2>Launching</h2><p>A creator picks a name, a symbol and a starting value in $STAG (at least 1,000,000). One transaction creates the token (fixed supply of 1 billion, no minting) and puts all of it into a Uniswap pool paired with $STAG. That liquidity is locked by the contract: nobody can remove it, including the creator and us. The creator receives no free tokens. The creator earns the pool's 0.30% trading fee and can collect it at any time.</p>
-<h2>The 3% tax</h2><table class="fees"><tr><th>Trade</th><th>Tax</th><th>Where it goes</th></tr>
+<div class="step"><img src="/pad/assets/s1.webp" alt="" width="140" height="140" loading="lazy"><div><h2>Launching</h2><p>A creator picks a name, a symbol and a starting value in $STAG (at least 1,000,000). One transaction creates the token (fixed supply of 1 billion, no minting) and puts all of it into a Uniswap pool paired with $STAG. That liquidity is locked by the contract: nobody can remove it, including the creator and us. The creator receives no free tokens. The creator earns the pool's 0.30% trading fee and can collect it at any time.</p>
+</div></div><div class="step"><img src="/pad/assets/s3.webp" alt="" width="140" height="140" loading="lazy"><div><h2>The 3% tax</h2><table class="fees"><tr><th>Trade</th><th>Tax</th><th>Where it goes</th></tr>
 <tr><td>Sell (token to $STAG)</td><td>3% of the $STAG you receive</td><td>The platform</td></tr>
 <tr><td>Buy, war mode</td><td>3% of the $STAG you pay</td><td>The token's war chest</td></tr>
 <tr><td>Buy, peace mode</td><td>3% of the $STAG you pay</td><td>1% to the creator, 2% to all holders in proportion to what they hold</td></tr></table>
 <p>Prices you see in the trade box already include the tax. The pool's 0.30% fee is paid to the creator on top.</p>
-<h2>War and peace</h2><p>The creator picks the mode and can switch while no battle holds the pool. Switching only changes later buys: the existing chest stays where it is. Every token page shows its current mode, and you should check it before you buy, because the creator can change it.</p>
-<h2>The war chest and burns</h2><p>In war mode the buy tax builds a chest of $STAG. The creator can spend the chest buying their own token from the pool and burning what comes back. A burn moves the price by at most about 1.5%, only one burn is allowed per hour, and anything the pool cannot fill within that limit stays in the chest.</p>
-<h2>Battles</h2><ul><li>A creator in war mode offers a battle to another token and sets how long it runs (1 hour to 14 days). The offer locks their pool (no mode change, no burning) and lapses after 3 days if not accepted.</li><li>The other creator accepts on chain. Both pools stay locked until the end.</li><li>The token with more <b>gross trading volume</b> during the fight wins. Volume counts even when it is wash trading, so a larger wallet can outspend a smaller one. That is part of the game and you should know it before you enter.</li><li>Only what each pool earned into its chest <b>during the fight</b> is at stake. The loser's fight earnings go to the winner's chest, and the winner's fight earnings plus that prize are marked to be burned. Older chest money stays with its pool.</li><li>A tie moves nothing. Nobody, including us, can pick or change a result.</li><li>If the winner's creator does not burn, anyone can burn the marked chest in steps, one per hour, with the creator getting the first chance each hour.</li></ul>
-<h2>What can go wrong</h2><ul><li>Tokens can lose most or all of their value. Thin pools can be pushed around by large trades.</li><li>The creator can switch war and peace at any time while no battle holds the pool.</li><li>The contracts are new. They were tested on a copy of the real chain and reviewed repeatedly by independent reviewers, but they have <b>not</b> had a professional third-party audit.</li><li>Some wallets and tools show prices without the 3% tax. Use the trade box here for the real number.</li><li>Gas fees and the $STAG curve's own fees apply when you trade through ETH.</li></ul>
-<p class="fine">Nothing here is financial advice or a promise of returns. $STAG and tokens launched on the pad are volatile. You can lose everything you put in.</p></div></section>
+</div></div><div class="step"><img src="/pad/assets/s2.webp" alt="" width="140" height="140" loading="lazy"><div><h2>War and peace</h2><p>The creator picks the mode and can switch while no battle holds the pool. Switching only changes later buys: the existing chest stays where it is. Every token page shows its current mode, and you should check it before you buy, because the creator can change it.</p>
+</div></div><div class="step"><img src="/pad/assets/s5.webp" alt="" width="140" height="140" loading="lazy"><div><h2>The war chest and burns</h2><p>In war mode the buy tax builds a chest of $STAG. The creator can spend the chest buying their own token from the pool and burning what comes back. A burn moves the price by at most about 1.5%, only one burn is allowed per hour, and anything the pool cannot fill within that limit stays in the chest.</p>
+</div></div><div class="step"><img src="/pad/assets/s4.webp" alt="" width="140" height="140" loading="lazy"><div><h2>Battles</h2><ul><li>A creator in war mode offers a battle to another token and sets how long it runs (1 hour to 14 days). The offer locks their pool (no mode change, no burning) and lapses after 3 days if not accepted.</li><li>The other creator accepts on chain. Both pools stay locked until the end.</li><li>The token with more <b>gross trading volume</b> during the fight wins. Volume counts even when it is wash trading, so a larger wallet can outspend a smaller one. That is part of the game and you should know it before you enter.</li><li>Only what each pool earned into its chest <b>during the fight</b> is at stake. The loser's fight earnings go to the winner's chest, and the winner's fight earnings plus that prize are marked to be burned. Older chest money stays with its pool.</li><li>A tie moves nothing. Nobody, including us, can pick or change a result.</li><li>If the winner's creator does not burn, anyone can burn the marked chest in steps, one per hour, with the creator getting the first chance each hour.</li></ul>
+</div></div><div class="step risk"><div><h2>What can go wrong</h2><ul><li>Tokens can lose most or all of their value. Thin pools can be pushed around by large trades.</li><li>The creator can switch war and peace at any time while no battle holds the pool.</li><li>The contracts are new. They were tested on a copy of the real chain and reviewed repeatedly by independent reviewers, but they have <b>not</b> had a professional third-party audit.</li><li>Some wallets and tools show prices without the 3% tax. Use the trade box here for the real number.</li><li>Gas fees and the $STAG curve's own fees apply when you trade through ETH.</li></ul>
+</div></div><p class="fine">Nothing here is financial advice or a promise of returns. $STAG and tokens launched on the pad are volatile. You can lose everything you put in.</p></div></section>
 </main>"""
 
 def write(rel, content):
