@@ -104,6 +104,25 @@
     stateView: () => c("stateView", C.stateView), stag: () => c("erc20", C.stag),
   };
 
+
+  // ------------------------------------------------------------------ motion
+  // Drifting embers over a banner. Decorative only: pauses when the tab is hidden or the banner is off screen, and does nothing when the visitor asks for reduced motion.
+  const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function embers(host, opts = {}) {
+    if (REDUCED || !host) return;
+    const cv = document.createElement("canvas"); cv.className = "embers"; cv.setAttribute("aria-hidden", "true"); host.prepend(cv);
+    const ctx = cv.getContext("2d"); let W2 = 0, H2 = 0, run = true, vis = true, parts = [];
+    const cols = opts.cols || ["57,255,20", "255,200,60"], n = opts.n || 55, split = opts.split;
+    const size = () => { const r = host.getBoundingClientRect(); const d = Math.min(2, window.devicePixelRatio || 1); W2 = cv.width = Math.max(1, r.width * d); H2 = cv.height = Math.max(1, r.height * d); cv.style.width = r.width + "px"; cv.style.height = r.height + "px"; };
+    const mkp = (init) => { const x = Math.random() * W2; const c2 = split ? (x < W2 / 2 ? cols[0] : cols[1]) : cols[Math.random() < 0.6 ? 0 : 1]; return { x, y: init ? Math.random() * H2 : H2 + 10, r: (0.8 + Math.random() * 2.4) * (W2 > 900 ? 1.4 : 1), vy: 0.25 + Math.random() * 0.9, vx: (Math.random() - 0.5) * 0.35, ph: Math.random() * 6.28, a: 0.25 + Math.random() * 0.6, c: c2 }; };
+    size(); for (let i = 0; i < n; i++) parts.push(mkp(true));
+    const frame = (t) => { if (!run) return; requestAnimationFrame(frame); if (!vis || document.hidden) return; ctx.clearRect(0, 0, W2, H2);
+      for (const q of parts) { q.y -= q.vy; q.x += q.vx + Math.sin(t / 900 + q.ph) * 0.25; if (q.y < -10) Object.assign(q, mkp(false)); const f = Math.min(1, (q.y / H2) * 1.4 + 0.15);
+        ctx.beginPath(); ctx.fillStyle = `rgba(${q.c},${q.a * f})`; ctx.shadowColor = `rgba(${q.c},.9)`; ctx.shadowBlur = 8; ctx.arc(q.x, q.y, q.r, 0, 6.283); ctx.fill(); } };
+    if ("IntersectionObserver" in window) new IntersectionObserver((e) => { vis = e[0].isIntersecting; }).observe(host);
+    window.addEventListener("resize", size); requestAnimationFrame(frame);
+  }
+
   // ------------------------------------------------------------------ toast + modal
   let toastBox;
   // one toast per action: it is updated in place (confirm, sent, done) instead of stacking three lines per transaction
@@ -199,6 +218,7 @@
   const pages = {};
 
   pages.home = async () => {
+    embers($(".hero"), { n: 45 });
     const box = $("#padlist"), stats = $("#padstats");
     if (!LIVE && !DEMO) { box.innerHTML = `<p class="muted">No launches yet. This page lists every token launched through the pad once it is live.</p>`; return; }
     try {
@@ -478,7 +498,7 @@
   }
   const topN = (m, n) => [...m.entries()].sort((a, b) => (b[1] > a[1] ? 1 : b[1] < a[1] ? -1 : 0)).slice(0, n);
   async function sideStats(p, from, to) {
-    const out = { buyVol: 0n, sellVol: 0n, buys: 0, sells: 0, buyers: new Map(), sellers: new Map(), holders: [], holdersSeen: 0, note: "" };
+    const out = { buyVol: 0n, sellVol: 0n, buys: 0, sells: 0, buyers: new Map(), sellers: new Map(), holders: [], holdersSeen: 0, note: "", ev: [] };
     const head = await ro.getBlockNumber(); const toB = to == null ? head : Math.min(head, to);
     const taxedT = IFACE.getEvent("Taxed").topicHash;
     if (from != null) for (const l of await getLogsSafe({ address: C.hook, topics: [taxedT, p.id] }, from, toB)) { const d = IFACE.parseLog(l); if (d.args.buy) { out.buyVol += d.args.volume; out.buys++; } else { out.sellVol += d.args.volume; out.sells++; } }
@@ -492,8 +512,8 @@
       const d = IFACE.parseLog(l); const f = d.args.from.toLowerCase(), t = d.args.to.toLowerCase(), v = d.args.value;
       for (const a of [f, t]) if (!skip.has(a)) seen.set(a, (seen.get(a) || 0n) + v);
       const inWin = from != null && l.blockNumber >= from && l.blockNumber <= toB;
-      if (inWin && f === C.pm.toLowerCase() && !skip.has(t)) out.buyers.set(t, (out.buyers.get(t) || 0n) + v);
-      if (inWin && t === C.pm.toLowerCase() && !skip.has(f)) out.sellers.set(f, (out.sellers.get(f) || 0n) + v);
+      if (inWin && f === C.pm.toLowerCase() && !skip.has(t)) { out.buyers.set(t, (out.buyers.get(t) || 0n) + v); out.ev.push({ blk: l.blockNumber, buy: true, addr: t, amt: v }); }
+      if (inWin && t === C.pm.toLowerCase() && !skip.has(f)) { out.sellers.set(f, (out.sellers.get(f) || 0n) + v); out.ev.push({ blk: l.blockNumber, buy: false, addr: f, amt: v }); }
     }
     const cand = topN(seen, 150).map((x) => x[0]); const tok = c("erc20", p.token);
     const bal = await Promise.all(cand.map(async (a) => [a, await tok.balanceOf(a).catch(() => 0n)]));
@@ -504,19 +524,23 @@
   function mockSide(seed, vol) {
     const mk2 = (n, k) => Array.from({ length: n }, (_, j) => [mockWallet(seed * 40 + k * 10 + j), W18(Math.round(vol / (j + 2.2) / 90))]);
     const buyers = mk2(6, 1), sellers = mk2(4, 2), holders = mk2(8, 3).map((x) => [x[0], W18(Math.round(Number(E.formatUnits(x[1], 18)) * 900))]);
-    return { buyVol: W18(Math.round(vol * 0.62)), sellVol: W18(Math.round(vol * 0.38)), buys: Math.round(vol / 31000), sells: Math.round(vol / 52000), buyers, sellers, holders, holdersSeen: 40 + seed * 7, note: "" };
+    return { buyVol: W18(Math.round(vol * 0.62)), sellVol: W18(Math.round(vol * 0.38)), buys: Math.round(vol / 31000), sells: Math.round(vol / 52000), buyers, sellers, holders, holdersSeen: 40 + seed * 7, note: "", ev: buyers.slice(0, 4).map((b, j) => ({ blk: 0, buy: j % 3 !== 2, addr: b[0], amt: b[1], age: 4 + j * 5 + seed })) };
   }
+  const BATTLE_EV = new E.Interface(["event Settled(uint256 indexed id,bytes32 winner,bytes32 loser,uint256 volWinner,uint256 volLoser,uint256 chestWon)", "event Tied(uint256 indexed id,uint256 volA,uint256 volB)"]);
+  const hueOf = (a) => (parseInt(String(a).slice(2, 8), 16) || 0) % 360;
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const clock = (sec) => { sec = Math.max(0, Math.floor(sec)); return `${pad2(Math.floor(sec / 3600))} : ${pad2(Math.floor((sec % 3600) / 60))} : ${pad2(sec % 60)}`; };
   pages.battle = async () => {
     const root = $("#battleroot"); const id = Number(new URLSearchParams(location.search).get("id"));
     if (!Number.isInteger(id) || id < 0) { root.innerHTML = `<p class="muted">No battle selected. <a href="${demoHref("/pad/battles/")}">See all battles</a>.</p>`; return; }
     const ST = ["none", "Offered", "Live", "Settled", "Cancelled"];
-    let A, B, st, dur, start = 0, end = 0, expiry = 0, chestA0 = 0n, chestB0 = 0n, volA0 = 0n, volB0 = 0n, SA, SB, vA = 0n, vB = 0n, endIn = 0;
+    let A, B, st, dur, start = 0, end = 0, expiry = 0, chestA0 = 0n, chestB0 = 0n, volA0 = 0n, volB0 = 0n, SA, SB, vA = 0n, vB = 0n, endIn = 0, tie = false;
     try {
       if (DEMO) {
         const b = MOCK_BATTLES.find((x) => x.id === id); if (!b) throw new Error("No such battle.");
-        A = MOCK[b.a]; B = MOCK[b.b]; st = b.st; dur = b.dur; endIn = b.endIn || 0; chestA0 = A.chest / 2n; chestB0 = B.chest / 2n; expiry = b.expIn || 0;
+        A = MOCK[b.a]; B = MOCK[b.b]; st = b.st; dur = b.dur; endIn = b.endIn || 0; chestA0 = A.chest * 55n / 100n; chestB0 = B.chest * 62n / 100n; expiry = b.expIn || 0;
         if (st >= 2) { vA = W18(b.va || 1280000); vB = W18(b.vb || 990000); SA = mockSide(b.a + 1, Number(E.formatUnits(vA, 18))); SB = mockSide(b.b + 1, Number(E.formatUnits(vB, 18))); }
-        else { SA = mockSide(b.a + 1, 0); SB = mockSide(b.b + 1, 0); SA.buyers = SA.sellers = SB.buyers = SB.sellers = []; SA.buyVol = SA.sellVol = SB.buyVol = SB.sellVol = 0n; SA.buys = SA.sells = SB.buys = SB.sells = 0; }
+        else { SA = mockSide(b.a + 1, 0); SB = mockSide(b.b + 1, 0); SA.buyers = SA.sellers = SB.buyers = SB.sellers = []; SA.ev = SB.ev = []; SA.buyVol = SA.sellVol = SB.buyVol = SB.sellVol = 0n; SA.buys = SA.sells = SB.buys = SB.sells = 0; }
       } else {
         if (!LIVE) { root.innerHTML = `<p class="muted">Battles appear here once the pad is live.</p>`; return; }
         const n = Number(await R.battle().count()); if (id >= n) throw new Error("No such battle.");
@@ -527,41 +551,51 @@
         const info = st >= 2 ? { from: await blockAt(start), to: st === 3 || nowSec() > end ? await blockAt(end) : null } : { from: null, to: null };
         [SA, SB] = await Promise.all([sideStats(A, info.from, info.to), sideStats(B, info.from, info.to)]);
         if (st >= 2) { vA = A.volume - volA0; vB = B.volume - volB0; endIn = end - nowSec(); }
+        if (st === 3) { // the exact final volumes are in the settle event
+          try { const bl = await getLogsSafe({ address: C.battle, topics: [[BATTLE_EV.getEvent("Settled").topicHash, BATTLE_EV.getEvent("Tied").topicHash], E.zeroPadValue(E.toBeHex(id), 32)] }, info.to, await ro.getBlockNumber());
+            if (bl.length) { const d = BATTLE_EV.parseLog(bl[0]); if (d.name === "Tied") { vA = d.args.volA; vB = d.args.volB; tie = true; } else { const aWon = d.args.winner.toLowerCase() === A.id.toLowerCase(); vA = aWon ? d.args.volWinner : d.args.volLoser; vB = aWon ? d.args.volLoser : d.args.volWinner; } } } catch { /* fall back to the running totals */ }
+        }
       }
     } catch (e) { root.innerHTML = `<p class="muted">Could not load this battle: ${esc(errMsg(e))} <a href="${demoHref("/pad/battles/")}">All battles</a></p>`; return; }
 
-    const total = vA + vB, pa = total > 0n ? Number((vA * 1000n) / total) / 10 : 50, pb = Math.round((100 - pa) * 10) / 10;
-    const live = st === 2, ended = live && endIn <= 0;
-    let status = "";
-    if (st === 1) status = `Offer open for ${DEMO ? Math.round(expiry / 86400 * 10) / 10 + " d" : left(expiry)}. Runs ${Math.round(dur / 3600 * 10) / 10} h once the other creator accepts.`;
-    if (live) status = ended ? "The time is up. Anyone can settle this battle." : `Ends in ${endIn < 5400 ? Math.ceil(endIn / 60) + " min" : Math.floor(endIn / 3600) + " h " + Math.round((endIn % 3600) / 60) + " min"}.`;
-    if (st === 3) status = "Settled. The token with more volume won; its war chest is marked for burning (see its token page). A tie moves nothing.";
-    if (st === 4) status = "This offer was withdrawn or lapsed. No battle took place.";
-    const lead = st >= 2 && total > 0n ? (vA === vB ? "Level on volume." : `${esc((vA > vB ? A : B).name)} leads by ${num(vA > vB ? vA - vB : vB - vA)} STAG of volume.`) : "";
-    const who = (a, p) => { const x = a.toLowerCase(); return `<a href="${explorer("address", a)}" rel="noopener">${short(a)}</a>${p.creator && x === p.creator.toLowerCase() ? ` <span class="tag">creator</span>` : ""}`; };
-    const rows = (list, p, total2) => list.length ? `<table class="tbl"><tbody>${list.map(([a, v]) => `<tr><td>${who(a, p)}</td><td>${num(v)} $${esc(p.symbol)}${total2 ? ` <span class="muted">${(Number((v * 10000n) / total2) / 100).toFixed(1)}%</span>` : ""}</td></tr>`).join("")}</tbody></table>` : `<p class="muted small">None yet.</p>`;
-    const tokTotal = async (p) => DEMO ? W18(1000000000) : c("erc20", p.token).totalSupply().catch(() => 0n);
-    const [tsA, tsB] = await Promise.all([tokTotal(A), tokTotal(B)]);
-    const side = (p, S, v, chest0, cls, ts, idx) => `<div class="padbox bside ${cls}">
-      <div class="row"><a href="${DEMO ? demoHref("/pad/token/?i=" + p.i) : explorer("token", p.token)}" class="bname" ${DEMO ? "" : 'rel="noopener"'}><h3>${esc(p.name)} <small>$${esc(p.symbol)}</small></h3></a>${modeChip(p)}</div>
-      <div class="padstats2 two">
-        <div><span>Volume in battle</span><b>${st >= 2 ? num(v) : "0"} STAG</b></div>
-        <div><span>War chest now</span><b>${num(p.chest)} STAG</b></div>
-        <div><span>Chest at start</span><b>${st >= 2 ? num(chest0) : "n/a"} STAG</b></div>
-        <div><span>Chest change</span><b>${st >= 2 ? (p.chest >= chest0 ? "+" : "-") + num(p.chest >= chest0 ? p.chest - chest0 : chest0 - p.chest) : "n/a"} STAG</b></div>
-        <div><span>Buys</span><b>${S.buys} · ${num(S.buyVol)} STAG</b></div>
-        <div><span>Sells</span><b>${S.sells} · ${num(S.sellVol)} STAG</b></div>
-      </div>
-      <h4>Top buyers in this battle</h4>${rows(topN(new Map(S.buyers), 6), p)}
-      <h4>Top sellers in this battle</h4>${rows(topN(new Map(S.sellers), 6), p)}
-      <h4>Top holders now <small>(${S.holdersSeen} wallets seen)</small></h4>${rows(S.holders, p, ts)}
-    </div>`;
-    root.innerHTML = `<p><a href="${demoHref("/pad/battles/")}">← All battles</a></p>
-      <div class="row"><h1 class="sec-h">${esc(A.name)} <span class="vs">vs</span> ${esc(B.name)}</h1><span class="chip ${live ? "" : "soon"}">#${id} · ${ST[st]}</span></div>
-      <p class="sec-p">${status}${lead ? " " + lead : ""}</p>
-      ${st >= 2 ? `<div class="vsbar" role="img" aria-label="Volume share ${pa}% against ${pb}%"><i style="width:${pa}%"></i><b style="width:${pb}%"></b></div><div class="row vslab"><span>${esc(A.name)} ${pa}%</span><span>${pb}% ${esc(B.name)}</span></div>` : ""}
-      <div class="bgrid">${side(A, SA, vA, chestA0, "ga", tsA)}${side(B, SB, vB, chestB0, "gb", tsB)}</div>
+    const total = vA + vB, pa = total > 0n ? Math.round(Number((vA * 1000n) / total)) / 10 : 50, pb = Math.round((100 - pa) * 10) / 10;
+    const live = st === 2, started = st >= 2;
+    const leadA = vA > vB, level = vA === vB;
+    const tokTotals = await Promise.all([A, B].map(async (p) => DEMO ? W18(1000000000) : c("erc20", p.token).totalSupply().catch(() => 0n)));
+    const av = (a) => `<i class="av" style="--h:${hueOf(a)}"></i>`;
+    const who = (a, p) => `<a href="${explorer("address", a)}" rel="noopener">${short(a)}</a>${p.creator && a.toLowerCase() === p.creator.toLowerCase() ? ` <span class="tag">creator</span>` : ""}`;
+    const rowsHtml = (list, p, tsup) => { if (!list.length) return `<p class="muted small pad">None yet.</p>`; const mx = list[0][1] || 1n;
+      return list.map(([a, v], i) => `<div class="rk r${i < 3 ? i + 1 : 0}"><span class="rn">${i + 1}</span>${av(a)}<span class="ra">${who(a, p)}</span><span class="rb"><u style="width:${Math.max(3, Number((v * 100n) / mx))}%"></u></span><b class="rv">${num(v)} <small>$${esc(p.symbol)}</small>${tsup ? ` <em>${(Number((v * 10000n) / tsup) / 100).toFixed(1)}%</em>` : ""}</b></div>`).join(""); };
+    const col = (p, S, v, chest0, cls, ts, lead, label) => {
+      const dChest = p.chest >= chest0 ? p.chest - chest0 : chest0 - p.chest, up = p.chest >= chest0;
+      return `<div class="bcol ${cls}" data-col>
+        <div class="bh"><h2>${esc(p.name)}</h2>${started ? `<span class="chip lead ${lead ? "" : "soon"}">${label}</span>` : ""}</div>
+        <div class="stiles"><div><span>War chest</span><b>${num(p.chest)} STAG</b></div><div><span>Volume in battle</span><b>${started ? num(v) : "0"} STAG</b></div><div><span>Chest change</span><b class="${up ? "up" : "dn"}">${started ? (up ? "+" : "-") + num(dChest) : "n/a"} STAG</b></div></div>
+        <div class="tabs2" role="tablist"><button class="on" data-tab="buy">Buyers</button><button data-tab="sell">Sellers</button><button data-tab="hold">Holders</button></div>
+        <div data-pane="buy">${rowsHtml(topN(new Map(S.buyers), 5), p)}<p class="fine pad">${S.buys} buys · ${num(S.buyVol)} STAG, after the 3% tax</p></div>
+        <div data-pane="sell" hidden>${rowsHtml(topN(new Map(S.sellers), 5), p)}<p class="fine pad">${S.sells} sells · ${num(S.sellVol)} STAG, after the 3% tax</p></div>
+        <div data-pane="hold" hidden>${rowsHtml(S.holders.slice(0, 5), p, ts)}<p class="fine pad">${S.holdersSeen} wallets seen holding</p></div>
+      </div>`; };
+    let centre = "";
+    if (live) centre = `<div class="cd ${endIn > 0 && endIn < 3600 ? "hot" : ""}" id="cd">${endIn <= 0 ? "TIME UP" : clock(endIn)}</div><div class="cdl">${endIn <= 0 ? "Anyone can settle" : "Remains"}</div>`;
+    else if (st === 3) centre = `<div class="cd small">${tie ? "TIED" : "SETTLED"}</div><div class="cdl">${tie ? "Nothing moves" : esc((leadA ? A : B).name) + " wins · chest marked to burn"}</div>`;
+    else if (st === 1) centre = `<div class="cd small">OFFERED</div><div class="cdl">Open for ${DEMO ? Math.round(expiry / 86400 * 10) / 10 + " d" : left(expiry)} · runs ${Math.round(dur / 3600 * 10) / 10} h</div>`;
+    else centre = `<div class="cd small">NO FIGHT</div><div class="cdl">Offer withdrawn or lapsed</div>`;
+    const half = (p, cls, art) => `<div class="half ${cls}"><div class="hn"><span class="pfp ${art ? "" : "ini"}" style="--h:${hueOf(p.id)};${art ? `background-image:url(${art})` : ""}">${art ? "" : esc(String(p.symbol || "?").slice(0, 2).toUpperCase())}</span><h2>${esc(p.name)}</h2><span class="chip ${cls === "ga" ? "" : "soon"}">${p.war ? "War" : "Peace"}</span></div></div>`;
+    const artOf = (p) => DEMO ? `/pad/assets/${ART[p.i % ART.length]}.webp` : "";
+    // newest trades from both sides, newest first
+    let evs = [...SA.ev.map((e) => ({ ...e, side: "ga", p: A })), ...SB.ev.map((e) => ({ ...e, side: "gb", p: B }))].sort((x, y) => y.blk - x.blk || (x.age || 0) - (y.age || 0)).slice(0, 4);
+    if (!DEMO && evs.length) { await Promise.all(evs.map(async (e) => { try { e.ts = (await ro.getBlock(e.blk)).timestamp; } catch { e.ts = null; } })); }
+    const tick = evs.length ? `<div class="feed">${evs.map((e) => `<span class="${e.side}"><i></i>${DEMO ? (e.age + "s") : (e.ts ? ago(e.ts) : "")} ago · ${e.buy ? "bought" : "sold"} ${num(e.amt)} $${esc(e.p.symbol)} · ${short(e.addr)}</span>`).join("")}</div>` : "";
+    root.innerHTML = `<div class="btop"><a href="${demoHref("/pad/battles/")}">← All battles</a><span><span class="chip ${live ? "live" : "soon"}">${live ? "● Live" : ST[st]}</span> <span class="chip grey">Battle #${id}</span></span></div>
+      <div class="vsb"><div class="halves">${half(A, "ga", artOf(A))}${half(B, "gb", artOf(B))}</div><div class="flash"></div><div class="bolt"></div><div class="mid">${centre}</div></div>
+      ${started ? `<div class="tug" role="img" aria-label="Volume share ${pa}% against ${pb}%"><i class="ta" style="width:${pa}%">${pa}%</i><b class="tb" style="width:${pb}%">${pb}%</b></div>
+      <div class="tugn"><span>${num(vA)} STAG</span>${tick}<span>${num(vB)} STAG</span></div>` : ""}
+      <div class="bcols">${col(A, SA, vA, chestA0, "ga", tokTotals[0], leadA && !level, level ? "LEVEL" : leadA ? (st === 3 ? "WINNER" : "LEADING") : (st === 3 ? "LOST" : "TRAILING"))}${col(B, SB, vB, chestB0, "gb", tokTotals[1], !leadA && !level, level ? "LEVEL" : !leadA ? (st === 3 ? "WINNER" : "LEADING") : (st === 3 ? "LOST" : "TRAILING"))}</div>
       <div class="warnbox">Built from public on-chain data. Volumes are what reaches the pool, after the 3% tax (a 500 STAG buy shows as 485). Volume counts even when it is wash trading, so a bigger number does not mean more real interest. Addresses are wallets, not people, and one person can use many. ${SA.note || SB.note || ""}</div>`;
+    embers($(".vsb", root), { split: true, n: 70 });
+    root.addEventListener("click", (ev) => { const bt = ev.target.closest("[data-tab]"); if (!bt) return; const colEl = bt.closest("[data-col]"); $$("[data-tab]", colEl).forEach((x) => x.classList.toggle("on", x === bt)); $$("[data-pane]", colEl).forEach((x) => { x.hidden = x.dataset.pane !== bt.dataset.tab; }); });
+    if (live && endIn > 0) { const tEnd = DEMO ? Date.now() / 1000 + endIn : end; const iv = setInterval(() => { const el = $("#cd"); if (!el) return clearInterval(iv); const left2 = DEMO ? tEnd - Date.now() / 1000 : tEnd - nowSec(); el.textContent = left2 <= 0 ? "TIME UP" : clock(left2); if (left2 <= 0) clearInterval(iv); }, 1000); }
   };
 
   // ------------------------------------------------------------------ boot
