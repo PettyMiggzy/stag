@@ -287,7 +287,7 @@
     embers($(".hero"), { n: 45 });
     const box = $("#padlist"), stats = $("#padstats");
     const vf = $("#vfilter"); if (vf) vf.addEventListener("click", (ev) => { const bt = ev.target.closest("[data-v]"); if (!bt) return; $$("[data-v]", vf).forEach((x) => x.classList.toggle("on", x === bt)); const only = bt.dataset.v === "1"; $$(".padcard", box).forEach((el) => { el.hidden = only && el.dataset.ver !== "1"; }); const none = $("#vnone"); if (none) none.hidden = !only || $$(".padcard:not([hidden])", box).length > 0; });
-    if (!LIVE && !DEMO) { box.innerHTML = `<p class="muted">No launches yet. This page lists every token launched through the pad once it is live.</p>`; return; }
+    if (!LIVE && !DEMO) { box.innerHTML = `<p class="muted">No launches yet. This page lists every token launched through the pad once it is live.</p>`; const hb0 = $("#homebattles"); if (hb0) hb0.innerHTML = `<p class="muted">No battles yet. Battles show up here once the pad is live.</p>`; return; }
     try {
       const n = await launchCount(), nb = DEMO ? MOCK_BATTLES.length : Number(await R.battle().count());
       stats.innerHTML = `<span><b>${n}</b> launches</span><span><b>${nb}</b> battles</span><span><b>Robinhood</b> Chain</span>`;

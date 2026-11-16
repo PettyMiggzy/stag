@@ -432,10 +432,77 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 .padcard .row .muted{font:700 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .padbox.bcard .row b{font:700 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 table.fees{width:100%;border-collapse:collapse;margin:12px 0}table.fees th,table.fees td{border:1px solid var(--line);padding:10px 12px;text-align:left;font-size:15px;color:#c4d6c0}table.fees th{color:var(--fg)}
+/* ===== v5 polish: compact pad nav, phone hero, banner crops, tap targets ===== */
+.padnav{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding-top:16px;padding-bottom:6px}
+.padnav .brand{font-size:30px;margin-right:6px}
+.padlinks{display:flex;gap:6px;align-items:center;flex:1;min-width:0}
+.padlinks .btn,.padnav [data-wallet]{padding:0 16px;min-height:44px;font-size:13px;letter-spacing:.08em;white-space:nowrap}
+.padlinks .btn{border:1px solid var(--line);color:#cfe9c8;background:rgba(10,17,12,.7)}
+.padlinks .btn:hover,.padlinks .btn:focus-visible{border-color:var(--neon);color:var(--neon);transform:none;box-shadow:0 0 16px rgba(57,255,20,.3)}
+body[data-page="home"] .padlinks [data-n="home"],body[data-page="token"] .padlinks [data-n="home"],body[data-page="launch"] .padlinks [data-n="launch"],body[data-page="battles"] .padlinks [data-n="battles"],body[data-page="battle"] .padlinks [data-n="battles"],body[data-page="verified"] .padlinks [data-n="verified"],body[data-page="how"] .padlinks [data-n="how"]{border-color:var(--neon);color:var(--neon);background:rgba(57,255,20,.1);box-shadow:inset 0 -2px 0 var(--neon)}
+.padnav [data-wallet]{margin-left:auto;border-width:1px}
+main>.padnav+.band{padding-top:clamp(18px,3vw,30px)}
+.padnote a{display:inline-block;padding:11px 0;margin:-11px 0}
+.padcard .kv b,.padbox .kv b{text-align:right;white-space:nowrap}
+.padbox .kv small{font-size:11px}
+#tradeBtn,#launchgo{justify-content:center}
+.lbl{line-height:1.4}
+#launchform .tabs{margin-top:8px}
+.tr span:first-child{white-space:nowrap}
+.btop>a{display:inline-flex;align-items:center;min-height:44px}
+.vsb .cdl{text-shadow:0 1px 2px #000,0 0 10px #000,0 0 18px #000}
+.howban{background:linear-gradient(180deg,transparent 45%,#050806),url(/pad/assets/hero.webp) center 5%/cover}
+.tb-name h1{font-size:clamp(34px,5vw,60px)}
+@media(min-width:561px){.tbanner{background:linear-gradient(90deg,#070d09 0%,#070d09 42%,rgba(7,13,9,.5) 70%,rgba(7,13,9,.08) 100%),url(/pad/assets/hero.webp) right top 18%/auto 165% no-repeat,#070d09}}
+@media(max-width:720px){
+.padnav{gap:10px;padding-top:12px}
+.padnav .brand{font-size:26px;margin-right:0}
+.padnav [data-wallet]{order:2}
+.padlinks{order:3;flex:1 0 100%;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:6px 16px;-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent)}
+.padlinks::-webkit-scrollbar{display:none}
+.padlinks .btn{flex:none;padding:0 13px}
+.hero{min-height:0;padding-bottom:28px;background:linear-gradient(180deg,rgba(5,8,6,0) 0,rgba(5,8,6,0) 150px,rgba(5,8,6,.84) 262px,#050806 340px),url(/pad/assets/hero.webp) left calc(50vw - 705px) top/auto 380px no-repeat,#050806}
+.hero .in{padding:0 16px}
+.hero .in:first-of-type{padding-top:230px;padding-bottom:22px}
+.tbs{margin-top:22px}
+.hero .in:first-of-type>div{max-width:none}
+.hero h1{font-size:clamp(40px,12.5vw,56px)}
+.hero .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero .stats span{padding:10px 10px 12px;font-size:10px;letter-spacing:.06em}
+.hero .stats b{font-size:22px}
+.howban{height:200px;background:linear-gradient(180deg,transparent 45%,#050806),url(/pad/assets/hero.webp) 90% 10%/auto 150% no-repeat}
+}
+@media(max-width:640px){
+.vsb.feat{min-height:230px}
+.vsb.feat .hn{padding:10px 12px 60px;gap:8px}
+.vsb.feat .pfp{width:36px;border-width:2px}
+.vsb.feat h2{font-size:18px}
+.vsb.feat .mid{width:92%;bottom:10px}
+.vsb.feat .cd.small{font-size:20px}
+.vsb:not(.feat) .mid{width:74%}
+.vsb .cdl{font-size:10px;letter-spacing:.1em}
+table.fees,table.fees tbody,table.fees tr,table.fees td{display:block}
+table.fees tr:first-child{display:none}
+table.fees tr{border:1px solid var(--line);border-radius:12px;padding:8px 0;margin:0 0 8px}
+table.fees td{border:0;padding:3px 12px}
+table.fees td:first-child{color:var(--fg);font-weight:600}
+table.fees td:nth-child(2)::before{content:"Tax: ";color:var(--muted)}
+table.fees td:nth-child(3)::before{content:"Goes to: ";color:var(--muted)}
+.how .step ul{margin-left:0;padding-left:20px}
+}
+@media(max-width:560px){
+.padbox .cta .btn{flex:1 1 100%;justify-content:center;text-align:center}
+.tr{grid-template-columns:68px 44px 1fr}
+.pills{gap:6px}.pills button{padding:10px 13px;font-size:16px}
+.stiles{grid-template-columns:repeat(3,1fr);gap:6px}
+.stiles>div{padding:8px;display:flex;flex-direction:column;justify-content:space-between}
+.stiles span{font-size:9px;letter-spacing:.04em;line-height:1.2}
+.stiles b{font-size:15px}
+}
 </style>
 <body data-page="battle">
 <header><div class="in"><a class="brand" href="/"><img src="/assets/badge.webp" alt=""><span>$STAG</span></a><nav><a href="/#ecosystem">Ecosystem</a><a href="/stagr/">StagR</a><a href="/play/">Play</a><a href="/lounge/">Lounge</a><a href="https://records.stagwifhood.fun">Records</a><a class="btn solid" href="https://t.me/StagWifHood" rel="noopener">Join Telegram</a></nav></div></header>
-<main><div class="in" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding-top:22px"><a class="brand" href="/pad/">STAGGY <span>PADDY</span></a><a class="btn" href="/pad/">Menu</a><a class="btn" href="/pad/launch/">Launch</a><a class="btn" href="/pad/battles/">Paddy wars</a><a class="btn" href="/pad/verified/">Verified</a><a class="btn" href="/pad/how/">How it works</a><span style="flex:1"></span><button class="btn solid" data-wallet>Connect wallet</button></div>
+<main><div class="in padnav"><a class="brand" href="/pad/">STAGGY <span>PADDY</span></a><nav class="padlinks" aria-label="Staggy Paddy"><a class="btn" data-n="home" href="/pad/">Menu</a><a class="btn" data-n="launch" href="/pad/launch/">Launch</a><a class="btn" data-n="battles" href="/pad/battles/">Paddy wars</a><a class="btn" data-n="verified" href="/pad/verified/">Verified</a><a class="btn" data-n="how" href="/pad/how/">How it works</a></nav><button class="btn solid" data-wallet>Connect wallet</button></div>
 <section class="band"><div class="in"><div id="notlive"></div><div id="battleroot"><p class="muted">Loading…</p></div></div></section>
 </main>
 <footer><div class="in"><span>© $STAG · Stag Wif Hood</span><a href="/stagr/">StagR CRM</a><a href="https://x.com/stagwifhoodrh" target="_blank" rel="noopener">X</a><a href="https://records.stagwifhood.fun">Stag House Records</a><a href="https://t.me/StagWifHood" rel="noopener">Telegram</a></div><div class="in"><p class="fine">$STAG is a community token. Nothing here is financial advice or a promise of returns. Crypto is volatile and you can lose everything you put in.</p></div></footer>
