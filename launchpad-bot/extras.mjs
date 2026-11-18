@@ -58,6 +58,25 @@ export function initExtras(X) {
       const r = await (await fetch(`${api}/sendVideo`, { method: "POST", body: fd })).json(); if (!r.ok) log("buyback send err:", r.description); return !!r.ok;
     } catch (e) { log("buyback send err:", e.message); return false; }
   }
+  // The "real businesses, real buybacks" announcement: card + video + text. Draft goes to the owner DM, "go" posts it to the main group once.
+  const BP_TEXT = ["🦌 <b>$STAG is backed by real businesses.</b>", "",
+    "Every business we run puts <b>5% of its profits</b> into $STAG buybacks. The launchpad puts in <b>half</b>.", "",
+    "🗑️ Junk Junkies · 🧼 Emili's Cleaning Co. · 📋 StagR CRM · 🎵 Stag House Records · ⚔️ Staggy Paddy (coming soon)", "",
+    "For every $100 of profit, $5 of $STAG is bought back. No promise on an amount, but it's happening. Once buybacks add up to something meaningful, we start burning. 🔥", "",
+    "💬 t.me/StagWifHoodRH", "", "<i>Not financial advice. Tokens can lose most or all of their value.</i>"].join("\n");
+  async function bpSend(to, draft) {
+    try {
+      const dir = path.join(DIR, "buybackpost"), vf = path.join(dir, "promo.mp4"), cf = path.join(dir, "card.png");
+      if (draft) await tgPost("sendMessage", { chat_id: to, text: "<i>DRAFT. Only you can see this. Nothing has been posted.</i>", parse_mode: "HTML" });
+      const v = new FormData(); v.append("chat_id", String(to)); v.append("caption", BP_TEXT); v.append("parse_mode", "HTML"); v.append("supports_streaming", "true");
+      v.append("video", new Blob([readFileSync(vf)], { type: "video/mp4" }), "promo.mp4");
+      const r1 = await (await fetch(`${api}/sendVideo`, { method: "POST", body: v })).json(); if (!r1.ok) { log("buybackpost video err:", r1.description); return false; }
+      const p = new FormData(); p.append("chat_id", String(to)); p.append("photo", new Blob([readFileSync(cf)], { type: "image/png" }), "card.png");
+      if (draft) p.append("caption", "The card (image version of the same message)");
+      const r2 = await (await fetch(`${api}/sendPhoto`, { method: "POST", body: p })).json(); if (!r2.ok) log("buybackpost card err:", r2.description);
+      return true;
+    } catch (e) { log("buybackpost err:", e.message); return false; }
+  }
   // every dev buy in the last 24 hours as one card. Reads the chain history the bot already holds, so it also covers buys from before the wallet was saved.
   async function bbToday(to, draft) {
     const head = await provider.getBlockNumber(); const day = ST.buys.filter((b) => b.block > head - BLOCKS_PER_DAY);
@@ -236,6 +255,12 @@ export function initExtras(X) {
       if (cmd === "wytepost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // admin only, in the bot DM: posts the WYTE BOYZ sale announcement to the main group, once
         const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
         const ok = await wyteSend(chat, false); if (!ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); return reply("The post failed, nothing was marked as sent. Try again."); } return reply("✅ Posted to the main group.");
+      }
+      if (cmd === "buybackpost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // owner only, in the bot DM: /buybackpost shows the draft here, /buybackpost go posts it to the main group once
+        const go = (args[0] || "").toLowerCase() === "go";
+        if (go) { const [c] = await W.q("insert into bot_state(k,v) values('buybackAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again."); }
+        const ok = await bpSend(go ? chat : msg.chat.id, !go); if (!ok) { if (go) await W.q("delete from bot_state where k='buybackAnnounced'"); return reply("The send failed" + (go ? ", nothing was marked as posted" : "") + ". Try again."); }
+        return reply(go ? "✅ Posted to the main group." : "☝️ That is the draft, only you can see it. Send /buybackpost go to post it to the main group (once).");
       }
       if (["setdev", "cleardev", "buybackdraft", "buyback", "buybacktoday"].includes(cmd) && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, and only in the bot DM
         if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
