@@ -88,7 +88,7 @@ route('PUT', '/api/services/:id', async ctx => {
 });
 
 // ---- requests (new leads: from the booking page or typed in) ----
-route('GET', '/api/requests', async ctx => ({ requests: (await sql`SELECT id, tenant_id, customer_id, source, name, phone, email, service, address, message, status, contacted_at, created_at, company, availability, notes, email_ok, sms_ok,
+route('GET', '/api/requests', async ctx => ({ requests: (await sql`SELECT id, tenant_id, customer_id, source, name, phone, email, service, details, address, message, status, contacted_at, created_at, company, availability, notes, email_ok, sms_ok,
   (SELECT COALESCE(jsonb_agg(0), '[]'::jsonb) FROM jsonb_array_elements(photos)) AS photos FROM requests WHERE tenant_id = ${ctx.tid} ORDER BY created_at DESC LIMIT 300`).map(requestOut) }));
 // One photo, as an image. Request photos are for managers; a visit photo is also open to the crew assigned to that visit.
 route('GET', '/api/photos/:kind/:id/:idx', async ctx => {
@@ -112,7 +112,7 @@ async function customerFromRequest(ctx, r) {
   if (!c) {
     const sms = !!(r.sms_ok && r.phone), em = !!(r.email_ok && r.email);
     [c] = await sql`INSERT INTO customers (tenant_id, name, company, phone, email, source, notes, sms_opt_in, sms_opt_in_at, email_opt_in) VALUES (${ctx.tid}, ${r.name}, ${r.company || ''}, ${r.phone}, ${r.email}, ${r.source}, ${r.message}, ${sms}, ${sms ? r.created_at : null}, ${em}) RETURNING *`;
-    if (r.address) await sql`INSERT INTO properties (tenant_id, customer_id, address) VALUES (${ctx.tid}, ${c.id}, ${r.address})`;
+    if (r.address) await sql`INSERT INTO properties (tenant_id, customer_id, address, notes) VALUES (${ctx.tid}, ${c.id}, ${r.address}, ${detailLines(r.details).join('\n')})`;
   }
   await sql`UPDATE requests SET status = 'converted', customer_id = ${c.id}, contacted_at = COALESCE(contacted_at, now()) WHERE id = ${r.id} AND tenant_id = ${ctx.tid}`;
   await logActivity(ctx.tid, c.id, 'request', 'Request converted to a customer', ctx.user.id);
@@ -140,13 +140,34 @@ route('POST', '/api/requests/:id/convert-quote', async ctx => {
   return { customer: c, quote: q };
 });
 
+// Home details a cleaning customer can give on the booking page. Only these keys, only these shapes, are ever stored.
+const DETAIL_ENUMS = { pets: ['none', 'dog', 'cat', 'both', 'other'], frequency: ['once', 'weekly', 'biweekly', 'monthly'], access: ['home', 'keybox', 'doorcode', 'other'], supplies: ['you', 'me'] };
+export function cleanDetails(d) {
+  d = d && typeof d === 'object' ? d : {}; const out = {};
+  for (const [k, max] of [['beds', 20], ['baths', 20]]) { const n = Number(d[k]); if (Number.isFinite(n) && n >= 0 && n <= max) out[k] = Math.round(n * 2) / 2; }
+  const sq = Math.round(Number(d.sqft)); if (Number.isFinite(sq) && sq > 0 && sq <= 100000) out.sqft = sq;
+  for (const [k, vals] of Object.entries(DETAIL_ENUMS)) if (vals.includes(d[k])) out[k] = d[k];
+  const an = clean(d.access_note, 300); if (an) out.access_note = an;
+  const pn = clean(d.pet_note, 200); if (pn) out.pet_note = pn;
+  return out;
+}
+const LABELS = { none: 'no pets', dog: 'dog', cat: 'cat', both: 'dog and cat', other: 'other pets', once: 'one time', weekly: 'weekly', biweekly: 'every 2 weeks', monthly: 'monthly', home: 'someone will be home', keybox: 'key or lockbox', doorcode: 'door code', me: 'we bring supplies', you: 'customer provides supplies' };
+export function detailLines(d) {
+  d = d || {}; const L = [];
+  const size = [d.beds != null ? d.beds + ' bed' : '', d.baths != null ? d.baths + ' bath' : '', d.sqft ? d.sqft + ' sq ft' : ''].filter(Boolean).join(', '); if (size) L.push('Home: ' + size);
+  if (d.pets) L.push('Pets: ' + LABELS[d.pets] + (d.pet_note ? ' (' + d.pet_note + ')' : ''));
+  if (d.access) L.push('Entry: ' + LABELS[d.access] + (d.access_note ? ' (' + d.access_note + ')' : '')); else if (d.access_note) L.push('Entry: ' + d.access_note);
+  if (d.frequency) L.push('How often: ' + LABELS[d.frequency]);
+  if (d.supplies) L.push('Supplies: ' + LABELS[d.supplies]);
+  return L;
+}
 // ---- public booking page: anyone can send a request to a business by its slug ----
 route('GET', '/api/public/b/:slug', { public: true }, async ctx => {
   const [t] = await sql`SELECT id, name, slug, phone, city, state, brand_color, settings FROM tenants WHERE slug = ${clean(ctx.params.slug, 60)}`;
   if (!t || (t.settings || {}).booking_enabled === false) throw missing('Booking page not found');
   const services = await sql`SELECT name, description FROM services WHERE tenant_id = ${t.id} AND active ORDER BY name`;
   const st = t.settings || {}, pr = st.pricing || {};
-  return { business: { name: t.name, phone: t.phone, city: t.city, state: t.state, brand_color: t.brand_color, intro: st.booking_intro || '', logo: st.logo || '' }, services,
+  return { business: { name: t.name, phone: t.phone, city: t.city, state: t.state, brand_color: t.brand_color, intro: st.booking_intro || '', logo: st.logo || '', trade: st.trade || '' }, services,
     pricing: pr.show_on_booking ? { loads: pr.loads || [], hourly: pr.hourly && pr.hourly.rate > 0 ? pr.hourly : null } : null };
 });
 route('POST', '/api/public/b/:slug/request', { public: true }, async ctx => {
@@ -161,8 +182,8 @@ route('POST', '/api/public/b/:slug/request', { public: true }, async ctx => {
   const av = b.availability && typeof b.availability === 'object' ? b.availability : {};
   const dates = (Array.isArray(av.dates) ? av.dates : []).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(0, 2), arrival = (Array.isArray(av.arrival) ? av.arrival : []).filter(a => ['any', 'morning', 'afternoon'].includes(a));
   // Consent is stored with the request and copied to the customer when the request is converted.
-  await sql`INSERT INTO requests (tenant_id, source, name, company, phone, email, service, address, message, photos, availability, sms_ok, email_ok)
-    VALUES (${t.id}, 'booking page', ${name}, ${clean(b.company, 120)}, ${ph}, ${em}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}, ${JSON.stringify(photos)}::jsonb, ${JSON.stringify({ dates, arrival })}::jsonb, ${b.sms_ok === true && !!ph}, ${b.email_ok === true && !!em})`;
+  await sql`INSERT INTO requests (tenant_id, source, name, company, phone, email, service, address, message, photos, availability, sms_ok, email_ok, details)
+    VALUES (${t.id}, 'booking page', ${name}, ${clean(b.company, 120)}, ${ph}, ${em}, ${clean(b.service, 120)}, ${clean(b.address, 200)}, ${clean(b.message, 2000)}, ${JSON.stringify(photos)}::jsonb, ${JSON.stringify({ dates, arrival })}::jsonb, ${b.sms_ok === true && !!ph}, ${b.email_ok === true && !!em}, ${JSON.stringify(cleanDetails(b.details))}::jsonb)`;
   await notify(t.id, { title: 'New request', body: `${name}${clean(b.service, 60) ? ' · ' + clean(b.service, 60) : ''}`, path: '/requests' });
   return { ok: true };
 });

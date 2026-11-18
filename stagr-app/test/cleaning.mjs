@@ -42,5 +42,37 @@ await page.locator('[data-visit], [data-vid], .item').first().click().catch(() =
 await page.waitForTimeout(800);
 const modalText = await page.locator('.modal, dialog, [role=dialog]').first().innerText().catch(() => '');
 ok('visit screen shows the door code', /Door code 4821/.test(modalText), modalText.slice(0, 120));
+
+// ---- booking page questions
+const slug = su.business.slug;
+const pub = await ctx.newPage(); const perrs = []; pub.on('pageerror', e => perrs.push(String(e)));
+await pub.goto(BASE + '/b/' + slug); await pub.waitForSelector('#f');
+ok('cleaning booking page asks about the home', (await pub.locator('[name=beds]').count()) === 1 && (await pub.locator('[name=access]').count()) === 1);
+await pub.fill('[name=first]', 'Lee'); await pub.fill('[name=phone]', '5559998888'); await pub.fill('[name=street]', '9 Elm Ct'); await pub.fill('[name=city]', 'Austin');
+await pub.fill('[name=service]', 'Standard clean'); await pub.fill('[name=message]', 'Two story house');
+await pub.fill('[name=beds]', '4'); await pub.fill('[name=baths]', '2.5'); await pub.fill('[name=sqft]', '2400');
+await pub.selectOption('[name=frequency]', 'biweekly'); await pub.selectOption('[name=pets]', 'dog'); await pub.fill('[name=pet_note]', 'Biscuit is friendly');
+await pub.selectOption('[name=access]', 'doorcode'); await pub.selectOption('[name=supplies]', 'me'); await pub.fill('[name=access_note]', 'Code 7788, park in drive');
+await pub.click('button[type=submit]'); await pub.waitForSelector('.ok');
+const reqs = await api('GET', '/requests'); const rq = reqs.requests.find(r => r.name === 'Lee');
+ok('request keeps the home details', rq && rq.details.beds === 4 && rq.details.baths === 2.5 && rq.details.sqft === 2400 && rq.details.frequency === 'biweekly' && rq.details.access === 'doorcode', rq && rq.details);
+// bad input is dropped, not stored
+const bad = await fetch(BASE + '/api/public/b/' + slug + '/request', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Mal', phone: '5550001111', message: 'x', details: { beds: 999, baths: 'abc', sqft: -5, pets: 'tiger', frequency: 'hourly', hack: '<script>', access_note: 'ok note' } }) });
+ok('bad home details accepted but dropped', bad.ok);
+const rq2 = (await api('GET', '/requests')).requests.find(r => r.name === 'Mal');
+ok('only the valid detail was kept', JSON.stringify(rq2.details) === JSON.stringify({ access_note: 'ok note' }), rq2.details);
+// request screen + conversion
+await page.goto(BASE + '/app#/requests/' + rq.id); await page.waitForTimeout(1200);
+const rt = await page.locator('#main').innerText();
+ok('request screen lists the home details', /Bedrooms: 4/.test(rt) && /Every 2 weeks/.test(rt) && /Code 7788/.test(rt), rt.slice(0, 200));
+const cv = await api('POST', '/requests/' + rq.id + '/convert');
+const cd = await api('GET', '/customers/' + cv.customer.id);
+ok('entry details become property notes', /Entry: door code \(Code 7788/.test(cd.properties[0].notes) && /Pets: dog/.test(cd.properties[0].notes), cd.properties[0] && cd.properties[0].notes);
+// a non-cleaning business does not see the cleaning questions
+const ctx2 = await b.newContext(); const p2 = await ctx2.newPage(); await p2.goto(BASE + '/app');
+const su2 = await p2.evaluate(async () => (await fetch('/api/auth/signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ business: 'Haul Co', name: 'Hal', email: 'hal@example.com', password: 'longpassword1', trade: 'junk' }) })).json());
+await p2.goto(BASE + '/b/' + su2.business.slug); await p2.waitForSelector('#f');
+ok('junk booking page has no cleaning questions', (await p2.locator('[name=beds]').count()) === 0);
+ok('no JS errors on booking pages', perrs.length === 0, perrs);
 ok('no JS errors', errs.length === 0, errs);
 console.log(`${pass} passed, ${fail} failed`); await b.close(); srv.close?.(); process.exit(fail ? 1 : 0);

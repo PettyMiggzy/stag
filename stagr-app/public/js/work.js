@@ -21,6 +21,7 @@ export function newJobModal(customerId, opts = {}) {
     const { customers } = await get('/customers'), sel = $('#cust', el), psel = $('#prop', el);
     const loadProps = async id => { if (!id) { psel.innerHTML = '<option value="">—</option>'; return; } const d = await get('/customers/' + id); psel.innerHTML = '<option value="">No property</option>' + d.properties.map(p => `<option value="${p.id}">${esc(p.address)}</option>`).join(''); const want = q?.property_id; if (want) psel.value = want; else if (d.properties.length === 1) psel.value = d.properties[0].id; };
     sel.innerHTML = '<option value="">Choose a customer…</option>' + customers.map(c => `<option value="${c.id}" ${c.id == customerId ? 'selected' : ''}>${esc(c.name)}</option>`).join(''); sel.addEventListener('change', () => loadProps(sel.value)); await loadProps(customerId || '');
+    if (opts.repeat && opts.repeat !== 'once') $('#rep', el).value = opts.repeat;
     $('#chkt', el).addEventListener('click', e => { const k = e.target.dataset && e.target.dataset.tpl; if (!k) return; const t = $('#chk', el), cur = t.value.trim(); t.value = (cur ? cur + '\n' : '') + CHECK_TEMPLATES[k].join('\n'); });
     $('#jf', el).addEventListener('submit', async e => { e.preventDefault(); if (!sel.value) return toast('Choose a customer', true);
       const startIso = fromInput($('#start', el).value); if (!startIso) return toast('Pick a start time', true);
