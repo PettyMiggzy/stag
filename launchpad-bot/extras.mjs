@@ -77,6 +77,14 @@ export function initExtras(X) {
       return true;
     } catch (e) { log("buybackpost err:", e.message); return false; }
   }
+  // Once, after this version first starts: send the draft to the owner DM (never the group). The owner then sends /buybackpost go to post it.
+  setTimeout(async () => { try {
+    const admin = process.env.ADMIN_TG_ID || "6820752140";
+    const [c] = await W.q("insert into bot_state(k,v) values('buybackDraftSent','1') on conflict(k) do nothing returning k"); if (!c) return;
+    const ok = await bpSend(admin, true);
+    if (ok) await tgPost("sendMessage", { chat_id: admin, text: "☝️ That is the buyback announcement draft. Only you got it. Send /buybackpost go to post it to the main group (once), or /buybackpost to see it again.", parse_mode: "HTML" });
+    else await W.q("delete from bot_state where k='buybackDraftSent'");
+  } catch (e) { log("buybackpost auto-draft err:", e.message); } }, 25000);
   // every dev buy in the last 24 hours as one card. Reads the chain history the bot already holds, so it also covers buys from before the wallet was saved.
   async function bbToday(to, draft) {
     const head = await provider.getBlockNumber(); const day = ST.buys.filter((b) => b.block > head - BLOCKS_PER_DAY);
