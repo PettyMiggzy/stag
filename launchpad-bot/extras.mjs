@@ -64,19 +64,28 @@ export function initExtras(X) {
     "🗑️ Junk Junkies · 🧼 Emili's Cleaning Co. · 📋 StagR CRM · 🎵 Stag House Records · ⚔️ Staggy Paddy (coming soon)", "",
     "For every $100 of profit, $5 of $STAG is bought back. No promise on an amount, but it's happening. Once buybacks add up to something meaningful, we start burning. 🔥", "",
     "💬 t.me/StagWifHoodRH", "", "<i>Not financial advice. Tokens can lose most or all of their value.</i>"].join("\n");
-  async function bpSend(to, draft) {
+  async function bpSend(to, draft, withCard = true) {
     try {
       const dir = path.join(DIR, "buybackpost"), vf = path.join(dir, "promo.mp4"), cf = path.join(dir, "card.png");
       if (draft) await tgPost("sendMessage", { chat_id: to, text: "<i>DRAFT. Only you can see this. Nothing has been posted.</i>", parse_mode: "HTML" });
       const v = new FormData(); v.append("chat_id", String(to)); v.append("caption", BP_TEXT); v.append("parse_mode", "HTML"); v.append("supports_streaming", "true");
       v.append("video", new Blob([readFileSync(vf)], { type: "video/mp4" }), "promo.mp4");
-      const r1 = await (await fetch(`${api}/sendVideo`, { method: "POST", body: v })).json(); if (!r1.ok) { log("buybackpost video err:", r1.description); return false; }
-      const p = new FormData(); p.append("chat_id", String(to)); p.append("photo", new Blob([readFileSync(cf)], { type: "image/png" }), "card.png");
-      if (draft) p.append("caption", "The card (image version of the same message)");
-      const r2 = await (await fetch(`${api}/sendPhoto`, { method: "POST", body: p })).json(); if (!r2.ok) log("buybackpost card err:", r2.description);
-      return true;
+      let r1 = null; for (let t = 0; t < 3; t++) { const f = new FormData(); for (const [k, x] of v.entries()) f.append(k, x); r1 = await (await fetch(`${api}/sendVideo`, { method: "POST", body: f })).json(); if (r1.ok) break; log("buybackpost video err (try " + (t + 1) + "):", r1.description); await new Promise((r) => setTimeout(r, 4000)); }
+      if (!r1 || !r1.ok) return false;
+      const ids = [r1.result.message_id];
+      if (withCard) { const p = new FormData(); p.append("chat_id", String(to)); p.append("photo", new Blob([readFileSync(cf)], { type: "image/png" }), "card.png");
+        if (draft) p.append("caption", "The card (image version of the same message)");
+        const r2 = await (await fetch(`${api}/sendPhoto`, { method: "POST", body: p })).json(); if (!r2.ok) log("buybackpost card err:", r2.description); else ids.push(r2.result.message_id); }
+      return { ids };
     } catch (e) { log("buybackpost err:", e.message); return false; }
   }
+  // Repeat the announcement in the main group every 4 hours (ON unless /buybackpost auto off). Each new post replaces the previous one. The first post is always the owner's /buybackpost go.
+  setInterval(async () => { try {
+    if ((await stGet("buybackAuto")) === "0") return; if (!(await stGet("buybackAnnounced"))) return;
+    const last = Number(await stGet("buybackLast") || 0); if (!last) { await stSet("buybackLast", Date.now()); return; } if (Date.now() - last < 4 * 3600000) return;
+    const prev = (await stGet("buybackMsgs") || "").split(",").filter(Boolean); const r = await bpSend(chat, false, false); if (!r) return;
+    await stSet("buybackLast", Date.now()); await stSet("buybackMsgs", r.ids.join(",")); for (const id of prev) tgPost("deleteMessage", { chat_id: chat, message_id: Number(id) }); log("buyback announcement re-posted");
+  } catch (e) { log("buyback repeat err:", e.message); } }, 10 * 60000);
   // Once, after this version first starts: send the draft to the owner DM (never the group). The owner then sends /buybackpost go to post it.
   setTimeout(async () => { try {
     const admin = process.env.ADMIN_TG_ID || "6820752140";
@@ -267,10 +276,14 @@ export function initExtras(X) {
       }
       if (cmd === "buybackpost") log("buybackpost command from", msg.from.id, "in", msg.chat.type, "(admin is", String(process.env.ADMIN_TG_ID || "6820752140") + ")");
       if (cmd === "buybackpost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // owner only, in the bot DM: /buybackpost shows the draft here, /buybackpost go posts it to the main group once
+        if ((args[0] || "").toLowerCase() === "auto") { const v = (args[1] || "").toLowerCase();
+          if (v === "on" || v === "off") { await stSet("buybackAuto", v === "on" ? "1" : "0"); if (v === "on" && !(await stGet("buybackLast"))) await stSet("buybackLast", Date.now()); return reply(v === "on" ? "🔁 The buyback post repeats every 4 hours in the main group. /buybackpost auto off stops it." : "⏹ The 4-hour repeat is OFF."); }
+          const on = (await stGet("buybackAuto")) !== "0"; const last = Number(await stGet("buybackLast") || 0); return reply(`The 4-hour repeat is ${on ? "ON" : "OFF"}.${last ? " Last post: " + new Date(last).toISOString().replace("T", " ").slice(0, 16) + " UTC." : ""}\n/buybackpost auto on or /buybackpost auto off to change it.`); }
         const go = (args[0] || "").toLowerCase() === "go";
         if (go) { const [c] = await W.q("insert into bot_state(k,v) values('buybackAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again."); }
         const ok = await bpSend(go ? chat : msg.chat.id, !go); if (!ok) { if (go) await W.q("delete from bot_state where k='buybackAnnounced'"); return reply("The send failed" + (go ? ", nothing was marked as posted" : "") + ". Try again."); }
-        return reply(go ? "✅ Posted to the main group." : "☝️ That is the draft, only you can see it. Send /buybackpost go to post it to the main group (once).");
+        if (go) { await stSet("buybackMsgs", ok.ids.join(",")); await stSet("buybackLast", Date.now()); }
+        return reply(go ? "✅ Posted to the main group. It now repeats every 4 hours (the previous one is deleted each time). /buybackpost auto off stops that." : "☝️ That is the draft, only you can see it. Send /buybackpost go to post it to the main group. After that it repeats every 4 hours.");
       }
       if (["setdev", "cleardev", "buybackdraft", "buyback", "buybacktoday"].includes(cmd) && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140")) { // owner only, and only in the bot DM
         if (msg.chat.type !== "private") return reply("Send that in my DM, not in a group.");
