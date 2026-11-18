@@ -137,7 +137,7 @@ route('GET', '/api/visits', async ctx => {
   return { visits: rows };
 });
 route('GET', '/api/visits/:id', async ctx => {
-  const [v] = await sql`SELECT v.*, j.title, j.number AS job_number, j.customer_id, c.name AS customer_name, c.phone AS customer_phone, p.address, p.city
+  const [v] = await sql`SELECT v.*, j.title, j.number AS job_number, j.customer_id, c.name AS customer_name, c.phone AS customer_phone, p.address, p.city, p.state, p.zip, p.notes AS property_notes
     FROM visits v JOIN jobs j ON j.id = v.job_id AND j.tenant_id = v.tenant_id JOIN customers c ON c.id = j.customer_id AND c.tenant_id = j.tenant_id LEFT JOIN properties p ON p.id = j.property_id AND p.tenant_id = j.tenant_id
     WHERE v.id = ${Number(ctx.params.id) || 0} AND v.tenant_id = ${ctx.tid}`;
   if (!v) throw missing('Visit not found');

@@ -71,7 +71,7 @@ function editCustomer(d) {
 function propertyModal(customerId, p) {
   modal(`<h2>${p ? 'Edit' : 'Add'} property</h2><form class="col" id="pf"><label class="field"><span>Address</span><input name="address" required value="${esc(p?.address || '')}"></label>
     <div class="grid g3"><label class="field"><span>City</span><input name="city" value="${esc(p?.city || S.business.city || '')}"></label><label class="field"><span>State</span><input name="state" maxlength="2" value="${esc(p?.state || S.business.state || '')}"></label><label class="field"><span>ZIP</span><input name="zip" value="${esc(p?.zip || '')}"></label></div>
-    <label class="field"><span>Notes (gate codes, pets, parking)</span><textarea name="notes">${esc(p?.notes || '')}</textarea></label>
+    <label class="field"><span>Entry notes (door code, key, pets, alarm, parking)</span><textarea name="notes">${esc(p?.notes || '')}</textarea></label>
     <div class="row between"><div class="row"><button class="btn main" type="submit">Save</button><button class="btn" type="button" data-close>Cancel</button></div>${p ? '<button class="btn small warn" type="button" id="delp">Delete</button>' : ''}</div></form>`, (el, close) => {
     $('#pf', el).addEventListener('submit', async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); try { p ? await put('/properties/' + p.id, f) : await post('/customers/' + customerId + '/properties', f); close(); hooks.refresh(); } catch (err) { toast(err.message, true); } });
     $('#delp', el)?.addEventListener('click', async () => { if (!confirm('Delete this property?')) return; await del('/properties/' + p.id); close(); hooks.refresh(); });

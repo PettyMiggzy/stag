@@ -13,29 +13,37 @@ export function newJobModal(customerId, opts = {}) {
     <label class="field"><span>Job title</span><input id="title" required placeholder="What is the job?" value="${esc(q ? (q.title || 'Job from quote ' + q.label) : opts.title || '')}"></label>
     <div class="grid g2"><label class="field"><span>Starts</span><input id="start" type="datetime-local" value="${esc(tomorrow)}"></label><label class="field"><span>Ends (optional)</span><input id="end" type="datetime-local"></label></div>
     <div><span class="mono">Crew</span><div class="row wrap" style="margin-top:6px">${crewBoxes()}</div></div>
-    <div class="grid g3"><label class="field"><span>Repeat</span><select id="rep"><option value="">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label><label class="field"><span>Every</span><input id="every" inputmode="numeric" value="1"></label><label class="field"><span>Ends after (visits)</span><input id="count" inputmode="numeric" placeholder="No end"></label></div>
+    <div class="grid g3"><label class="field"><span>Repeat</span><select id="rep"><option value="">Does not repeat</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option><option value="daily">Daily</option><option value="yearly">Yearly</option></select></label><label class="field"><span>Every</span><input id="every" inputmode="numeric" value="1"></label><label class="field"><span>Ends after (visits)</span><input id="count" inputmode="numeric" placeholder="No end"></label></div>
+    <div class="row wrap" id="chkt"><span class="mono small">Checklist from a template:</span>${Object.keys(CHECK_TEMPLATES).map(k => `<button type="button" class="btn small" data-tpl="${k}">${esc(k)}</button>`).join('')}</div>
     <label class="field"><span>Checklist (one item per line, optional)</span><textarea id="chk" placeholder="Take before photos&#10;Sweep up when done"></textarea></label>
     <label class="field"><span>Job notes</span><textarea id="desc"></textarea></label>
     <div class="row"><button class="btn main" type="submit">Schedule job</button><button class="btn" type="button" data-close>Cancel</button></div></form>`, async (el, close) => {
     const { customers } = await get('/customers'), sel = $('#cust', el), psel = $('#prop', el);
     const loadProps = async id => { if (!id) { psel.innerHTML = '<option value="">—</option>'; return; } const d = await get('/customers/' + id); psel.innerHTML = '<option value="">No property</option>' + d.properties.map(p => `<option value="${p.id}">${esc(p.address)}</option>`).join(''); const want = q?.property_id; if (want) psel.value = want; else if (d.properties.length === 1) psel.value = d.properties[0].id; };
     sel.innerHTML = '<option value="">Choose a customer…</option>' + customers.map(c => `<option value="${c.id}" ${c.id == customerId ? 'selected' : ''}>${esc(c.name)}</option>`).join(''); sel.addEventListener('change', () => loadProps(sel.value)); await loadProps(customerId || '');
+    $('#chkt', el).addEventListener('click', e => { const k = e.target.dataset && e.target.dataset.tpl; if (!k) return; const t = $('#chk', el), cur = t.value.trim(); t.value = (cur ? cur + '\n' : '') + CHECK_TEMPLATES[k].join('\n'); });
     $('#jf', el).addEventListener('submit', async e => { e.preventDefault(); if (!sel.value) return toast('Choose a customer', true);
       const startIso = fromInput($('#start', el).value); if (!startIso) return toast('Pick a start time', true);
       const body = { customer_id: Number(sel.value), property_id: psel.value || null, quote_id: q ? q.id : undefined, title: $('#title', el).value, description: $('#desc', el).value,
         visit: { starts_at: startIso, ends_at: fromInput($('#end', el).value), assigned: picked(el), checklist: $('#chk', el).value.split('\n').map(t => ({ text: t.trim() })).filter(t => t.text) },
-        recurrence: $('#rep', el).value ? { freq: $('#rep', el).value, interval: Number($('#every', el).value) || 1, count: Number($('#count', el).value) || undefined } : null };
+        recurrence: $('#rep', el).value ? { freq: $('#rep', el).value === 'biweekly' ? 'weekly' : $('#rep', el).value, interval: $('#rep', el).value === 'biweekly' ? 2 * (Number($('#every', el).value) || 1) : Number($('#every', el).value) || 1, count: Number($('#count', el).value) || undefined } : null };
       try { const r = await post('/jobs', body); close(); toast('Job scheduled'); location.hash = '#/jobs/' + r.job.id; } catch (err) { toast(err.message, true); }
     });
   });
 }
 
+// Ready-made checklists a cleaning crew can drop into a visit, then edit.
+const CHECK_TEMPLATES = {
+  'Standard clean': ['Kitchen: counters, sink, stovetop, outside of appliances', 'Kitchen: sweep and mop floor', 'Bathrooms: toilet, shower or tub, sink, mirror', 'Bathrooms: floor', 'Bedrooms: make beds, dust surfaces', 'Living areas: dust, vacuum, mop hard floors', 'Empty trash cans and replace liners', 'Final walk-through and lock up'],
+  'Deep clean': ['Baseboards and door frames wiped', 'Inside microwave and oven front', 'Inside fridge (if requested)', 'Kitchen: cabinet fronts and backsplash', 'Bathrooms: scrub grout and fixtures', 'Windowsills and blinds dusted', 'Light switches and door handles disinfected', 'Vacuum under furniture', 'Mop all hard floors', 'Final walk-through and lock up'],
+  'Move-out clean': ['Inside all cabinets and drawers', 'Inside oven, microwave and fridge', 'Closets wiped and vacuumed', 'Walls spot-cleaned', 'Windows and tracks', 'Bathrooms scrubbed top to bottom', 'Floors vacuumed and mopped', 'Take after photos of every room', 'Final walk-through and lock up']
+};
 // One visit: status, crew, notes, checklist, photos, clock in and out.
 export async function visitModal(id) {
   let v; try { v = (await get('/visits/' + id)).visit; } catch (e) { return toast(e.message, true); }
   const admin = S.user.role !== 'worker';
   modal(`<h2>${esc(v.customer_name)}</h2><p class="mute" style="margin:-6px 0 12px">${esc(v.title)} · ${esc(fmtDT(v.starts_at))}${v.ends_at ? ' to ' + esc(fmtTime(v.ends_at)) : ''}${v.address ? ' · ' + esc(v.address) : ''}</p>
-    <div class="row wrap" style="margin-bottom:12px">${statusChip(v.status)}${v.customer_phone ? `<a class="btn small" href="tel:${esc(v.customer_phone)}">Call</a>` : ''}${v.address ? `<a class="btn small" target="_blank" rel="noopener" href="${esc(mapsLink([v.address, v.city, v.state, v.zip]))}">Directions</a>` : ''}${v.customer_phone && v.status !== 'completed' && v.status !== 'cancelled' ? '<button class="btn small" id="omw" type="button">Text “on my way”</button>' : ''}${admin ? `<a class="btn small" href="#/jobs/${v.job_id}" data-close>Open job</a>` : ''}</div>
+    ${v.property_notes ? `<div class="card" style="margin:0 0 12px;padding:10px 12px;border-left:3px solid var(--accent,#2e7d32)"><div class="mono small">Entry and house notes</div><div style="white-space:pre-wrap">${esc(v.property_notes)}</div></div>` : ''}<div class="row wrap" style="margin-bottom:12px">${statusChip(v.status)}${v.customer_phone ? `<a class="btn small" href="tel:${esc(v.customer_phone)}">Call</a>` : ''}${v.address ? `<a class="btn small" target="_blank" rel="noopener" href="${esc(mapsLink([v.address, v.city, v.state, v.zip]))}">Directions</a>` : ''}${v.customer_phone && v.status !== 'completed' && v.status !== 'cancelled' ? '<button class="btn small" id="omw" type="button">Text “on my way”</button>' : ''}${admin ? `<a class="btn small" href="#/jobs/${v.job_id}" data-close>Open job</a>` : ''}</div>
     ${admin ? `<div class="grid g2"><label class="field"><span>Starts</span><input id="vs" type="datetime-local" value="${esc(toInput(v.starts_at))}"></label><label class="field"><span>Ends</span><input id="ve" type="datetime-local" value="${esc(toInput(v.ends_at))}"></label></div><div style="margin-top:10px"><span class="mono">Crew</span><div class="row wrap" style="margin-top:6px">${crewBoxes(v.assigned)}</div></div>` : `<p class="small mute">Crew: ${esc(crewNames(v.assigned) || 'none')}</p>`}
     <h3 style="margin-top:14px">Checklist</h3><div class="col" id="chk" style="gap:6px">${(v.checklist || []).length ? v.checklist.map((c, i) => `<label class="row"><input type="checkbox" data-ci="${i}" ${c.done ? 'checked' : ''}> ${esc(c.text)}</label>`).join('') : '<span class="mute small">No checklist for this visit.</span>'}</div>
     <label class="field" style="margin-top:12px"><span>Notes</span><textarea id="vn">${esc(v.notes)}</textarea></label>
@@ -70,7 +78,7 @@ export async function scheduleView() {
 }
 export async function jobsView() {
   const { jobs } = await get('/jobs'), main = document.getElementById('main');
-  setTimeout(() => { $('#nj', main).addEventListener('click', () => newJobModal()); wireFilter(main); }, 0);
+  setTimeout(() => { $('#nj', main)?.addEventListener('click', () => newJobModal()); wireFilter(main); }, 0);
   return `<div class="top"><h1>Jobs</h1><button class="btn main" id="nj">+ New job</button></div>${jobs.length > 6 ? filterBox('Search jobs') : ''}<div class="list">${jobs.length ? jobs.map(j => `<a class="item" href="#/jobs/${j.id}"><div class="grow"><div class="t">J-${j.number} · ${esc(j.title)}</div><div class="s">${esc(j.customer_name)}${j.next_visit ? ' · next ' + esc(fmtDT(j.next_visit)) : ''}${j.recurrence ? ' · repeats ' + esc(j.recurrence.freq) : ''}</div></div>${statusChip(j.status)}</a>`).join('') : empty('No jobs yet. Approve a quote and schedule it, or create a job directly.')}</div>`;
 }
 export async function jobView(id) {
