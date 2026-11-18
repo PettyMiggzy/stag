@@ -82,6 +82,7 @@ export function initExtras(X) {
     const admin = process.env.ADMIN_TG_ID || "6820752140";
     const [c] = await W.q("insert into bot_state(k,v) values('buybackDraftSent','1') on conflict(k) do nothing returning k"); if (!c) return;
     const ok = await bpSend(admin, true);
+    log("buyback draft dm:", ok ? "sent" : "failed");
     if (ok) await tgPost("sendMessage", { chat_id: admin, text: "☝️ That is the buyback announcement draft. Only you got it. Send /buybackpost go to post it to the main group (once), or /buybackpost to see it again.", parse_mode: "HTML" });
     else await W.q("delete from bot_state where k='buybackDraftSent'");
   } catch (e) { log("buybackpost auto-draft err:", e.message); } }, 25000);
@@ -264,6 +265,7 @@ export function initExtras(X) {
         const [c] = await W.q("insert into bot_state(k,v) values('wyteAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again.");
         const ok = await wyteSend(chat, false); if (!ok) { await W.q("delete from bot_state where k='wyteAnnounced'"); return reply("The post failed, nothing was marked as sent. Try again."); } return reply("✅ Posted to the main group.");
       }
+      if (cmd === "buybackpost") log("buybackpost command from", msg.from.id, "in", msg.chat.type, "(admin is", String(process.env.ADMIN_TG_ID || "6820752140") + ")");
       if (cmd === "buybackpost" && String(msg.from.id) === String(process.env.ADMIN_TG_ID || "6820752140") && msg.chat.type === "private") { // owner only, in the bot DM: /buybackpost shows the draft here, /buybackpost go posts it to the main group once
         const go = (args[0] || "").toLowerCase() === "go";
         if (go) { const [c] = await W.q("insert into bot_state(k,v) values('buybackAnnounced','1') on conflict(k) do nothing returning k"); if (!c) return reply("Already posted to the main group once. Not posting again."); }
@@ -533,6 +535,7 @@ export function initExtras(X) {
     for (;;) {
       try {
         const r = await fetch(`${api}/getUpdates?timeout=25&offset=${offset}&allowed_updates=${encodeURIComponent('["message","chat_member"]')}`).then((x) => x.json());
+        if (!r.ok) { log("getUpdates error:", r.error_code, r.description); await new Promise((r2) => setTimeout(r2, 5000)); continue; }
         for (const u of r.result || []) { offset = u.update_id + 1; if (u.message) handle(u.message); else if (u.chat_member) refJoin(u.chat_member); }
       } catch (e) { await new Promise((r) => setTimeout(r, 3000)); }
     }
