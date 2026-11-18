@@ -9,8 +9,8 @@ window.PAD = {
   curve: "0x8e68043f7553ff7adf30eb8b0baac8d8fc2ed958",
   pm: "0x8366a39cc670b4001a1121b8f6a443a643e40951",
   stateView: "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b",
-  hook: "",
-  factory: "",
-  battle: "",
-  router: ""
+  hook: "0x8Bf62CE9e743219BDb94eAfc56484eE8E43DE8CC",
+  factory: "0xCDfd58238EE2eb065f660DE23Fe98Bd97CE22a0B",
+  battle: "0xFFF081A81A841B4cb683A812952F24606B8a93Cc",
+  router: "0xAca814B78eD274eECB4B7AdE29BBAb90aaD368c0"
 };
