@@ -42,12 +42,18 @@ export function initExtras(X) {
     const [l] = await bbQ("select eth, tok, extract(epoch from at)::bigint as ts from dev_buys order by at desc limit 1"); bbLast = l ? { eth: Number(l.eth), tok: Number(l.tok), ts: Number(l.ts) } : null;
   }
   const bbWeek = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys where at > now() - interval '7 days'"); return { n: w ? w.n : 0, eth: w ? Number(w.eth) : 0, tok: w ? Number(w.tok) : 0 }; };
-  function bbCaption(a, wk, draft) {
+  const bbTotal = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys"); return { n: w ? w.n : 0, eth: w ? Number(w.eth) : 0, tok: w ? Number(w.tok) : 0 }; };
+  function bbCaption(a, wk, draft, tot) {
+    const spree = a.n > 1, pct = a.tokens ? a.tokens / SUPPLY * 100 : 0;
     return [draft ? "<i>DRAFT with sample numbers. Not posted anywhere. Send /buyback on here to switch the alerts on.</i>\n" : "",
-      "🦌🔥 <b>DEV BUYBACK</b> 🔥🦌", `💵 <b>${a.spentUsd ? usd(a.spentUsd) : ""}</b> · ${fmt(a.eth, 4)} ETH`, `🟩 Bought <b>${fmt(a.tokens, 0)}</b> $STAG off the market`,
-      wk && wk.n ? `📅 Last 7 days: <b>${wk.n}</b> buyback${wk.n === 1 ? "" : "s"} · <b>${fmt(wk.eth, 3)} ETH</b> · <b>${fmt(wk.tok, 0)}</b> $STAG` : "",
+      spree ? `🦌🔥🔥 <b>DEV BUYBACK SPREE</b> 🔥🔥🦌` : `🦌🔥🔥 <b>DEV BUYBACK</b> 🔥🔥🦌`, "",
+      `💥 <b>${a.spentUsd ? usd(a.spentUsd) : fmt(a.eth, 4) + " ETH"}</b> BOUGHT BACK${spree ? ` IN <b>${a.n}</b> BUYS` : ""}`,
+      `🟩 <b>${fmt(a.tokens, 0)}</b> $STAG pulled off the market${a.spentUsd ? ` · ${fmt(a.eth, 4)} ETH` : ""}`,
+      pct >= 0.005 ? `📊 <b>${pct.toFixed(pct < 1 ? 2 : 1)}%</b> of the total supply` : "", "",
+      tot && tot.n ? `🏆 All dev buybacks so far: <b>${tot.n}</b> · <b>${fmt(tot.tok, 0)}</b> $STAG · <b>${fmt(tot.eth, 3)} ETH</b>` : "",
+      wk && wk.n ? `📅 Last 7 days: <b>${wk.n}</b> · <b>${fmt(wk.tok, 0)}</b> $STAG` : "",
       a.priceUsd ? `Price <b>${usd(a.priceUsd)}</b>${a.mcapUsd ? ` · MC <b>${usd(a.mcapUsd)}</b>` : ""}` : "",
-      `👤 Dev wallet${a.txUrl ? ` · <a href="${a.txUrl}">Tx</a>` : ""}`].filter(Boolean).join("\n");
+      `👤 Dev wallet${a.txUrl ? ` · <a href="${a.txUrl}">Tx</a>` : ""}`].filter((x, k, arr) => x !== "" || (arr[k - 1] !== "" && k < arr.length - 1)).join("\n");
   }
   async function bbSend(to, caption) {
     try {
@@ -55,7 +61,11 @@ export function initExtras(X) {
       if (!existsSync(f)) { const r = await tgPost("sendMessage", { chat_id: to, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: JSON.parse(markup) }); return !!(r && r.ok); }
       const fd = new FormData(); fd.append("chat_id", String(to)); fd.append("caption", caption); fd.append("parse_mode", "HTML"); fd.append("reply_markup", markup);
       fd.append("video", new Blob([readFileSync(f)], { type: "video/mp4" }), "buyback.mp4");
-      const r = await (await fetch(`${api}/sendVideo`, { method: "POST", body: fd })).json(); if (!r.ok) log("buyback send err:", r.description); return !!r.ok;
+      // the video upload is retried once; if Telegram still refuses it, the card goes out as text so a buyback is never lost
+      for (let t = 0; t < 2; t++) { const f2 = new FormData(); for (const [k, x] of fd.entries()) f2.append(k, x);
+        try { const r = await (await fetch(`${api}/sendVideo`, { method: "POST", body: f2 })).json(); if (r.ok) return true; log("buyback send err:", r.description); } catch (e) { log("buyback send err:", e.message); }
+        await new Promise((r) => setTimeout(r, 3000)); }
+      const r2 = await tgPost("sendMessage", { chat_id: to, text: caption, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: JSON.parse(markup) }); return !!(r2 && r2.ok);
     } catch (e) { log("buyback send err:", e.message); return false; }
   }
   // The "real businesses, real buybacks" announcement: card + video + text. Draft goes to the owner DM, "go" posts it to the main group once.
@@ -110,13 +120,26 @@ export function initExtras(X) {
     return (await bbSend(to, cap)) ? mine.length : -1;
   }
   // called for every buy card: true = this was a dev buyback and its own card went out, so the normal card is skipped
+  // Dev buys that arrive close together (the dev often buys 5-8 times in a few minutes) become ONE big card: wait for 60 s of quiet (5 min at most), then post the total.
+  let bbBatch = null; const BB_QUIET = 60000, BB_MAX = 300000;
+  async function bbFlush() {
+    const b = bbBatch; bbBatch = null; if (!b) return;
+    try { const a = { ...b.last, eth: b.eth, tokens: b.tok, spentUsd: b.usd, n: b.n };
+      if (!(await bbSend(chat, bbCaption(a, await bbWeek(), false, await bbTotal())))) log("buyback card failed to send");
+    } catch (e) { log("buyback flush err:", e.message); }
+  }
+  // called for every buy card: true = this was a dev buyback and its own card goes out (so the normal card is skipped)
   async function sendBuyback(a) {
     try {
       if (!DEVS.has(String(a.buyer || "").toLowerCase())) return false;
       const tx = String(a.txUrl || "").split("/").pop();
       await bbQ("insert into dev_buys(tx, eth, tok) values ($1,$2,$3) on conflict do nothing", [tx, a.eth || 0, a.tokens || 0]); bbLast = { eth: a.eth || 0, tok: a.tokens || 0, ts: Math.floor(Date.now() / 1000) }; tokAt = 0;
       if (!BB_ON || a.late) return false;
-      return await bbSend(chat, bbCaption(a, await bbWeek(), false));
+      const now = Date.now();
+      if (bbBatch) { clearTimeout(bbBatch.timer); bbBatch.eth += a.eth || 0; bbBatch.tok += a.tokens || 0; bbBatch.usd += a.spentUsd || 0; bbBatch.n++; bbBatch.last = a; }
+      else bbBatch = { eth: a.eth || 0, tok: a.tokens || 0, usd: a.spentUsd || 0, n: 1, last: a, first: now };
+      bbBatch.timer = setTimeout(bbFlush, now - bbBatch.first > BB_MAX ? 0 : BB_QUIET);
+      return true;
     } catch (e) { log("buyback err:", e.message); return false; }
   }
   const isTeam = (tx) => !!TEAM && BUYER.get(tx) === TEAM;
@@ -291,7 +314,7 @@ export function initExtras(X) {
           DEVS.add(a); await stSet("devWallets", [...DEVS].join(",")); tgPost("deleteMessage", { chat_id: msg.chat.id, message_id: msg.message_id });
           return tgPost("sendMessage", { chat_id: msg.chat.id, text: `Saved dev wallet …${a.slice(-4)} (${DEVS.size} saved). I deleted your message so the address is not sitting in this chat. Next: /buybackdraft to see the alert, then /buyback on.`, parse_mode: "HTML" }); }
         if (cmd === "cleardev") { DEVS = new Set(); await stSet("devWallets", ""); return reply("Dev wallets cleared. Buyback alerts will not fire until you add one with /setdev."); }
-        if (cmd === "buybackdraft") { const m = await market(); const eth = 0.05, px = m.priceUsd || 0; const ok = await bbSend(msg.chat.id, bbCaption({ eth, spentUsd: eth * (m.ethUsd || 0), tokens: px && m.ethUsd ? eth * m.ethUsd / px : 0, priceUsd: px, mcapUsd: m.mcUsd, txUrl: "" }, { n: 3, eth: 0.15, tok: px && m.ethUsd ? 0.15 * m.ethUsd / px : 0 }, true)); return ok ? null : reply("Could not send the draft. Try again."); }
+        if (cmd === "buybackdraft") { const m = await market(); const eth = 0.05, px = m.priceUsd || 0; const ok = await bbSend(msg.chat.id, bbCaption({ eth, n: 8, spentUsd: eth * (m.ethUsd || 0), tokens: px && m.ethUsd ? eth * m.ethUsd / px : 0, priceUsd: px, mcapUsd: m.mcUsd, txUrl: "" }, { n: 3, eth: 0.15, tok: px && m.ethUsd ? 0.15 * m.ethUsd / px : 0 }, true, { n: 12, eth: 0.4, tok: px && m.ethUsd ? 0.4 * m.ethUsd / px : 0 })); return ok ? null : reply("Could not send the draft. Try again."); }
         if (cmd === "buybacktoday") { const post = (args[0] || "").toLowerCase() === "post"; const n = await bbToday(post ? chat : msg.chat.id, !post); return n > 0 ? (post ? reply(`Posted to the main group: ${n} dev buyback${n === 1 ? "" : "s"} from the last 24 hours.`) : null) : reply(n === 0 ? (DEVS.size ? "No buys from the saved dev wallet in the last 24 hours." : "No dev wallet is saved yet. Send /setdev 0x… first.") : "The post failed. Try again."); }
         const arg = (args[0] || "").toLowerCase(); if (arg !== "on" && arg !== "off") return reply(`Dev buyback alerts are ${BB_ON ? "ON" : "OFF"} · ${DEVS.size} dev wallet${DEVS.size === 1 ? "" : "s"} saved.\n/buyback on or /buyback off to change it.\n/buybacktoday shows a draft of the last 24 hours, /buybacktoday post sends it to the main group.`);
         const on = arg === "on"; BB_ON = on; await stSet("buybackOn", on ? "1" : "0");
