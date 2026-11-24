@@ -436,18 +436,19 @@ export function initExtras(X) {
       }
     } catch (e) { log("watch sells err:", e.shortMessage || e.message); } finally { wBusy = false; }
   }
+  let hwMem = null, hwInitMem = false, hwLastIntro = 0; // in-memory copy so a database outage cannot make this repeat
   async function watchHolders() {
     try {
       const c = await wCfg(); if (!c.on) return; const skip = new Set([CFG.pool.toLowerCase(), "0x000000000000000000000000000000000000dead", "0x0000000000000000000000000000000000000000", RS_ADDR]);
-      let known = {}; try { known = JSON.parse((await stGet("watchHolders")) || "{}"); } catch {} const first = (await stGet("watchHoldersInit")) !== "1"; const head = await provider.getBlockNumber(); const cur = [];
+      let known = {}; try { known = JSON.parse((await stGet("watchHolders")) || "{}"); } catch {} if (hwMem) known = { ...known, ...hwMem }; const first = !hwInitMem && (await stGet("watchHoldersInit")) !== "1"; const head = await provider.getBlockNumber(); const cur = [];
       for (const [a, v] of ST.bal.entries()) { if (v <= 0n || skip.has(a) || DEVS.has(a)) continue; const bal = Number(ethers.formatUnits(v, 18)), pct = bal / SUPPLY * 100; if (pct >= c.pct) cur.push({ a, bal, pct, lvl: Math.floor(pct / c.pct) }); }
       cur.sort((x, y) => y.bal - x.bal);
-      if (first) { await stSet("watchHoldersInit", "1"); for (const h of cur) known[h.a] = h.lvl; await stSet("watchHolders", JSON.stringify(known));
+      if (first) { hwInitMem = true; if (Date.now() - hwLastIntro < 864e5) return; hwLastIntro = Date.now(); await stSet("watchHoldersInit", "1"); for (const h of cur) known[h.a] = h.lvl; hwMem = { ...known }; await stSet("watchHolders", JSON.stringify(known));
         await ownerDM(cur.length ? [`👀 <b>BIG HOLDERS RIGHT NOW</b> (only you see this)`, `Wallets holding ${c.pct}% of supply or more, not counting the curve or the dev wallet:`, "", ...cur.slice(0, 15).map((h) => `${wLink(h.a)}\n<b>${fmt(h.bal, 0)}</b> · ${fmt(h.pct, 2)}%`), "", "From now on I will message you when a new wallet crosses that line, and whenever a big sell hits."].join("\n") : `👀 Big-holder watch is on. No wallet other than the curve and the dev wallet holds ${c.pct}% of supply or more right now.`); return; }
       for (const h of cur) { if ((known[h.a] || 0) >= h.lvl) continue; known[h.a] = h.lvl;
         await ownerDM([`👀 <b>BIG HOLDER</b> (only you see this)`, `A wallet now holds <b>${fmt(h.pct, 2)}%</b> of supply: <b>${fmt(h.bal, 0)}</b> $STAG`, `Wallet: ${wLink(h.a)}`, "", "<b>Where its $STAG came from</b>", await wSources(h.a, head)].join("\n")); }
       for (const a of Object.keys(known)) if (!cur.find((h) => h.a === a)) delete known[a]; // dropped back under the line: alert again if they climb back
-      await stSet("watchHolders", JSON.stringify(known));
+      hwMem = { ...known }; await stSet("watchHolders", JSON.stringify(known));
     } catch (e) { log("watch holders err:", e.shortMessage || e.message); }
   }
   // ---------- watch list: any wallet the owner names, private DM alerts only ----------
