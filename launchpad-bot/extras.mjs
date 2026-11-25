@@ -439,6 +439,7 @@ export function initExtras(X) {
   let hwMem = null, hwInitMem = false, hwLastIntro = 0; // in-memory copy so a database outage cannot make this repeat
   async function watchHolders() {
     try {
+      try { await W.q("select 1"); } catch { return; } // database down: stay silent rather than repeat the same DM
       const c = await wCfg(); if (!c.on) return; const skip = new Set([CFG.pool.toLowerCase(), "0x000000000000000000000000000000000000dead", "0x0000000000000000000000000000000000000000", RS_ADDR]);
       let known = {}; try { known = JSON.parse((await stGet("watchHolders")) || "{}"); } catch {} if (hwMem) known = { ...known, ...hwMem }; const first = !hwInitMem && (await stGet("watchHoldersInit")) !== "1"; const head = await provider.getBlockNumber(); const cur = [];
       for (const [a, v] of ST.bal.entries()) { if (v <= 0n || skip.has(a) || DEVS.has(a)) continue; const bal = Number(ethers.formatUnits(v, 18)), pct = bal / SUPPLY * 100; if (pct >= c.pct) cur.push({ a, bal, pct, lvl: Math.floor(pct / c.pct) }); }
