@@ -110,6 +110,17 @@ async function onMessage(m) {
   try { await say(chat, await ask(chat, who, clean), m.message_id); } catch (e) { log("ask err", e.message); await say(chat, "Something went wrong on my side. Try again in a minute.", m.message_id); }
 }
 
+
+async function selfCheck() { // logs what the GitHub token can reach (never the token itself)
+  if (!GH) return;
+  try {
+    const r = await fetch("https://api.github.com/user", { headers: { authorization: `Bearer ${GH}`, "user-agent": "kp-assistant" } });
+    log("github token:", r.status, "scopes:", JSON.stringify(r.headers.get("x-oauth-scopes")), "expires:", r.headers.get("github-authentication-token-expiration") || "never/unknown");
+  } catch (e) { log("github check err", e.message); }
+  for (const repo of [...new Set(SITES.map((x) => x.repo))]) { try { const j = await gh(`/repos/${repo}`); log("repo", repo, "push:", !!(j.permissions && j.permissions.push)); } catch (e) { log("repo", repo, "ERR", e.message); } }
+  for (const s of SITES) { try { await gh(`/repos/${s.repo}/git/ref/heads/${s.base}`); log("branch ok:", s.key, s.base); } catch (e) { log("branch MISSING:", s.key, s.base); } }
+}
+
 async function poll() {
   let off = 0;
   try { const me = await tg("getMe"); BOT_USER = me.username; log("King Petty Assistant up as @" + BOT_USER, "model", MODEL, "effort", EFFORT, "editing", GH ? "ON (review branches)" : "off"); } catch (e) { log("getMe failed", e.message); }
@@ -119,5 +130,5 @@ async function poll() {
   }
 }
 http.createServer((q, r) => { r.end("King Petty Assistant"); }).listen(Number(E.PORT || 3000));
-if (TG && KEY && !process.env.KPA_NO_POLL) poll();
+if (TG && KEY && !process.env.KPA_NO_POLL) { selfCheck(); poll(); }
 export { ask };
