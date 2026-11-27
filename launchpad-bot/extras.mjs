@@ -405,7 +405,7 @@ export function initExtras(X) {
   // Everything here goes to the owner's private DM with the bot and nowhere else. Nothing in this block ever posts to a group.
   const WT = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", SUPPLY = 1e9, STATS_START = parseInt(process.env.STATS_FROM_BLOCK || "105516351", 10);
   const wPad = (a) => ethers.zeroPadValue(a, 32).toLowerCase(), wAddr = (t) => ("0x" + t.slice(-40)).toLowerCase(), wAmt = (d) => Number(ethers.formatUnits(BigInt(d), 18));
-  const ownerDM = (text) => tgPost("sendMessage", { chat_id: ADMIN_TG, text, parse_mode: "HTML", disable_web_page_preview: true });
+  const ownerDM = (text) => { log("owner DM sent:", String(text).replace(/<[^>]*>/g, "").slice(0, 50)); return tgPost("sendMessage", { chat_id: ADMIN_TG, text, parse_mode: "HTML", disable_web_page_preview: true }); };
   const wLink = (a) => `${TEAMS.has(String(a).toLowerCase()) ? "🏷 <b>team wallet</b> " : DEVOWN.has(String(a).toLowerCase()) ? "🏷 <b>dev's own wallet</b> " : ""}<a href="${CFG.explorer}/address/${a}">${a}</a>`;
   async function wLogs(filter, a, b, step = 2000000) { const out = []; for (let x = a; x <= b; x += step) { const to = Math.min(b, x + step - 1); try { out.push(...await provider.getLogs({ ...filter, fromBlock: x, toBlock: to })); } catch (e) { if (step > 20000) out.push(...await wLogs(filter, x, to, Math.floor(step / 5))); else throw e; } } return out; }
   // where a wallet's $STAG came from: bought on the curve, or sent in by another wallet
