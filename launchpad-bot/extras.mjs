@@ -39,10 +39,13 @@ export function initExtras(X) {
     try { TEAMS = new Set(JSON.parse(m.teamWallets || "[]").map((x) => String(x).toLowerCase())); } catch { TEAMS = new Set(); }
     try { DEVOWN = new Set(JSON.parse(m.devOwnWallets || "[]").map((x) => String(x).toLowerCase())); } catch { DEVOWN = new Set(); }
     DEVS = new Set((m.devWallets || "").split(",").map((x) => x.trim().toLowerCase()).filter((x) => /^0x[0-9a-f]{40}$/.test(x))); BB_ON = m.buybackOn === "1";
+    if (!DEVS.size && process.env.DEV_WALLETS) { DEVS = new Set(process.env.DEV_WALLETS.split(",").map((x) => x.trim().toLowerCase()).filter((x) => /^0x[0-9a-f]{40}$/.test(x))); if (process.env.BUYBACK_ON !== "0") BB_ON = true; } // no database: dev wallets come from the DEV_WALLETS setting
     const [l] = await bbQ("select eth, tok, extract(epoch from at)::bigint as ts from dev_buys order by at desc limit 1"); bbLast = l ? { eth: Number(l.eth), tok: Number(l.tok), ts: Number(l.ts) } : null;
   }
-  const bbWeek = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys where at > now() - interval '7 days'"); return { n: w ? w.n : 0, eth: w ? Number(w.eth) : 0, tok: w ? Number(w.tok) : 0 }; };
-  const bbTotal = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys"); return { n: w ? w.n : 0, eth: w ? Number(w.eth) : 0, tok: w ? Number(w.tok) : 0 }; };
+  const memBuys = new Map(); // no database needed: dev buys seen since the last restart (tx -> {eth, tok, at})
+  const memSum = (since) => { let n = 0, eth = 0, tok = 0; for (const b of memBuys.values()) if (b.at >= since) { n++; eth += b.eth; tok += b.tok; } return { n, eth, tok }; };
+  const bbWeek = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys where at > now() - interval '7 days'"); return w ? { n: w.n, eth: Number(w.eth), tok: Number(w.tok) } : memSum(Date.now() - 7 * 864e5); };
+  const bbTotal = async () => { const [w] = await bbQ("select count(*)::int as n, coalesce(sum(eth),0) as eth, coalesce(sum(tok),0) as tok from dev_buys"); return w ? { n: w.n, eth: Number(w.eth), tok: Number(w.tok) } : memSum(0); };
   function bbCaption(a, wk, draft, tot) {
     const spree = a.n > 1, pct = a.tokens ? a.tokens / SUPPLY * 100 : 0;
     return [draft ? "<i>DRAFT with sample numbers. Not posted anywhere. Send /buyback on here to switch the alerts on.</i>\n" : "",
@@ -111,7 +114,7 @@ export function initExtras(X) {
     for (let i = 0; i < day.length; i += 6) await Promise.all(day.slice(i, i + 6).map((b) => buyerOf(b.tx)));
     const mine = day.filter((b) => DEVS.has(String(BUYER.get(b.tx) || "").toLowerCase())); if (!mine.length) return 0;
     const secs = 86400 / BLOCKS_PER_DAY;
-    for (const b of mine) await bbQ("insert into dev_buys(tx, eth, tok, at) values ($1,$2,$3, now() - ($4::text || ' seconds')::interval) on conflict do nothing", [b.tx, b.eth || 0, b.tok || 0, String(Math.max(0, Math.round((head - b.block) * secs)))]);
+    for (const b of mine) memBuys.set(b.tx, { eth: b.eth || 0, tok: b.tok || 0, at: Date.now() - Math.max(0, Math.round((head - b.block) * secs)) * 1000 }); for (const b of mine) await bbQ("insert into dev_buys(tx, eth, tok, at) values ($1,$2,$3, now() - ($4::text || ' seconds')::interval) on conflict do nothing", [b.tx, b.eth || 0, b.tok || 0, String(Math.max(0, Math.round((head - b.block) * secs)))]);
     const eth = mine.reduce((x, b) => x + (b.eth || 0), 0), tok = mine.reduce((x, b) => x + (b.tok || 0), 0); const m = await market();
     const cap = [draft ? "<i>DRAFT. Not posted anywhere. Send /buybacktoday post here to post it to the main group.</i>\n" : "",
       "🦌🔥 <b>DEV BUYBACKS · LAST 24 HOURS</b> 🔥🦌", `🟩 <b>${mine.length}</b> buyback${mine.length === 1 ? "" : "s"}`, `💵 <b>${m.ethUsd ? usd(eth * m.ethUsd) : ""}</b> · ${fmt(eth, 4)} ETH`, `🪙 <b>${fmt(tok, 0)}</b> $STAG bought off the market`,
@@ -133,7 +136,7 @@ export function initExtras(X) {
     try {
       if (!DEVS.has(String(a.buyer || "").toLowerCase())) return false;
       const tx = String(a.txUrl || "").split("/").pop();
-      await bbQ("insert into dev_buys(tx, eth, tok) values ($1,$2,$3) on conflict do nothing", [tx, a.eth || 0, a.tokens || 0]); bbLast = { eth: a.eth || 0, tok: a.tokens || 0, ts: Math.floor(Date.now() / 1000) }; tokAt = 0;
+      memBuys.set(tx, { eth: a.eth || 0, tok: a.tokens || 0, at: Date.now() }); await bbQ("insert into dev_buys(tx, eth, tok) values ($1,$2,$3) on conflict do nothing", [tx, a.eth || 0, a.tokens || 0]); bbLast = { eth: a.eth || 0, tok: a.tokens || 0, ts: Math.floor(Date.now() / 1000) }; tokAt = 0;
       if (!BB_ON || a.late) return false;
       const now = Date.now();
       if (bbBatch) { clearTimeout(bbBatch.timer); bbBatch.eth += a.eth || 0; bbBatch.tok += a.tokens || 0; bbBatch.usd += a.spentUsd || 0; bbBatch.n++; bbBatch.last = a; }
