@@ -1,0 +1,10 @@
+[
+  { "key": "spring", "name": "Junk Junkies Spring TX", "repo": "PettyMiggzy/Junk-Junkie-Texas", "base": "main", "hint": "Built from content.py + data/ by build.py into dist/spring. Edit content.py or data/spring/*." },
+  { "key": "college-station", "name": "Junk Junkies College Station TX", "repo": "PettyMiggzy/Junk-Junkie-Texas", "base": "main", "hint": "Built from content.py + data/college-station/*." },
+  { "key": "cypress", "name": "Junk Junkies Cypress TX", "repo": "PettyMiggzy/Junk-Junkie-Texas", "base": "main", "hint": "Built from content.py + data/cypress/*." },
+  { "key": "tomball", "name": "Junk Junkies Tomball TX", "repo": "PettyMiggzy/Junk-Junkie-Texas", "base": "main", "hint": "Built from content.py + data/tomball/*." },
+  { "key": "new-caney", "name": "Junk Junkies New Caney TX", "repo": "PettyMiggzy/Junk-Junkie-Texas", "base": "claude/new-caney-site", "hint": "Built from content.py + data/new-caney/*." },
+  { "key": "florida", "name": "Junk Junkies Florida", "repo": "PettyMiggzy/Florida-junk", "base": "claude/vibrant-tesla-g71d90", "hint": "Static pages: index.html, areas/<city>/index.html, assets/." },
+  { "key": "indiana", "name": "Junk Junkies Indiana", "repo": "PettyMiggzy/jji", "base": "claude/upbeat-volta-9zgmbl", "hint": "Static pages: index.html, areas/, service pages, assets/." },
+  { "key": "emilis", "name": "Emili's Cleaning Co.", "repo": "PettyMiggzy/cleaning", "base": "claude/emilis-cleaning-site", "hint": "Cleaning company site." }
+]
